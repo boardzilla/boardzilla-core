@@ -1,11 +1,9 @@
 import { Game, Player, Board } from '../';
-import Sequence from './flow-sequence';
-import Step from './flow-step';
 
 import type Loop from './loop';
 import type {
-  // FlowDefinition,
   FlowBranchNode,
+  FlowBranchJSON,
   ActionStepPosition
 } from './types';
 import type { ResolvedSelection, Argument } from '../action/types';
@@ -61,6 +59,19 @@ export default class Flow {
     return branch;
   }
 
+  branchJSON(): FlowBranchNode[] {
+    if (this.position === undefined) return [];
+    let branch = [
+      {
+        type: this.type,
+        position: this.positionJSON()
+      } as FlowBranchJSON
+    ]
+    if (this.name) branch[0].name = this.name;
+    if (this.subflow) branch = branch.concat(this.subflow.branchJSON());
+    return branch;
+  }
+
   /**
    * set the position of this flow and all subflows recursively
    */
@@ -74,6 +85,22 @@ export default class Flow {
           throw Error('Excess position elements sent to flow');
         }
         this.subflow.setBranch(branch.slice(1)); // continue down the hierarchy
+      }
+    } else {
+      this.reset();
+    }
+  }
+
+  setBranchFromJSON(branch: FlowBranchJSON[]) {
+    const node = branch[0];
+    if (node) {
+      this.setPositionFromJSON(node.position);
+      if (branch.length) {
+        if (!this.subflow) {
+          console.error(this, branch.slice(1));
+          throw Error('Excess position elements sent to flow');
+        }
+        this.subflow.setBranchFromJSON(branch.slice(1)); // continue down the hierarchy
       }
     } else {
       this.reset();
@@ -177,6 +204,16 @@ export default class Flow {
   // must override. must rely on this.position
   currentSubflow(): Flow | undefined {
     return undefined;
+  }
+
+  // override if position contains objects that need serialization
+  positionJSON() {
+    return this.position;
+  }
+
+  // override if position contains objects that need serialization
+  setPositionFromJSON(position: any) {
+    this.setPosition(position, false);
   }
 
   // override for steps that await

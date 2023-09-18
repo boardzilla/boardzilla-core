@@ -43,7 +43,7 @@ describe('Game', () => {
     game = new Game();
     board = game.defineBoard(TestBoard, [  ]);
     game.defineFlow(
-      new Sequence({
+      (game, board) => new Sequence({
         steps: [
           new Step({ command: () => board.tokens = 4 }),
           new Loop({ while: () => board.tokens < 8, do: (

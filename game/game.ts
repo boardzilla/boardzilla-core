@@ -18,10 +18,10 @@ import type {
   MoveResponse
 } from './action/types';
 import type { PlayerAttributes } from './player/types';
-import type { FlowBranchNode } from './flow/types';
 
 export default class Game<P extends Player, B extends Board> {
   flow: Flow;
+  flowDefinition: (game: typeof this, board: B) => Flow;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
   settings: Record<string, any>;
@@ -37,10 +37,9 @@ export default class Game<P extends Player, B extends Board> {
   /**
    * configuration functions
    */
-  defineFlow(flow: Flow) {
+  defineFlow(flowDefinition: typeof this.flowDefinition) {
     if (this.phase !== 'define') throw Error('cannot call defineFlow once started');
-    this.flow = flow;
-    flow.ctx.game = this as unknown as Game<Player, Board>;
+    this.flowDefinition = flowDefinition;
   }
 
   action(name: string, player: P) {
@@ -84,20 +83,23 @@ export default class Game<P extends Player, B extends Board> {
       throw Error("No players");
     }
     this.phase = 'started';
+    this.buildFlow();
     this.flow.start();
   }
 
-  setState(state: Omit<GameState<P>, 'position'> & {position?: GameState<P>['position']}) {
+  buildFlow() {
+    this.flow = this.flowDefinition(this, this.board);
+    this.flow.ctx.game = this as unknown as Game<Player, Board>;
+  }
+
+  setState(state: GameState<P>) {
     this.players.fromJSON(state.players);
     this.players.currentPosition = state.currentPlayerPosition;
     this.setSettings(state.settings);
     this.board.fromJSON(state.board);
-    if (state.position) this.setPosition(state.position);
-  }
-
-  setPosition(position: FlowBranchNode[]) {
+    this.buildFlow();
     this.phase = 'started';
-    this.flow.setBranch(position);
+    this.flow.setBranchFromJSON(state.position);
   }
 
   getState(): GameState<P> {
@@ -105,7 +107,7 @@ export default class Game<P extends Player, B extends Board> {
       players: this.players.map(p => p.toJSON() as PlayerAttributes<P>),
       currentPlayerPosition: this.players.currentPosition,
       settings: this.settings,
-      position: this.flow.branch(),
+      position: this.flow.branchJSON(),
       board: this.board.allJSON(),
     };
   }
@@ -113,8 +115,13 @@ export default class Game<P extends Player, B extends Board> {
   getPlayerStates(): PlayerState<P>[] {
     return this.players.map(p => ({
       position: p.position,
-      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-      board: this.board.allJSON(p.position)
+      state: {
+        players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
+        currentPlayerPosition: this.players.currentPosition,
+        settings: this.settings,
+        position: this.flow.branchJSON(),
+        board: this.board.allJSON(p.position)
+      }
     }));
   }
 

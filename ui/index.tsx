@@ -8,24 +8,16 @@ import Main from './Main'
 
 import type { SetupComponentProps } from './types'
 import type { Game, Board, GameElement, Player } from '../game'
-import type { GameInterface } from '../game/types'
 import type { ElementJSON } from '../game/board/types'
+import type { SetupFunction } from '../game/types'
 import type { IncompleteMove, ResolvedSelection } from '../game/action/types'
-// Sentry.init({
-//   dsn: "https://c149a1d2a5464aae80d74fddcb7f1f1a@o1206738.ingest.sentry.io/6340273",
-//   integrations: [new BrowserTracing()],
-//   tracesSampleRate: 1.0,
-// });
-
-// export {default as Counter} from './components/Counter';
-// export {default as Die} from './components/Die';
-// export { times } from './utils';
 
 type GameStore = {
-  game?: Game<Player, Board>;
-  board?: Board;
+  game: Game<Player, Board>;
   boardJSON: ElementJSON[];
   setGame: (g: Game<Player, Board>) => void;
+  userID: string;
+  setUserID: (u: string) => void;
   updateBoard: () => void;
   player?: Player;
   setPlayer: (p: number) => void;
@@ -44,29 +36,31 @@ type GameStore = {
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
+  game: undefined as unknown as Game<Player, Board>, // pretend always defined
   boardJSON: [],
   setGame: (game: Game<Player, Board>) => set({
     game,
-    board: game.board,
     boardJSON: game.board.allJSON()
   }),
+  userID: "",
+  setUserID: userID => set({ userID }),
   updateBoard: () => {
     set(s => {
-      if (!s.game || !s.player) return {};
-      // auto-switch to new player in debug
-      const player = s.game.players.currentPosition ? s.game.players.current() : s.player;
       if (s.move) console.error(s.move, 'during updateBoard? why?');
+      const player = s.game.players.find(p => p.id == s.userID);
+      if (!player) return { boardJSON: s.game.board.allJSON() };
+
       const {move, selection} = s.game.currentSelection(player);
       console.log('updateBoard', player.position, move, selection);
       return ({
         move,
         selection,
         player,
-        boardJSON: s.game?.board.allJSON()
+        boardJSON: s.game.board.allJSON()
       })
     });
   },
-  setPlayer: (p: number) => set(state => {
+  setPlayer: p => set(state => {
     if (!state.game) return {};
     const player = state.game.players.atPosition(p);
     if (!player) return {};
@@ -78,8 +72,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       selection,
     })
   }),
-  setMove: (move?: IncompleteMove<Player>) => set({ move }),
-  setSelection: (selection?: ResolvedSelection) => set({ selection }),
+  setMove: move => set({ move }),
+  setSelection: selection => set({ selection }),
   selected: [],
   setSelected: sel => set({ selected: [...new Set(sel)] }),
   hilites: [],
@@ -95,19 +89,18 @@ type UIOptions = {
   appearance?: Record<string, (el: GameElement, contents: JSX.Element[]) => JSX.Element>
 };
 
-export default (gameInterface: GameInterface<Player, Board>, options: UIOptions): void => {
+export default (setup: SetupFunction<Player, Board>, options: UIOptions): void => {
   gameStore.getState().setUIOptions(options);
-  // const bootstrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || "{}");
-  // gameStore.getState().setPlayer(bootstrap.currentPlayer);
-  // const game = gameInterface.initialState(bootstrap.players, bootstrap.setup);
-  // game.play();
-  // gameStore.getState().setGame(game);
+  const bootstrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || "");
+  const userID = bootstrap.userID;
+  const game = setup({players: [], settings: {}}, false);
+  gameStore.getState().setGame(game);
+  gameStore.getState().setUserID(userID);
   
   ReactDOM.render(
-    <Main gameInterface={gameInterface}/>,
+    <Main/>,
     document.getElementById('root')
   )
 };
 
-                                   
 export * from './setup/components/settingComponents';

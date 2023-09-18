@@ -1,5 +1,5 @@
-import type { PlayerAttributes } from 'boardzilla-game/player/types';
-import type { Player } from 'boardzilla-game/player';
+import type { PlayerAttributes } from '../game/player/types';
+import type { Player } from '../game/player';
 
 export type Argument = string | number | boolean;
 
@@ -24,22 +24,21 @@ export type SetupComponentProps = {
 // used to update the current setup json state
 export type SetupUpdated = {
   type: "setupUpdated"
-  data: any
+  data: SetupState
 }
 
 // used to send a move
 export type MoveMessage = {
   id: string
   type: 'move'
-  data: any
+  data: string[]
 }
 
 // used to actually start the game
 export type StartMessage = {
   id: string
   type: 'start'
-  setup: any
-  players: Player[]
+  setup: SetupState
 }
 
 // used to tell the top that you're ready to recv events
@@ -47,10 +46,11 @@ export type ReadyMessage = {
   type: 'ready'
 }
 
-// indicates a player was added
-export type PlayerEvent = {
-  type: "player"
-  player: PlayerAttributes<Player>
+// indicates a user was added
+type UserEvent = {
+  type: "user"
+  id: string
+  name: string
   added: boolean
 }
 
@@ -60,6 +60,20 @@ export type UpdateEvent = {
   phase: "new" | "started"
   state: any
 }
+
+// // an update to the setup state
+// type SetupUpdateEvent = {
+//   type: "update"
+//   phase: "new"
+//   state: SetupState
+// }
+
+// // an update to the current game state
+// type GameUpdateEvent = {
+//   type: "update"
+//   phase: "started"
+//   state: GameState
+// }
 
 // indicates the disposition of a message that was processed
 type MessageProcessed = {

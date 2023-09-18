@@ -94,6 +94,14 @@ describe('Board', () => {
     );
   });
 
+  it('builds from json', () => {
+    const piece1 = board.create(Piece, 'piece1');
+    const piece2 = board.create(Piece, 'piece2');
+    board.fromJSON(board.allJSON());
+    expect(board.first(Piece, 'piece1')!._t.id).to.equal(piece1._t.id);
+    expect(board.first(Piece, 'piece2')!._t.id).to.equal(piece2._t.id);
+  });
+
   describe("Element subclasses", () => {
     class Card extends Piece {
       suit: string;
@@ -281,10 +289,10 @@ describe('Board', () => {
       expect(card2.suit).to.equal(undefined);
       card.showOnlyTo(1);
       expect(card.toJSON(1)).to.deep.equal(
-        { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 2, _visible: { default: false, except: [1] } },
+        { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _visible: { default: false, except: [1] } },
       );
       expect(card.toJSON(2)).to.deep.equal(
-        { className: 'Card', flipped: false, state: 'initial', name: 'AH', pip: 1, _id: 2, _visible: { default: false, except: [1] } },
+        { className: 'Card', flipped: false, state: 'initial', name: 'AH', pip: 1, _visible: { default: false, except: [1] } },
       )
       board.fromJSON(board.allJSON(2));
       const card3 = board.first(Card)!;

@@ -1,6 +1,8 @@
 import Flow from './flow';
+import { serializeArg, deserializeArg } from '../action/utils';
+
 import type { ActionStepPosition } from './types.d';
-import type { ResolvedSelection, Argument } from '../action/types';
+import type { ResolvedSelection } from '../action/types';
 
 export default class PlayerAction extends Flow {
   position: ActionStepPosition | undefined;
@@ -48,6 +50,22 @@ export default class PlayerAction extends Flow {
       this.setPosition(move);
       return [] as [ResolvedSelection?]
     }
+  }
+
+  positionJSON() {
+    if (this.position) return {
+      player: this.position.player,
+      action: this.position.action,
+      args: this.position.args.map(serializeArg)
+    };
+  }
+
+  setPositionFromJSON(position: any) {
+    if (position) this.setPosition({
+      player: position.player,
+      action: position.action,
+      args: position.args.map((a: any) => deserializeArg(a, this.ctx.game))
+    }, false);
   }
 
   toString(): string {

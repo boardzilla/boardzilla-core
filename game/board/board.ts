@@ -24,11 +24,10 @@ export default class Board extends Space {
 
     // reset all on self
     Object.assign(this, {...rest});
-    this._t.id = _id;
     this._t.children.splice(0, this._t.children.length);
     this._ctx.removed._t.children.splice(0, this._ctx.removed._t.children.length);
 
-    if (children) this.createChildrenFromJSON(_id, children);
+    if (children) this.createChildrenFromJSON(children);
 
     // add removed elements
     for (const json of boardJSON.slice(1)) {
@@ -37,7 +36,7 @@ export default class Board extends Space {
       if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
       const unconnected = this._ctx.removed.create(elementClass, name, rest);
       // TODO worried about removed children. Should removal even preserve parent-child relationships?
-      if (children) unconnected.createChildrenFromJSON(_id, children);
+      if (children) unconnected.createChildrenFromJSON(children);
     };
   }
 }

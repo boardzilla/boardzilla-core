@@ -1,4 +1,6 @@
 import Flow from './flow';
+import { serializeArg, deserializeArg } from '../action/utils';
+
 import type { Argument } from '../action/types';
 import type { SwitchCaseCases } from './types';
 
@@ -40,6 +42,22 @@ export default class SwitchCase<T extends Argument> extends Flow {
       return this.cases[this.position.index].flow;
     }
     if (this.position.default) return this.default;
+  }
+
+  positionJSON() {
+    return {
+      index: this.position.index,
+      default: this.position.default,
+      value: serializeArg(this.position.value)
+    };
+  }
+
+  setPositionFromJSON(position: any) {
+    this.setPosition({
+      index: position.index,
+      default: position.default,
+      value: deserializeArg(position.value, this.ctx.game)
+    }, false);
   }
 
   toString(): string {

@@ -10,14 +10,13 @@ const Board = ({clickables, hilites, selected, onSelectElement}: {
   selected: GameElement[];
   onSelectElement: (e: GameElement) => void;
 }) => {
-  const [board, boardJSON] = gameStore(s => [s.board, s.boardJSON]);
-  console.log('RENDER BOARD');
+  const [game, boardJSON] = gameStore(s => [s.game, s.boardJSON]);
 
   return (
     <div id="play-area">
-      { board && (
+      { game && (
         <Element
-          element={board}
+          element={game.board}
           json={boardJSON[0]}
           clickables={clickables}
           hilites={hilites}

@@ -57,13 +57,20 @@ export default class GameElement {
 
     this._t = {
       children: new ElementCollection(),
-      id: this._ctx.sequence++
+      id: this._ctx.sequence++,
     }
 
     Object.getPrototypeOf(this).top = this.last;
     Object.getPrototypeOf(this).topN = this.lastN;
     Object.getPrototypeOf(this).bottom = this.first;
     Object.getPrototypeOf(this).bottomN = this.firstN;
+  }
+
+  setId(id?: number) {
+    if (id !== undefined) {
+      this._t.id = id;
+      if (this._ctx.sequence < id) this._ctx.sequence = id;
+    }
   }
 
   all<F extends GameElement>(className: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection<GameElement>;
@@ -309,20 +316,21 @@ export default class GameElement {
     attrs = rest;
     if (attrs.player) attrs.player = rest.player?.position;
 
-    const json: ElementJSON = Object.assign(attrs, { className: this.constructor.name, _id: _t.id });
+    const json: ElementJSON = Object.assign(attrs, { className: this.constructor.name });
+    if (seenBy === undefined) json._id = _t.id;
     if (_t.children.length) json.children = Array.from(_t.children.map(c => c.toJSON(seenBy)));
     return json;
   }
 
-  createChildrenFromJSON(id: number, childrenJSON: ElementJSON[]) {
+  createChildrenFromJSON(childrenJSON: ElementJSON[]) {
     for (const json of childrenJSON) {
       const { className, children, _id, name, player, ...rest } = json;
       const elementClass = this._ctx.classRegistry.find(c => c.name === className);
       if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
       const child = this.create(elementClass, name, rest);
-      child._t.id = id;
+      child.setId(_id);
       if (player) child.player = this._ctx.game?.players.atPosition(player);
-      if (children) child.createChildrenFromJSON(_id, children);
+      if (children) child.createChildrenFromJSON(children);
     };
   }
 }

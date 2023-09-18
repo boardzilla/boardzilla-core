@@ -4,25 +4,24 @@ import { gameStore } from '../';
 import Board from './components/Board';
 import PlayerControls from './components/PlayerControls';
 import Debug from './components/Debug';
-//import '../styles/main.scss';
 import '../styles/game.scss';
-
-// import TestA from './Test';
-// import TestB from './TestB';
 
 import type { GameElement } from '../../game/board'
 import type { Move } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
-export default () => {
+export default ({ onMove }: { onMove: (m: Move<Player>) => void }) => {
   const [game, updateBoard, player, move, setMove, autoplay, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.player, s.move, s.setMove, s.autoplay, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
   const [error, setError] = useState<string>();
 
-  if (!game || !player) return null;
+  if (!player) {
+    console.log('no player to render');
+    return null;
+  }
 
   let clickables: GameElement[] = [];
 
-  console.log("RENDER MAIN", move, selection);
+  console.log("RENDER GAME", move, selection);
 
   if (selection?.type === 'board') clickables = selection.boardChoices;
 
@@ -48,6 +47,7 @@ export default () => {
       setSelection(undefined);
       if (autoplay) game.play();
       updateBoard();
+      onMove(move);
     }
   };
 

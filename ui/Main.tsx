@@ -2,65 +2,93 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { gameStore } from './';
 import Game from './game/Game';
 import Setup from './setup/Setup';
+import { serializeArg } from '../game/action/utils';
 
-import type { User, SetupState, UpdateEvent, PlayerEvent, MessageProcessed } from './types';
-import type { GameInterface } from 'boardzilla-game/types'
-import type { Board } from 'boardzilla-game/board'
-import type { Player } from 'boardzilla-game/player';
+import type {
+  User,
+  SetupState,
+  UpdateEvent,
+  UserEvent,
+  MessageProcessed,
+  SetupUpdated,
+  ReadyMessage,
+  StartMessage,
+  MoveMessage,
+} from './types';
+import type { Player } from '../game/player';
+import type { Move } from '../game/action/types';
 
-export default ({ gameInterface }: { gameInterface: GameInterface<Player, Board> }) => {
-  const [game, setGame, updateBoard] = gameStore(s => [s.game, s.setGame, s.updateBoard]);
+export default () => {
+  const [game, updateBoard] = gameStore(s => [s.game, s.updateBoard]);
   const [setupState, setSetupState] = useState<SetupState>({players: [], settings: []});
   const [phase, setPhase] = useState('new');
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
 
-  const listener = (event: MessageEvent<UpdateEvent | PlayerEvent | MessageProcessed>) => {
-    console.log('message', event);
-    switch(event.data.type) {
+  const listener = useCallback((event: any) => {
+    const data = JSON.parse(event.data);
+    console.log('message', event, data);
+    switch(data.type) {
     case 'update':
-      console.log('update', !!game);
-      const gameInstance = game || gameInterface.initialState({players: [], settings: {}}, false);
-      if (event.data.phase === 'new') {
-        setSetupState(event.data.state);
+      console.log('update');
+      if (data.phase === 'new') {
+        setSetupState(data.state);
       } else {
-        gameInstance.setState(event.data.state);
-        setPhase('started');
+        game.setState(data.state);
         updateBoard();
+        setPhase('started');
       }
-      if (!game) setGame(gameInstance);
       break;
-    case 'player':
-      const user = event.data.player;
-      if (event.data.added) {
+    case 'user':
+      const { id, name } = data;
+      if (data.added) {
         setUsers(users => {
-          if (users.find(p => p.id === user.id)) return users
-          return [...users, user]
+          if (users.find(p => p.id === id)) return users
+          return [...users, { id, name }]
         });
       } else {
-        setUsers((users) => users.filter(p => p.id === user.id))
+        setUsers((users) => users.filter(p => p.id !== id))
       }
       break;
     }
-  };
+  }, [game]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
     console.log('ready', readySent);
+    const message: ReadyMessage = {type: "ready"};
     if (!readySent) {
-      window.top!.postMessage({type: "ready"}, "*");
+      window.top!.postMessage(message, "*");
       setReadySent(true);
     }
     return () => window.removeEventListener('message', listener)
-  }, [])
+  }, [listener])
+
+  const move = (move: Move<Player>) => {
+    const message: MoveMessage = {
+      type: "move",
+      id: "todo",
+      data: [move.action, ...move.args.map(serializeArg)]
+    };
+    window.top!.postMessage(message, "*");
+  };
 
   const update = (setupState: SetupState) => {
     console.log('update setupState', setupState);
     setSetupState(setupState);
-    window.top!.postMessage({type: "setupUpdated", data: setupState}, "*");
+    const message: SetupUpdated = {type: "setupUpdated", data: setupState};
+    window.top!.postMessage(message, "*");
   }
 
+  const start = () => {
+    console.log('start');
+    const message: StartMessage = {type: "start", id: 'todo', setup: setupState};
+    window.top!.postMessage(message, "*");
+  }
+
+  console.log('RENDER MAIN', phase);
+
   return phase === 'new' ?
-    <Setup users={users} setupState={setupState} onUpdate={update}/> :
-    <Game/>
+    <Setup users={users} setupState={setupState} onUpdate={update} onStart={start}/> :
+    <Game onMove={move}/>
 }

@@ -28,7 +28,7 @@ export const deserializeArg = (arg: SerializedArg, game: Game<Player, Board>): A
   return deserializeSingleArg(o, game);
 }
 
-const deserializeSingleArg = (arg: string | number | boolean, game: Game<Player, Board>): GameElement | Player | string | number | boolean => {
+export const deserializeSingleArg = (arg: string | number | boolean, game: Game<Player, Board>): GameElement | Player | string | number | boolean => {
   if (typeof arg === 'number' || typeof arg === 'boolean') return arg;
   if (arg.slice(0, 3) === '$p[') return game.players.atPosition(parseInt(arg.slice(3, -1)))!;
   if (arg.slice(0, 4) === '$el[') return game.board.atBranch(arg.slice(4, -1))!;

@@ -4,12 +4,15 @@ import { gameStore } from '../';
 
 import type { User, SetupPlayer, SetupState } from '../types';
 
-export default ({ users, setupState, onUpdate }: {
+export default ({ users, setupState, onUpdate, onStart }: {
   users: User[],
   setupState: SetupState,
   onUpdate: ({ players, settings }: SetupState) => void,
+  onStart: () => void,
 }) => {
-  const [uiOptions] = gameStore(s => [s.uiOptions]);
+  const [game, uiOptions] = gameStore(s => [s.game, s.uiOptions]);
+
+  if (!game) return null;
 
   const updateSettingsKey = (key: string, value: any) => {
     const newSettings = Object.assign(setupState.settings || {}, { [key]: value });
@@ -43,6 +46,7 @@ export default ({ users, setupState, onUpdate }: {
     <>
       <Seating users={users} players={setupState.players || []} onUpdate={updatePlayers}/>
       {settingsComponents}
+      <input type="button" disabled={(setupState.players?.length || 0) < game.minPlayers} value="Start" onClick={onStart}/>
     </>
   );
 }

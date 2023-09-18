@@ -22,7 +22,6 @@ type ElementContext = {
   top: GameElement;
   removed: GameElement;
   sequence: number;
-  named: Record<string, GameElement>;
   player?: Player;
   classRegistry: ElementClass<GameElement>[];
   game?: Game<Player, Board>;

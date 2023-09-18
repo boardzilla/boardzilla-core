@@ -1,5 +1,7 @@
 import Loop from './loop';
 import Flow from './flow';
+import { serializeArg, deserializeArg } from '../action/utils';
+
 import type { Argument } from '../action/types';
 
 export default class ForEach extends Loop<Argument> {
@@ -24,6 +26,22 @@ export default class ForEach extends Loop<Argument> {
   reset() {
     const collection = (typeof this.collection === 'function') ? this.collection(this.flowStepArgs()) : this.collection;
     this.setPosition({ index: collection.length ? 0 : -1, value: collection[0], collection });
+  }
+
+  positionJSON() {
+    return {
+      index: this.position.index,
+      value: this.position.value ? serializeArg(this.position.value) : undefined,
+      collection: this.position.collection.map(serializeArg)
+    };
+  }
+
+  setPositionFromJSON(position: any) {
+    this.setPosition({
+      index: position.index,
+      value: deserializeArg(position.value, this.ctx.game),
+      collection: position.collection.map((a: any) => deserializeArg(a, this.ctx.game))
+    }, false);
   }
 
   toString(): string {

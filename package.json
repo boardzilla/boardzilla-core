@@ -10,6 +10,7 @@
     "graphology-traversal": "^0.3.1",
     "graphology-types": "^0.24.7",
     "react": "^17.0.2",
+    "react-color": "^2.19.3",
     "react-dom": "^17.0.2",
     "react-draggable": "^4.4.5",
     "zustand": "^4.4.0"
@@ -20,6 +21,7 @@
     "@types/jest": "^28.1.4",
     "@types/node": "^20.6.2",
     "@types/react": "^18.0.15",
+    "@types/react-color": "^3.0.6",
     "@types/react-dom": "^18.0.6",
     "chai": "^4.3.8",
     "chai-spies": "^1.0.0",

@@ -11,6 +11,7 @@ export type ActionStepPosition = {
 export type LoopPosition = any;
 export type SequencePosition = number;
 export type FlowBranchNode = {type: string, name?: string, position?: ActionStepPosition | LoopPosition | SequencePosition}
+export type FlowBranchJSON = {type: string, name?: string, position?: any}
 
 export type SwitchCaseCases<T> = {eq: T, flow: Flow}[] | {test: (a: T) => boolean, flow: Flow}[];
 

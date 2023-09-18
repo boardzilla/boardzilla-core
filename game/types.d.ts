@@ -19,33 +19,31 @@ export type GameState<P extends Player> = {
   board: ElementJSON[],
 }
 
-type PlayerState<P extends Player> = {
+export type PlayerState<P extends Player> = {
   position: number
-  players: (PlayerAttributes<P> & Record<string, any>)[] // Game-specific player object, scrubbed
-  board: any // json tree, scrubbed
+  state: GameState<P> // Game state, scrubbed
 }
 
-type Message = {
+export type Message = {
   position: number
   body: string
 }
 
-type GameUpdate<P extends Player> = {
+export type GameUpdate<P extends Player> = {
   game: GameState<P>
   players: PlayerState<P>[]
   messages: Message[]
 }
 
-export type GameInterface<P extends Player, B extends Board> = {
-  initialState: (state: SetupState, start?: boolean) => Game<P, B>,
+export type SetupFunction<P extends Player, B extends Board> = (state: SetupState | GameState<P>, start: boolean) => Game<P, B>
+
+export type GameInterface<P extends Player> = {
+  initialState: (state: SetupState, start?: boolean) => GameUpdate<P>,
   processMove: (
     previousState: GameState<P>,
     move: {
       position: number
-      data: {
-        action: string,
-        args: Argument[]
-      }
+      data: string[]
     }
-  ) => Game<P, B>
+  ) => GameUpdate<P>
 }

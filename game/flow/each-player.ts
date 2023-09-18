@@ -1,6 +1,7 @@
 import Flow from './flow';
 import { Player } from '../player';
 import { Loop } from './';
+import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
 export default class EachPlayer<P extends Player> extends Loop<P> {
   type = 'each-player';
@@ -44,6 +45,20 @@ export default class EachPlayer<P extends Player> extends Loop<P> {
       this.ctx.game.players.setCurrent(this.position.value);
       this.ctx.game.board._ctx.player = this.position.value;
     }
+  }
+
+  positionJSON() {
+    return {
+      index: this.position.index,
+      value: this.position.value ? serializeSingleArg(this.position.value) : undefined
+    };
+  }
+
+  setPositionFromJSON(position: any) {
+    this.setPosition({
+      index: position.index,
+      value: position.value ? deserializeSingleArg(position.value, this.ctx.game) as P : undefined
+    }, false);
   }
 
   toString(): string {
