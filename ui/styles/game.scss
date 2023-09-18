@@ -1,0 +1,20 @@
+.Space {
+  outline: .5vmin solid black;
+  padding: 1vmin;
+  margin: 1.5vmin;
+}
+
+.Piece {
+  display: inline-block;
+  outline: .5vmin solid blue;
+  padding: 1vmin;
+  margin: 1vmin;
+}
+
+.hilite {
+  outline: 1vmin solid yellow;
+}
+
+.selected {
+  outline: 1vmin solid red;
+}

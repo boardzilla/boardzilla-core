@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "target": "ES2020",
+    "types": ["node", "jest"],
+    "module": "nodenext",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "jsx": "react",
+    "resolveJsonModule": true
+  },
+  "include": ["*/game/**/*", "*/ui/**/*", "*/shared/**/*"],
+  "exclude": ["**/node_modules", "**/.*/"]
+}
