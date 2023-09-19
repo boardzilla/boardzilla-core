@@ -93,7 +93,7 @@ export default class Selection {
   // have to make some assumptions here to tree shake possible moves
   options(): Argument[] {
     if (!this.isResolved() || this.isUnbounded()) return [];
-    if (this.type === 'number') return range(this.min || 1, this.max!);
+    if (this.type === 'number') return range(this.min === undefined ? 1 : this.min, this.max!);
     if (this.type === 'choices') return this.choices instanceof Array ? this.choices : Object.keys(this.choices);
     if (this.type === 'board') return this.boardChoices;
     return [];
@@ -101,7 +101,7 @@ export default class Selection {
 
   isUnbounded(): boolean {
     if (!this.isResolved()) return true;
-    if (this.type === 'number') return this.max === undefined || this.max - (this.min || 1) > 100;
+    if (this.type === 'number') return this.max === undefined || this.max - (this.min === undefined ? 1 : this.min) > 100;
     return this.type === 'text' || this.type === 'button';
   }
 
@@ -131,8 +131,8 @@ export default class Selection {
       this.choices instanceof Array ? this.choices : Object.keys(this.choices) as Argument[]
     ).length > 0
 
-    const isInBounds = this.max !== undefined ? (this.min || 1) <= this.max : true;
-    if (this.type === 'board' && this.boardChoices) return isInBounds && this.boardChoices.length >= (this.min || 1);
+    const isInBounds = this.max !== undefined ? (this.min === undefined ? 1 : this.min) <= this.max : true;
+    if (this.type === 'board' && this.boardChoices) return isInBounds && this.boardChoices.length >= (this.min === undefined ? 1 : this.min);
     if (this.type === 'number') return isInBounds;
 
     return true;
