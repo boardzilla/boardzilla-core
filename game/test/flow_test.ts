@@ -172,6 +172,17 @@ describe('Flow', () => {
       { type: 'sequence', name: 'test', position: 4 }
     ]);
   });
+  it('serializes', () => {
+    const branch = [
+      { type: 'sequence', name: 'test', position: 3 },
+      { type: 'sequence', name: 'step4', position: 2 },
+      { type: 'action', name: 'play-or-pass', position: { action: 'pass', args: [], player: 1 }},
+      { type: 'sequence', name: 'pass-stage', position: 1 },
+    ];
+    testFlow.setBranch(branch);
+    testFlow.setBranchFromJSON(testFlow.branchJSON());
+    expect(testFlow.branch()).to.deep.equals(branch);
+  });
 });
 
 describe('Loop', () => {

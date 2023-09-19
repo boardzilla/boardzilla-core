@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { gameStore } from './';
 import Game from './game/Game';
 import Setup from './setup/Setup';
@@ -24,9 +24,11 @@ export default () => {
   const [phase, setPhase] = useState('new');
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
+  const [error, setError] = useState<string>();
+  const moves = useMemo<((e: string) => void)[]>(() => [], []);
 
-  const listener = useCallback((event: any) => {
-    const data = JSON.parse(event.data);
+  const listener = useCallback((event: MessageEvent<string>) => {
+    const data: UpdateEvent | UserEvent | MessageProcessed = JSON.parse(event.data);
     console.log('message', event, data);
     switch(data.type) {
     case 'update':
@@ -50,6 +52,12 @@ export default () => {
         setUsers((users) => users.filter(p => p.id !== id))
       }
       break;
+    case 'messageProcessed':
+      setError(data.error);
+      const move = moves[parseInt(data.id)];
+      if (move && data.error) move(data.error);
+      delete moves[parseInt(data.id)];
+      break;
     }
   }, [game]);
 
@@ -65,10 +73,14 @@ export default () => {
   }, [listener])
 
   const move = (move: Move<Player>) => {
+    moves.push((error: string) => console.error(`move ${move} failed: ${error}`));
     const message: MoveMessage = {
       type: "move",
-      id: "todo",
-      data: [move.action, ...move.args.map(serializeArg)]
+      id: String(moves.length),
+      data: {
+        action: move.action,
+        args: move.args.map(a => serializeArg(a))
+      }
     };
     window.top!.postMessage(message, "*");
   };
@@ -88,7 +100,11 @@ export default () => {
 
   console.log('RENDER MAIN', phase);
 
-  return phase === 'new' ?
-    <Setup users={users} setupState={setupState} onUpdate={update} onStart={start}/> :
-    <Game onMove={move}/>
+  return <>
+    {phase === 'new' ?
+      <Setup users={users} setupState={setupState} onUpdate={update} onStart={start}/> :
+      <Game onMove={move} onError={setError}/>
+    }
+    {error && <div className="error">{error}</div>}
+  </>
 }

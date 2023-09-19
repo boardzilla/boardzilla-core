@@ -102,6 +102,38 @@ describe('Board', () => {
     expect(board.first(Piece, 'piece2')!._t.id).to.equal(piece2._t.id);
   });
 
+  it('understands branches', () => {
+    const map = board.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const england = map.create(Space, 'england', {});
+    const play = board.create(Space, 'play', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = france.create(Piece, 'token2', { player: players[1] });
+    const piece3 = play.create(Piece, 'token3');
+    expect(piece1.branch()).to.equal('0/0/0/0');
+    expect(piece2.branch()).to.equal('0/0/0/1');
+    expect(piece3.branch()).to.equal('0/1/0');
+    expect(board.atBranch('0/0/0/0')).to.equal(piece1);
+    expect(board.atBranch('0/0/0/1')).to.equal(piece2);
+    expect(board.atBranch('0/1/0')).to.equal(piece3);
+  });
+
+  it('assigns and finds IDs', () => {
+    const map = board.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const england = map.create(Space, 'england', {});
+    const play = board.create(Space, 'play', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = france.create(Piece, 'token2', { player: players[1] });
+    const piece3 = play.create(Piece, 'token3');
+    expect(piece1._t.id).to.equal(6);
+    expect(piece2._t.id).to.equal(7);
+    expect(piece3._t.id).to.equal(8);
+    expect(board.atID(6)).to.equal(piece1);
+    expect(board.atID(7)).to.equal(piece2);
+    expect(board.atID(8)).to.equal(piece3);
+  });
+
   describe("Element subclasses", () => {
     class Card extends Piece {
       suit: string;

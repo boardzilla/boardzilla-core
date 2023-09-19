@@ -1,17 +1,17 @@
 import Loop from './loop';
 import Flow from './flow';
-import { serializeArg, deserializeArg } from '../action/utils';
+import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
-import type { Argument } from '../action/types';
+import type { SingleArgument } from '../action/types';
 
-export default class ForEach extends Loop<Argument> {
-  collection: ((a: Record<any, any>) => Argument[]) | Argument[]
-  position: { index: number, value?: Argument, collection: Argument[] };
+export default class ForEach extends Loop<SingleArgument> {
+  collection: ((a: Record<any, any>) => SingleArgument[]) | SingleArgument[]
+  position: { index: number, value?: SingleArgument, collection: SingleArgument[] };
   type = 'foreach';
 
   constructor({ name, collection, do: block }: {
     name?: string,
-    collection: ((a: Record<any, any>) => Argument[]) | Argument[],
+    collection: ((a: Record<any, any>) => SingleArgument[]) | SingleArgument[],
     do: Flow,
   }) {
     super({
@@ -28,19 +28,19 @@ export default class ForEach extends Loop<Argument> {
     this.setPosition({ index: collection.length ? 0 : -1, value: collection[0], collection });
   }
 
-  positionJSON() {
+  positionJSON(forPlayer=true) {
     return {
       index: this.position.index,
-      value: this.position.value ? serializeArg(this.position.value) : undefined,
-      collection: this.position.collection.map(serializeArg)
+      value: this.position.value ? serializeSingleArg(this.position.value) : undefined,
+      collection: this.position.collection.map(a => serializeSingleArg(a, forPlayer))
     };
   }
 
   setPositionFromJSON(position: any) {
     this.setPosition({
       index: position.index,
-      value: deserializeArg(position.value, this.ctx.game),
-      collection: position.collection.map((a: any) => deserializeArg(a, this.ctx.game))
+      value: deserializeSingleArg(position.value, this.ctx.game),
+      collection: position.collection.map((a: any) => deserializeSingleArg(a, this.ctx.game))
     }, false);
   }
 

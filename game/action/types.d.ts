@@ -2,8 +2,10 @@ import { Player } from '../player/';
 import { GameElement } from '../board/';
 import type Selection from './selection';
 
-export type Argument = string | number | boolean | GameElement | Player | string[] | number[] | boolean[] | GameElement[] | Player[];
-export type SerializedArg = string & { __brand: 'serializedArg' };
+export type SingleArgument = string | number | boolean | GameElement | Player;
+export type Argument = SingleArgument | SingleArgument[];
+export type SerializedSingleArg = string | number | boolean;
+export type SerializedArg = SerializedSingleArg | SerializedSingleArg[];
 
 export type BoardQuerySingle<T extends GameElement> = string | T | undefined | ((...a: Argument[]) => T | undefined)
 export type BoardQueryMulti<T extends GameElement> = string | T[] | ((...a: Argument[]) => T[])
@@ -21,6 +23,11 @@ export type IncompleteMove<P> = {
   action?: string,
   args: Argument[]
 };
+
+export type SerializedMove = {
+  action: string,
+  args: SerializedArg[]
+}
 
 /**
  * Selection objects represent player choices. They either specify the options

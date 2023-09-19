@@ -3,12 +3,12 @@ import { deserializeArg } from './action/utils';
 
 import type { SetupFunction, GameInterface, GameState, SetupState } from './types';
 import type { Player, Board } from './';
-import type { SerializedArg } from './action/types';
+import type { SerializedArg, SerializedMove } from './action/types';
 
 export const createInteface = (setup: SetupFunction<Player, Board>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState, start: boolean = true) => {
-      const game = setup(state, start);
+    initialState: (state: SetupState | GameState<Player>) => {
+      const game = setup(state, true);
       return {
         game: game.getState(),
         players: game.getPlayerStates(),
@@ -19,14 +19,14 @@ export const createInteface = (setup: SetupFunction<Player, Board>): GameInterfa
       previousState: GameState<Player>,
       move: {
         position: number
-        data: string[]
+        data: SerializedMove
       }
     ) => {
       const game = setup(previousState, true);
       const result = game.processMove({
         player: game.players.atPosition(move.position)!,
-        action: move.data[0],
-        args: move.data.slice(1).map(a => deserializeArg(a as SerializedArg, game))
+        action: move.data.action,
+        args: move.data.args.map(a => deserializeArg(a as SerializedArg, game))
       });
       if (result.selection) {
         throw Error(`Unable to process move: ${result.error}`);

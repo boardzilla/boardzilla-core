@@ -1,10 +1,10 @@
 import Flow from './flow';
-import { serializeArg, deserializeArg } from '../action/utils';
+import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
-import type { Argument } from '../action/types';
+import type { SingleArgument } from '../action/types';
 import type { SwitchCaseCases } from './types';
 
-export default class SwitchCase<T extends Argument> extends Flow {
+export default class SwitchCase<T extends SingleArgument> extends Flow {
   position: { index?: number, default?: boolean, value: T };
   switch: ((r: Record<any, any>) => T) | T;
   cases: SwitchCaseCases<T>;
@@ -44,11 +44,11 @@ export default class SwitchCase<T extends Argument> extends Flow {
     if (this.position.default) return this.default;
   }
 
-  positionJSON() {
+  positionJSON(forPlayer=true) {
     return {
       index: this.position.index,
       default: this.position.default,
-      value: serializeArg(this.position.value)
+      value: serializeSingleArg(this.position.value, forPlayer)
     };
   }
 
@@ -56,7 +56,7 @@ export default class SwitchCase<T extends Argument> extends Flow {
     this.setPosition({
       index: position.index,
       default: position.default,
-      value: deserializeArg(position.value, this.ctx.game)
+      value: deserializeSingleArg(position.value, this.ctx.game)
     }, false);
   }
 

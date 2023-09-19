@@ -136,7 +136,7 @@ describe('Game', () => {
         position: [
           { type: 'sequence', position: 2 },
           { type: 'loop', position: { index: 0 } },
-          { type: 'each-player', position: { index: 1, value: game.players[1] } },
+          { type: 'each-player', position: { index: 1, value: '$p[2]' } },
         ],
         board: [ { className: 'TestBoard', tokens: 9 } ],
       });

@@ -59,16 +59,16 @@ export default class Flow {
     return branch;
   }
 
-  branchJSON(): FlowBranchNode[] {
+  branchJSON(forPlayer=true): FlowBranchNode[] {
     if (this.position === undefined) return [];
     let branch = [
       {
         type: this.type,
-        position: this.positionJSON()
+        position: this.positionJSON(forPlayer)
       } as FlowBranchJSON
     ]
     if (this.name) branch[0].name = this.name;
-    if (this.subflow) branch = branch.concat(this.subflow.branchJSON());
+    if (this.subflow) branch = branch.concat(this.subflow.branchJSON(forPlayer));
     return branch;
   }
 
@@ -207,7 +207,7 @@ export default class Flow {
   }
 
   // override if position contains objects that need serialization
-  positionJSON() {
+  positionJSON(forPlayer=true) {
     return this.position;
   }
 

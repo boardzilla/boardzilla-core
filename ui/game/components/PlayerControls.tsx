@@ -11,9 +11,8 @@ import type {
   IncompleteMove
 } from '../../../game/action/types';
 
-const PlayerControls = ({move, error, selection, onSubmit}: {
+const PlayerControls = ({move, selection, onSubmit}: {
   move?: IncompleteMove<Player>;
-  error?: string;
   selection?: ResolvedSelection;
   onSubmit: (move?: IncompleteMove<Player>) => void;
 }) => {
@@ -101,7 +100,6 @@ const PlayerControls = ({move, error, selection, onSubmit}: {
           )}
         </div>
       </form>
-      {error && <div className="error">{error}</div>}
     </div>
   );
 };

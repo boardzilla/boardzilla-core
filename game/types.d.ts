@@ -1,7 +1,7 @@
 import type Game from './game';
 import type { Player } from './player/';
 import type { Board } from './board/';
-import type { Argument } from './action/types';
+import type { SerializedMove } from './action/types';
 import type { ElementJSON } from './board/types';
 import type { PlayerAttributes } from './player/types';
 import type { FlowBranchNode } from './flow/types';
@@ -38,12 +38,12 @@ export type GameUpdate<P extends Player> = {
 export type SetupFunction<P extends Player, B extends Board> = (state: SetupState | GameState<P>, start: boolean) => Game<P, B>
 
 export type GameInterface<P extends Player> = {
-  initialState: (state: SetupState, start?: boolean) => GameUpdate<P>,
+  initialState: (state: SetupState) => GameUpdate<P>,
   processMove: (
     previousState: GameState<P>,
     move: {
       position: number
-      data: string[]
+      data: SerializedMove
     }
   ) => GameUpdate<P>
 }

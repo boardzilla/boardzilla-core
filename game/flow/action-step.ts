@@ -52,11 +52,11 @@ export default class PlayerAction extends Flow {
     }
   }
 
-  positionJSON() {
+  positionJSON(forPlayer=true) {
     if (this.position) return {
       player: this.position.player,
       action: this.position.action,
-      args: this.position.args.map(serializeArg)
+      args: this.position.args.map(a => serializeArg(a, forPlayer))
     };
   }
 

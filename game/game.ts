@@ -107,7 +107,7 @@ export default class Game<P extends Player, B extends Board> {
       players: this.players.map(p => p.toJSON() as PlayerAttributes<P>),
       currentPlayerPosition: this.players.currentPosition,
       settings: this.settings,
-      position: this.flow.branchJSON(),
+      position: this.flow.branchJSON(false),
       board: this.board.allJSON(),
     };
   }
@@ -119,7 +119,7 @@ export default class Game<P extends Player, B extends Board> {
         players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
         currentPlayerPosition: this.players.currentPosition,
         settings: this.settings,
-        position: this.flow.branchJSON(),
+        position: this.flow.branchJSON(true),
         board: this.board.allJSON(p.position)
       }
     }));

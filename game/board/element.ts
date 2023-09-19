@@ -292,6 +292,10 @@ export default class GameElement {
     return node;
   }
 
+  atID(id: number): GameElement | undefined {
+    return this._t.children.find(c => c._t.id === id) || this._t.children.find(c => c.atID(id))?.atID(id)
+  }
+
   isDescendantOf(el: GameElement): boolean {
     return this._t.parent === el || !!this._t.parent?.isDescendantOf(el)
   }

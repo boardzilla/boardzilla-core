@@ -1,7 +1,6 @@
 import type { PlayerAttributes } from '../game/player/types';
 import type { Player } from '../game/player';
-
-export type Argument = string | number | boolean;
+import type { SerializedArg } from '../game/action/types';
 
 export type User = {
   id: string
@@ -15,12 +14,6 @@ export type SetupState = {
   settings: Record<string, any>
 }
 
-export type SetupComponentProps = {
-  name: string
-  settings: Record<string, any>
-  updateKey: (key: string, value: any) => void
-}
-
 // used to update the current setup json state
 export type SetupUpdated = {
   type: "setupUpdated"
@@ -31,7 +24,10 @@ export type SetupUpdated = {
 export type MoveMessage = {
   id: string
   type: 'move'
-  data: string[]
+  data: {
+    action: string,
+    args: SerializedArg[]
+  }
 }
 
 // used to actually start the game
@@ -79,5 +75,5 @@ export type UpdateEvent = {
 type MessageProcessed = {
   type: "messageProcessed"
   id: string
-  error: string | undefined
+  error?: string
 }

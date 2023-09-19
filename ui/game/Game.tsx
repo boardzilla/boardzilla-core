@@ -10,9 +10,8 @@ import type { GameElement } from '../../game/board'
 import type { Move } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
-export default ({ onMove }: { onMove: (m: Move<Player>) => void }) => {
+export default ({ onMove, onError }: { onMove: (m: Move<Player>) => void, onError: (e?: string) => void }) => {
   const [game, updateBoard, player, move, setMove, autoplay, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.player, s.move, s.setMove, s.autoplay, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
-  const [error, setError] = useState<string>();
 
   if (!player) {
     console.log('no player to render');
@@ -38,12 +37,12 @@ export default ({ onMove }: { onMove: (m: Move<Player>) => void }) => {
     setSelected([]);
 
     if (newSelection) {
-      setError(error);
+      onError(error);
       setSelection(newSelection);
       setMove(newMove);
     } else {
       setMove(undefined);
-      setError("");
+      onError();
       setSelection(undefined);
       if (autoplay) game.play();
       updateBoard();
@@ -79,7 +78,6 @@ export default ({ onMove }: { onMove: (m: Move<Player>) => void }) => {
       />
       <PlayerControls
         move={move}
-        error={error}
         selection={selection}
         onSubmit={submitMove}
       />
