@@ -223,6 +223,7 @@ export default class GameElement {
   }
 
   create<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
+    if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
     const el = this.createElement(className, name, attrs);
     el._t.parent = this;
     this._t.children.push(el);
@@ -320,8 +321,10 @@ export default class GameElement {
       } else {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
         if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
-        child = this.create(elementClass, name, rest);
+        child = this.createElement(elementClass, name, rest);
         child.setId(_id);
+        child._t.parent = this;
+        this._t.children.push(child);
       }
       if (player) child.player = this._ctx.game?.players.atPosition(player);
       if (children) child.createChildrenFromJSON(children);

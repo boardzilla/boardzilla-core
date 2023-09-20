@@ -148,7 +148,6 @@ describe('Game', () => {
         ],
         board: [ { className: 'TestBoard', tokens: 9 } ],
       });
-      debugger;
       expect(game.players.currentPosition).to.equal(2);
       game.play();
       game.processMove({ action: 'takeOne', args: [], player: game.players[1] });
@@ -163,12 +162,16 @@ describe('Game', () => {
       expect(game.players.currentPosition).to.equal(1);
       expect(game.flow.branch()[1].position.index).to.equal(1)
     });
+  });
 
+  describe('godMode', () => {
+    beforeEach(() => { game.phase = 'define'; });
     it("does god mode moves", () => {
       game.godMode = true;
       const space1 = game.board.create(Space, 'area1');
       const space2 = game.board.create(Space, 'area2');
       const piece = space1.create(Piece, 'piece');
+      game.start();
       game.processMove({
         player: game.players[0],
         action: '_godMove',
@@ -180,6 +183,7 @@ describe('Game', () => {
     it("does god mode edits", () => {
       game.godMode = true;
       const card = game.board.create(Card, 'area1', {suit: "H", value: 1, flipped: false});
+      game.start();
       game.processMove({
         player: game.players[0],
         action: '_godEdit',
@@ -192,6 +196,7 @@ describe('Game', () => {
       const space1 = game.board.create(Space, 'area1');
       const space2 = game.board.create(Space, 'area2');
       const piece = space1.create(Piece, 'piece');
+      game.start();
       expect(() => game.processMove({
         player: game.players[0],
         action: '_godMove',

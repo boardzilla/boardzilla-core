@@ -15,6 +15,12 @@ export type SetupState = {
   settings: Record<string, any>
 }
 
+export type SetupComponentProps = {
+  name: string
+  settings: Record<string, any>
+  updateKey: (key: string, value: any) => void
+}
+
 // used to update the current setup json state
 export type SetupUpdated = {
   type: "setupUpdated"
