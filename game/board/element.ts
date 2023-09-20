@@ -7,7 +7,6 @@ import type {
   ElementClass,
   ElementFinder,
   ElementJSON,
-  ElementEventHandler
 } from './types';
 
 import type { Player } from '../player';
@@ -40,10 +39,6 @@ export default class GameElement {
     except?: number[]
   }
 
-  _eventHandlers: {
-    enter: ElementEventHandler<GameElement>[],
-  } = { enter: [] };
-
   static isGameElement = true;
   static hiddenAttributes: string[] = [];
 
@@ -52,7 +47,6 @@ export default class GameElement {
     if (!ctx.top) {
       this._ctx.top = this;
       this._ctx.sequence = 0;
-      this._ctx.removed = this.createElement(GameElement, 'removed');
     }
 
     this._t = {
@@ -228,21 +222,6 @@ export default class GameElement {
     );
   }
 
-  addEventHandler<T extends GameElement>(type: "enter", handler: ElementEventHandler<T>) {
-    this._eventHandlers[type].push(handler);
-  }
-
-  onEnter<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void) {
-    this.addEventHandler<T>("enter", { callback, type });
-  }
-
-  triggerEvent(event: "enter", entering: GameElement) {
-    for (const handler of this._eventHandlers[event]) {
-      if (event === 'enter' && !isA(entering, handler.type)) continue;
-      handler.callback(entering);
-    }
-  }
-
   create<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
     const el = this.createElement(className, name, attrs);
     el._t.parent = this;
@@ -265,7 +244,6 @@ export default class GameElement {
     el.board = this.board;
     el.name = name;
     Object.assign(el, attrs);
-    this.triggerEvent("enter", el);
     return el;
   }
 
@@ -302,7 +280,8 @@ export default class GameElement {
 
   toJSON(seenBy?: number) {
     let attrs: Record<any, any>;
-    let { _t, _ctx, _eventHandlers, board, ...rest } = this;
+    let { _t, _ctx, board, ...rest } = this;
+    if ('_eventHandlers' in rest) delete rest['_eventHandlers'];
 
     // remove methods
     rest = Object.fromEntries(Object.entries(rest).filter(
@@ -327,14 +306,28 @@ export default class GameElement {
   }
 
   createChildrenFromJSON(childrenJSON: ElementJSON[]) {
+    // truncate non-spaces
+    this._t.children = new ElementCollection(...this._t.children.filter(c => ('isSpace' in c)));
+    const spaces = this._t.children.map(c => c._t.id);
+
     for (const json of childrenJSON) {
       const { className, children, _id, name, player, ...rest } = json;
-      const elementClass = this._ctx.classRegistry.find(c => c.name === className);
-      if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
-      const child = this.create(elementClass, name, rest);
-      child.setId(_id);
+      let child: GameElement;
+      if (_id !== undefined && spaces.includes(_id)) {
+        child = this._t.children.find(c => c._t.id === _id)!;
+        Object.assign(child, {...rest});
+        delete spaces[spaces.indexOf(_id)];
+      } else {
+        const elementClass = this._ctx.classRegistry.find(c => c.name === className);
+        if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
+        child = this.create(elementClass, name, rest);
+        child.setId(_id);
+      }
       if (player) child.player = this._ctx.game?.players.atPosition(player);
       if (children) child.createChildrenFromJSON(children);
     };
+
+    // remove any spaces that were unaccounted for
+    this._t.children = new ElementCollection(...this._t.children.filter(c => !spaces.includes(c._t.id)));
   }
 }

@@ -35,12 +35,14 @@ describe('Board', () => {
 
   beforeEach(() => {
     board = new Board(Space, Piece, GameElement);
+    // @ts-ignore
+    board._ctx.game = { players };
   });
 
   it('renders', () => {
     expect(board.allJSON()).to.deep.equals(
       [
-        { className: 'Board', _id: 1 },
+        { className: 'Board', _id: 0 },
       ]
     );
   });
@@ -49,7 +51,7 @@ describe('Board', () => {
     board.create(Space, 'map', {});
     expect(board.allJSON()).to.deep.equals(
       [
-        { className: 'Board', _id: 1, children: [
+        { className: 'Board', _id: 0, children: [
           { className: 'Space', name: 'map', _id: 2 }
         ]},
       ]
@@ -60,7 +62,7 @@ describe('Board', () => {
     board.create(Piece, 'token', { player: players[0] });
     expect(board.allJSON()).to.deep.equals(
       [
-        { className: 'Board', _id: 1, children: [
+        { className: 'Board', _id: 0, children: [
           { className: 'Piece', name: 'token', _id: 2, player: 1 }
         ]},
       ]
@@ -73,7 +75,7 @@ describe('Board', () => {
     board.first(Piece)!.remove();
     expect(board.allJSON()).to.deep.equals(
       [
-        { className: 'Board', _id: 1, children: [
+        { className: 'Board', _id: 0, children: [
           { className: 'Piece', name: 'token', _id: 3, player: 1 }
         ]},
         { className: 'Piece', name: 'token', _id: 2, player: 2 }
@@ -87,7 +89,7 @@ describe('Board', () => {
     board.all(Piece).remove();
     expect(board.allJSON()).to.deep.equals(
       [
-        { className: 'Board', _id: 1},
+        { className: 'Board', _id: 0},
         { className: 'Piece', name: 'token', _id: 2, player: 2 },
         { className: 'Piece', name: 'token', _id: 3, player: 1 }
       ]
@@ -95,11 +97,19 @@ describe('Board', () => {
   });
 
   it('builds from json', () => {
-    const piece1 = board.create(Piece, 'piece1');
-    const piece2 = board.create(Piece, 'piece2');
+    const map = board.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const england = map.create(Space, 'england', {});
+    const play = board.create(Space, 'play', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = france.create(Piece, 'token2', { player: players[1] });
+    const piece3 = play.create(Piece, 'token3');
+    const json = board.allJSON();
     board.fromJSON(board.allJSON());
-    expect(board.first(Piece, 'piece1')!._t.id).to.equal(piece1._t.id);
-    expect(board.first(Piece, 'piece2')!._t.id).to.equal(piece2._t.id);
+    expect(board.allJSON()).to.deep.equals(json);
+    expect(board.first(Piece, 'token1')!._t.id).to.equal(piece1._t.id);
+    expect(board.first(Piece, 'token2')!._t.id).to.equal(piece2._t.id);
+    expect(board.first(Space, 'france')).to.equal(france);
   });
 
   it('understands branches', () => {
@@ -150,7 +160,7 @@ describe('Board', () => {
       board.create(Card, '2H', { suit: 'H', pip: 2 });
       expect(board.allJSON()).to.deep.equals(
         [
-          { className: 'Board', _id: 1, children: [
+          { className: 'Board', _id: 0, children: [
             { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 2 }
           ]},
         ]
@@ -161,7 +171,7 @@ describe('Board', () => {
       board.create(Card, '2H', { player: players[1], suit: 'H', pip: 2 });
       expect(board.allJSON()).to.deep.equals(
         [
-          { className: 'Board', _id: 1, children: [
+          { className: 'Board', _id: 0, children: [
             { className: 'Card', flipped: false, state: 'initial', name: '2H', player: 2, suit: 'H', pip: 2, _id: 2 }
           ]},
         ]
@@ -195,7 +205,7 @@ describe('Board', () => {
       expect(card.suit).equals('D');
       expect(board.allJSON()).to.deep.equals(
         [
-          { className: 'Board', _id: 1, children: [
+          { className: 'Board', _id: 0, children: [
             { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 2 },
             { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'D', pip: 2, _id: 3 },
             { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 4 }
@@ -212,7 +222,7 @@ describe('Board', () => {
 
       expect(board.allJSON()).to.deep.equals(
         [
-          { className: 'Board', _id: 1, children: [
+          { className: 'Board', _id: 0, children: [
             { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 2 },
             { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 3 },
           ]},
@@ -234,7 +244,7 @@ describe('Board', () => {
       deck.lastN(2, Card).putInto(discard);
       expect(board.allJSON()).to.deep.equals(
         [
-          { className: 'Board', _id: 1, children: [
+          { className: 'Board', _id: 0, children: [
             { className: 'Space', name: 'deck', _id: 2, children: [
               { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
             ]},
@@ -249,7 +259,7 @@ describe('Board', () => {
       discard.first(Card)!.putInto(deck, {fromBottom: 0});
       expect(board.allJSON()).to.deep.equals(
         [
-          { className: 'Board', _id: 1, children: [
+          { className: 'Board', _id: 0, children: [
             { className: 'Space', name: 'deck', _id: 2, children: [
               { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
               { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
@@ -346,6 +356,14 @@ describe('Board', () => {
       deck.onEnter(Card, eventSpy);
       const card = board.create(Card, "AH", {suit: "H", pip: 1});
       card.putInto(deck);
+      expect(eventSpy).to.have.been.called()
+    });
+
+    it("preserves events in JSON", () => {
+      const eventSpy = chai.spy();
+      board.onEnter(Card, eventSpy);
+      board.fromJSON(board.allJSON());
+      board.create(Card, "AH", {suit: "H", pip: 1});
       expect(eventSpy).to.have.been.called()
     });
   });

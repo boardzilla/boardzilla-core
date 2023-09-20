@@ -5,13 +5,17 @@ import Board from './components/Board';
 import PlayerControls from './components/PlayerControls';
 import Debug from './components/Debug';
 import '../styles/game.scss';
+import { serializeArg } from '../../game/action/utils';
 
 import type { GameElement } from '../../game/board'
-import type { Move } from '../../game/action/types';
+import type { Move, SerializedMove } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
-export default ({ onMove, onError }: { onMove: (m: Move<Player>) => void, onError: (e?: string) => void }) => {
-  const [game, updateBoard, player, move, setMove, autoplay, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.player, s.move, s.setMove, s.autoplay, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
+export default ({ onMove, onError }: {
+  onMove: (m: SerializedMove) => void,
+  onError: (e?: string) => void
+}) => {
+  const [game, updateBoard, player, move, setMove, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.player, s.move, s.setMove, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
 
   if (!player) {
     console.log('no player to render');
@@ -26,11 +30,18 @@ export default ({ onMove, onError }: { onMove: (m: Move<Player>) => void, onErro
 
   const submitMove = (move?: Move<Player>) => {
     console.log("processAction", move);
-    if (!move) {
+    if (!move?.action) {
       setMove({ player, args: [] });
+      onError();
       return updateBoard();
     }
     if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
+
+    // serialize now before we alter our state to ensure proper references
+    const serializedMove: SerializedMove = {
+      action: move.action,
+      args: move.args.map(a => serializeArg(a))
+    }
 
     const {move: newMove, selection: newSelection, error} = game.processMove(move);
     console.log('response', newMove, newSelection, error);
@@ -41,12 +52,12 @@ export default ({ onMove, onError }: { onMove: (m: Move<Player>) => void, onErro
       setSelection(newSelection);
       setMove(newMove);
     } else {
+      console.log('success, submitting to server');
       setMove(undefined);
       onError();
       setSelection(undefined);
-      if (autoplay) game.play();
       updateBoard();
-      onMove(move);
+      onMove(serializedMove);
     }
   };
 

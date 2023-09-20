@@ -43,15 +43,18 @@ export type BoardSelection<T extends GameElement> = {
 
 export type ChoiceSelection = {
   choices: Argument[] | Record<string, Argument> | ((...a: Argument[]) => Argument[] | Record<string, Argument>);
+  default?: Argument | ((...a: Argument[]) => Argument);
 }
 
 export type NumberSelection = {
   min?: number | ((...a: Argument[]) => number);
   max?: number | ((...a: Argument[]) => number);
+  default?: number | ((...a: Argument[]) => number);
 }
 
 export type TextSelection = {
   regexp?: RegExp;
+  default?: string | ((...a: Argument[]) => string);
 }
 
 export type ButtonSelection = any;
@@ -97,6 +100,7 @@ export type ResolvedSelection = Selection & {
   boardChoices: GameElement[];
   min?: number;
   max?: number;
+  default?: Argument;
   regexp?: RegExp;
 }
 

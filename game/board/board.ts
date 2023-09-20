@@ -8,6 +8,7 @@ export default class Board extends Space {
   constructor(...classes: ElementClass<GameElement>[]) {
     super({ classRegistry: classes });
     this.board = this;
+    this._ctx.removed = this.createElement(Space, 'removed');
     this.pile = this._ctx.removed;
   }
 
@@ -24,7 +25,6 @@ export default class Board extends Space {
 
     // reset all on self
     Object.assign(this, {...rest});
-    this._t.children.splice(0, this._t.children.length);
     this._ctx.removed._t.children.splice(0, this._ctx.removed._t.children.length);
 
     if (children) this.createChildrenFromJSON(children);

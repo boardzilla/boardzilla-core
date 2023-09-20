@@ -1,4 +1,4 @@
-import { Action, Selection } from './action/';
+import { Action, Selection, MoveAction } from './action/';
 import {
   Board,
   Space,
@@ -29,6 +29,7 @@ export default class Game<P extends Player, B extends Board> {
   phase: 'define' | 'new' | 'started'
   minPlayers = 1;
   maxPlayers: number;
+  godMode = false;
 
   constructor() {
     this.phase = 'define';
@@ -43,7 +44,15 @@ export default class Game<P extends Player, B extends Board> {
   }
 
   action(name: string, player: P) {
-    return this.inContextOfPlayer(player, () => this.actions(this, this.board)[name](player));
+    if (this.godMode) {
+      const action = this.godModeActions()[name];
+      if (action) return action;
+    }
+    return this.inContextOfPlayer(player, () => {
+      const action = this.actions(this, this.board)[name];
+      if (!action) throw Error(`No such action ${name}`);
+      return action(player);
+    });
   }
 
   defineActions(actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action>) {
@@ -75,6 +84,52 @@ export default class Game<P extends Player, B extends Board> {
 
   setSettings(settings: Record<string, any>) {
     this.settings = settings;
+  }
+
+  godModeActions(): Record<string, Action> {
+    if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
+    return {
+      _godMove: new MoveAction({
+        prompt: "Move anything",
+        promptTo: "To anywhere",
+        piece: {
+          chooseFrom: this.board.all(Piece)
+        },
+        to: {
+          chooseFrom: this.board.all(GameElement)
+        },
+      }),
+      _godEdit: new Action({
+        prompt: "Change anything",
+        selections: [{
+          prompt: "Select element",
+          selectOnBoard: {
+            chooseFrom: this.board.all(GameElement)
+          }
+        }, {
+          prompt: "Change what?",
+          selectFromChoices: {
+            choices: (el: GameElement) => Object.keys(el).filter(a => !['_t', '_ctx', '_eventHandlers', 'mine', 'board'].includes(a))
+          }
+        }, {
+          prompt: "Change to",
+          enterText: {
+            default: (el: GameElement, attr: keyof GameElement) => String(el[attr])
+          }
+        }],
+        move: (el: GameElement, attr: keyof GameElement, value: any) => {
+          if (value === 'true') {
+            value = true;
+          } else if (value === 'false') {
+            value = false;
+          } else if (parseInt(value).toString() === value) {
+            value = parseInt(value);
+          }
+          // @ts-ignore
+          el[attr] = value
+        }
+      })
+    };
   }
 
   start() {
@@ -177,14 +232,18 @@ export default class Game<P extends Player, B extends Board> {
   // it. if not, returns next selection for that player, plus any implied partial
   // moves
   processMove({ player, action, args }: Move<P>): MoveResponse<P> {
+    let resolvedSelection, truncatedArgs, error;
     return this.inContextOfPlayer(player, () => {
-      const actionChosen = this.action(action, player);
-      if (!actionChosen) throw Error(`No such action ${action}`);
-      const [resolvedSelection, truncatedArgs, error] = this.flow.processMove({
-        action,
-        player: player.position,
-        args
-      });
+      if (this.godMode && this.godModeActions()[action]) {
+        const godModeAction = this.godModeActions()[action];
+        [resolvedSelection, truncatedArgs, error] = godModeAction.process(...args);
+      } else {
+        [resolvedSelection, truncatedArgs, error] = this.flow.processMove({
+          action,
+          player: player.position,
+          args
+        });
+      }
       if (resolvedSelection) return {
         selection: resolvedSelection,
         move: {action, player, args: truncatedArgs || []},
@@ -197,12 +256,13 @@ export default class Game<P extends Player, B extends Board> {
     });
   }
 
-  allowedActions(player: P) {
-    if (this.players.currentPosition && player !== this.players.current()) return [];
+  allowedActions(player: P): string[] {
+    const allowedActions = this.godMode ? Object.keys(this.godModeActions()) : [];
+    if (this.players.currentPosition && player !== this.players.current()) return allowedActions;
     return this.inContextOfPlayer(player, () => {
       let actions = this.flow.actionNeeded();
-      if (!actions) return [];
-      return actions.filter(a => this.action(a, player).isPossible());
+      if (!actions) return allowedActions;
+      return allowedActions.concat(actions.filter(a => this.action(a, player).isPossible()));
     });
   }
 

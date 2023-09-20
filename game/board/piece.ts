@@ -1,4 +1,5 @@
 import GameElement from './element'
+import Space from './space'
 
 export default class Piece extends GameElement {
   putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
@@ -11,7 +12,7 @@ export default class Piece extends GameElement {
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);
-    to.triggerEvent("enter", this);
+    if (to instanceof Space) to.triggerEvent("enter", this);
   }
 
   remove() {

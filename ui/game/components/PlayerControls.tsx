@@ -67,7 +67,7 @@ const PlayerControls = ({move, selection, onSubmit}: {
             (selection.choices instanceof Array ?
              selection.choices.map(c => ([c, c])) :
              Object.entries(selection.choices)).map(([k,v]) => (
-               <button key={serializeArg(k)} type="submit" name="selection" value={serializeArg(k)}>
+               <button key={String(serializeArg(k))} type="submit" name="selection" value={String(serializeArg(k))}>
                  {humanizeArg(v)}
                </button>
              ))
@@ -75,14 +75,20 @@ const PlayerControls = ({move, selection, onSubmit}: {
 
           {selection?.type === 'number' && (
             <>
-              <input name="selection" type="number" min={selection.min} max={selection.max} />
+              <input
+                name="selection"
+                type="number"
+                min={selection.min}
+                max={selection.max}
+                defaultValue={selection.default === undefined ? "" : String(selection.default)}
+              />
               <button type="submit">Submit</button>
             </>
           )}
 
           {selection?.type === 'text' && (
             <>
-              <input name="selection" />
+              <input name="selection" defaultValue={selection.default === undefined ? "" : String(selection.default)}/>
               <button type="submit">Submit</button>
             </>
           )}

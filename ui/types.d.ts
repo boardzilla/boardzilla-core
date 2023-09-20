@@ -1,6 +1,7 @@
 import type { PlayerAttributes } from '../game/player/types';
 import type { Player } from '../game/player';
 import type { SerializedArg } from '../game/action/types';
+import type { GameState } from '../game/types';
 
 export type User = {
   id: string
@@ -50,26 +51,17 @@ type UserEvent = {
   added: boolean
 }
 
-// an update to the current game state
-export type UpdateEvent = {
-  type: "update"
-  phase: "new" | "started"
-  state: any
+// an update to the setup state
+type SetupUpdateEvent = {
+  type: "setupUpdate"
+  state: SetupState
 }
 
-// // an update to the setup state
-// type SetupUpdateEvent = {
-//   type: "update"
-//   phase: "new"
-//   state: SetupState
-// }
-
-// // an update to the current game state
-// type GameUpdateEvent = {
-//   type: "update"
-//   phase: "started"
-//   state: GameState
-// }
+// an update to the current game state
+type GameUpdateEvent = {
+  type: "gameUpdate"
+  state: GameState<Player>
+}
 
 // indicates the disposition of a message that was processed
 type MessageProcessed = {

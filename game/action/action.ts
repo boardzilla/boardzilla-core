@@ -76,7 +76,10 @@ export default class Action {
     // truncate invalid args
     for (let i = 0; i !== args.length; i++) {
       error = selections[i].validate(args[i], args.slice(0, i));
-      if (error) args = args.slice(0, i);
+      if (error) {
+        args = args.slice(0, i);
+        break;
+      }
     }
 
     // check next selection for viable options. append any forced args

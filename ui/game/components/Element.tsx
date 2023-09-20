@@ -39,11 +39,6 @@ const Element = ({element, json, clickables, hilites, selected, onSelectElement}
   const isSelected = selected.includes(element);
   const isClickable = clickables.includes(element)
 
-  // debug
-  if (player && !element.isVisibleTo(player.position)) {
-    element = element.hidden();
-  }
-
   const htmlElement = isA(element, Piece) ? {
     tag: 'span',
     base: 'Piece'
@@ -67,7 +62,7 @@ const Element = ({element, json, clickables, hilites, selected, onSelectElement}
           selected: isSelected,
         }
       ),
-      onClick: isClickable ? () => onSelectElement(element) : null,
+      onClick: isClickable ? (e: Event) => { e.stopPropagation(); onSelectElement(element) } : null,
       ...elementAttributes(element)
     },
     appearance(

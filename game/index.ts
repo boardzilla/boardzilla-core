@@ -76,6 +76,10 @@ export default <P extends Player, B extends Board>({ minPlayers, maxPlayers, pla
       game.start();
     }
   } else {
+    // require setup to build spaces and event handlers
+    game.players.fromJSON(state.players);
+    setupBoard(game, game.board as B);
+
     game.setState(state);
   }
   console.timeLog('setup');

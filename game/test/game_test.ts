@@ -8,6 +8,8 @@ import {
   Game,
   Action,
   Board,
+  Space,
+  Piece,
   Player
 } from '../';
 
@@ -35,13 +37,19 @@ describe('Game', () => {
     tokens: number = 0;
   }
 
+  class Card extends Piece {
+    suit: string;
+    value: number;
+    flipped: boolean;
+  }
+
   let game: Game<Player, TestBoard>;
   let board: TestBoard;
 
   beforeEach(() => {
     spendSpy = chai.spy();
     game = new Game();
-    board = game.defineBoard(TestBoard, [  ]);
+    board = game.defineBoard(TestBoard, [ Card ]);
     game.defineFlow(
       (game, board) => new Sequence({
         steps: [
@@ -154,6 +162,41 @@ describe('Game', () => {
       game.play();
       expect(game.players.currentPosition).to.equal(1);
       expect(game.flow.branch()[1].position.index).to.equal(1)
+    });
+
+    it("does god mode moves", () => {
+      game.godMode = true;
+      const space1 = game.board.create(Space, 'area1');
+      const space2 = game.board.create(Space, 'area2');
+      const piece = space1.create(Piece, 'piece');
+      game.processMove({
+        player: game.players[0],
+        action: '_godMove',
+        args: [ piece, space2 ]
+      });
+      expect(space2.first(Piece)).to.equal(piece);
+    });
+
+    it("does god mode edits", () => {
+      game.godMode = true;
+      const card = game.board.create(Card, 'area1', {suit: "H", value: 1, flipped: false});
+      game.processMove({
+        player: game.players[0],
+        action: '_godEdit',
+        args: [ card, 'suit', 'S' ]
+      });
+      expect(card.suit).to.equal('S');
+    });
+
+    it("restricts god mode moves", () => {
+      const space1 = game.board.create(Space, 'area1');
+      const space2 = game.board.create(Space, 'area2');
+      const piece = space1.create(Piece, 'piece');
+      expect(() => game.processMove({
+        player: game.players[0],
+        action: '_godMove',
+        args: [ piece, space2 ]
+      })).to.throw()
     });
   });
 

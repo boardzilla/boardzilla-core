@@ -1,14 +1,45 @@
 import GameElement from './element'
 import ElementCollection from './element-collection'
+import { isA } from '../utils';
 
 import { UndirectedGraph } from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
 import { bfs } from 'graphology-traversal';
 
-import type { ElementFinder, ElementClass } from './types';
+import type {
+  ElementFinder,
+  ElementClass,
+  ElementAttributes,
+  ElementEventHandler
+} from './types';
 
 export default class Space extends GameElement {
+  _eventHandlers: {
+    enter: ElementEventHandler<GameElement>[],
+  } = { enter: [] };
+
   isSpace() { return true; }
+
+  createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
+    const el = super.createElement(className, name, attrs);
+    this.triggerEvent("enter", el);
+    return el;
+  }
+
+  addEventHandler<T extends GameElement>(type: "enter", handler: ElementEventHandler<T>) {
+    this._eventHandlers[type].push(handler);
+  }
+
+  onEnter<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void) {
+    this.addEventHandler<T>("enter", { callback, type });
+  }
+
+  triggerEvent(event: "enter", entering: GameElement) {
+    for (const handler of this._eventHandlers[event]) {
+      if (event === 'enter' && !isA(entering, handler.type)) continue;
+      handler.callback(entering);
+    }
+  }
 
   connectTo(el: GameElement, cost: number = 1) {
     if (!this._t.parent || this._t.parent !== el._t.parent) throw Error("Cannot connect two elements that are on different spaces");

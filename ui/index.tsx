@@ -31,8 +31,6 @@ type GameStore = {
   setHilites: (h: GameElement[]) => void;
   uiOptions: UIOptions;
   setUIOptions: (o: UIOptions) => void;
-  autoplay: boolean;
-  toggleAutoplay: () => void;
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
@@ -44,6 +42,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   }),
   userID: "",
   setUserID: userID => set({ userID }),
+  // function to ensure react detects a change. must be called immediately after any function that alters game state
   updateBoard: () => {
     set(s => {
       if (s.move) console.error(s.move, 'during updateBoard? why?');
@@ -80,8 +79,6 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setHilites: hilites => set({ hilites }),
   uiOptions: {},
   setUIOptions: uiOptions => set({ uiOptions }),
-  autoplay: true,
-  toggleAutoplay: () => set(s => ({ autoplay: !s.autoplay })),
 }), shallow);
 
 type UIOptions = {

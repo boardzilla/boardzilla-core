@@ -12,6 +12,7 @@ export default class Selection {
   boardChoices: BoardQueryMulti<GameElement>;
   min?: number | ((...a: Argument[]) => number);
   max?: number | ((...a: Argument[]) => number);
+  default?: Argument | ((...a: Argument[]) => Argument);
   regexp?: RegExp;
 
   constructor(s: SelectionDefinition | Selection) {
@@ -21,6 +22,7 @@ export default class Selection {
       this.boardChoices = s.boardChoices;
       this.min = s.min;
       this.max = s.max;
+      this.default = s.default;
       this.regexp = s.regexp;
     } else {
       if (s.selectFromChoices) {
@@ -28,6 +30,7 @@ export default class Selection {
         this.choices = s.selectFromChoices.choices;
         //this.min = s.selectFromChoices.min;
         //this.max = s.selectFromChoices.max;
+        this.default = s.selectFromChoices.default;
       } else if (s.selectOnBoard) {
         this.type = 'board';
         this.boardChoices = s.selectOnBoard.chooseFrom;
@@ -37,9 +40,11 @@ export default class Selection {
         this.type = 'number';
         this.min = s.selectNumber.min;
         this.max = s.selectNumber.max;
+        this.default = s.selectNumber.default;
       } else if (s.enterText) {
         this.type = 'text';
         this.regexp = s.enterText.regexp;
+        this.default = s.enterText.default;
       } else {
         this.type = 'button';
       }
@@ -110,6 +115,7 @@ export default class Selection {
       typeof this.min !== 'function' &&
       typeof this.max !== 'function' &&
       typeof this.choices !== 'function' &&
+      typeof this.default !== 'function' &&
       typeof this.boardChoices !== 'function';
   }
 
@@ -120,6 +126,7 @@ export default class Selection {
     if (typeof this.min === 'function') resolved.min = this.min(...args)
     if (typeof this.max === 'function') resolved.max = this.max(...args)
     if (typeof this.choices === 'function') resolved.choices = this.choices(...args)
+    if (typeof this.default === 'function') resolved.default = this.default(...args)
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.boardChoices === 'function') resolved.boardChoices = this.boardChoices(...args)
     return resolved as ResolvedSelection;
