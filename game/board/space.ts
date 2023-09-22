@@ -51,6 +51,7 @@ export default class Space extends GameElement {
     if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {element: this});
     if (!graph.hasNode(el._t.id)) graph.addNode(el._t.id, {element: el});
     graph.addEdge(this._t.id, el._t.id, {cost});
+    return this;
   }
 
   adjacentTo(el: GameElement) {

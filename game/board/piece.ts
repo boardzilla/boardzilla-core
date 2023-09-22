@@ -8,11 +8,11 @@ export default class Piece extends GameElement {
     if (options?.position !== undefined) pos = options.position;
     if (options?.fromBottom !== undefined) pos = options.fromBottom;
     if (options?.fromTop !== undefined) pos = to._t.children.length - options.fromTop;
+    if (to instanceof Space && this._t.parent !== to) to.triggerEvent("enter", this);
     const position = this._t.parent!._t.children.indexOf(this);
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);
-    if (to instanceof Space) to.triggerEvent("enter", this);
   }
 
   remove() {
