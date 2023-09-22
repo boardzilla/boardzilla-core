@@ -21,7 +21,7 @@ import type {
 import type { SerializedMove } from '../game/action/types';
 
 export default () => {
-  const [game, updateBoard] = gameStore(s => [s.game, s.updateBoard]);
+  const [game, setPosition, updateBoard] = gameStore(s => [s.game, s.setPosition, s.updateBoard]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
   const [phase, setPhase] = useState('new');
@@ -49,8 +49,8 @@ export default () => {
       setPlayers(data.players);
       break;
     case 'gameUpdate':
-      if (!data.state) break;
       console.log('game-update');
+      setPosition(data.state.position);
       game.setState(data.state.state);
       console.log('game-updateBoard');
       updateBoard();
@@ -123,7 +123,6 @@ export default () => {
   const catchError = (error: string) => {
     if (!error) return
     alert(error);
-    console.error(error);
     setError(error);
   }
 

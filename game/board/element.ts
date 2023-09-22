@@ -1,5 +1,6 @@
 import ElementCollection from './element-collection';
 import { isA, shuffleArray, times } from '../utils';
+import { serializeObject, deserializeObject } from '../action/utils';
 
 import type {
   ElementAttributes,
@@ -147,7 +148,7 @@ export default class GameElement {
   }
 
   shuffle() {
-    shuffleArray(this._t.children);
+    shuffleArray(this._t.children, this._ctx.game?.random || Math.random);
   }
 
   owner() {
@@ -298,9 +299,9 @@ export default class GameElement {
     }
 
     attrs = rest;
-    if (attrs.player) attrs.player = rest.player?.position;
+//    if (attrs.player) attrs.player = rest.player?.position;
 
-    const json: ElementJSON = Object.assign(attrs, { className: this.constructor.name });
+    const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
     if (seenBy === undefined) json._id = _t.id;
     if (_t.children.length) json.children = Array.from(_t.children.map(c => c.toJSON(seenBy)));
     return json;
@@ -308,29 +309,27 @@ export default class GameElement {
 
   createChildrenFromJSON(childrenJSON: ElementJSON[]) {
     // truncate non-spaces
-    this._t.children = new ElementCollection(...this._t.children.filter(c => ('isSpace' in c)));
-    const spaces = this._t.children.map(c => c._t.id);
+    const spaces = this._t.children.filter(c => 'isSpace' in c);
+    this._t.children = new ElementCollection();
 
     for (const json of childrenJSON) {
-      const { className, children, _id, name, player, ...rest } = json;
-      let child: GameElement;
-      if (_id !== undefined && spaces.includes(_id)) {
-        child = this._t.children.find(c => c._t.id === _id)!;
-        Object.assign(child, {...rest});
-        delete spaces[spaces.indexOf(_id)];
-      } else {
+      let { className, children, _id, name, ...rest } = json;
+      if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
+      let child: GameElement | undefined = undefined;
+      if (_id !== undefined) {
+        child = spaces.find(c => c._t.id === _id);
+        if (child) Object.assign(child, rest);
+      }
+      if (!child) {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
         if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
         child = this.createElement(elementClass, name, rest);
         child.setId(_id);
         child._t.parent = this;
-        this._t.children.push(child);
       }
-      if (player) child.player = this._ctx.game?.players.atPosition(player);
+      this._t.children.push(child);
+      //if (player) child.player = this._ctx.game?.players.atPosition(player);
       if (children) child.createChildrenFromJSON(children);
     };
-
-    // remove any spaces that were unaccounted for
-    this._t.children = new ElementCollection(...this._t.children.filter(c => !spaces.includes(c._t.id)));
   }
 }

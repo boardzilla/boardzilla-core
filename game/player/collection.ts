@@ -2,6 +2,7 @@ import Player from './player';
 
 import { shuffleArray } from '../utils';
 
+import type { Game, Board } from '..';
 import type {
   PlayerAttributes
 } from './types';
@@ -9,6 +10,7 @@ import type {
 export default class PlayerCollection<T extends Player> extends Array<T> {
   currentPosition?: number;
   className: {new(...a: any[]): T};
+  game: Game<T, Board>
 
   addPlayer(attrs: PlayerAttributes<T> | PlayerAttributes<Player>) {
     const player = new this.className(attrs);
@@ -73,7 +75,7 @@ export default class PlayerCollection<T extends Player> extends Array<T> {
   }
 
   shuffle() {
-    shuffleArray(this);
+    shuffleArray(this, this.game?.random || Math.random);
   }
 
   withHighest(key: keyof T) {

@@ -121,3 +121,8 @@ export type StartMessage = {
 export type ReadyMessage = {
   type: 'ready'
 }
+
+export type SwitchPlayerMessage = {
+  type: "switchPlayer"
+  index: number
+}

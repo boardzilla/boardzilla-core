@@ -39,7 +39,8 @@ export {
 // starter function
 
 import { Player, Game, Board, Action, GameElement } from '.';
-import type { SetupState, GameState, SetupFunction } from './types';
+import type { SetupState, GameState } from '../types';
+import type { SetupFunction } from './types';
 import type { ElementClass } from './board/types';
 import type { PlayerAttributes } from './player/types';
 import type { Flow } from './flow';
@@ -53,10 +54,10 @@ export default <P extends Player, B extends Board>({ minPlayers, maxPlayers, pla
   setupBoard: (game: Game<P, B>, board: B) => any,
   setupFlow: (game: Game<P, B>, board: B) => Flow,
   actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action>
-}): SetupFunction<P, B> => (state: SetupState | GameState<P>, start: boolean): Game<P, B> => {
+}): SetupFunction<P, B> => (state: SetupState | GameState<P>, rseed: string, start: boolean): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
-
+  game.setRandomSeed(rseed);
   game.minPlayers = minPlayers;
   game.maxPlayers = maxPlayers;
   game.definePlayers(playerClass);

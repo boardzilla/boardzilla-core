@@ -16,9 +16,11 @@ const PlayerControls = ({move, selection, onSubmit}: {
   selection?: ResolvedSelection;
   onSubmit: (move?: IncompleteMove<Player>) => void;
 }) => {
-  const [game, player, selected] = gameStore(s => [s.game, s.player, s.selected, s.boardJSON]);
+  const [game, position, selected] = gameStore(s => [s.game, s.position, s.selected, s.boardJSON]);
   console.log('render PlayerControls');
 
+  if (!position) return null;
+  const player = game.players.atPosition(position);
   if (!game || !player) return null;
 
   if (game.players.currentPosition && game.players.current() != player) {

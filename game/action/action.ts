@@ -122,6 +122,7 @@ export default class Action {
       }
       if (this.move) this.move(...args);
     } catch(e) {
+      console.error(e.message, e.stack);
       return [this.getSelections()[0].resolve(), [], e.message];
     }
     return [];

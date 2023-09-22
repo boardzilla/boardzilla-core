@@ -7,6 +7,7 @@ import {
 } from './board/';
 import { PlayerAction } from './flow/';
 import type { Flow } from './flow/';
+import random from 'random-seed';
 
 import { GameState, PlayerState } from '../types';
 import { ElementClass } from './board/types';
@@ -27,6 +28,7 @@ export default class Game<P extends Player, B extends Board> {
   settings: Record<string, any>;
   actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action>;
   phase: 'define' | 'new' | 'started'
+  random: () => number;
   minPlayers = 1;
   maxPlayers: number;
   godMode = false;
@@ -78,12 +80,17 @@ export default class Game<P extends Player, B extends Board> {
   ): PlayerCollection<P> {
     if (this.phase !== 'define') throw Error('cannot call definePlayer once started');
     this.players = new PlayerCollection<P>();
+    this.players.game = this;
     this.players.className = className;
     return this.players as PlayerCollection<P>;
   }
 
   setSettings(settings: Record<string, any>) {
     this.settings = settings;
+  }
+
+  setRandomSeed(rseed: string) {
+    this.random = random.create(rseed).random;
   }
 
   godModeActions(): Record<string, Action> {

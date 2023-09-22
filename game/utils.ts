@@ -8,8 +8,8 @@ import type { SetupState, GameState, GameUpdate } from '../types';
 
 export const createInteface = (setup: SetupFunction<Player, Board>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState | GameState<Player>): GameUpdate<Player> => {
-      const game = setup(state, true);
+    initialState: (state: SetupState | GameState<Player>, rseed: string): GameUpdate<Player> => {
+      const game = setup(state, rseed, true);
       return {
         game: game.getState(),
         players: game.getPlayerStates(),
@@ -21,9 +21,10 @@ export const createInteface = (setup: SetupFunction<Player, Board>): GameInterfa
       move: {
         position: number
         data: SerializedMove
-      }
+      },
+      rseed: string
     ): GameUpdate<Player> => {
-      const game = setup(previousState, true);
+      const game = setup(previousState, rseed, true);
       const result = game.processMove({
         player: game.players.atPosition(move.position)!,
         action: move.data.action,
@@ -53,9 +54,9 @@ const chain = (o: any, c?: string[]): string[] => {
 // export const isA = (el: GameElement, el2: {new(...a: any[]): any, name: string}) => chain(el).includes(el2.name);
 export const isA = (el: GameElement, el2: {new(...a: any[]): any, name: string}) => el instanceof el2
 
-export const shuffleArray = (array: any[]) => {
+export const shuffleArray = (array: any[], random: () => number) => {
   for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
 }

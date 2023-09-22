@@ -36,7 +36,7 @@ describe('Board', () => {
   beforeEach(() => {
     board = new Board(Space, Piece, GameElement);
     // @ts-ignore
-    board._ctx.game = { players };
+    board._ctx.game = { players, board };
   });
 
   it('renders', () => {
@@ -63,7 +63,7 @@ describe('Board', () => {
     expect(board.allJSON()).to.deep.equals(
       [
         { className: 'Board', _id: 0, children: [
-          { className: 'Piece', name: 'token', _id: 2, player: 1 }
+          { className: 'Piece', name: 'token', _id: 2, player: '$p[1]' }
         ]},
       ]
     );
@@ -76,9 +76,9 @@ describe('Board', () => {
     expect(board.allJSON()).to.deep.equals(
       [
         { className: 'Board', _id: 0, children: [
-          { className: 'Piece', name: 'token', _id: 3, player: 1 }
+          { className: 'Piece', name: 'token', _id: 3, player: '$p[1]' }
         ]},
-        { className: 'Piece', name: 'token', _id: 2, player: 2 }
+        { className: 'Piece', name: 'token', _id: 2, player: '$p[2]' }
       ]
     );
   });
@@ -90,8 +90,8 @@ describe('Board', () => {
     expect(board.allJSON()).to.deep.equals(
       [
         { className: 'Board', _id: 0},
-        { className: 'Piece', name: 'token', _id: 2, player: 2 },
-        { className: 'Piece', name: 'token', _id: 3, player: 1 }
+        { className: 'Piece', name: 'token', _id: 2, player: '$p[2]' },
+        { className: 'Piece', name: 'token', _id: 3, player: '$p[1]' }
       ]
     );
   });
@@ -99,17 +99,39 @@ describe('Board', () => {
   it('builds from json', () => {
     const map = board.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});
+    const piece3 = map.create(Piece, 'token3');
     const england = map.create(Space, 'england', {});
     const play = board.create(Space, 'play', {});
     const piece1 = france.create(Piece, 'token1', { player: players[0] });
     const piece2 = france.create(Piece, 'token2', { player: players[1] });
-    const piece3 = play.create(Piece, 'token3');
     const json = board.allJSON();
-    board.fromJSON(board.allJSON());
+    board.fromJSON(JSON.parse(JSON.stringify(board.allJSON())));
     expect(board.allJSON()).to.deep.equals(json);
     expect(board.first(Piece, 'token1')!._t.id).to.equal(piece1._t.id);
+    expect(board.first(Piece, 'token1')!.player).to.equal(players[0]);
     expect(board.first(Piece, 'token2')!._t.id).to.equal(piece2._t.id);
+    expect(board.first(Piece, 'token2')!.player).to.equal(players[1]);
     expect(board.first(Space, 'france')).to.equal(france);
+  });
+
+  it('preserves serializable attributes from json', () => {
+    class Country extends Space {
+      rival: Country;
+      general: Piece;
+    }
+
+    board._ctx.classRegistry.push(Country);
+    const map = board.create(Space, 'map', {});
+    const napolean = map.create(Piece, 'napolean')
+    const england = map.create(Country, 'england', {});
+    const france = map.create(Country, 'france', { rival: england, general: napolean });
+    const json = board.allJSON();
+    board.fromJSON(JSON.parse(JSON.stringify(board.allJSON())));
+    expect(board.allJSON()).to.deep.equals(json);
+    expect(board.first(Country, 'france')).to.equal(france);
+    expect(board.first(Country, 'france')!.rival).to.equal(england);
+    expect(board.first(Country, 'france')!.general).to.not.equal(napolean);
+    expect(board.first(Country, 'france')!.general).to.equal(board.first(Piece, 'napolean'));
   });
 
   it('understands branches', () => {
@@ -172,7 +194,7 @@ describe('Board', () => {
       expect(board.allJSON()).to.deep.equals(
         [
           { className: 'Board', _id: 0, children: [
-            { className: 'Card', flipped: false, state: 'initial', name: '2H', player: 2, suit: 'H', pip: 2, _id: 2 }
+            { className: 'Card', flipped: false, state: 'initial', name: '2H', player: '$p[2]', suit: 'H', pip: 2, _id: 2 }
           ]},
         ]
       );
@@ -336,7 +358,7 @@ describe('Board', () => {
       expect(card.toJSON(2)).to.deep.equal(
         { className: 'Card', flipped: false, state: 'initial', name: 'AH', pip: 1, _visible: { default: false, except: [1] } },
       )
-      board.fromJSON(board.allJSON(2));
+      board.fromJSON(JSON.parse(JSON.stringify(board.allJSON(2))));
       const card3 = board.first(Card)!;
       expect(card3.pip).to.equal(1);
       expect(card3.suit).to.equal(undefined);
@@ -362,7 +384,7 @@ describe('Board', () => {
     it("preserves events in JSON", () => {
       const eventSpy = chai.spy();
       board.onEnter(Card, eventSpy);
-      board.fromJSON(board.allJSON());
+      board.fromJSON(JSON.parse(JSON.stringify(board.allJSON())));
       board.create(Card, "AH", {suit: "H", pip: 1});
       expect(eventSpy).to.have.been.called()
     });

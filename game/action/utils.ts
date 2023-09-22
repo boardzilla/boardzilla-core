@@ -43,3 +43,24 @@ export const deserializeSingleArg = (arg: SerializedSingleArg, game: Game<Player
   if (!deser) throw Error(`Unable to find arg: ${arg}`);
   return deser;
 }
+
+export const serializeObject = (obj: Record<string, any>, forPlayer=true) => {
+  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, serialize(v, forPlayer)]));
+}
+
+export const deserializeObject = (obj: Record<string, any>, game: Game<Player, Board>) => {
+  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, deserialize(v, game)]));
+}
+
+export const serialize = (arg: any, forPlayer=true): any => {
+  if (arg instanceof Array) return arg.map(a => serialize(a, forPlayer));
+  if (arg instanceof Player || arg instanceof GameElement) return serializeSingleArg(arg, forPlayer);
+  if (typeof arg === 'object') return serializeObject(arg, forPlayer);
+  return serializeSingleArg(arg, forPlayer);
+}
+
+export const deserialize = (arg: any, game: Game<Player, Board>): any => {
+  if (arg instanceof Array) return arg.map(a => deserialize(a, game));
+  if (typeof arg === 'object') return deserializeObject(arg, game);
+  return deserializeSingleArg(arg, game);
+}

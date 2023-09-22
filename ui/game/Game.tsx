@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { gameStore } from '../';
 
 import Board from './components/Board';
 import PlayerControls from './components/PlayerControls';
-import Debug from './components/Debug';
 import '../styles/game.scss';
 import { serializeArg } from '../../game/action/utils';
 
@@ -15,8 +14,13 @@ export default ({ onMove, onError }: {
   onMove: (m: SerializedMove) => void,
   onError: (e?: string) => void
 }) => {
-  const [game, updateBoard, player, move, setMove, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.player, s.move, s.setMove, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
+  const [game, updateBoard, position, move, setMove, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.position, s.move, s.setMove, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
 
+  if (!position) {
+    console.log('no position to render');
+    return null;
+  }
+  const player = game.players.atPosition(position);
   if (!player) {
     console.log('no player to render');
     return null;
@@ -92,7 +96,6 @@ export default ({ onMove, onError }: {
         selection={selection}
         onSubmit={submitMove}
       />
-      <Debug/>
     </div>
   );
 }
