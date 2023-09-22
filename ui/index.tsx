@@ -45,7 +45,6 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   // function to ensure react detects a change. must be called immediately after any function that alters game state
   updateBoard: () => {
     set(s => {
-      if (s.move) console.error(s.move, 'during updateBoard? why?');
       const player = s.game.players.find(p => p.id == s.userID);
       if (!player) return { boardJSON: s.game.board.allJSON() };
 

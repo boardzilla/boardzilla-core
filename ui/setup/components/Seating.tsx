@@ -4,41 +4,48 @@ import { gameStore } from '../../';
 import { times } from '../../../game';
 import { GithubPicker } from 'react-color';
 
-import type { User, SetupPlayer } from '../../types';
+import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../types';
 
 const colors = ['#ff0000', '#ffa500', '#ffff00', '#008000', '#008b8b', '#0000ff', '#000080', '#4b0082', '#800080', '#cc82cc', '#800000'];
 
-const Seating = ({ users, players, onUpdate }: {
+const Seating = ({ users, players, onUpdatePlayers }: {
   users: User[],
-  players: SetupPlayer[],
-  onUpdate: (p: SetupPlayer[]) => void,
+  players: UserPlayer[],
+  onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
 }) => {
   const [game] = gameStore(s => [s.game]);
   const [pickingColor, setPickingColor] = useState<number>();
 
   if (!game) return null;
 
-  const updateSeat = (position: number, id: string) => {
-    console.log('updateSeat', position, id);
-    const user = users.find(u => u.id === id);
-    const rest = players.filter(p => p.id !== id && p.position !== position);
-    const usedColors = players.map(p => p.color);
-    const color = colors.find(c => !usedColors.includes(c));
-    if (user) rest.push({
-      id,
+  const seatPlayer = (position: number, userID: string) => {
+    console.log('updateSeat', position, userID);
+    const user = users.find(u => u.userID === userID);
+    const unseats = players.filter(p => p.userID === userID && p.position !== position || p.userID !== userID && p.position === position);
+    const usedColors = players.filter(p => p.userID !== userID && p.position !== position).map(p => p.color);
+    const color = colors.find(c => !usedColors.includes(c))!;
+    const operations: UpdatePlayersMessage['operations'] = unseats.map(u => (
+      {type: 'unseat', position: u.position} as UnseatOperation
+    ));
+    if (user) operations.push({
+      type: "seat",
       position,
-      name: user.name,
+      userID,
       color,
+      name: user.userName,
       settings: {}
     });
-    onUpdate(rest);
+    onUpdatePlayers(operations);
   }
 
   const updateColor = (position: number, color: string) => {
     setPickingColor(undefined);
-    const player = playerAt(position);
-    player.color = color;
-    onUpdate([...players.filter(p => p !== player), player]);
+    const operation: UpdateOperation = {
+      type: "update",
+      position,
+      color,
+    };
+    onUpdatePlayers([operation]);
   }
 
   const playerAt = (position: number) => players.find(p => p.position === position);
@@ -50,11 +57,11 @@ const Seating = ({ users, players, onUpdate }: {
         return (
           <div key={p}>
             Seat {p}:
-            <select value={player?.id || ""} onChange={e => updateSeat(p, e.target.value)}>
+            <select value={player?.userID || ""} onChange={e => seatPlayer(p, e.target.value)}>
               <option key="" value="">[empty]</option>
               {users.filter(u => (
-                player?.id === u.id || !players.find(player => player.id === u.id)
-              )).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                player?.userID === u.userID || !players.find(player => player.userID === u.userID)
+              )).map(u => <option key={u.userID} value={u.userID}>{u.userName}</option>)}
             </select>
             {player && (
               <>

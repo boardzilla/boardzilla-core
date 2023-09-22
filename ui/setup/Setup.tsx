@@ -2,12 +2,14 @@ import React from 'react';
 import Seating from './components/Seating';
 import { gameStore } from '../';
 
-import type { User, SetupPlayer, SetupState } from '../types';
+import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../types';
 
-export default ({ users, setupState, onUpdate, onStart }: {
+export default ({ users, players, settings, onUpdatePlayers, onUpdateSettings, onStart }: {
   users: User[],
-  setupState: SetupState,
-  onUpdate: ({ players, settings }: SetupState) => void,
+  players: UserPlayer[],
+  settings?: GameSettings,
+  onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
+  onUpdateSettings: (s: GameSettings) => void,
   onStart: () => void,
 }) => {
   const [game, uiOptions] = gameStore(s => [s.game, s.uiOptions]);
@@ -15,20 +17,9 @@ export default ({ users, setupState, onUpdate, onStart }: {
   if (!game) return null;
 
   const updateSettingsKey = (key: string, value: any) => {
-    const newSettings = Object.assign(setupState.settings || {}, { [key]: value });
+    const newSettings = Object.assign(settings || {}, { [key]: value });
     console.log('postMessage', newSettings);
-    onUpdate({
-      players: setupState.players,
-      settings: newSettings
-    });
-  }
-
-  const updatePlayers = (players: SetupPlayer[]) => {
-    console.log('postMessage', players);
-    onUpdate({
-      players,
-      settings: setupState.settings
-    });
+    onUpdateSettings(newSettings);
   }
 
   const settingsComponents = uiOptions.settings ?
@@ -37,16 +28,21 @@ export default ({ users, setupState, onUpdate, onStart }: {
       {
         name,
         key: name,
-        settings: setupState.settings,
+        settings: settings || {},
+        players,
         updateKey: updateSettingsKey
       }
     )) : null;
 
   return (
     <>
-      <Seating users={users} players={setupState.players || []} onUpdate={updatePlayers}/>
+      <Seating
+        users={users}
+        players={players}
+        onUpdatePlayers={onUpdatePlayers}
+      />
       {settingsComponents}
-      <input type="button" disabled={(setupState.players?.length || 0) < game.minPlayers} value="Start" onClick={onStart}/>
+      <input type="button" disabled={(players?.length || 0) < game.minPlayers} value="Start" onClick={onStart}/>
     </>
   );
 }

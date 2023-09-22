@@ -1,0 +1,46 @@
+premise
+- UI elements have reasonable defaults
+- HTML/SVG
+- stack/free/splay layouts
+- layout responsive
+- layout changes based on game and user
+
+board({
+  map: {
+    className: Space,
+    spaces: {
+      england: Space,
+      france: {
+        className: Space,
+        connected: ['england', 2]
+      }
+    }
+  },
+  score: {
+    className: Space,
+  }
+})
+
+layoutSpaces(PowergridBoard, [{
+  name: "main",
+  ratio: 1/1,
+  spaces: {
+    map: {
+      engine: 'html/svg',
+      top: 50,
+      left: 10,
+      width: 100,
+      height: 20
+      spaces: {
+                
+      }
+    },
+    
+  }
+}]
+
+    
+
+render(Card, {mine: true, inside: Hand}, card => {
+
+})

@@ -1,30 +1,104 @@
-import type { PlayerAttributes } from '../game/player/types';
 import type { Player } from '../game/player';
 import type { SerializedArg } from '../game/action/types';
-import type { GameState } from '../game/types';
-
-export type User = {
-  id: string
-  name: string
-}
-
-export type SetupPlayer = (PlayerAttributes<Player> & { settings: Record<string, any> })
-
-export type SetupState = {
-  players: SetupPlayer[] // permit add'l per-player settings
-  settings: Record<string, any>
-}
+import type { PlayerState } from '../types';
 
 export type SetupComponentProps = {
   name: string
   settings: Record<string, any>
+  players: SetupPlayer[]
   updateKey: (key: string, value: any) => void
 }
 
-// used to update the current setup json state
-export type SetupUpdated = {
-  type: "setupUpdated"
-  data: SetupState
+export type User = {
+  userID: string
+  userName: string
+}
+
+export type SetupPlayer = {
+  color: string
+  name: string
+  position: number
+  settings?: any
+}
+
+export type UserPlayer = SetupPlayer & {
+  userID?: string
+}
+
+export type GameSettings = Record<string, any>
+
+export type UserEvent = {
+  type: "user"
+  userID: string
+  userName: string
+  added: boolean
+}
+
+export type PlayersEvent = {
+  type: "players"
+  players: UserPlayer[]
+}
+
+// an update to the setup state
+export type SettingsUpdateEvent = {
+  type: "settingsUpdate"
+  settings: GameSettings
+}
+
+export type GameUpdateEvent = {
+  type: "gameUpdate"
+  state: PlayerState<Player>
+}
+
+// indicates the disposition of a message that was processed
+export type MessageProcessedEvent = {
+  type: "messageProcessed"
+  id: string
+  error?: string
+}
+
+export type SeatOperation = {
+  type: 'seat'
+  position: number,
+  userID: string
+  color: string
+  name: string
+  settings?: any
+}
+
+export type UnseatOperation = {
+  type: 'unseat'
+  position: number,
+}
+
+export type UpdateOperation = {
+  type: 'update'
+  position: number,
+  color?: string
+  name?: string
+  settings?: any
+}
+
+export type ReserveOperation = {
+  type: 'reserve'
+  position: number,
+  color: string
+  name: string
+  settings?: any
+}
+
+type PlayerOperation = SeatOperation | UnseatOperation | UpdateOperation | ReserveOperation
+
+export type UpdatePlayersMessage = {
+  type: "updatePlayers"
+  id: string
+  operations: PlayerOperation[]
+}
+
+export type UpdateSettingsMessage = {
+  type: "updateSettings"
+  id: string
+  settings: GameSettings
 }
 
 // used to send a move
@@ -41,37 +115,9 @@ export type MoveMessage = {
 export type StartMessage = {
   id: string
   type: 'start'
-  setup: SetupState
 }
 
 // used to tell the top that you're ready to recv events
 export type ReadyMessage = {
   type: 'ready'
-}
-
-// indicates a user was added
-type UserEvent = {
-  type: "user"
-  id: string
-  name: string
-  added: boolean
-}
-
-// an update to the setup state
-type SetupUpdateEvent = {
-  type: "setupUpdate"
-  state: SetupState
-}
-
-// an update to the current game state
-type GameUpdateEvent = {
-  type: "gameUpdate"
-  state: GameState<Player>
-}
-
-// indicates the disposition of a message that was processed
-type MessageProcessed = {
-  type: "messageProcessed"
-  id: string
-  error?: string
 }

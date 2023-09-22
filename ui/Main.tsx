@@ -5,54 +5,66 @@ import Setup from './setup/Setup';
 
 import type {
   User,
-  SetupState,
-  SetupUpdateEvent,
+  UserPlayer,
+  GameSettings,
   GameUpdateEvent,
   UserEvent,
-  MessageProcessed,
-  SetupUpdated,
+  PlayersEvent,
+  SettingsUpdateEvent,
+  MessageProcessedEvent,
   ReadyMessage,
   StartMessage,
   MoveMessage,
+  UpdateSettingsMessage,
+  UpdatePlayersMessage,
 } from './types';
-import type { Player } from '../game/player';
-import type { Move, SerializedMove } from '../game/action/types';
+import type { SerializedMove } from '../game/action/types';
 
 export default () => {
   const [game, updateBoard] = gameStore(s => [s.game, s.updateBoard]);
-  const [setupState, setSetupState] = useState<SetupState>({players: [], settings: []});
+  const [players, setPlayers] = useState<UserPlayer[]>([]);
+  const [settings, setSettings] = useState<GameSettings>();
   const [phase, setPhase] = useState('new');
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
   const [error, setError] = useState<string>();
   const moves = useMemo<((e: string) => void)[]>(() => [], []);
 
-  const listener = useCallback((event: MessageEvent<string>) => {
-    const data: SetupUpdateEvent | GameUpdateEvent | UserEvent | MessageProcessed = JSON.parse(event.data);
+  const listener = useCallback((event: MessageEvent<
+    UserEvent |
+    PlayersEvent |
+    SettingsUpdateEvent |
+    GameUpdateEvent |
+    MessageProcessedEvent
+  >) => {
+    const data = event.data;
     console.log('message', event, data);
     switch(data.type) {
-    case 'setupUpdate':
-      if (!data.state) break;
+    case 'settingsUpdate':
       console.log('setup-update');
-      setSetupState(data.state);
+      setSettings(data.settings);
+      break;
+    case 'players':
+      console.log('players-update');
+      setPlayers(data.players);
       break;
     case 'gameUpdate':
       if (!data.state) break;
       console.log('game-update');
-      game.setState(data.state);
+      game.setState(data.state.state);
       console.log('game-updateBoard');
       updateBoard();
       setPhase('started');
       break;
     case 'user':
-      const { id, name } = data;
+      const { userID, userName } = data;
       if (data.added) {
         setUsers(users => {
-          if (users.find(p => p.id === id)) return users
-          return [...users, { id, name }]
+          if (users.find(p => p.userID === userID)) return users
+          return [...users, { userID, userName }]
         });
       } else {
-        setUsers((users) => users.filter(p => p.id !== id))
+        setUsers((users) => users.filter(p => p.userID !== userID))
       }
       break;
     case 'messageProcessed':
@@ -85,16 +97,26 @@ export default () => {
     window.top!.postMessage(message, "*");
   };
 
-  const update = (setupState: SetupState) => {
-    console.log('update setupState', setupState);
-    setSetupState(setupState);
-    const message: SetupUpdated = {type: "setupUpdated", data: setupState};
+  const updateSettings = (settings: GameSettings) => {
+    console.log('update settings', settings);
+    setSettings(settings);
+    const message: UpdateSettingsMessage = {type: "updateSettings", id: 'settings', settings};
+    window.top!.postMessage(message, "*");
+  }
+
+  const updatePlayers = (operations: UpdatePlayersMessage['operations']) => {
+    console.log('update player', operations);
+    const message: UpdatePlayersMessage = {
+      type: 'updatePlayers',
+      id: 'updatePlayers',
+      operations
+    }
     window.top!.postMessage(message, "*");
   }
 
   const start = () => {
     console.log('start');
-    const message: StartMessage = {type: "start", id: 'start', setup: setupState};
+    const message: StartMessage = {type: "start", id: 'start'};
     window.top!.postMessage(message, "*");
   }
 
@@ -109,8 +131,15 @@ export default () => {
 
   return <>
     {phase === 'new' ?
-      <Setup users={users} setupState={setupState} onUpdate={update} onStart={start}/> :
-      <Game onMove={move} onError={catchError}/>
+     <Setup
+       users={users}
+       players={players}
+       settings={settings}
+       onUpdatePlayers={updatePlayers}
+       onUpdateSettings={updateSettings}
+       onStart={start}
+     /> :
+     <Game onMove={move} onError={catchError}/>
     }
     {error && <div className="error">{error}</div>}
   </>
