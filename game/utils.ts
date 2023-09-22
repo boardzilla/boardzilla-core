@@ -1,13 +1,14 @@
 import { GameElement } from './';
 import { deserializeArg } from './action/utils';
 
-import type { SetupFunction, GameInterface, GameState, SetupState } from './types';
 import type { Player, Board } from './';
 import type { SerializedArg, SerializedMove } from './action/types';
+import type { SetupFunction, GameInterface } from './types';
+import type { SetupState, GameState, GameUpdate } from '../types';
 
 export const createInteface = (setup: SetupFunction<Player, Board>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState | GameState<Player>) => {
+    initialState: (state: SetupState | GameState<Player>): GameUpdate<Player> => {
       const game = setup(state, true);
       return {
         game: game.getState(),
@@ -21,7 +22,7 @@ export const createInteface = (setup: SetupFunction<Player, Board>): GameInterfa
         position: number
         data: SerializedMove
       }
-    ) => {
+    ): GameUpdate<Player> => {
       const game = setup(previousState, true);
       const result = game.processMove({
         player: game.players.atPosition(move.position)!,

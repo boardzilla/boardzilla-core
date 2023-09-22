@@ -8,7 +8,7 @@ import {
 import { PlayerAction } from './flow/';
 import type { Flow } from './flow/';
 
-import { GameState, PlayerState } from './types';
+import { GameState, PlayerState } from '../types';
 import { ElementClass } from './board/types';
 import { Player, PlayerCollection } from './player/';
 import type {
