@@ -1,15 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "types": ["node", "jest"],
-    "esModuleInterop": true,
+    "target": "es2020",
     "module": "nodenext",
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "jsx": "react",
-    "resolveJsonModule": true
+    "jsx": "react"
   },
-  "include": ["*/game/**/*", "*/ui/**/*", "*/shared/**/*"],
-  "exclude": ["**/node_modules", "**/.*/"]
+  "include": ["*/game/**/*", "*/ui/**/*"],
 }

@@ -39,6 +39,11 @@ export const createInteface = (setup: SetupFunction<Player, Board>): GameInterfa
         players: game.getPlayerStates(),
         messages: []
       }
+    },
+    getPlayerState: (state: GameState<Player>, position: number): GameState<Player> => {
+      if (!position) throw Error('getPlayerState without position');
+      const game = setup(state, '', false);
+      return game.getState(position)
     }
   };
 }

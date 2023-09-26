@@ -73,7 +73,7 @@ export default class Flow {
   }
 
   /**
-   * set the position of this flow and all subflows recursively
+   * set the position of this flow and all subflows recursively - obsolete?
    */
   setBranch(branch: FlowBranchNode[]) {
     const node = branch[0];
@@ -140,7 +140,6 @@ export default class Flow {
   //   return flow;
   // }
 
-
   currentLoop(): Loop | undefined {
     let loop: Loop | undefined = undefined;
     let flow: Flow | undefined = this.ctx.top;
@@ -169,8 +168,12 @@ export default class Flow {
     }
   }
 
-  // advance flow one step and return 'complete' if complete, 'ok' if can continue, 'skip'/'repeat' to skip/repeat the current loop
-  // override for self-contained flows that do not have subflows
+  /**
+   * advance flow one step and return 'complete' if complete, 'ok' if can
+   * continue, 'skip'/'repeat' to skip/repeat the current loop. return a list of
+   * actions if now waiting for player input. override for self-contained flows
+   * that do not have subflows.
+   */
   playOneStep(): 'ok' | 'complete' | 'repeat' | 'skip' | string[] {
     if (this.subflow) {
       const actions = this.subflow.awaitingAction();
@@ -179,10 +182,10 @@ export default class Flow {
         const result = this.subflow.playOneStep();
         if (result !== 'complete') return result;
       } catch (e) {
-        if (e instanceof FlowInteruptAndRepeat || e instanceof FlowInteruptAndSkip) {
+        if (e instanceof FlowInterruptAndRepeat || e instanceof FlowInterruptAndSkip) {
           const loop = this.currentLoop();
-          if (!loop) throw Error("Cannot interupt loop when not in a loop");
-          if (e instanceof FlowInteruptAndSkip) return loop.advance();
+          if (!loop) throw Error("Cannot skip/repeat when not in a loop");
+          if (e instanceof FlowInterruptAndSkip) return loop.advance();
           return loop.repeat();
         }
         throw e;
@@ -191,7 +194,7 @@ export default class Flow {
     return this.advance();
   }
 
-  // play until action required or game over
+  // play until action required (returns list) or game over
   play(): string[] | void {
     let step;
     do { step = this.playOneStep() } while (step === 'ok' || step === 'repeat' || step === 'skip')
@@ -230,5 +233,5 @@ export default class Flow {
   }
 }
 
-export class FlowInteruptAndRepeat extends Error {}
-export class FlowInteruptAndSkip extends Error {}
+export class FlowInterruptAndRepeat extends Error {}
+export class FlowInterruptAndSkip extends Error {}

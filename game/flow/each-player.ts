@@ -11,7 +11,7 @@ export default class EachPlayer<P extends Player> extends Loop<P> {
     name?: string,
     startingPlayer?: ((a: Record<any, any>) => P) | P,
     nextPlayer?: (p: P) => P,
-    turns?: never,
+    turns?: number,
     continueUntil: (p: P) => boolean,
     do: Flow,
   } | {

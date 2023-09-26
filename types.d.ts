@@ -16,7 +16,7 @@ export type GameState<P extends Player> = {
   board: ElementJSON[],
 }
 
-export type PlayerState<P extends Player> = {
+export type PlayerPositionState<P extends Player> = {
   position: number
   state: GameState<P> // Game state, scrubbed
 }
@@ -28,6 +28,6 @@ export type Message = {
 
 export type GameUpdate<P extends Player> = {
   game: GameState<P>
-  players: PlayerState<P>[]
+  players: PlayerPositionState<P>[]
   messages: Message[]
 }

@@ -12,8 +12,10 @@ import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
 import type { IncompleteMove, ResolvedSelection } from '../game/action/types'
 
+const userID = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}').userID;
+
 type GameStore = {
-  game: Game<Player, Board>;
+  game?: Game<Player, Board>;
   boardJSON: ElementJSON[];
   setGame: (g: Game<Player, Board>) => void;
   updateBoard: () => void;
@@ -32,28 +34,31 @@ type GameStore = {
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
-  game: undefined as unknown as Game<Player, Board>, // pretend always defined
   boardJSON: [],
-  setGame: (game: Game<Player, Board>) => set({
-    game,
-    boardJSON: game.board.allJSON()
-  }),
-  // function to ensure react detects a change. must be called immediately after any function that alters game state
-  updateBoard: () => {
-    set(s => {
-      if (!s.position) return {};
-      const player = s.game.players.atPosition(s.position);
-      if (!player) return {};
-      const {move, selection} = s.game.currentSelection(player);
-      console.log('updateBoard', s.position, move, selection);
-      return ({
-        move,
-        selection,
-        boardJSON: s.game.board.allJSON()
-      })
+  setGame: (game: Game<Player, Board>) => {
+    // @ts-ignore;
+    window.game = game;
+    // @ts-ignore;
+    window.board = game.board;
+    return set({
+      game,
+      boardJSON: game.board.allJSON()
     });
   },
-  setPosition: position => set({ position }),
+  // function to ensure react detects a change. must be called immediately after any function that alters game state
+  updateBoard: () => set(s => {
+    if (!s.game || !s.position) return {};
+    const player = s.game.players.atPosition(s.position);
+    if (!player) return {};
+    const {move, selection} = s.game.currentSelection(player);
+    console.log('updateBoard', s.position, move, selection);
+    return ({
+      move,
+      selection,
+      boardJSON: s.game.board.allJSON()
+    })
+  }),
+  setPosition: position => { console.log('setPosition', position); return set({ position }) },
   setMove: move => set({ move }),
   setSelection: selection => set({ selection }),
   selected: [],
@@ -71,11 +76,9 @@ type UIOptions = {
 
 export default (setup: SetupFunction<Player, Board>, options: UIOptions): void => {
   gameStore.getState().setUIOptions(options);
-  const game = setup({players: [], settings: {}}, 'ui', false);
-  gameStore.getState().setGame(game);
   
   ReactDOM.render(
-    <Main/>,
+    <Main userID={userID} setup={setup}/>,
     document.getElementById('root')
   )
 };

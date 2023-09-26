@@ -9,9 +9,9 @@ export {default as SwitchCase} from './switch-case';
 export {default as IfElse} from './if-else';
 
 import {
-  FlowInteruptAndSkip,
-  FlowInteruptAndRepeat
+  FlowInterruptAndSkip,
+  FlowInterruptAndRepeat
 } from './flow';
 
-export function repeat() { throw new FlowInteruptAndRepeat() }
-export function skip() { throw new FlowInteruptAndSkip() }
+export function repeat() { throw new FlowInterruptAndRepeat() }
+export function skip() { throw new FlowInterruptAndSkip() }

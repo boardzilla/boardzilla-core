@@ -11,7 +11,8 @@ import {
 import type { ElementJSON } from '../../../game/board/types'
 
 const elementAttributes = (el: GameElement) => {
-  const { _t, _ctx, name, _visible, _eventHandlers, ...rest } = el;
+  const { _t, _ctx, name, _visible, ...rest } = el;
+  if ('_eventHandlers' in rest) delete rest['_eventHandlers'];
   return Object.fromEntries(Object.entries(rest).map(([key, val]) => [`data-${key.toLowerCase()}`, val]));
 }
 
@@ -33,7 +34,7 @@ const Element = ({element, json, clickables, hilites, selected, onSelectElement}
   onSelectElement: (e: GameElement) => void,
 }) => {
   //console.log("updated", element.branch());
-  const [player, uiOptions] = gameStore(s => [s.player, s.uiOptions]);
+  const [uiOptions] = gameStore(s => [s.uiOptions]);
 
   const isHilited = hilites.includes(element);
   const isSelected = selected.includes(element);

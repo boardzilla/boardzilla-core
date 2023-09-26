@@ -61,28 +61,31 @@ export default <P extends Player, B extends Board>({ minPlayers, maxPlayers, pla
   game.minPlayers = minPlayers;
   game.maxPlayers = maxPlayers;
   game.definePlayers(playerClass);
-  console.timeLog('setup');
+  //console.timeLog('setup', 'setup players');
   game.defineBoard(boardClass, elementClasses);
-  console.timeLog('setup');
+  //console.timeLog('setup', 'define board');
   game.defineFlow(setupFlow);
-  console.timeLog('setup');
+  //console.timeLog('setup', 'setup flow');
   game.defineActions(actions);
-  console.timeLog('setup');
+  //console.timeLog('setup', 'define actions');
 
   game.setSettings(state.settings);
-  if (!('board' in state)) { // phase=started
+  if (!('board' in state)) { // phase=new
     game.players.fromJSON(state.players);
     if (start) {
       setupBoard(game, game.board as B);
       game.start();
     }
-  } else { // phase=new
-    // require setup to build spaces and event handlers
+  } else { // phase=started
     game.players.fromJSON(state.players);
-    setupBoard(game, game.board as B);
+    if (start) {
+      // require setup to build spaces, graphs, event handlers
+      setupBoard(game, game.board as B);
+      //console.timeLog('setup', 'setupBoard');
+    }
     game.setState(state);
   }
-  console.timeLog('setup');
+  //console.timeLog('setup', 'setState');
 
   if (start) {
     game.play();

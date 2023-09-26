@@ -11,7 +11,7 @@ import type {
 export type SetupFunction<P extends Player, B extends Board> = (state: SetupState | GameState<P>, rseed: string, start: boolean) => Game<P, B>
 
 export type GameInterface<P extends Player> = {
-  initialState: (state: SetupState, rseed: string) => GameUpdate<P>,
+  initialState: (state: SetupState, rseed: string) => GameUpdate<P>
   processMove: (
     previousState: GameState<P>,
     move: {
@@ -20,4 +20,8 @@ export type GameInterface<P extends Player> = {
     },
     rseed: string
   ) => GameUpdate<P>
+  getPlayerState: (
+    state: GameState<P>,
+    position: number
+  ) => GameState<P>
 }

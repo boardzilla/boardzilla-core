@@ -11,6 +11,9 @@ const Board = ({clickables, hilites, selected, onSelectElement}: {
   onSelectElement: (e: GameElement) => void;
 }) => {
   const [game, boardJSON] = gameStore(s => [s.game, s.boardJSON]);
+  if (!game) return null;
+  //console.log('RENDER BOARD');
+  if (JSON.stringify(game.board.allJSON()) !== JSON.stringify(boardJSON)) console.error('-------------------------------------------------- json out of sync --------------------------------------------------');
 
   return (
     <div id="play-area">

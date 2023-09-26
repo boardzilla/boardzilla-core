@@ -9,7 +9,7 @@ import { PlayerAction } from './flow/';
 import type { Flow } from './flow/';
 import random from 'random-seed';
 
-import { GameState, PlayerState } from '../types';
+import { GameState, PlayerPositionState } from '../types';
 import { ElementClass } from './board/types';
 import { Player, PlayerCollection } from './player/';
 import type {
@@ -164,26 +164,20 @@ export default class Game<P extends Player, B extends Board> {
     this.flow.setBranchFromJSON(state.position);
   }
 
-  getState(): GameState<P> {
+  getState(forPlayer?: number): GameState<P> {
     return {
-      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>),
+      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
       currentPlayerPosition: this.players.currentPosition,
       settings: this.settings,
-      position: this.flow.branchJSON(false),
-      board: this.board.allJSON(),
+      position: this.flow.branchJSON(!!forPlayer),
+      board: this.board.allJSON(forPlayer),
     };
   }
 
-  getPlayerStates(): PlayerState<P>[] {
+  getPlayerStates(): PlayerPositionState<P>[] {
     return this.players.map(p => ({
       position: p.position,
-      state: {
-        players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-        currentPlayerPosition: this.players.currentPosition,
-        settings: this.settings,
-        position: this.flow.branchJSON(true),
-        board: this.board.allJSON(p.position)
-      }
+      state: this.getState(p.position)
     }));
   }
 

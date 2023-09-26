@@ -1,6 +1,6 @@
 import type { Player } from '../game/player';
 import type { SerializedArg } from '../game/action/types';
-import type { PlayerState } from '../types';
+import type { GameState } from '../types';
 
 export type SetupComponentProps = {
   name: string
@@ -47,7 +47,7 @@ export type SettingsUpdateEvent = {
 
 export type GameUpdateEvent = {
   type: "gameUpdate"
-  state: PlayerState<Player>
+  state: GameState<Player>
 }
 
 // indicates the disposition of a message that was processed

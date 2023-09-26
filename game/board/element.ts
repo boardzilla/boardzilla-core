@@ -283,13 +283,13 @@ export default class GameElement {
   toJSON(seenBy?: number) {
     let attrs: Record<any, any>;
     let { _t, _ctx, board, ...rest } = this;
+    if ('pile' in rest) delete rest.pile;
     if ('_eventHandlers' in rest) delete rest['_eventHandlers'];
 
     // remove methods
     rest = Object.fromEntries(Object.entries(rest).filter(
       ([, value]) => typeof value !== 'function'
     )) as typeof rest;
-    if ('pile' in rest) delete rest.pile;
 
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
@@ -299,10 +299,9 @@ export default class GameElement {
     }
 
     attrs = rest;
-//    if (attrs.player) attrs.player = rest.player?.position;
 
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
-    if (seenBy === undefined) json._id = _t.id;
+    if (seenBy === undefined || 'isSpace' in this) json._id = _t.id;
     if (_t.children.length) json.children = Array.from(_t.children.map(c => c.toJSON(seenBy)));
     return json;
   }
@@ -318,7 +317,14 @@ export default class GameElement {
       let child: GameElement | undefined = undefined;
       if (_id !== undefined) {
         child = spaces.find(c => c._t.id === _id);
-        if (child) Object.assign(child, rest);
+        if (child) {
+          // reset all on child
+          for (const key of Object.keys(child)) {
+            if (!['_ctx', '_t', '_eventHandlers', 'board', 'name'].includes(key) && !(key in rest))
+              rest[key] = undefined;
+          }
+          Object.assign(child, rest);
+        }
       }
       if (!child) {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
@@ -328,8 +334,7 @@ export default class GameElement {
         child._t.parent = this;
       }
       this._t.children.push(child);
-      //if (player) child.player = this._ctx.game?.players.atPosition(player);
-      if (children) child.createChildrenFromJSON(children);
+      child.createChildrenFromJSON(children || []);
     };
   }
 }

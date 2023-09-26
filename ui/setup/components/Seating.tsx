@@ -13,13 +13,9 @@ const Seating = ({ users, players, onUpdatePlayers }: {
   players: UserPlayer[],
   onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
 }) => {
-  const [game] = gameStore(s => [s.game]);
   const [pickingColor, setPickingColor] = useState<number>();
 
-  if (!game) return null;
-
   const seatPlayer = (position: number, userID: string) => {
-    console.log('updateSeat', position, userID);
     const user = users.find(u => u.userID === userID);
     const unseats = players.filter(p => p.userID === userID && p.position !== position || p.userID !== userID && p.position === position);
     const usedColors = players.filter(p => p.userID !== userID && p.position !== position).map(p => p.color);
@@ -52,7 +48,7 @@ const Seating = ({ users, players, onUpdatePlayers }: {
 
   return (
     <div>
-      {times(game.maxPlayers, p => {
+      {times(4, p => {
         const player = playerAt(p);
         return (
           <div key={p}>

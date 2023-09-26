@@ -1,7 +1,6 @@
 import { PlayerAttributes } from './types';
 
 export default class Player {
-  public id: string;
   public name: string;
   public color: string;
   public position: number; // table position, as opposed to turn order

@@ -19,9 +19,9 @@ const PlayerControls = ({move, selection, onSubmit}: {
   const [game, position, selected] = gameStore(s => [s.game, s.position, s.selected, s.boardJSON]);
   console.log('render PlayerControls');
 
-  if (!position) return null;
+  if (!game || !position) return null;
   const player = game.players.atPosition(position);
-  if (!game || !player) return null;
+  if (!player) return null;
 
   if (game.players.currentPosition && game.players.current() != player) {
     return <div>{`Not my turn, waiting for ${game.players.current()!.name}`}</div>;

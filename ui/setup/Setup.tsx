@@ -12,9 +12,7 @@ export default ({ users, players, settings, onUpdatePlayers, onUpdateSettings, o
   onUpdateSettings: (s: GameSettings) => void,
   onStart: () => void,
 }) => {
-  const [game, uiOptions] = gameStore(s => [s.game, s.uiOptions]);
-
-  if (!game) return null;
+  const [uiOptions] = gameStore(s => [s.uiOptions]);
 
   const updateSettingsKey = (key: string, value: any) => {
     const newSettings = Object.assign(settings || {}, { [key]: value });
@@ -42,7 +40,7 @@ export default ({ users, players, settings, onUpdatePlayers, onUpdateSettings, o
         onUpdatePlayers={onUpdatePlayers}
       />
       {settingsComponents}
-      <input type="button" disabled={(players?.length || 0) < game.minPlayers} value="Start" onClick={onStart}/>
+      <input type="button" disabled={(players?.length || 0) < 1} value="Start" onClick={onStart}/>
     </>
   );
 }

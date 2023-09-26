@@ -53,14 +53,22 @@ export const deserializeObject = (obj: Record<string, any>, game: Game<Player, B
 }
 
 export const serialize = (arg: any, forPlayer=true): any => {
+  if (arg === undefined) return undefined;
+  if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => serialize(a, forPlayer));
   if (arg instanceof Player || arg instanceof GameElement) return serializeSingleArg(arg, forPlayer);
   if (typeof arg === 'object') return serializeObject(arg, forPlayer);
-  return serializeSingleArg(arg, forPlayer);
+  if (typeof arg === 'number' || typeof arg === 'string' || typeof arg === 'boolean')
+    return serializeSingleArg(arg, forPlayer);
+  throw Error(`unable to serialize ${arg}`);
 }
 
 export const deserialize = (arg: any, game: Game<Player, Board>): any => {
+  if (arg === undefined) return undefined;
+  if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => deserialize(a, game));
   if (typeof arg === 'object') return deserializeObject(arg, game);
-  return deserializeSingleArg(arg, game);
+  if (typeof arg === 'number' || typeof arg === 'string' || typeof arg === 'boolean')
+    return deserializeSingleArg(arg, game);
+  throw Error(`unable to deserialize ${arg}`);
 }

@@ -84,7 +84,7 @@ export default class Space extends GameElement {
       classToSearch = className;
     }
     if (!this._t.parent?._t.graph) return undefined;
-    const others = this.others(classToSearch, { adjacent: true }, ...finders);
+    const others = this.others(classToSearch, ...finders);
     return others.sortBy(el => {
       const distance =  this.distanceTo(el);
       return distance === undefined ? Infinity : distance;

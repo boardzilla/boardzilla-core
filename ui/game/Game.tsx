@@ -16,10 +16,8 @@ export default ({ onMove, onError }: {
 }) => {
   const [game, updateBoard, position, move, setMove, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.position, s.move, s.setMove, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
 
-  if (!position) {
-    console.log('no position to render');
-    return null;
-  }
+  console.log('GAME', position);
+  if (!game || !position) return null;
   const player = game.players.atPosition(position);
   if (!player) {
     console.log('no player to render');

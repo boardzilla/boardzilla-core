@@ -23,13 +23,11 @@ describe('Board', () => {
   players.addPlayer({
     name: 'Joe',
     position: 1,
-    id: '1',
     color: 'red',
   });
   players.addPlayer({
     name: 'Jane',
     position: 2,
-    id: '2',
     color: 'green',
   });
 
