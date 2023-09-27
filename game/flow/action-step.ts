@@ -2,15 +2,16 @@ import Flow from './flow';
 import { serializeArg, deserializeArg } from '../action/utils';
 
 import type { ActionStepPosition } from './types.d';
+import type { Player } from '../player';
 import type { ResolvedSelection } from '../action/types';
 
-export default class PlayerAction extends Flow {
-  position: ActionStepPosition | undefined;
-  actions: Record<string, Flow | null>;
+export default class PlayerAction<P extends Player> extends Flow<P> {
+  position: ActionStepPosition<P> | undefined;
+  actions: Record<string, Flow<P> | null>;
   type = "action";
   prompt?: string;
 
-  constructor({ name, actions, prompt }: { name?: string, actions: Record<string, Flow | null>, prompt?: string }) {
+  constructor({ name, actions, prompt }: { name?: string, actions: Record<string, Flow<P> | null>, prompt?: string }) {
     super({ name });
     for (const action of Object.values(actions)) {
       if (action) action.parent = this;
@@ -25,7 +26,7 @@ export default class PlayerAction extends Flow {
 
   currentSubflow() {
     if (!this.position) return;
-    const step = this.actions[this.position.action] as Flow;
+    const step = this.actions[this.position.action];
     if (step) return step;
   }
 
@@ -35,20 +36,22 @@ export default class PlayerAction extends Flow {
     }
   }
 
-  processMove(move: ActionStepPosition) {
+  processMove(move: ActionStepPosition<P>) {
     if (!(move.action in this.actions)) throw Error(`No action ${move.action} available at this point. Waiting for ${Object.keys(this.actions).join(", ")}`);
-    if (this.ctx.game.players.currentPosition && move.player !== this.ctx.game.players.currentPosition) {
-      throw Error(`move ${move.action} from player #${move.player} not allowed. player #${this.ctx.game.players.currentPosition} turn`);
+    const game = this.ctx.game;
+
+    if (game.players.currentPosition && move.player !== game.players.currentPosition) {
+      throw Error(`move ${move.action} from player #${move.player} not allowed. player #${game.players.currentPosition} turn`);
     }
 
-    const player = this.ctx.game.players.atPosition(move.player)!;
-    const gameAction = this.ctx.game.action(move.action, player);
+    const player = game.players.atPosition(move.player)!;
+    const gameAction = game.action(move.action, player);
     const response = gameAction.process(...move.args);
     if (response[0]) {
       return response;
     } else {
       this.setPosition(move);
-      return [] as [ResolvedSelection?]
+      return [] as [ResolvedSelection<P>?]
     }
   }
 

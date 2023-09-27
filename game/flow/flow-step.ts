@@ -1,6 +1,8 @@
 import Flow from './flow';
 
-export default class FlowStep extends Flow {
+import type { Player } from '../player';
+
+export default class FlowStep extends Flow<Player> {
   command?: (args: Record<any, any>) => any;
   type = "step";
 

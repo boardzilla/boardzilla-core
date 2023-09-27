@@ -7,12 +7,13 @@ import type {
   PlayerAttributes
 } from './types';
 
-export default class PlayerCollection<T extends Player> extends Array<T> {
+export default class PlayerCollection<P extends Player> extends Array<P> {
   currentPosition?: number;
-  className: {new(...a: any[]): T};
-  game: Game<T, Board>
+  className: {new(...a: any[]): P};
+  game: Game<P, Board<P>>
 
-  addPlayer(attrs: PlayerAttributes<T> | PlayerAttributes<Player>) {
+  addPlayer(attrs: PlayerAttributes<P> // | PlayerAttributes<Player>
+    ) {
     const player = new this.className(attrs);
     Object.assign(player, attrs);
     this.push(player);
@@ -22,7 +23,7 @@ export default class PlayerCollection<T extends Player> extends Array<T> {
     return this.find(p => p.position === position);
   }
 
-  current(): T {
+  current(): P {
     if (this.currentPosition === undefined) throw Error("Calling players.current() when not taking turns");
     return this.atPosition(this.currentPosition)!;
   }
@@ -35,7 +36,7 @@ export default class PlayerCollection<T extends Player> extends Array<T> {
     return this.sort((p1, p2) => (p1.position > p2.position ? 1 : -1));
   }
 
-  setCurrent(player: number | T) {
+  setCurrent(player: number | P) {
     if (typeof player !== 'number') player = player.position;
     if (player > this.length || player < 1) {
       throw Error(`No such player ${player}`);
@@ -53,24 +54,24 @@ export default class PlayerCollection<T extends Player> extends Array<T> {
     return this.current()!
   }
 
-  after(player: number | T) {
+  after(player: number | P) {
     return this[this.turnOrderOf(player) % this.length];
   }
 
   // Turn order of player, starting with 1. Note that this is not the same as player position and can change
-  turnOrderOf(player: number | T) {
+  turnOrderOf(player: number | P) {
     if (typeof player !== 'number') player = player.position;
     const index = this.findIndex(p => p.position === player);
     if (index === -1) throw Error("No such player");
     return index + 1;
   }
 
-  sortBy(key: keyof T, direction?: "asc" | "desc") {
+  sortBy(key: keyof P, direction?: "asc" | "desc") {
     const [up, down] = direction === 'desc' ? [-1, 1] : [1, -1];
     return this.sort((a: any, b: any) => a[key] < b[key] ? down : (a[key] > b[key] ? up : 0));
   }
 
-  sortedBy(key: keyof T, direction?: "asc" | "desc") {
+  sortedBy(key: keyof P, direction?: "asc" | "desc") {
     return (this.slice(0, this.length) as this).sortBy(key, direction);
   }
 
@@ -78,27 +79,28 @@ export default class PlayerCollection<T extends Player> extends Array<T> {
     shuffleArray(this, this.game?.random || Math.random);
   }
 
-  withHighest(key: keyof T) {
+  withHighest(key: keyof P) {
     return this.sortedBy(key)[0]
   }
 
-  withLowest(key: keyof T) {
+  withLowest(key: keyof P) {
     return this.sortedBy(key, 'desc')[0]
   }
 
-  max<K extends keyof T>(key: K): T[K] {
+  max<K extends keyof P>(key: K): P[K] {
     return this.sortedBy(key, 'desc')[0][key];
   }
 
-  min<K extends keyof T>(key: K): T[K] {
+  min<K extends keyof P>(key: K): P[K] {
     return this.sortedBy(key)[0][key];
   }
 
-  sum(key: ((...a: any[]) => number) | (keyof {[K in keyof T]: T[K] extends number ? never: K})) {
+  sum(key: ((...a: any[]) => number) | (keyof {[K in keyof P]: P[K] extends number ? never: K})) {
     return this.reduce((sum, n) => sum + (typeof key === 'function' ? key(n) : n[key] as unknown as number), 0);
   }
 
-  fromJSON(players: (PlayerAttributes<T> | PlayerAttributes<Player>)[]) {
+  fromJSON(players: (PlayerAttributes<P> // | PlayerAttributes<Player>
+                    )[]) {
     // reset all on self
     this.splice(0, this.length);
     this.currentPosition = undefined;

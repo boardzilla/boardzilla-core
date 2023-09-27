@@ -24,7 +24,7 @@ export default ({ onMove, onError }: {
     return null;
   }
 
-  let clickables: GameElement[] = [];
+  let clickables: GameElement<Player>[] = [];
 
   console.log("RENDER GAME", move, selection);
 
@@ -63,7 +63,7 @@ export default ({ onMove, onError }: {
     }
   };
 
-  const onSelectElement = (element: GameElement) => {
+  const onSelectElement = (element: GameElement<Player>) => {
     const newSelected = selected.includes(element) ?
           selected.filter(s => s !== element) :
           selected.concat([element]);

@@ -2,10 +2,11 @@ import {Piece, GameElement} from './'
 
 import {
   ElementClass,
-  ElementFinder
+  ElementFinder,
 } from './types';
+import type { Player } from '../player';
 
-export default class ElementCollection<T extends GameElement> extends Array<T> {
+export default class ElementCollection<P extends Player, T extends GameElement<P>> extends Array<T> {
   top: typeof this.last;
   bottom: typeof this.first;
 
@@ -15,23 +16,23 @@ export default class ElementCollection<T extends GameElement> extends Array<T> {
     this.bottom = this.first;
   }
 
-  slice(...a: any[]):ElementCollection<T> {return super.slice(...a) as ElementCollection<T>};
+  slice(...a: any[]):ElementCollection<P, T> {return super.slice(...a) as ElementCollection<P, T>};
 
   // search this collection and all children
-  all<F extends GameElement>(className: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection<GameElement>;
-  all<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  all<F extends GameElement>(className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement> {
+  all<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  all<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  all<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      return this._finder<GameElement>(GameElement, {}, className, ...finders);
+      return this._finder<GameElement<P>>(GameElement<P>, {}, className, ...finders);
     }
     return this._finder(className, {}, ...finders);
   }
 
-  _finder<F extends GameElement>(
-    className: ElementClass<F>,
+  _finder<F extends GameElement<P>>(
+    className: ElementClass<P, F>,
     options: {limit?: number, order?: 'asc' | 'desc'},
-    ...finders: ElementFinder<F>[]
-  ): ElementCollection<F> {
+    ...finders: ElementFinder<P, F>[]
+  ): ElementCollection<P, F> {
     const fns: ((e: F) => boolean)[] = finders.map(finder => {
       if (typeof finder === 'object') {
         const attrs = finder;
@@ -54,7 +55,7 @@ export default class ElementCollection<T extends GameElement> extends Array<T> {
       }
       return finder;
     })
-    const coll = new ElementCollection<F>();
+    const coll = new ElementCollection<P, F>();
 
     const finderFn = (el: T, order: 'asc' | 'desc') => {
       if (el instanceof className && fns.every(fn => fn(el as unknown as F))) {
@@ -88,43 +89,43 @@ export default class ElementCollection<T extends GameElement> extends Array<T> {
   }
 
   // search this collection recursively and return first result
-  first<F extends GameElement>(className: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  first<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  first<F extends GameElement>(className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
+  first<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
+  first<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  first<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | GameElement<P> | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      return this._finder<GameElement>(GameElement, {limit: 1}, className, ...finders)[0];
+      return this._finder<GameElement<P>>(GameElement<P>, {limit: 1}, className, ...finders)[0];
     }
     return this._finder(className, {limit: 1}, ...finders)[0];
   }
 
   // search this collection recursively and return first N results
-  firstN<F extends GameElement>(n: number, className: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection<GameElement>;
-  firstN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  firstN<F extends GameElement>(n: number, className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement> {
+  firstN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  firstN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  firstN<F extends GameElement<P>>(n: number, className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
     if (typeof n !== 'number') throw Error('first argument must be number of matches');
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      return this._finder<GameElement>(GameElement, {limit: n}, className, ...finders);
+      return this._finder<GameElement<P>>(GameElement<P>, {limit: n}, className, ...finders);
     }
     return this._finder(className, {limit: n}, ...finders);
   }
 
   // search this collection recursively and return last result
-  last<F extends GameElement>(className: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  last<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  last<F extends GameElement>(className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
+  last<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
+  last<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  last<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | GameElement<P> | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      return this._finder<GameElement>(GameElement, {limit: 1, order: 'desc'}, className, ...finders)[0];
+      return this._finder<GameElement<P>>(GameElement<P>, {limit: 1, order: 'desc'}, className, ...finders)[0];
     }
     return this._finder(className, {limit: 1, order: 'desc'}, ...finders)[0];
   }
 
   // search this collection recursively and return last N results
-  lastN<F extends GameElement>(n: number, className: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection<GameElement>;
-  lastN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  lastN<F extends GameElement>(n: number, className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement> {
+  lastN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  lastN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  lastN<F extends GameElement<P>>(n: number, className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
     if (typeof n !== 'number') throw Error('first argument must be number of matches');
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      return this._finder<GameElement>(GameElement, {limit: n, order: 'desc'}, className, ...finders);
+      return this._finder<GameElement<P>>(GameElement<P>, {limit: n, order: 'desc'}, className, ...finders);
     }
     return this._finder(className, {limit: n, order: 'desc'}, ...finders);
   }
@@ -169,7 +170,7 @@ export default class ElementCollection<T extends GameElement> extends Array<T> {
     }
   }
 
-  putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
+  putInto(to: GameElement<P>, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
     for (const el of this) {
       if (!(el instanceof Piece)) throw Error('cannot move Space');
       el.putInto(to, options);

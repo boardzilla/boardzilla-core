@@ -22,8 +22,8 @@ import type {
 } from './types';
 import type { SerializedMove } from '../game/action/types';
 
-export default ({ userID, setup }: { userID: string, setup: SetupFunction<Player, Board> }) => {
-  const [game, setGame, setPosition, updateBoard] = gameStore(s => [s.game, s.setGame, s.setPosition, s.updateBoard]);
+export default ({ userID, setup }: { userID: string, setup: SetupFunction<Player, Board<Player>> }) => {
+  const [game, setGame, position, setPosition, updateBoard] = gameStore(s => [s.game, s.setGame, s.position, s.setPosition, s.updateBoard]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
   const [phase, setPhase] = useState<string>();
@@ -50,13 +50,14 @@ export default ({ userID, setup }: { userID: string, setup: SetupFunction<Player
     case 'players':
       //console.log('players-update');
       setPlayers(data.players);
-      const position = data.players.find(p => p.userID === userID)?.position;
-      if (position) setPosition(position)
+      // const position = data.players.find(p => p.userID === userID)?.position;
+      // if (position) setPosition(position)
       break;
     case 'gameUpdate':
       //console.log('game-update', phase);
-      let newGame = game || setup({ players: data.state.players, settings: data.state.settings }, 'ui', true);
-      newGame.setState(data.state);
+      let newGame = game || setup({ players: data.state.state.players, settings: data.state.state.settings }, 'ui', true);
+      newGame.setState(data.state.state);
+      if (!position) setPosition(data.state.position)
       if (newGame !== game) setGame(newGame);
       updateBoard();
 

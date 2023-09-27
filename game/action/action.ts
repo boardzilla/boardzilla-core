@@ -5,6 +5,7 @@ import type {
   SelectionDefinition,
   ResolvedSelection,
 } from './types';
+import type { Player } from '../player';
 
 /**
  * Actions represent discreet moves players can make. The Action object is responsible for:
@@ -12,17 +13,17 @@ import type {
  * - validating player Arguments and returning any Selections needed to complete
  * - accepting player Arguments and altering board state
  */
-export default class Action {
+export default class Action<P extends Player> {
   prompt: string;
-  selections: (Action|Selection)[];
-  move?: (...a: Argument[]) => void;
+  selections: (Action<P>|Selection<P>)[];
+  move?: (...a: Argument<P>[]) => void;
   condition?: (() => boolean) | boolean;
 
   constructor({ prompt, selections, condition, move }: {
     prompt: string,
-    selections?: (Action|SelectionDefinition)[],
+    selections?: (Action<P> | SelectionDefinition<P>)[],
     condition?: (() => boolean) | boolean,
-    move?: (...a: Argument[]) => void,
+    move?: (...a: Argument<P>[]) => void,
   }) {
     this.prompt = prompt;
     this.selections = selections ? selections.map(s => s instanceof Action ? s : new Selection(s)) : [];
@@ -46,7 +47,7 @@ export default class Action {
    * given a set of args, returns a selection object for continuation. returns
    * false if no continuation. returns true if no further selection required.
    */
-  nextSelection(...args: Argument[]): ResolvedSelection | boolean {
+  nextSelection(...args: Argument<P>[]): ResolvedSelection<P> | boolean {
     const selections = this.getSelections().slice(args.length);
     if (selections.length === 0) return true;
     const selection = selections[0].resolve(...args);
@@ -68,7 +69,7 @@ export default class Action {
   // validate args and truncate if invalid, append any add'l args that are
   // forced and return next selection. return error if args fail validation. no
   // selection and no error means args are validated and processable
-  forceArgs(...args: Argument[]): [ResolvedSelection?, Argument[]?, string?] {
+  forceArgs(...args: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
     const selections = this.getSelections();
     let error: string | undefined = undefined;
     args = args.slice(0, selections.length); // remove extra args. likely a confirmation step was added
@@ -83,8 +84,8 @@ export default class Action {
     }
 
     // check next selection for viable options. append any forced args
-    let forcedArg: Argument | undefined = undefined;
-    let nextSelection: ResolvedSelection | undefined = undefined;
+    let forcedArg: Argument<P> | undefined = undefined;
+    let nextSelection: ResolvedSelection<P> | undefined = undefined;
     do {
       const selection = this.nextSelection(...args);
       if (selection === false) return [undefined, [], error || "Action invalid. How did you get here?"];
@@ -100,7 +101,7 @@ export default class Action {
   }
 
   // skip validate for sub-actions?
-  process(...args: Argument[]): [ResolvedSelection?, Argument[]?, string?] {
+  process(...args: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
     const [resolvedSelection, forcedArgs, error] = this.forceArgs(...args);
     if (resolvedSelection) return [resolvedSelection, forcedArgs, error];
     if (forcedArgs) args = forcedArgs;
@@ -128,9 +129,9 @@ export default class Action {
     return [];
   }
 
-  getSelections(): Selection[] {
+  getSelections(): Selection<P>[] {
     // selections each recursive flatten, add "defer" to dependant args?
-    const flatten: (a: Action | Selection, s: Selection[], prompt?: string) => Selection[] = (a, s, prompt) => {
+    const flatten: (a: Action<P> | Selection<P>, s: Selection<P>[], prompt?: string) => Selection<P>[] = (a, s, prompt) => {
       if (a instanceof Action) {
         a.selections.map(a2 => flatten(a2, s, a.prompt))
       } else {

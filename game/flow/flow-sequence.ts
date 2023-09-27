@@ -1,12 +1,13 @@
 import Flow from './flow';
 import type { SequencePosition } from './types.d';
+import type { Player } from '../player';
 
-export default class FlowSequence extends Flow {
-  subflows: Flow[];
+export default class FlowSequence<P extends Player> extends Flow<P> {
+  subflows: Flow<P>[];
   position: SequencePosition;
   type = "sequence";
 
-  constructor({ name, steps }: { name?: string, steps: Flow[] }) {
+  constructor({ name, steps }: { name?: string, steps: Flow<P>[] }) {
     super({ name });
     steps.forEach(step => step.parent = this);
     this.subflows = steps;
@@ -16,7 +17,7 @@ export default class FlowSequence extends Flow {
     this.setPosition(0);
   }
 
-  currentSubflow(): Flow {
+  currentSubflow(): Flow<P> {
     if (typeof this.position !== "number") throw Error(`Invalid flow position: ${this.position}`);
     if (!this.subflows[this.position]) {
       throw Error(`Cannot set flow ${this.name} to position ${this.position}`);

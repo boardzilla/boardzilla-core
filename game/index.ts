@@ -10,7 +10,8 @@ export {
   Space,
   Piece,
   GameElement,
-  union
+  union,
+  boardClasses
 } from './board/';
 
 export {
@@ -45,16 +46,16 @@ import type { ElementClass } from './board/types';
 import type { PlayerAttributes } from './player/types';
 import type { Flow } from './flow';
 
-export default <P extends Player, B extends Board>({ minPlayers, maxPlayers, playerClass, boardClass, elementClasses, setupBoard, setupFlow, actions }: {
+export default <P extends Player, B extends Board<P>>({ minPlayers, maxPlayers, playerClass, boardClass, elementClasses, setupBoard, setupFlow, actions }: {
   minPlayers: number,
   maxPlayers: number,
   playerClass: {new(a: PlayerAttributes<P>): P},
-  boardClass: ElementClass<B>,
-  elementClasses: ElementClass<GameElement>[],
+  boardClass: ElementClass<P, B>,
+  elementClasses: ElementClass<P, GameElement<P>>[],
   setupBoard: (game: Game<P, B>, board: B) => any,
-  setupFlow: (game: Game<P, B>, board: B) => Flow,
-  actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action>
-}): SetupFunction<P, B> => (state: SetupState | GameState<P>, rseed: string, start: boolean): Game<P, B> => {
+  setupFlow: (game: Game<P, B>, board: B) => Flow<P>,
+  actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P>>
+}): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, rseed: string, start: boolean): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
   game.setRandomSeed(rseed);

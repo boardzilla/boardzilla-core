@@ -2,26 +2,26 @@ import { Player } from '../player/';
 import { GameElement } from '../board/';
 import type Selection from './selection';
 
-export type SingleArgument = string | number | boolean | GameElement | Player;
-export type Argument = SingleArgument | SingleArgument[];
+export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | Player;
+export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
 export type SerializedSingleArg = string | number | boolean;
 export type SerializedArg = SerializedSingleArg | SerializedSingleArg[];
 
-export type BoardQuerySingle<T extends GameElement> = string | T | undefined | ((...a: Argument[]) => T | undefined)
-export type BoardQueryMulti<T extends GameElement> = string | T[] | ((...a: Argument[]) => T[])
-export type BoardQuery<T extends GameElement> = BoardQuerySingle<T> | BoardQueryMulti<T>
+export type BoardQuerySingle<P extends Player, T extends GameElement<P>> = string | T | undefined | ((...a: Argument<P>[]) => T | undefined)
+export type BoardQueryMulti<P extends Player, T extends GameElement<P>> = string | T[] | ((...a: Argument<P>[]) => T[])
+export type BoardQuery<P extends Player, T extends GameElement<P>> = BoardQuerySingle<P, T> | BoardQueryMulti<P, T>
 
 // a Move is a request from a particular Player to perform a certain Action with supplied args
-export type Move<P> = {
+export type Move<P extends Player> = {
   player: P,
   action: string,
-  args: Argument[]
+  args: Argument<P>[]
 };
 
-export type IncompleteMove<P> = {
+export type IncompleteMove<P extends Player> = {
   player: P,
   action?: string,
-  args: Argument[]
+  args: Argument<P>[]
 };
 
 export type SerializedMove = {
@@ -34,57 +34,57 @@ export type SerializedMove = {
  * or provide enough information for the client to contextually show options to
  * players at runtime
  */
-export type BoardSelection<T extends GameElement> = {
-  chooseFrom: BoardQueryMulti<T>;
-  min?: number | ((...a: Argument[]) => number);
-  max?: number | ((...a: Argument[]) => number);
+export type BoardSelection<P extends Player, T extends GameElement<P>> = {
+  chooseFrom: BoardQueryMulti<P, T>;
+  min?: number | ((...a: Argument<P>[]) => number);
+  max?: number | ((...a: Argument<P>[]) => number);
   noChoice?: never;
 }
 
-export type ChoiceSelection = {
-  choices: Argument[] | Record<string, Argument> | ((...a: Argument[]) => Argument[] | Record<string, Argument>);
-  default?: Argument | ((...a: Argument[]) => Argument);
+export type ChoiceSelection<P extends Player> = {
+  choices: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
+  default?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
 }
 
-export type NumberSelection = {
-  min?: number | ((...a: Argument[]) => number);
-  max?: number | ((...a: Argument[]) => number);
-  default?: number | ((...a: Argument[]) => number);
+export type NumberSelection<P extends Player> = {
+  min?: number | ((...a: Argument<P>[]) => number);
+  max?: number | ((...a: Argument<P>[]) => number);
+  default?: number | ((...a: Argument<P>[]) => number);
 }
 
-export type TextSelection = {
+export type TextSelection<P extends Player> = {
   regexp?: RegExp;
-  default?: string | ((...a: Argument[]) => string);
+  default?: string | ((...a: Argument<P>[]) => string);
 }
 
 export type ButtonSelection = any;
 
-export type SelectionDefinition = {
-  prompt?: string | ((...a: Argument[]) => string);
+export type SelectionDefinition<P extends Player> = {
+  prompt?: string | ((...a: Argument<P>[]) => string);
   clientContext?: Record<any, any> // additional meta info that describes the context for this selection
 } & ({
-  selectOnBoard: BoardSelection<GameElement>;
+  selectOnBoard: BoardSelection<P, GameElement<P>>;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
   click?: never;
 } | {
   selectOnBoard?: never;
-  selectFromChoices: ChoiceSelection;
+  selectFromChoices: ChoiceSelection<P>;
   selectNumber?: never;
   enterText?: never;
   click?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
-  selectNumber: NumberSelection;
+  selectNumber: NumberSelection<P>;
   enterText?: never;
   click?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
-  enterText: TextSelection;
+  enterText: TextSelection<P>;
   click?: never;
 } | {
   selectOnBoard?: never;
@@ -94,19 +94,19 @@ export type SelectionDefinition = {
   click: ButtonSelection;
 });
 
-export type ResolvedSelection = Selection & {
+export type ResolvedSelection<P extends Player> = Selection<P> & {
   prompt?: string;
-  choices?: Argument[] | Record<string, Argument>;
-  boardChoices: GameElement[];
+  choices?: Argument<P>[] | Record<string, Argument<P>>;
+  boardChoices: GameElement<P>[];
   min?: number;
   max?: number;
-  default?: Argument;
+  default?: Argument<P>;
   regexp?: RegExp;
 }
 
 // move if altered, selection if invalid and more info required to become valid, error if message
-export type MoveResponse<P> = {
+export type MoveResponse<P extends Player> = {
   move: IncompleteMove<P>,
-  selection?: ResolvedSelection,
+  selection?: ResolvedSelection<P>,
   error?: string
 };

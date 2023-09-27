@@ -3,6 +3,7 @@ import {
   Board,
   Space,
   Piece,
+  ElementCollection,
   GameElement
 } from './board/';
 import { PlayerAction } from './flow/';
@@ -20,13 +21,13 @@ import type {
 } from './action/types';
 import type { PlayerAttributes } from './player/types';
 
-export default class Game<P extends Player, B extends Board> {
-  flow: Flow;
-  flowDefinition: (game: typeof this, board: B) => Flow;
+export default class Game<P extends Player, B extends Board<P>> {
+  flow: Flow<P>;
+  flowDefinition: (game: typeof this, board: B) => Flow<P>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
   settings: Record<string, any>;
-  actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action>;
+  actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P>>;
   phase: 'define' | 'new' | 'started'
   random: () => number;
   minPlayers = 1;
@@ -57,21 +58,21 @@ export default class Game<P extends Player, B extends Board> {
     });
   }
 
-  defineActions(actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action>) {
+  defineActions(actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P>>) {
     if (this.phase !== 'define') throw Error('cannot call defineActions once started');
     this.actions = actions;
   }
 
   defineBoard(
     className: {
-      new(...classes: ElementClass<GameElement>[]): B;
+      new(...classes: ElementClass<P, GameElement<P>>[]): B;
       isGameElement: boolean;
     },
-    classRegistry: ElementClass<GameElement>[]
+    classRegistry: ElementClass<P, GameElement<P>>[]
   ): B {
     if (this.phase !== 'define') throw Error('cannot call defineActions once started');
     this.board = new className(GameElement, Space, Piece, ...classRegistry)
-    this.board._ctx.game = this as unknown as Game<Player, Board>;
+    this.board._ctx.game = this;
     return this.board;
   }
 
@@ -93,20 +94,20 @@ export default class Game<P extends Player, B extends Board> {
     this.random = random.create(rseed).random;
   }
 
-  godModeActions(): Record<string, Action> {
+  godModeActions(): Record<string, Action<P>> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
     return {
-      _godMove: new MoveAction({
+      _godMove: new MoveAction<P, Piece<P>, GameElement<P>>({
         prompt: "Move anything",
         promptTo: "To anywhere",
         piece: {
-          chooseFrom: this.board.all(Piece)
+          chooseFrom: this.board.all(Piece<P>)
         },
         to: {
-          chooseFrom: this.board.all(GameElement)
+          chooseFrom: this.board.all(GameElement<P>)
         },
       }),
-      _godEdit: new Action({
+      _godEdit: new Action<P>({
         prompt: "Change anything",
         selections: [{
           prompt: "Select element",
@@ -116,15 +117,15 @@ export default class Game<P extends Player, B extends Board> {
         }, {
           prompt: "Change what?",
           selectFromChoices: {
-            choices: (el: GameElement) => Object.keys(el).filter(a => !['_t', '_ctx', '_eventHandlers', 'mine', 'board'].includes(a))
+            choices: (el: GameElement<P>) => Object.keys(el).filter(a => !['_t', '_ctx', '_eventHandlers', 'mine', 'board', 'game', 'pile'].includes(a))
           }
         }, {
           prompt: "Change to",
           enterText: {
-            default: (el: GameElement, attr: keyof GameElement) => String(el[attr])
+            default: (el: GameElement<P>, attr: keyof GameElement<P>) => String(el[attr])
           }
         }],
-        move: (el: GameElement, attr: keyof GameElement, value: any) => {
+        move: (el: GameElement<P>, attr: keyof GameElement<P>, value: any) => {
           if (value === 'true') {
             value = true;
           } else if (value === 'false') {
@@ -151,7 +152,7 @@ export default class Game<P extends Player, B extends Board> {
 
   buildFlow() {
     this.flow = this.flowDefinition(this, this.board);
-    this.flow.ctx.game = this as unknown as Game<Player, Board>;
+    this.flow.ctx.game = this;
   }
 
   setState(state: GameState<P>) {
@@ -202,7 +203,7 @@ export default class Game<P extends Player, B extends Board> {
         let [selection, forcedArgs, error] = action.forceArgs();
         if (error) throw Error(`${error} at currentSelection which should not be allowed. allowedActions should not have provided this action`)
         // if no selection needed, provide a confirmation prompt (TODO get the final prompt)
-        if (!selection) selection = new Selection({ prompt: `Please confirm: ${action.prompt}`, click: true }) as ResolvedSelection;
+        if (!selection) selection = new Selection<P>({ prompt: `Please confirm: ${action.prompt}`, click: true }) as ResolvedSelection<P>;
         return {
           move: {
             action: actions[0],
@@ -220,7 +221,7 @@ export default class Game<P extends Player, B extends Board> {
               selectFromChoices: {
                 choices: Object.fromEntries(actions.map(a => [a, this.action(a, player).prompt]))
               }
-            }) as ResolvedSelection,
+            }) as ResolvedSelection<P>,
             move,
           };
         }

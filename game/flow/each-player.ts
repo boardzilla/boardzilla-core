@@ -3,7 +3,7 @@ import { Player } from '../player';
 import { Loop } from './';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
-export default class EachPlayer<P extends Player> extends Loop<P> {
+export default class EachPlayer<P extends Player> extends Loop<P, P> {
   type = 'each-player';
   position: { index: number, value?: P };
 
@@ -13,14 +13,14 @@ export default class EachPlayer<P extends Player> extends Loop<P> {
     nextPlayer?: (p: P) => P,
     turns?: number,
     continueUntil: (p: P) => boolean,
-    do: Flow,
+    do: Flow<P>,
   } | {
     name?: string,
     startingPlayer?: ((a: Record<any, any>) => P) | P,
     nextPlayer?: never,
     turns?: number,
     continueUntil?: never,
-    do: Flow,
+    do: Flow<P>,
   }) {
     let initial: (r: Record<any, any>) => P
     if (startingPlayer) {

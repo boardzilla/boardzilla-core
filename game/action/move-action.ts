@@ -1,5 +1,5 @@
 import Action from './action';
-import Selection from './selection';
+import type { Player } from '../player';
 
 import { GameElement, Piece } from '../board';
 
@@ -10,16 +10,16 @@ import type {
   SelectionDefinition
 } from './types';
 
-export default class MoveAction<P extends Piece, S extends GameElement> extends Action {
+export default class MoveAction<P extends Player, E extends Piece<P>, S extends GameElement<P>> extends Action<P> {
   constructor({piece, to, prompt, promptTo, move}: {
-    piece: BoardQuerySingle<P> | BoardSelection<P>;
-    to: BoardQuerySingle<S> | BoardSelection<S>;
+    piece: BoardQuerySingle<P, E> | BoardSelection<P, E>;
+    to: BoardQuerySingle<P, S> | BoardSelection<P, S>;
     prompt: string;
     promptTo?: string;
-    move?: (...a: Argument[]) => void;
+    move?: (...a: Argument<P>[]) => void;
   }) {
-    let selections: SelectionDefinition[] = [];
-    let movePiece: (...a: Argument[]) => void;
+    let selections: SelectionDefinition<P>[] = [];
+    let movePiece: (...a: Argument<P>[]) => void;
 
     if (noChoice(piece) && noChoice(to)) {
       movePiece = () => resolve(piece)!.putInto(resolve(to)!);
@@ -33,7 +33,7 @@ export default class MoveAction<P extends Piece, S extends GameElement> extends 
         },
         clientContext: { drag: piece }
       }];
-      movePiece = (to: S) => resolve(piece, [])!.putInto(to);
+      movePiece = (to: S) => resolve(piece)!.putInto(to);
     }
 
     if (!noChoice(piece) && noChoice(to)) {
@@ -44,7 +44,7 @@ export default class MoveAction<P extends Piece, S extends GameElement> extends 
         },
         clientContext: { drop: to }
       }];
-      movePiece = (piece: P) => piece.putInto(resolve(to, [piece])!);
+      movePiece = (piece: E) => piece.putInto(resolve(to, [piece])!);
     }
 
     if (!noChoice(piece) && !noChoice(to)) {
@@ -61,7 +61,7 @@ export default class MoveAction<P extends Piece, S extends GameElement> extends 
         },
         clientContext: { drop: to }
       }];
-      movePiece = (piece: P, to: S) => piece.putInto(to);
+      movePiece = (piece: E, to: S) => piece.putInto(to);
     }
 
     super({
@@ -75,12 +75,11 @@ export default class MoveAction<P extends Piece, S extends GameElement> extends 
   }
 }
 
-const noChoice = (s: BoardQuerySingle<GameElement> | BoardSelection<GameElement>): s is BoardQuerySingle<GameElement> => {
+const noChoice = <P extends Player>(s: BoardQuerySingle<P, GameElement<P>> | BoardSelection<P, GameElement<P>>): s is BoardQuerySingle<P, GameElement<P>> => {
   return typeof s !== 'object' || !('chooseFrom' in s);
 }
 
-
-const resolve = <T extends GameElement>(q: BoardQuerySingle<T>, ...args: Argument[]) => {
+const resolve = <P extends Player, T extends GameElement<P>>(q: BoardQuerySingle<P, T>, ...args: Argument<P>[]) => {
   if (typeof q === 'string') throw Error("not impl");
   return (typeof q === 'function') ? q(...args) : q;
 }

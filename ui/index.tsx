@@ -15,27 +15,27 @@ import type { IncompleteMove, ResolvedSelection } from '../game/action/types'
 const userID = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}').userID;
 
 type GameStore = {
-  game?: Game<Player, Board>;
+  game?: Game<Player, Board<Player>>;
   boardJSON: ElementJSON[];
-  setGame: (g: Game<Player, Board>) => void;
+  setGame: (g: Game<Player, Board<Player>>) => void;
   updateBoard: () => void;
   position?: number;
   setPosition: (p: number) => void;
   move?: IncompleteMove<Player>;
   setMove: (m?: IncompleteMove<Player>) => void;
-  selection?: ResolvedSelection;
-  setSelection: (s?: ResolvedSelection) => void;
-  selected: GameElement[];
-  setSelected: (s: GameElement[]) => void;
-  hilites: GameElement[];
-  setHilites: (h: GameElement[]) => void;
-  uiOptions: UIOptions;
-  setUIOptions: (o: UIOptions) => void;
+  selection?: ResolvedSelection<Player>;
+  setSelection: (s?: ResolvedSelection<Player>) => void;
+  selected: GameElement<Player>[];
+  setSelected: (s: GameElement<Player>[]) => void;
+  hilites: GameElement<Player>[];
+  setHilites: (h: GameElement<Player>[]) => void;
+  uiOptions: UIOptions<Player>;
+  setUIOptions: (o: UIOptions<Player>) => void;
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   boardJSON: [],
-  setGame: (game: Game<Player, Board>) => {
+  setGame: (game: Game<Player, Board<Player>>) => {
     // @ts-ignore;
     window.game = game;
     // @ts-ignore;
@@ -69,16 +69,17 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setUIOptions: uiOptions => set({ uiOptions }),
 }), shallow);
 
-type UIOptions = {
-  settings?: Record<string, React.ComponentType<SetupComponentProps>>
-  appearance?: Record<string, (el: GameElement, contents: JSX.Element[]) => JSX.Element>
+type UIOptions<P extends Player> = {
+  settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
+  appearance?: Record<string, (el: GameElement<P>, contents: JSX.Element[]) => JSX.Element>
 };
 
-export default (setup: SetupFunction<Player, Board>, options: UIOptions): void => {
-  gameStore.getState().setUIOptions(options);
+export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UIOptions<P>): void => {
+  gameStore.getState().setUIOptions(options as UIOptions<Player>);
   
   ReactDOM.render(
-    <Main userID={userID} setup={setup}/>,
+    // we can anonymize Player class internally
+    <Main userID={userID} setup={setup as unknown as SetupFunction<Player, Board<Player>>}/>,
     document.getElementById('root')
   )
 };

@@ -12,40 +12,41 @@ import type {
   ElementAttributes,
   ElementEventHandler
 } from './types';
+import type { Player } from '../player';
 
-export default class Space extends GameElement {
+export default class Space<P extends Player> extends GameElement<P> {
   _eventHandlers: {
-    enter: ElementEventHandler<GameElement>[],
+    enter: ElementEventHandler<P, GameElement<P>>[],
   } = { enter: [] };
 
   isSpace() { return true; }
 
-  createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
+  createElement<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T {
     const el = super.createElement(className, name, attrs);
     this.triggerEvent("enter", el);
     return el;
   }
 
-  addEventHandler<T extends GameElement>(type: "enter", handler: ElementEventHandler<T>) {
+  addEventHandler<T extends GameElement<P>>(type: "enter", handler: ElementEventHandler<P, T>) {
     this._eventHandlers[type].push(handler);
   }
 
-  onEnter<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void) {
+  onEnter<T extends GameElement<P>>(type: ElementClass<P, T>, callback: (el: T) => void) {
     this.addEventHandler<T>("enter", { callback, type });
   }
 
-  triggerEvent(event: "enter", entering: GameElement) {
+  triggerEvent(event: "enter", entering: GameElement<P>) {
     for (const handler of this._eventHandlers[event]) {
       if (event === 'enter' && !isA(entering, handler.type)) continue;
       handler.callback(entering);
     }
   }
 
-  connectTo(el: GameElement, cost: number = 1) {
+  connectTo(el: GameElement<P>, cost: number = 1) {
     if (!this._t.parent || this._t.parent !== el._t.parent) throw Error("Cannot connect two elements that are on different spaces");
     
     if (!this._t.parent._t.graph) {
-      this._t.parent._t.graph = new UndirectedGraph<{element: Space}, {cost: number}>();
+      this._t.parent._t.graph = new UndirectedGraph<{element: Space<P>}, {cost: number}>();
     }
     const graph = this._t.parent._t.graph;
     if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {element: this});
@@ -54,12 +55,12 @@ export default class Space extends GameElement {
     return this;
   }
 
-  adjacentTo(el: GameElement) {
+  adjacentTo(el: GameElement<P>) {
     if (!this._t.parent?._t.graph) return false;
     return this._t.parent!._t.graph.areNeighbors(this._t.id, el._t.id);
   }
 
-  distanceTo(el: GameElement) {
+  distanceTo(el: GameElement<P>) {
     if (!this._t.parent?._t.graph) return undefined;
     try {
       const graph = this._t.parent._t.graph;
@@ -74,10 +75,10 @@ export default class Space extends GameElement {
     }
   }
 
-  closest<F extends GameElement>(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  closest<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  closest<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
-    let classToSearch: ElementClass<GameElement> = GameElement;
+  closest<F extends GameElement<P>>(className?: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
+  closest<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  closest<F extends GameElement<P>>(className?: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | GameElement<P> | undefined {
+    let classToSearch: ElementClass<P, GameElement<P>> = GameElement<P>;
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
     } else {
@@ -92,7 +93,7 @@ export default class Space extends GameElement {
   }
 
   withinDistance(distance: number) {
-    const c = new ElementCollection<Space>();
+    const c = new ElementCollection<P, Space<P>>();
     try {
       const graph = this._t.parent!._t.graph!;
       bfs(graph, node => {
@@ -106,21 +107,21 @@ export default class Space extends GameElement {
     return c;
   }
 
-  _otherFinder<T extends GameElement>(finders: ElementFinder<T>[]): ElementFinder<GameElement> {
-    let otherFinder: ElementFinder<GameElement> = el => el !== (this as GameElement);
+  _otherFinder<T extends GameElement<P>>(finders: ElementFinder<P, T>[]): ElementFinder<P, GameElement<P>> {
+    let otherFinder: ElementFinder<P, GameElement<P>> = el => el !== (this as GameElement<P>);
     for (const finder of finders) {
       if (typeof finder === 'object') {
         if (finder.adjacent !== undefined) {
           const adj = finder.adjacent;
-          otherFinder = (el: GameElement) => this.adjacentTo(el) === adj && el !== (this as GameElement)
+          otherFinder = (el: GameElement<P>) => this.adjacentTo(el) === adj && el !== (this as GameElement<P>)
           delete(finder.adjacent);
         }
         if (finder.withinDistance !== undefined) {
           const distance = finder.withinDistance;
-          otherFinder = (el: GameElement) => {
+          otherFinder = (el: GameElement<P>) => {
             const d = this.distanceTo(el);
             if (d === undefined) return false;
-            return d <= distance && el !== (this as GameElement);
+            return d <= distance && el !== (this as GameElement<P>);
           }
           delete(finder.withinDistance);
         }

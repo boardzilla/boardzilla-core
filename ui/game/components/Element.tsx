@@ -9,29 +9,30 @@ import {
 } from '../../../game'
 
 import type { ElementJSON } from '../../../game/board/types'
+import type { Player } from '../../../game/player';
 
-const elementAttributes = (el: GameElement) => {
+const elementAttributes = (el: GameElement<Player>) => {
   const { _t, _ctx, name, _visible, ...rest } = el;
   if ('_eventHandlers' in rest) delete rest['_eventHandlers'];
   return Object.fromEntries(Object.entries(rest).map(([key, val]) => [`data-${key.toLowerCase()}`, val]));
 }
 
-const defaultAppearance = (element: GameElement, children: JSX.Element[]) => (
+const defaultAppearance = (element: GameElement<Player>, children: JSX.Element[]) => (
   <>
     {element.name || className(element)}
     {children}
   </>
 );
 
-const className = (element: GameElement) => element.constructor.name;
+const className = (element: GameElement<Player>) => element.constructor.name;
 
 const Element = ({element, json, clickables, hilites, selected, onSelectElement}: {
-  element: GameElement,
+  element: GameElement<Player>,
   json: ElementJSON,
-  clickables: GameElement[],
-  hilites: GameElement[],
-  selected: GameElement[],
-  onSelectElement: (e: GameElement) => void,
+  clickables: GameElement<Player>[],
+  hilites: GameElement<Player>[],
+  selected: GameElement<Player>[],
+  onSelectElement: (e: GameElement<Player>) => void,
 }) => {
   //console.log("updated", element.branch());
   const [uiOptions] = gameStore(s => [s.uiOptions]);

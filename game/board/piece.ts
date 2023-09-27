@@ -1,8 +1,10 @@
 import GameElement from './element'
 import Space from './space'
 
-export default class Piece extends GameElement {
-  putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
+import type { Player } from '../player';
+
+export default class Piece<P extends Player> extends GameElement<P> {
+  putInto(to: GameElement<P>, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
     if (to.isDescendantOf(this)) throw Error(`Cannot put ${this} into itself`);
     let pos: number = to._t.children.length;
     if (options?.position !== undefined) pos = options.position;

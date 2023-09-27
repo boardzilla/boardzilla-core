@@ -1,7 +1,9 @@
 import Flow from './flow';
 
-export default class Loop<T = string | number | boolean | Record<any, any>> extends Flow {
-  do: Flow;
+import type { Player } from '../player';
+
+export default class Loop<P extends Player, T = string | number | boolean | Record<any, any>> extends Flow<P> {
+  do: Flow<P>;
   position: { index: number, value?: T };
   initial?: ((a?: Record<any, any>) => T) | T;
   next?: (a: T) => T;
@@ -13,13 +15,13 @@ export default class Loop<T = string | number | boolean | Record<any, any>> exte
     initial?: never,
     next?: () => T,
     while: () => boolean,
-    do: Flow
+    do: Flow<P>
   } | {
     name?: string,
     initial: ((a: Record<any, any>) => T) | T,
     next: (a: T) => T,
     while: (a: T) => boolean,
-    do: Flow
+    do: Flow<P>
   }) {
     super({ name })
     this.initial = initial;

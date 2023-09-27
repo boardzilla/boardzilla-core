@@ -6,9 +6,9 @@ import type { SerializedArg, SerializedMove } from './action/types';
 import type { SetupFunction, GameInterface } from './types';
 import type { SetupState, GameState, GameUpdate } from '../types';
 
-export const createInteface = (setup: SetupFunction<Player, Board>): GameInterface<Player> => {
+export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState | GameState<Player>, rseed: string): GameUpdate<Player> => {
+    initialState: (state: SetupState<Player> | GameState<Player>, rseed: string): GameUpdate<Player> => {
       const game = setup(state, rseed, true);
       return {
         game: game.getState(),
@@ -57,7 +57,7 @@ const chain = (o: any, c?: string[]): string[] => {
 
 // loose instanceof check that uses class names. required to deal with lack of class equality in webpack?
 // export const isA = (el: GameElement, el2: {new(...a: any[]): any, name: string}) => chain(el).includes(el2.name);
-export const isA = (el: GameElement, el2: {new(...a: any[]): any, name: string}) => el instanceof el2
+export const isA = <P extends Player>(el: GameElement<P>, el2: {new(...a: any[]): any, name: string}) => el instanceof el2
 
 export const shuffleArray = (array: any[], random: () => number) => {
   for (let i = array.length - 1; i > 0; i--) {

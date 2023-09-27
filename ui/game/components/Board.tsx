@@ -3,12 +3,13 @@ import Element from './Element';
 import { gameStore } from '../../';
 
 import type { GameElement } from '../../../game/board'
+import type { Player } from '../../../game/player';
 
 const Board = ({clickables, hilites, selected, onSelectElement}: {
-  clickables: GameElement[];
-  hilites: GameElement[];
-  selected: GameElement[];
-  onSelectElement: (e: GameElement) => void;
+  clickables: GameElement<Player>[];
+  hilites: GameElement<Player>[];
+  selected: GameElement<Player>[];
+  onSelectElement: (e: GameElement<Player>) => void;
 }) => {
   const [game, boardJSON] = gameStore(s => [s.game, s.boardJSON]);
   if (!game) return null;

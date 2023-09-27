@@ -9,15 +9,15 @@ import type {
 import type { ResolvedSelection, Argument } from '../action/types';
 
 // Abstract Base class
-export default class Flow {
+export default class Flow<P extends Player> {
   name?: string;
   position?: any;
   type: string;
-  parent: Flow;
-  subflow?: Flow;
+  parent: Flow<P>;
+  subflow?: Flow<P>;
   ctx: {
-    game: Game<Player, Board>,
-    top: Flow
+    game: Game<P, Board<P>>,
+    top: Flow<P>
   };
 
   constructor({ name }: { name?: string }) {
@@ -46,20 +46,20 @@ export default class Flow {
   /**
    * get the position of this flow and all subflows recursively
    */
-  branch(): FlowBranchNode[] {
+  branch(): FlowBranchNode<P>[] {
     if (this.position === undefined) return [];
     let branch = [
       {
         type: this.type,
         position: this.position
-      } as FlowBranchNode
+      } as FlowBranchNode<P>
     ]
     if (this.name) branch[0].name = this.name;
     if (this.subflow) branch = branch.concat(this.subflow.branch());
     return branch;
   }
 
-  branchJSON(forPlayer=true): FlowBranchNode[] {
+  branchJSON(forPlayer=true): FlowBranchNode<P>[] {
     if (this.position === undefined) return [];
     let branch = [
       {
@@ -75,7 +75,7 @@ export default class Flow {
   /**
    * set the position of this flow and all subflows recursively - obsolete?
    */
-  setBranch(branch: FlowBranchNode[]) {
+  setBranch(branch: FlowBranchNode<P>[]) {
     const node = branch[0];
     if (node) {
       this.setPosition(node.position, false);
@@ -116,7 +116,7 @@ export default class Flow {
     }
   }
 
-  currentStep(): Flow {
+  currentStep(): Flow<P> {
     this.subflow = this.currentSubflow();
     if (this.subflow) {
       return this.subflow.currentStep();
@@ -140,11 +140,11 @@ export default class Flow {
   //   return flow;
   // }
 
-  currentLoop(): Loop | undefined {
-    let loop: Loop | undefined = undefined;
-    let flow: Flow | undefined = this.ctx.top;
+  currentLoop(): Loop<P> | undefined {
+    let loop: Loop<P> | undefined = undefined;
+    let flow: Flow<P> | undefined = this.ctx.top;
     while (flow) {
-      if ('repeat' in flow) loop = flow as Loop;
+      if ('repeat' in flow) loop = flow as Loop<P>;
       flow = flow.currentSubflow();
     }
     return loop;
@@ -154,7 +154,7 @@ export default class Flow {
     return this.currentStep().awaitingAction();
   }
 
-  processMove(move: ActionStepPosition): [ResolvedSelection?, Argument[]?, string?] {
+  processMove(move: ActionStepPosition<P>): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
     const step = this.currentStep();
     if (!step || step.type !== 'action') throw Error(`Cannot process action currently ${JSON.stringify(this.branch())}`);
     return step.processMove(move);
@@ -205,7 +205,7 @@ export default class Flow {
   reset() { }
 
   // must override. must rely on this.position
-  currentSubflow(): Flow | undefined {
+  currentSubflow(): Flow<P> | undefined {
     return undefined;
   }
 

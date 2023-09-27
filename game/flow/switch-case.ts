@@ -3,19 +3,20 @@ import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
 import type { SingleArgument } from '../action/types';
 import type { SwitchCaseCases } from './types';
+import type { Player } from '../player';
 
-export default class SwitchCase<T extends SingleArgument> extends Flow {
+export default class SwitchCase<P extends Player, T extends SingleArgument<P>> extends Flow<P> {
   position: { index?: number, default?: boolean, value: T };
   switch: ((r: Record<any, any>) => T) | T;
-  cases: SwitchCaseCases<T>;
-  default?: Flow;
+  cases: SwitchCaseCases<P, T>;
+  default?: Flow<P>;
   type = "switch-case";
 
   constructor({ name, switch: switchExpr, cases, default: def }: {
     name: string,
     switch: ((r: Record<any, any>) => T) | T,
-    cases: SwitchCaseCases<T>;
-    default?: Flow
+    cases: SwitchCaseCases<P, T>;
+    default?: Flow<P>
   }) {
     super({ name });
     this.switch = switchExpr;
@@ -48,7 +49,7 @@ export default class SwitchCase<T extends SingleArgument> extends Flow {
     return {
       index: this.position.index,
       default: this.position.default,
-      value: serializeSingleArg(this.position.value, forPlayer)
+      value: serializeSingleArg<P>(this.position.value, forPlayer)
     };
   }
 
@@ -56,7 +57,7 @@ export default class SwitchCase<T extends SingleArgument> extends Flow {
     this.setPosition({
       index: position.index,
       default: position.default,
-      value: deserializeSingleArg(position.value, this.ctx.game)
+      value: deserializeSingleArg<P>(position.value, this.ctx.game)
     }, false);
   }
 

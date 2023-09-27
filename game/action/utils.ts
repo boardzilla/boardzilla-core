@@ -5,31 +5,31 @@ import type { Argument, SingleArgument, SerializedArg, SerializedSingleArg } fro
 import type { Game } from '../';
 import type { Board } from '../board';
 
-export const humanizeArg = (arg: Argument) => {
+export const humanizeArg = (arg: Argument<Player>) => {
   if (arg instanceof Player) return arg.name;
   if (arg instanceof GameElement) return arg.name || `$el[${arg.branch()}]`; // ??
   return arg.toString();
 }
 
-export const serializeArg = (arg: Argument, forPlayer=true): SerializedArg => {
+export const serializeArg = <P extends Player>(arg: Argument<P>, forPlayer=true): SerializedArg => {
   if (arg instanceof Array) return arg.map(a => serializeSingleArg(a, forPlayer));
   return serializeSingleArg(arg, forPlayer);
 }
 
-export const serializeSingleArg = (arg: SingleArgument, forPlayer=true): SerializedSingleArg => {
+export const serializeSingleArg = <P extends Player>(arg: SingleArgument<P>, forPlayer=true): SerializedSingleArg => {
   if (arg instanceof Player) return `$p[${arg.position}]`;
   if (arg instanceof GameElement) return forPlayer ? `$el[${arg.branch()}]` : `$eid[${arg._t.id}]`;
   return arg;
 }
 
-export const deserializeArg = (arg: SerializedArg, game: Game<Player, Board>): Argument => {
-  if (arg instanceof Array) return arg.map(a => deserializeSingleArg(a, game)) as GameElement[];
+export const deserializeArg = <P extends Player>(arg: SerializedArg, game: Game<P, Board<P>>): Argument<P> => {
+  if (arg instanceof Array) return arg.map(a => deserializeSingleArg(a, game)) as GameElement<P>[];
   return deserializeSingleArg(arg, game);
 }
 
-export const deserializeSingleArg = (arg: SerializedSingleArg, game: Game<Player, Board>): SingleArgument => {
+export const deserializeSingleArg = <P extends Player>(arg: SerializedSingleArg, game: Game<P, Board<P>>): SingleArgument<P> => {
   if (typeof arg === 'number' || typeof arg === 'boolean') return arg;
-  let deser: SingleArgument | undefined;
+  let deser: SingleArgument<P> | undefined;
   if (arg.slice(0, 3) === '$p[') {
     deser = game.players.atPosition(parseInt(arg.slice(3, -1)));
   } else if (arg.slice(0, 4) === '$el[') {
@@ -48,7 +48,7 @@ export const serializeObject = (obj: Record<string, any>, forPlayer=true) => {
   return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, serialize(v, forPlayer)]));
 }
 
-export const deserializeObject = (obj: Record<string, any>, game: Game<Player, Board>) => {
+export const deserializeObject = <P extends Player>(obj: Record<string, any>, game: Game<P, Board<P>>) => {
   return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, deserialize(v, game)]));
 }
 
@@ -63,7 +63,7 @@ export const serialize = (arg: any, forPlayer=true): any => {
   throw Error(`unable to serialize ${arg}`);
 }
 
-export const deserialize = (arg: any, game: Game<Player, Board>): any => {
+export const deserialize = <P extends Player>(arg: any, game: Game<P, Board<P>>): any => {
   if (arg === undefined) return undefined;
   if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => deserialize(a, game));

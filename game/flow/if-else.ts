@@ -1,14 +1,16 @@
 import Flow from './flow';
 import SwitchCase from './switch-case';
 
-export default class If extends SwitchCase<boolean> {
+import type { Player } from '../player';
+
+export default class If<P extends Player> extends SwitchCase<P, boolean> {
   type = "if-else";
 
   constructor({ name, test, do: doExpr, else: elseExpr }: {
     name: string,
     test: (r: Record<any, any>) => boolean,
-    do: Flow;
-    else?: Flow
+    do: Flow<P>;
+    else?: Flow<P>
   }) {
     super({ name, switch: test, cases: [{ eq: true, flow: doExpr }], default: elseExpr });
   }

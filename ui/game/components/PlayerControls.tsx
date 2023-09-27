@@ -13,7 +13,7 @@ import type {
 
 const PlayerControls = ({move, selection, onSubmit}: {
   move?: IncompleteMove<Player>;
-  selection?: ResolvedSelection;
+  selection?: ResolvedSelection<Player>;
   onSubmit: (move?: IncompleteMove<Player>) => void;
 }) => {
   const [game, position, selected] = gameStore(s => [s.game, s.position, s.selected, s.boardJSON]);
@@ -34,7 +34,7 @@ const PlayerControls = ({move, selection, onSubmit}: {
     const form = e.currentTarget;
     if (!form) throw Error("No form in submit");
     if (!selection) throw Error("Submitted without a selection");
-    let arg: Argument | undefined = undefined;
+    let arg: Argument<Player> | undefined = undefined;
     if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) {
       arg = selected;
     } else {

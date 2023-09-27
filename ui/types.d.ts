@@ -47,7 +47,10 @@ export type SettingsUpdateEvent = {
 
 export type GameUpdateEvent = {
   type: "gameUpdate"
-  state: GameState<Player>
+  state: {
+    position: number,
+    state: GameState<Player>
+  }
 }
 
 // indicates the disposition of a message that was processed

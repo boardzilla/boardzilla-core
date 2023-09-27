@@ -5,6 +5,7 @@ import {
   GameElement,
   ElementCollection,
 } from '../../../game/board/';
+import type { Player } from '../../../game/player';
 
 export default () => {
   const [game, updateBoard, setHilites] = gameStore(s => [s.game, s.updateBoard, s.setHilites, s.boardJSON]);
@@ -29,7 +30,7 @@ export default () => {
 
     if (result) {
       if (result.constructor.name === 'ElementCollection') {
-        setHilites(Array.from(result as ElementCollection<GameElement>));
+        setHilites(Array.from(result as ElementCollection<Player, GameElement<Player>>));
       }
       if (result.branch) {
         setHilites([result.branch()]);

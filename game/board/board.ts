@@ -1,12 +1,14 @@
 import Space from './space'
-import type { ElementJSON, ElementClass } from './types';
-import type { GameElement } from './';
 import { deserializeObject } from '../action/utils';
 
-export default class Board extends Space {
-  pile: GameElement;
+import type { ElementJSON, ElementClass } from './types';
+import type { GameElement } from './';
+import type { Player } from '../player';
 
-  constructor(...classes: ElementClass<GameElement>[]) {
+export default class Board<P extends Player> extends Space<P> {
+  pile: GameElement<P>;
+
+  constructor(...classes: ElementClass<P, GameElement<P>>[]) {
     super({ classRegistry: classes });
     this.board = this;
     this._ctx.removed = this.createElement(Space, 'removed');
@@ -27,7 +29,7 @@ export default class Board extends Space {
 
     // reset all on self
     for (const key of Object.keys(this)) {
-      if (!['_ctx', '_t', '_eventHandlers', 'board', 'pile'].includes(key) && !(key in rest))
+      if (!['_ctx', '_t', '_eventHandlers', 'board', 'game', 'pile'].includes(key) && !(key in rest))
         rest[key] = undefined;
     }
     Object.assign(this, {...rest});
