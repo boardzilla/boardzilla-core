@@ -16,7 +16,7 @@ chai.use(spies);
 const { expect } = chai;
 
 describe('Board', () => {
-  let board: Board;
+  let board: Board<Player>;
 
   const players = new PlayerCollection<Player>;
   players.className = Player;
@@ -34,7 +34,7 @@ describe('Board', () => {
   beforeEach(() => {
     board = new Board(Space, Piece, GameElement);
     // @ts-ignore
-    board._ctx.game = { players, board };
+    board.game = { players, board };
   });
 
   it('renders', () => {
@@ -113,9 +113,9 @@ describe('Board', () => {
   });
 
   it('preserves serializable attributes from json', () => {
-    class Country extends Space {
+    class Country extends Space<Player> {
       rival: Country;
-      general: Piece;
+      general: Piece<Player>;
     }
 
     board._ctx.classRegistry.push(Country);
@@ -165,7 +165,7 @@ describe('Board', () => {
   });
 
   describe("Element subclasses", () => {
-    class Card extends Piece {
+    class Card extends Piece<Player> {
       suit: string;
       pip: number = 1;
       flipped?: boolean = false;

@@ -42,9 +42,8 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
             if (!el._ctx.player) throw Error('Using "mine" in a non-player context');
             kvpairs = kvpairs.concat([["mine", el.mine]]);
           }
-          if (attrs.adjacent) {
-            if (!el._ctx.player) throw Error('Using "mine" in a non-player context');
-            finders.push(el => el._t.graph?.areNeighbors(this, el) || false);
+          if (attrs.empty) {
+            kvpairs = kvpairs.concat([["empty", el.isEmpty()]]);
           }
           return kvpairs.find(([k2, v2]) => k1 === k2 && v1 === v2)
         })

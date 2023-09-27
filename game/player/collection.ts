@@ -12,7 +12,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   className: {new(...a: any[]): P};
   game: Game<P, Board<P>>
 
-  addPlayer(attrs: PlayerAttributes<P> // | PlayerAttributes<Player>
+  addPlayer(attrs: PlayerAttributes<P>
     ) {
     const player = new this.className(attrs);
     Object.assign(player, attrs);
@@ -99,8 +99,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     return this.reduce((sum, n) => sum + (typeof key === 'function' ? key(n) : n[key] as unknown as number), 0);
   }
 
-  fromJSON(players: (PlayerAttributes<P> // | PlayerAttributes<Player>
-                    )[]) {
+  fromJSON(players: (PlayerAttributes<P>)[]) {
     // reset all on self
     this.splice(0, this.length);
     this.currentPosition = undefined;

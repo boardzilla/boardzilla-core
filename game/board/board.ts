@@ -24,7 +24,7 @@ export default class Board<P extends Player> extends Space<P> {
 
   fromJSON(boardJSON: ElementJSON[]) {
     let { className, children, _id, ...rest } = boardJSON[0];
-    if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
+    if (this.game) rest = deserializeObject({...rest}, this.game);
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
 
     // reset all on self

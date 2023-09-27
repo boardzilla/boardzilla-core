@@ -141,6 +141,10 @@ export default class GameElement<P extends Player> {
       this._t.parent.container(className);
   }
 
+  isEmpty() {
+    return !this._t.children.length;
+  }
+
   sort(fn?: (a: GameElement<P>, b: GameElement<P>) => number) {
     return this._t.children.sort(fn)
   }
@@ -150,7 +154,7 @@ export default class GameElement<P extends Player> {
   }
 
   shuffle() {
-    shuffleArray(this._t.children, this._ctx.game?.random || Math.random);
+    shuffleArray(this._t.children, this.game?.random || Math.random);
   }
 
   owner() {
@@ -209,7 +213,7 @@ export default class GameElement<P extends Player> {
     }
   }
 
-  static hide<P extends Player>(this: ElementClass<P, GameElement<P>>, ...attrs: (string & keyof GameElement<P>)[]): void {
+  static hide<P extends Player, T extends GameElement<P>>(this: ElementClass<P, T>, ...attrs: (string & keyof T)[]): void {
     this.hiddenAttributes = attrs;
   }
 
@@ -226,7 +230,7 @@ export default class GameElement<P extends Player> {
   }
 
   create<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T {
-    if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
+    if (this.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
     const el = this.createElement(className, name, attrs);
     el._t.parent = this;
     this._t.children.push(el);
@@ -285,7 +289,7 @@ export default class GameElement<P extends Player> {
 
   toJSON(seenBy?: number) {
     let attrs: Record<any, any>;
-    let { _t, _ctx, board, ...rest } = this;
+    let { _t, _ctx, game, board, ...rest } = this;
     if ('pile' in rest) delete rest.pile;
     if ('_eventHandlers' in rest) delete rest['_eventHandlers'];
 
@@ -316,7 +320,7 @@ export default class GameElement<P extends Player> {
 
     for (const json of childrenJSON) {
       let { className, children, _id, name, ...rest } = json;
-      if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
+      if (this.game) rest = deserializeObject({...rest}, this.game);
       let child: GameElement<P> | undefined = undefined;
       if (_id !== undefined) {
         child = spaces.find(c => c._t.id === _id);

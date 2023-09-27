@@ -33,11 +33,11 @@ describe('Game', () => {
     { id: '104', name: 'Jin', color: 'purple', position: 4 },
   ];
 
-  class TestBoard extends Board {
+  class TestBoard extends Board<Player> {
     tokens: number = 0;
   }
 
-  class Card extends Piece {
+  class Card extends Piece<Player> {
     suit: string;
     value: number;
     flipped: boolean;

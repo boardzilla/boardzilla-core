@@ -72,7 +72,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   ): B {
     if (this.phase !== 'define') throw Error('cannot call defineActions once started');
     this.board = new className(GameElement, Space, Piece, ...classRegistry)
-    this.board._ctx.game = this;
+    this.board.game = this;
     return this.board;
   }
 
