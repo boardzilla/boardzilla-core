@@ -1,23 +1,30 @@
 import { Action, Selection, MoveAction } from './action/';
+import { escapeArgument } from './action/utils';
 import {
   Board,
   Space,
   Piece,
-  ElementCollection,
   GameElement
 } from './board/';
 import { PlayerAction } from './flow/';
-import type { Flow } from './flow/';
-import random from 'random-seed';
-
-import { GameState, PlayerPositionState } from '../types';
+import {
+  GameState,
+  PlayerPositionState,
+  Message
+} from '../types';
 import { ElementClass } from './board/types';
 import { Player, PlayerCollection } from './player/';
+
+import random from 'random-seed';
+
+import type { Flow } from './flow/';
 import type {
   Move,
   IncompleteMove,
+  Argument,
   ResolvedSelection,
-  MoveResponse
+  MoveResponse,
+  SerializedArg
 } from './action/types';
 import type { PlayerAttributes } from './player/types';
 
@@ -28,15 +35,12 @@ export default class Game<P extends Player, B extends Board<P>> {
   board: B;
   settings: Record<string, any>;
   actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P>>;
-  phase: 'define' | 'new' | 'started'
+  phase: 'define' | 'new' | 'started' = 'define';
   random: () => number;
+  messages: Message[] = [];
   minPlayers = 1;
   maxPlayers: number;
   godMode = false;
-
-  constructor() {
-    this.phase = 'define';
-  }
 
   /**
    * configuration functions
@@ -235,6 +239,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   // moves
   processMove({ player, action, args }: Move<P>): MoveResponse<P> {
     let resolvedSelection, truncatedArgs, error;
+    this.messages = [];
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[action]) {
         const godModeAction = this.godModeActions()[action];
@@ -274,5 +279,26 @@ export default class Game<P extends Player, B extends Board<P>> {
     const results = fn();
     this.board._ctx.player = prev;
     return results;
+  }
+
+  message(message: string, ...args: [...Argument<P>[], Record<string, Argument<P>>] | Argument<P>[]) {
+    let replacements: Record<string, SerializedArg> = {};
+    if (args.length) {
+      const lastArg = args[args.length - 1]
+      if (typeof lastArg === 'object' && !(lastArg instanceof Array) && !(lastArg instanceof Player) && !(lastArg instanceof GameElement)) {
+        replacements = Object.fromEntries(Object.entries(lastArg).map(([k, v]) => (
+          [k, escapeArgument(v)]
+        )));;
+        args = args.slice(0, -1) as Argument<P>[];
+      }
+    }
+    for (let i = 0; i !== args.length; i++) {
+      replacements[i + 1] = escapeArgument(args[i] as Argument<P>);
+    }
+
+    Object.entries(replacements).forEach(([k, v]) => {
+      message = message.replace(new RegExp(`\\$${k}\\b`), v as string);
+    })
+    this.messages.push({body: message});
   }
 }

@@ -22,7 +22,12 @@ import type {
 } from './types';
 import type { SerializedMove } from '../game/action/types';
 
-export default ({ userID, setup }: { userID: string, setup: SetupFunction<Player, Board<Player>> }) => {
+export default ({ userID, minPlayers, maxPlayers, setup }: {
+  userID: string,
+  minPlayers: number,
+  maxPlayers: number,
+  setup: SetupFunction<Player, Board<Player>>
+}) => {
   const [game, setGame, position, setPosition, updateBoard] = gameStore(s => [s.game, s.setGame, s.position, s.setPosition, s.updateBoard]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
@@ -138,6 +143,8 @@ export default ({ userID, setup }: { userID: string, setup: SetupFunction<Player
     {phase === 'new' &&
      <Setup
        users={users}
+       minPlayers={minPlayers}
+       maxPlayers={maxPlayers}
        players={players}
        settings={settings}
        onUpdatePlayers={updatePlayers}

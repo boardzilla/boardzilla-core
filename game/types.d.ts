@@ -25,3 +25,5 @@ export type GameInterface<P extends Player> = {
     position: number
   ) => GameState<P>
 }
+
+export type Sorter<T> = keyof {[K in keyof T]: T[K] extends number | string ? never: K} | ((e: T) => number | string)

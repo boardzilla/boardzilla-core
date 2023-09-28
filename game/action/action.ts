@@ -18,17 +18,20 @@ export default class Action<P extends Player> {
   selections: (Action<P>|Selection<P>)[];
   move?: (...a: Argument<P>[]) => void;
   condition?: (() => boolean) | boolean;
+  message?: string | ((...a: Argument<P>[]) => string);
 
-  constructor({ prompt, selections, condition, move }: {
+  constructor({ prompt, selections, condition, move, message }: {
     prompt: string,
     selections?: (Action<P> | SelectionDefinition<P>)[],
     condition?: (() => boolean) | boolean,
     move?: (...a: Argument<P>[]) => void,
+    message?: string | ((...a: Argument<P>[]) => string);
   }) {
     this.prompt = prompt;
     this.selections = selections ? selections.map(s => s instanceof Action ? s : new Selection(s)) : [];
     this.condition = condition;
     this.move = move;
+    this.message = message;
   }
 
   isPossible(): boolean {

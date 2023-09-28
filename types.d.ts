@@ -22,7 +22,7 @@ export type PlayerPositionState<P extends Player> = {
 }
 
 export type Message = {
-  position: number
+  position?: number
   body: string
 }
 

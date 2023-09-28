@@ -5,26 +5,27 @@ import classNames from 'classnames';
 import {
   Piece,
   GameElement,
-  isA
+  isA,
 } from '../../../game'
+import { serialize } from '../../../game/action/utils'
 
 import type { ElementJSON } from '../../../game/board/types'
 import type { Player } from '../../../game/player';
 
 const elementAttributes = (el: GameElement<Player>) => {
-  const { _t, _ctx, name, _visible, ...rest } = el;
-  if ('_eventHandlers' in rest) delete rest['_eventHandlers'];
-  return Object.fromEntries(Object.entries(rest).map(([key, val]) => [`data-${key.toLowerCase()}`, val]));
+  return Object.fromEntries(Object.entries(el).filter(([key, val]) => (
+    !['_t', '_ctx', 'name', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function'
+  )).map(([key, val]) => (
+    [`data-${key.toLowerCase()}`, serialize(val)]
+  )));
 }
 
 const defaultAppearance = (element: GameElement<Player>, children: JSX.Element[]) => (
   <>
-    {element.name || className(element)}
+    {element.name || element.constructor.name}
     {children}
   </>
 );
-
-const className = (element: GameElement<Player>) => element.constructor.name;
 
 const Element = ({element, json, clickables, hilites, selected, onSelectElement}: {
   element: GameElement<Player>,
@@ -49,8 +50,8 @@ const Element = ({element, json, clickables, hilites, selected, onSelectElement}
     base: 'Space'
   };
 
-  const appearance = (uiOptions.appearance && uiOptions.appearance[className(element)]) ?
-                      uiOptions.appearance[className(element)] : defaultAppearance;;
+  const appearance = (uiOptions.appearance && uiOptions.appearance[json.className]) ?
+                      uiOptions.appearance[json.className] : defaultAppearance;
 
   return React.createElement(
     htmlElement.tag,

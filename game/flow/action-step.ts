@@ -48,9 +48,19 @@ export default class PlayerAction<P extends Player> extends Flow<P> {
     const gameAction = game.action(move.action, player);
     const response = gameAction.process(...move.args);
     if (response[0]) {
+      // failed with a selection required
       return response;
     } else {
+      // succeeded
       this.setPosition(move);
+      const message = gameAction.message;
+      if (message) {
+        if (typeof message === 'function') {
+          this.ctx.game.message(message(...move.args));
+        } else {
+          this.ctx.game.message(message, ...move.args, {player});
+        }          
+      }
       return [] as [ResolvedSelection<P>?]
     }
   }

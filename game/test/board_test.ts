@@ -315,9 +315,14 @@ describe('Board', () => {
       deck.create(Card, '3D', { suit: 'D', pip: 3 });
       deck.create(Card, '2H', { suit: 'H', pip: 2 });
 
-      expect(board.all(Card).withHighest('pip').name).to.equal('3D');
-      expect(board.all(Card).withHighest('suit').name).to.equal('AH');
-      expect(board.all(Card).withHighest('suit', 'pip').name).to.equal('2H');
+      expect(board.all(Card).withHighest('pip')!.name).to.equal('3D');
+      expect(board.all(Card).withHighest('suit')!.name).to.equal('AH');
+      expect(board.all(Card).withHighest('suit', 'pip')!.name).to.equal('2H');
+      expect(board.all(Card).withHighest(c => c.suit === 'D' ? 100 : 1)!.name).to.equal('3D');
+      expect(board.all(Card).min('pip')).to.equal(1);
+      expect(board.all(Card).max('pip')).to.equal(3);
+      expect(board.all(Card).min('suit')).to.equal('C');
+      expect(board.all(Card).max('suit')).to.equal('H');
     });
 
     it("isVisibleTo", () => {

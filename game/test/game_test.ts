@@ -27,10 +27,10 @@ let spendSpy: ReturnType<typeof chai.spy>;
 
 describe('Game', () => {
   const players = [
-    { id: '101', name: 'Joe', color: 'red', position: 1 },
-    { id: '102', name: 'Jane', color: 'green', position: 2 },
-    { id: '103', name: 'Jag', color: 'yellow', position: 3 },
-    { id: '104', name: 'Jin', color: 'purple', position: 4 },
+    { name: 'Joe', color: 'red', position: 1 },
+    { name: 'Jane', color: 'green', position: 2 },
+    { name: 'Jag', color: 'yellow', position: 3 },
+    { name: 'Jin', color: 'purple', position: 4 },
   ];
 
   class TestBoard extends Board<Player> {
@@ -53,7 +53,10 @@ describe('Game', () => {
     game.defineFlow(
       (game, board) => new Sequence({
         steps: [
-          new Step({ command: () => board.tokens = 4 }),
+          new Step({ command: () => {
+            board.tokens = 4;
+            game.message('Starting game with $1 tokens', board.tokens);
+          }}),
           new Loop({ while: () => board.tokens < 8, do: (
             new PlayerAction({ actions: {
               addSome: null,
@@ -71,7 +74,7 @@ describe('Game', () => {
       })
     );
 
-    game.defineActions((game, board) => ({
+    game.defineActions((_, board) => ({
       addSome: player => new Action({
         prompt: 'add some counters',
         selections: [{
@@ -81,13 +84,14 @@ describe('Game', () => {
             max: 3,
           }
         }],
-        move: (n: number) => board.tokens += n
+        move: (n: number) => board.tokens += n,
+        message: '$player added $1'
       }),
-      takeOne: player => new Action({
+      takeOne: () => new Action({
         prompt: 'take one counter',
         move: () => board.tokens -= 1,
       }),
-      spend: player => new Action({
+      spend: () => new Action({
         prompt: 'Spend resource',
         selections: [{
           prompt: 'which resource',
@@ -123,6 +127,22 @@ describe('Game', () => {
       { type: 'loop', position: { index: 0 } }
     ]);
     expect(actions).to.deep.equal(['addSome', 'spend']);;
+  });
+
+  it('messages', () => {
+    game.play();
+    expect(game.messages).to.deep.equals([
+      {
+        "body": "Starting game with 4 tokens"
+      }
+    ]);
+    game.processMove({ action: 'addSome', args: [3], player: game.players[0] });
+    game.play();
+    expect(game.messages).to.deep.equals([
+      {
+        "body": "[[$p[1]|Joe]] added 3"
+      }
+    ]);
   });
 
   describe('state', () => {
@@ -246,11 +266,11 @@ describe('Game', () => {
     });
 
     it('withHighest', () => {
-      expect(game.players.withHighest('color')).to.equal(game.players[1])
+      expect(game.players.withHighest('color')).to.equal(game.players[2])
     });
 
     it('withLowest', () => {
-      expect(game.players.withLowest('color')).to.equal(game.players[2])
+      expect(game.players.withLowest('color')).to.equal(game.players[1])
     });
 
     it('min', () => {

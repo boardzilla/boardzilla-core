@@ -13,7 +13,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       return {
         game: game.getState(),
         players: game.getPlayerStates(),
-        messages: []
+        messages: game.messages
       }
     },
     processMove: (
@@ -37,7 +37,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       return {
         game: game.getState(),
         players: game.getPlayerStates(),
-        messages: []
+        messages: game.messages
       }
     },
     getPlayerState: (state: GameState<Player>, position: number): GameState<Player> => {

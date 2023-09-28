@@ -4,9 +4,11 @@ import { gameStore } from '../';
 
 import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../types';
 
-export default ({ users, players, settings, onUpdatePlayers, onUpdateSettings, onStart }: {
+export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlayers, onUpdateSettings, onStart }: {
   users: User[],
   players: UserPlayer[],
+  minPlayers: number,
+  maxPlayers: number,
   settings?: GameSettings,
   onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
   onUpdateSettings: (s: GameSettings) => void,
@@ -37,10 +39,12 @@ export default ({ users, players, settings, onUpdatePlayers, onUpdateSettings, o
       <Seating
         users={users}
         players={players}
+        minPlayers={minPlayers}
+        maxPlayers={maxPlayers}
         onUpdatePlayers={onUpdatePlayers}
       />
       {settingsComponents}
-      <input type="button" disabled={(players?.length || 0) < 1} value="Start" onClick={onStart}/>
+      <input type="button" disabled={(players?.length || 0) < minPlayers} value="Start" onClick={onStart}/>
     </>
   );
 }

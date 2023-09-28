@@ -4,16 +4,21 @@ import {
   ElementClass,
   ElementFinder,
 } from './types';
+import type { Sorter } from '../types';
 import type { Player } from '../player';
 
 export default class ElementCollection<P extends Player, T extends GameElement<P>> extends Array<T> {
   top: typeof this.last;
   bottom: typeof this.first;
+  topN: typeof this.lastN;
+  bottomN: typeof this.firstN;
 
   constructor(...collection: T[]) {
     super(...collection);
-    this.top = this.last;
-    this.bottom = this.first;
+    Object.getPrototypeOf(this).top = this.last;
+    Object.getPrototypeOf(this).topN = this.lastN;
+    Object.getPrototypeOf(this).bottom = this.first;
+    Object.getPrototypeOf(this).bottomN = this.firstN;
   }
 
   slice(...a: any[]):ElementCollection<P, T> {return super.slice(...a) as ElementCollection<P, T>};
@@ -129,37 +134,45 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
     return this._finder(className, {limit: n, order: 'desc'}, ...finders);
   }
 
-  sortBy(key: string | ((el: T) => number), direction?: "asc" | "desc") {
+  sortBy<E extends T>(key: Sorter<E> | (Sorter<E>)[], direction?: "asc" | "desc") {
+    const rank = (e: E, k: Sorter<E>) => typeof k === 'function' ? k(e) : e[k]
     const [up, down] = direction === 'desc' ? [-1, 1] : [1, -1];
-    return this.sort((a: any, b: any) => {
-      let aVal: number;
-      let bVal: number;
-      if (typeof key === 'function') {
-        aVal = key(a);
-        bVal = key(b);
-      } else {
-        aVal = a[key];
-        bVal = b[key];
-      }
-      return aVal < bVal ? down : (aVal > bVal ? up : 0);
-    });
-  }
-
-  sum(key: ((...a: any[]) => number) | (keyof {[K in keyof T]: T[K] extends number ? never: K})) {
-    return this.reduce((sum, n) => sum + (typeof key === 'function' ? key(n) : n[key] as unknown as number), 0);
-  }
-
-  // TODO have to decide if collection holds-type-restrictions are good idea
-  withHighest(...attributes: (keyof T)[]) {
-    const sorted = this.slice(0, this.length);
-    sorted.sort((a, b) => {
-      for (const attr of attributes) {
-        if (a[attr] > b[attr]) return -1;
-        if (a[attr] < b[attr]) return 1;
+    return this.sort((a, b) => {
+      const keys = key instanceof Array ? key : [key];
+      for (const k of keys) {
+        const r1 = rank(a as E, k);
+        const r2 = rank(b as E, k);
+        if (r1 > r2) return up;
+        if (r1 < r2) return down;
       }
       return 0;
     });
-    return sorted[0];
+  }
+
+  sortedBy(key: Sorter<T> | (Sorter<T>)[], direction: "asc" | "desc" = "asc") {
+    return (this.slice(0, this.length) as this).sortBy(key, direction);
+  }
+
+  sum(key: ((e: T) => number) | (keyof {[K in keyof T]: T[K] extends number ? never: K})) {
+    return this.reduce((sum, n) => sum + (typeof key === 'function' ? key(n) : n[key] as unknown as number), 0);
+  }
+
+  withHighest(...attributes: Sorter<T>[]): T | undefined {
+    return this.sortedBy(attributes, 'desc')[0];
+  }
+
+  withLowest(...attributes: Sorter<T>[]): T | undefined {
+    return this.sortedBy(attributes, 'asc')[0];
+  }
+
+  max<K extends keyof T>(key: K): T[K] | undefined {
+    const el = this.sortedBy(key, 'desc')[0]
+    return el && el[key];
+  }
+
+  min<K extends keyof T>(key: K): T[K] | undefined {
+    const el = this.sortedBy(key, 'asc')[0]
+    return el && el[key];
   }
 
   remove() {

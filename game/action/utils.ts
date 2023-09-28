@@ -5,7 +5,7 @@ import type { Argument, SingleArgument, SerializedArg, SerializedSingleArg } fro
 import type { Game } from '../';
 import type { Board } from '../board';
 
-export const humanizeArg = (arg: Argument<Player>) => {
+export const humanizeArg = <P extends Player>(arg: Argument<P>) => {
   if (arg instanceof Player) return arg.name;
   if (arg instanceof GameElement) return arg.name || `$el[${arg.branch()}]`; // ??
   return arg.toString();
@@ -72,3 +72,14 @@ export const deserialize = <P extends Player>(arg: any, game: Game<P, Board<P>>)
     return deserializeSingleArg(arg, game);
   throw Error(`unable to deserialize ${arg}`);
 }
+
+export const escapeArgument = <P extends Player>(arg: Argument<P>): string => {
+  if (arg instanceof Array) {
+    const escapees = arg.map(escapeArgument);
+    return escapees.slice(0, -1).join(', ') + (escapees.length > 1 ? ' and ' : '') + (escapees[escapees.length - 1] || '');
+  }
+  if (typeof arg === 'object') return `[[${serializeSingleArg(arg)}|${humanizeArg(arg)}]]`;
+  return String(arg);
+}
+
+

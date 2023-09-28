@@ -13,6 +13,7 @@ import type {
 import type { Player } from '../player';
 import type { Game } from '../';
 import type Board from './board';
+import type { Sorter } from '../types';
 
 import type { UndirectedGraph } from 'graphology';
 
@@ -130,6 +131,16 @@ export default class GameElement<P extends Player> {
     return this._t.parent!._t.children._finder(className, {}, otherFinder, ...finders);
   }
 
+  has<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): boolean;
+  has<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): boolean;
+  has<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | boolean {
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      return !!this.first(className, ...finders);
+    } else {
+      return !!this.first(className, ...finders);
+    }
+  }
+
   _otherFinder<T extends GameElement<P>>(finders: ElementFinder<P, T>[]): ElementFinder<P, GameElement<P>> {
     return (el: T) => el !== (this as GameElement<P>);
   }
@@ -145,11 +156,7 @@ export default class GameElement<P extends Player> {
     return !this._t.children.length;
   }
 
-  sort(fn?: (a: GameElement<P>, b: GameElement<P>) => number) {
-    return this._t.children.sort(fn)
-  }
-
-  sortBy(key: string, direction?: "asc" | "desc") {
+  sortBy<E extends GameElement<P>>(key: Sorter<E> | (Sorter<E>)[], direction?: "asc" | "desc") {
     return this._t.children.sortBy(key, direction)
   }
 

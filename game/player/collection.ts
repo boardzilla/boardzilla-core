@@ -3,9 +3,8 @@ import Player from './player';
 import { shuffleArray } from '../utils';
 
 import type { Game, Board } from '..';
-import type {
-  PlayerAttributes
-} from './types';
+import type { Sorter } from '../types';
+import type { PlayerAttributes } from './types';
 
 export default class PlayerCollection<P extends Player> extends Array<P> {
   currentPosition?: number;
@@ -66,25 +65,39 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     return index + 1;
   }
 
-  sortBy(key: keyof P, direction?: "asc" | "desc") {
+  sortBy(key: Sorter<P> | (Sorter<P>)[], direction?: "asc" | "desc") {
+    const rank = (p: P, k: Sorter<P>) => typeof k === 'function' ? k(p) : p[k]
     const [up, down] = direction === 'desc' ? [-1, 1] : [1, -1];
-    return this.sort((a: any, b: any) => a[key] < b[key] ? down : (a[key] > b[key] ? up : 0));
+    return this.sort((a, b) => {
+      const keys = key instanceof Array ? key : [key];
+      for (const k of keys) {
+        const r1 = rank(a, k);
+        const r2 = rank(b, k);
+        if (r1 > r2) return up;
+        if (r1 < r2) return down;
+      }
+      return 0;
+    });
   }
 
-  sortedBy(key: keyof P, direction?: "asc" | "desc") {
+  sortedBy(key: Sorter<P> | (Sorter<P>)[], direction: "asc" | "desc" = "asc") {
     return (this.slice(0, this.length) as this).sortBy(key, direction);
+  }
+
+  sum(key: ((e: P) => number) | (keyof {[K in keyof P]: P[K] extends number ? never: K})) {
+    return this.reduce((sum, n) => sum + (typeof key === 'function' ? key(n) : n[key] as unknown as number), 0);
+  }
+
+  withHighest(...attributes: Sorter<P>[]) {
+    return this.sortedBy(attributes, 'desc')[0];
+  }
+
+  withLowest(...attributes: Sorter<P>[]) {
+    return this.sortedBy(attributes, 'asc')[0];
   }
 
   shuffle() {
     shuffleArray(this, this.game?.random || Math.random);
-  }
-
-  withHighest(key: keyof P) {
-    return this.sortedBy(key)[0]
-  }
-
-  withLowest(key: keyof P) {
-    return this.sortedBy(key, 'desc')[0]
   }
 
   max<K extends keyof P>(key: K): P[K] {
@@ -92,11 +105,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   }
 
   min<K extends keyof P>(key: K): P[K] {
-    return this.sortedBy(key)[0][key];
-  }
-
-  sum(key: ((...a: any[]) => number) | (keyof {[K in keyof P]: P[K] extends number ? never: K})) {
-    return this.reduce((sum, n) => sum + (typeof key === 'function' ? key(n) : n[key] as unknown as number), 0);
+    return this.sortedBy(key, 'asc')[0][key];
   }
 
   fromJSON(players: (PlayerAttributes<P>)[]) {

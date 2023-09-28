@@ -12,7 +12,10 @@ import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
 import type { IncompleteMove, ResolvedSelection } from '../game/action/types'
 
-const userID = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}').userID;
+const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
+const userID: string = boostrap.userID;
+const minPlayers: number = boostrap.minPlayers;
+const maxPlayers: number = boostrap.maxPlayers;
 
 type GameStore = {
   game?: Game<Player, Board<Player>>;
@@ -79,7 +82,12 @@ export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UI
   
   ReactDOM.render(
     // we can anonymize Player class internally
-    <Main userID={userID} setup={setup as unknown as SetupFunction<Player, Board<Player>>}/>,
+    <Main
+      userID={userID}
+      minPlayers={minPlayers}
+      maxPlayers={maxPlayers}
+      setup={setup as unknown as SetupFunction<Player, Board<Player>>}
+    />,
     document.getElementById('root')
   )
 };
