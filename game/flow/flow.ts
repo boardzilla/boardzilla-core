@@ -1,4 +1,4 @@
-import { Game, Player, Board } from '../';
+import { Player, Board } from '../';
 
 import type {
   Position,
@@ -9,6 +9,7 @@ import type {
   ActionStepPosition
 } from './types';
 import type { ResolvedSelection, Argument } from '../action/types';
+import type { Game } from '../';
 
 export default class Flow<P extends Player> {
   name?: string;
@@ -25,7 +26,6 @@ export default class Flow<P extends Player> {
     this.name = name;
     this.block = block;
     // each new can create its own context because they will be copied later by each parent as it loads its subflows
-    this.game = new Game();
     this.top = this;
   }
 

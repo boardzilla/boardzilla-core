@@ -20,13 +20,13 @@ export {
 
 export {
   Flow,
-  PlayerAction,
-  WhileLoop,
-  ForLoop,
-  ForEach,
-  SwitchCase,
-  IfElse,
-  EachPlayer,
+  playerActions,
+  whileLoop,
+  forLoop,
+  forEach,
+  switchCase,
+  ifElse,
+  eachPlayer,
   repeat,
   skip
 } from './flow/';

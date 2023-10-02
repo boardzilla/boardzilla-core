@@ -5,7 +5,7 @@ import type { ActionStepPosition, FlowBranchNode, FlowDefinition } from './types
 import type { Player } from '../player';
 import type { ResolvedSelection } from '../action/types';
 
-export default class PlayerAction<P extends Player> extends Flow<P> {
+export default class ActionStep<P extends Player> extends Flow<P> {
   position: ActionStepPosition<P>;
   actions: Record<string, FlowDefinition<P> | null>;
   type: FlowBranchNode<P>['type'] = "action";

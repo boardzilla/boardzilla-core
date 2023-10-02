@@ -1,5 +1,5 @@
+import ForLoop from './for-loop';
 import { Player } from '../player';
-import { ForLoop } from './';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
 import type { FlowDefinition } from './types';

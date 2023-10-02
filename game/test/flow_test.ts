@@ -6,11 +6,12 @@ import spies from 'chai-spies';
 
 import {
   Flow,
-  PlayerAction,
-  ForLoop,
-  ForEach,
-  SwitchCase,
-  IfElse,
+  playerActions,
+  whileLoop,
+  forLoop,
+  forEach,
+  switchCase,
+  ifElse,
   skip,
   repeat
 } from '../flow';
@@ -29,14 +30,17 @@ describe('Flow', () => {
     stepSpy1,
     stepSpy2,
     () => {},
-    new IfElse({ name: 'step4', test: () => true, do: [
+    ifElse({ name: 'step4', if: () => true, do: [
       () => {},
-      new PlayerAction({ name: 'play-or-pass', actions: {
-        play: ({ play }) => playSpy(play),
-        pass: [
-          () => {}
-        ]
-      }}),
+      playerActions({
+        name: 'play-or-pass',
+        actions: {
+          play: ({ play }) => playSpy(play),
+          pass: [
+            () => {}
+          ]
+        }
+      }),
       () => {}
     ]}),
     () => {}
@@ -190,17 +194,18 @@ describe('Flow', () => {
 describe('Loop', () => {
   const stepSpy1 = chai.spy((x:number) => x);
   const stepSpy2 = chai.spy((x:number) => x);
-  const forLoop = new ForLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 13, do: (
-    ({ loop }) => stepSpy1(loop)
+  let counter = 10;
+  const loop = whileLoop({ while: () => counter < 13, do: (
+    (a) => { stepSpy1(counter); counter += 1; }
   )});
 
-  const nonLoop = new ForLoop({ name: 'nonloop', initial: 0, next: loop => loop + 1, while: loop => loop < 0, do: (
+  const nonLoop = forLoop({ name: 'nonloop', initial: 0, next: loop => loop + 1, while: loop => loop < 0, do: (
     ({ nonloop }) => stepSpy2(nonloop)
   )});
 
   const testFlow = new Flow({ name: 'test', do: [
     () => {},
-    forLoop,
+    loop,
     () => {},
     nonLoop,
     () => {},
@@ -219,33 +224,33 @@ describe('Loop', () => {
     testFlow.playOneStep();
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: 'sequence', name: 'test', sequence: 1 },
-      { type: 'loop', name: 'loop', position: { index: 0, value: 10 } }
+      { type: 'loop', position: { index: 0 } }
     ]);
     expect(stepSpy1).to.not.have.been.called();
   });
   it('repeats loop', () => {
     testFlow.setBranchFromJSON([
       { type: 'sequence', name: 'test', sequence: 1 },
-      { type: 'loop', name: 'loop', position: { index: 0, value: 10 } }
+      { type: 'loop', position: { index: 0 } }
     ]);
     testFlow.playOneStep();
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: 'sequence', name: 'test', sequence: 1 },
-      { type: 'loop', name: 'loop', position: { index: 1, value: 11 } }
+      { type: 'loop', position: { index: 1 } }
     ]);
     expect(stepSpy1).to.have.been.called.with(10);
 
     testFlow.playOneStep();
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: 'sequence', name: 'test', sequence: 1 },
-      { type: 'loop', name: 'loop', position: { index: 2, value: 12 } }
+      { type: 'loop', position: { index: 2 } }
     ]);
     expect(stepSpy1).to.have.been.called.with(11);
   });
   it('exits loop', () => {
     testFlow.setBranchFromJSON([
       { type: 'sequence', name: 'test', sequence: 1 },
-      { type: 'loop', name: 'loop', position: { index: 2, value: 12 } }
+      { type: 'loop', position: { index: 2 } }
     ]);
     testFlow.playOneStep();
     expect(testFlow.branchJSON()).to.deep.equals([
@@ -270,12 +275,12 @@ describe('Loop', () => {
 
   describe('nested', () => {
     const stepSpy = chai.spy((x: number, y: number) => {x; y});
-    const nestedLoop = new ForLoop({
+    const nestedLoop = forLoop({
       name: 'x',
       initial: 0,
       next: x => x + 1,
       while: x => x < 3,
-      do: new ForLoop({
+      do: forLoop({
         name: 'y',
         initial: 0,
         next: y => y + 1,
@@ -303,7 +308,7 @@ describe('Loop', () => {
   describe('foreach', () => {
     it ('loops', () => {
       const stepSpy = chai.spy((x:number) => x);
-      const loop = new ForEach({ name: 'foreach', collection: [3, 5, 7], do: ({ foreach }) => stepSpy(foreach) });
+      const loop = forEach({ name: 'foreach', collection: [3, 5, 7], do: ({ foreach }) => stepSpy(foreach) });
       loop.reset();
       while(loop.playOneStep() === 'ok') { }
       expect(stepSpy).to.have.been.called.exactly(3);
@@ -313,7 +318,7 @@ describe('Loop', () => {
     });
     it ('resumes', () => {
       const stepSpy = chai.spy((x:number) => x);
-      const loop = new ForEach({ name: 'foreach', collection: [3, 5, 7], do: ({ foreach }) => stepSpy(foreach) });
+      const loop = forEach({ name: 'foreach', collection: [3, 5, 7], do: ({ foreach }) => stepSpy(foreach) });
       loop.reset();
       loop.setBranchFromJSON([
         {
@@ -329,11 +334,11 @@ describe('Loop', () => {
     });
     it ('allows dynamic collection', () => {
       const stepSpy = chai.spy((x:number) => x);
-      const loop = new ForLoop({ name: 'loop', initial: 1, next: loop => loop + 1, while: loop => loop != 3, do: (
-        new ForEach({ name: 'foreach', collection: ({ loop }) => [10 + loop, 20 + loop], do: ({ foreach }) => stepSpy(foreach) })
+      const outerLoop = forLoop({ name: 'loop', initial: 1, next: loop => loop + 1, while: loop => loop != 3, do: (
+        forEach({ name: 'foreach', collection: ({ loop }) => [10 + loop, 20 + loop], do: ({ foreach }) => stepSpy(foreach) })
       )});
-      loop.reset();
-      while(loop.playOneStep() === 'ok') { }
+      outerLoop.reset();
+      while(outerLoop.playOneStep() === 'ok') { }
       expect(stepSpy).to.have.been.called.exactly(4);
       expect(stepSpy).on.nth(1).be.called.with(11);
       expect(stepSpy).on.nth(2).be.called.with(21);
@@ -342,9 +347,9 @@ describe('Loop', () => {
     });
     it ('empty collection', () => {
       const stepSpy = chai.spy((x:number) => x);
-      const loop = new ForEach({ name: 'foreach', collection: [], do: ({ foreach }) => stepSpy(foreach) });
-      loop.reset();
-      while(loop.playOneStep() === 'ok') { }
+      const empty = forEach({ name: 'foreach', collection: [], do: ({ foreach }) => stepSpy(foreach) });
+      empty.reset();
+      while(empty.playOneStep() === 'ok') { }
       expect(stepSpy).not.to.have.been.called();
     });
 
@@ -355,27 +360,27 @@ describe('Loop short-circuiting', () => {
   it('can repeat', () => {
     const stepSpy1 = chai.spy((x:number) => x === 12 ? repeat() : undefined);
     const stepSpy2 = chai.spy((s: string, x:number) => x);
-    const forLoop = new ForLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
+    const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
       ({ loop }) => stepSpy2('start', loop),
       ({ loop }) => stepSpy1(loop),
       ({ loop }) => stepSpy2('end', loop)
     ]});
-    forLoop.reset();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
+    shortLoop.reset();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
     expect(stepSpy2).to.have.been.called.with('start', 11);
     expect(stepSpy2).to.have.been.called.with('end', 11);
     expect(stepSpy2).to.have.been.called.with('start', 12);
@@ -386,27 +391,27 @@ describe('Loop short-circuiting', () => {
   it('can skip', () => {
     const stepSpy1 = chai.spy((x:number) => x === 12 ? skip() : undefined);
     const stepSpy2 = chai.spy((s: string, x:number) => x);
-    const forLoop = new ForLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
+    const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
       ({ loop }) => stepSpy2('start', loop),
       ({ loop }) => stepSpy1(loop),
       ({ loop }) => stepSpy2('end', loop)
     ]});
-    forLoop.reset();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
-    forLoop.playOneStep();
+    shortLoop.reset();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
     expect(stepSpy2).to.have.been.called.with('start', 11);
     expect(stepSpy2).to.have.been.called.with('end', 11);
     expect(stepSpy2).to.have.been.called.with('start', 12);
@@ -418,8 +423,8 @@ describe('Loop short-circuiting', () => {
 describe('SwitchCase', () => {
   it('switches', () => {
     const stepSpy1 = chai.spy((x:number) => x);
-    const testFlow = new ForLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 3, do: (
-      new SwitchCase({ name: 'switcher', switch: ({ loop }) => loop, cases: [
+    const testFlow = forLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 3, do: (
+      switchCase({ name: 'switcher', switch: ({ loop }) => loop, cases: [
         { eq: 0, do: ({ switcher }) => stepSpy1(switcher) },
         { eq: 1, do: ({ switcher }) => stepSpy1(switcher) },
       ]})
@@ -452,8 +457,8 @@ describe('SwitchCase', () => {
 
   it('sets position', () => {
     const stepSpy1 = chai.spy((x:number) => x);
-    const testFlow = new ForLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 3, do: (
-      new SwitchCase({ name: 'switch', switch: ({ loop }) => loop, cases: [
+    const testFlow = forLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 3, do: (
+      switchCase({ name: 'switch', switch: ({ loop }) => loop, cases: [
         { eq: 0, do: () => stepSpy1(0) },
         { eq: 1, do: () => stepSpy1(1) },
       ]})
@@ -478,8 +483,8 @@ describe('SwitchCase', () => {
 
   it('defaults', () => {
     const stepSpy1 = chai.spy((x:number) => x);
-    const testFlow = new ForLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 3, do: (
-      new SwitchCase({
+    const testFlow = forLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 3, do: (
+      switchCase({
         name: 'switch',
         switch: ({ loop }) => loop,
         cases: [
@@ -520,12 +525,18 @@ describe('SwitchCase', () => {
 describe('IfElse', () => {
   it('switches', () => {
     const stepSpy1 = chai.spy((x:number) => x);
-    const testFlow = new ForLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 3, do: new IfElse({
-      name: 'if',
-      test: ({ loop }) => loop === 1,
-      do: () => stepSpy1(0),
-      else: () => stepSpy1(-1)
-    })});
+    const testFlow = forLoop({
+      name: 'loop',
+      initial: 0,
+      next: loop => loop + 1,
+      while: loop => loop < 3,
+      do: ifElse({
+        name: 'if',
+        if: ({ loop }) => loop === 1,
+        do: () => stepSpy1(0),
+        else: () => stepSpy1(-1)
+      })
+    });
 
     // @ts-ignore
     testFlow.game = { flow: testFlow };

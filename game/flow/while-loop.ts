@@ -23,7 +23,7 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
     this.setPosition(position);
     if (!this.while()) this.setPosition({...position, index: -1});
   }
-  
+
   currentBlock() {
     if (this.position.index !== -1) return this.block;
   }

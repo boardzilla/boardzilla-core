@@ -4,9 +4,9 @@ import type { FlowDefinition } from './types';
 import type { Player } from '../player';
 
 export default class If<P extends Player> extends SwitchCase<P, boolean> {
-  constructor({ name, test, do: doExpr, else: elseExpr }: {
+  constructor({ name, if: test, do: doExpr, else: elseExpr }: {
     name?: string,
-    test: (r: Record<any, any>) => boolean,
+    if: (r: Record<any, any>) => boolean,
     do: FlowDefinition<P>;
     else?: FlowDefinition<P>
   }) {

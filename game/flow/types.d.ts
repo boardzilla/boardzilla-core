@@ -17,7 +17,7 @@ export type SwitchCasePostion<T> = { index?: number, value?: T, default?: boolea
 export type Position<P extends Player> = (
   ActionStepPosition<P> | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any>
 )
-  
+
 export type FlowBranchNode<P extends Player> = ({
   type: 'sequence',
 } | {

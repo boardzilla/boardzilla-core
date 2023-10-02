@@ -6,7 +6,7 @@ import {
   Piece,
   GameElement
 } from './board/';
-import { PlayerAction } from './flow/';
+import ActionStep from './flow/action-step';
 import {
   GameState,
   PlayerPositionState,
@@ -18,7 +18,7 @@ import { Player, PlayerCollection } from './player/';
 
 import random from 'random-seed';
 
-import type { Flow } from './flow/';
+import type Flow from './flow/flow';
 import type {
   Move,
   IncompleteMove,
@@ -207,7 +207,7 @@ export default class Game<P extends Player, B extends Board<P>> {
         };
       } else {
         const actionStep = this.flow.currentFlow();
-        if (actionStep instanceof PlayerAction) {
+        if (actionStep instanceof ActionStep) {
           return {
             selection: new Selection<P>({ // selection is between multiple actions, return action choices
               prompt: actionStep.prompt || 'Choose action',
