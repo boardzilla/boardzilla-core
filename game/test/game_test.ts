@@ -6,24 +6,22 @@ import spies from 'chai-spies';
 
 import {
   Game,
-  Action,
   Board,
   Space,
   Piece,
-  Player
+  Player,
+  Flow,
+  action
 } from '../';
 
 import {
-  Sequence,
   PlayerAction,
-  Step,
-  Loop,
+  WhileLoop,
   EachPlayer,
 } from '../flow';
 
 chai.use(spies);
 const { expect } = chai;
-let spendSpy: ReturnType<typeof chai.spy>;
 
 describe('Game', () => {
   const players = [
@@ -45,69 +43,55 @@ describe('Game', () => {
 
   let game: Game<Player, TestBoard>;
   let board: TestBoard;
+  const spendSpy = chai.spy();
 
   beforeEach(() => {
-    spendSpy = chai.spy();
     game = new Game();
     board = game.defineBoard(TestBoard, [ Card ]);
-    game.defineFlow(
-      (game, board) => new Sequence({
-        steps: [
-          new Step({ command: () => {
-            board.tokens = 4;
-            game.message('Starting game with $1 tokens', board.tokens);
-          }}),
-          new Loop({ while: () => board.tokens < 8, do: (
-            new PlayerAction({ actions: {
-              addSome: null,
-              spend: null
-            }})
-          )}),
-          new Loop({ while: () => board.tokens > 0, do: (
-            new EachPlayer({ do: (
-              new PlayerAction({ actions: {
-                takeOne: null,
-              }})
-            )})
-          )})
-        ]
-      })
-    );
+    game.defineFlow((game, board) => new Flow({name: 'main', do: [
+      () => {
+        board.tokens = 4;
+        game.message('Starting game with $1 tokens', board.tokens);
+      },
+      new WhileLoop({ while: () => board.tokens < 8, do: (
+        new PlayerAction({ actions: {
+          addSome: null,
+          spend: null
+        }})
+      )}),
+      new WhileLoop({ while: () => board.tokens > 0, do: (
+        new EachPlayer({ name: 'player', do: (
+          new PlayerAction({ actions: {
+            takeOne: null,
+          }})
+        )})
+      )})
+    ]}));
 
     game.defineActions((_, board) => ({
-      addSome: player => new Action({
+      addSome: () => action({
         prompt: 'add some counters',
-        selections: [{
-          prompt: 'how many?',
-          selectNumber: {
-            min: 1,
-            max: 3,
-          }
-        }],
-        move: (n: number) => board.tokens += n,
         message: '$player added $1'
-      }),
-      takeOne: () => new Action({
+      }).chooseNumber({
+        prompt: 'how many?',
+        min: 1,
+        max: 3,
+      }).do(n => board.tokens += n),
+      takeOne: () => action({
         prompt: 'take one counter',
-        move: () => board.tokens -= 1,
-      }),
-      spend: () => new Action({
+      }).do(() => board.tokens -= 1),
+      spend: () => action({
         prompt: 'Spend resource',
-        selections: [{
-          prompt: 'which resource',
-          selectFromChoices: {
-            choices: ['gold', 'silver'],
-          }
-        }, {
-          prompt: 'How much?',
-          selectNumber: {
-            min: 1,
-            max: 3,
-          }
-        }],
-        move: spendSpy,
-      }),
+      }).chooseFrom({
+        prompt: 'which resource',
+        choices: ['gold', 'silver'],
+      }).chooseNumber({
+        prompt: 'How much?',
+        min: 1,
+        max: 3,
+      }).do(spendSpy),
     }));
+
     game.definePlayers(Player);
     game.players.fromJSON(players);
 
@@ -116,15 +100,16 @@ describe('Game', () => {
       players,
       settings: {},
       board: [ { className: 'TestBoard', tokens: 0 } ],
-      position: [],
+      position: [ { type: 'sequence', name: 'main', sequence: 0 } ],
     });
   });
 
   it('plays', () => {
     const actions = game.play();
-    expect(game.flow.branch()).to.deep.equals([
-      { type: 'sequence', position: 1 },
-      { type: 'loop', position: { index: 0 } }
+    expect(game.flow.branchJSON()).to.deep.equals([
+      { type: 'sequence', name: 'main', sequence: 1 },
+      { type: "loop", position: { index: 0 } },
+      { type: "action", position: {} }
     ]);
     expect(actions).to.deep.equal(['addSome', 'spend']);;
   });
@@ -162,9 +147,10 @@ describe('Game', () => {
         currentPlayerPosition: 2,
         settings: {},
         position: [
-          { type: 'sequence', position: 2 },
+          { type: 'sequence', name: 'main', sequence: 2 },
           { type: 'loop', position: { index: 0 } },
-          { type: 'each-player', position: { index: 1, value: '$p[2]' } },
+          { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
+          { type: 'action', position: {} }
         ],
         board: [ { className: 'TestBoard', tokens: 9 } ],
       });
@@ -176,11 +162,11 @@ describe('Game', () => {
       game.processMove({ action: 'takeOne', args: [], player: game.players[2] });
       game.play();
       expect(game.players.currentPosition).to.equal(4);
-      expect(game.flow.branch()[1].position.index).to.equal(0)
+      expect(game.flow.branchJSON()[1].position.index).to.equal(0)
       game.processMove({ action: 'takeOne', args: [], player: game.players[3] });
       game.play();
       expect(game.players.currentPosition).to.equal(1);
-      expect(game.flow.branch()[1].position.index).to.equal(1)
+      expect(game.flow.branchJSON()[1].position.index).to.equal(1)
     });
   });
 
@@ -192,6 +178,7 @@ describe('Game', () => {
       const space2 = game.board.create(Space, 'area2');
       const piece = space1.create(Piece, 'piece');
       game.start();
+      game.play();
       game.processMove({
         player: game.players[0],
         action: '_godMove',
@@ -230,23 +217,24 @@ describe('Game', () => {
       game.play();
       game.processMove({ action: 'spend', args: ['gold', 2], player: game.players[0] });
       expect(spendSpy).to.have.been.called.with('gold', 2);
-      expect(game.flow.branch()).to.deep.equals([
-        { type: 'sequence', position: 1 },
+      expect(game.flow.branchJSON()).to.deep.equals([
+        { type: 'sequence', name: 'main', sequence: 1 },
         { type: 'loop', position: { index: 0 } },
         { type: 'action', position: { action: "spend", args: [ "gold", 2 ], player: 1 }}
       ]);
       game.play();
-      expect(game.flow.branch()).to.deep.equals([
-        { type: 'sequence', position: 1 },
+      expect(game.flow.branchJSON()).to.deep.equals([
+        { type: 'sequence', name: 'main', sequence: 1 },
         { type: 'loop', position: { index: 1 } },
+        { type: "action", position: {} }
       ]);
     });
     it('changes state', async () => {
       game.play();
       expect(board.tokens).to.equal(4);
       game.processMove({ action: 'addSome', args: [2], player: game.players[0] });
-      expect(game.flow.branch()).to.deep.equals([
-        { type: 'sequence', position: 1 },
+      expect(game.flow.branchJSON()).to.deep.equals([
+        { type: 'sequence', name: 'main', sequence: 1 },
         { type: 'loop', position: { index: 0 } },
         { type: 'action', position: { action: "addSome", args: [ 2 ], player: 1 }}
       ]);

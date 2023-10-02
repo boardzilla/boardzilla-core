@@ -1,64 +1,62 @@
-import Flow from './flow';
 import { Player } from '../player';
-import { Loop } from './';
+import { ForLoop } from './';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
-export default class EachPlayer<P extends Player> extends Loop<P, P> {
-  type = 'each-player';
-  position: { index: number, value?: P };
+import type { FlowDefinition } from './types';
 
+export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
   constructor({ name, startingPlayer, nextPlayer, turns, continueUntil, do: block }: {
-    name?: string,
+    name: string,
     startingPlayer?: ((a: Record<any, any>) => P) | P,
     nextPlayer?: (p: P) => P,
     turns?: number,
     continueUntil: (p: P) => boolean,
-    do: Flow<P>,
+    do: FlowDefinition<P>,
   } | {
-    name?: string,
+    name: string,
     startingPlayer?: ((a: Record<any, any>) => P) | P,
     nextPlayer?: never,
     turns?: number,
     continueUntil?: never,
-    do: Flow<P>,
+    do: FlowDefinition<P>,
   }) {
     let initial: (r: Record<any, any>) => P
     if (startingPlayer) {
       initial = () => startingPlayer instanceof Function ? startingPlayer(this.flowStepArgs()) : startingPlayer
     } else {
-      initial = () => this.ctx.game.players.current() as P;
+      initial = () => this.game.players.current();
     }
-    let next = (player: P) => (nextPlayer ? nextPlayer(player) : this.ctx.game.players.after(player)) as P;
+    let next = (player: P) => (nextPlayer ? nextPlayer(player) : this.game.players.after(player));
 
     super({
       name,
       initial,
       next,
-      while: player => continueUntil !== undefined ? !continueUntil(player) : this.position.index < this.ctx.game.players.length * (turns || 1),
+      while: player => continueUntil !== undefined ? !continueUntil(player) : this.position.index < this.game.players.length * (turns || 1),
       do: block
     });
   }
 
-  setPosition(position: typeof this.position, reset=true) {
-    super.setPosition(position, reset);
+  setPosition(position: typeof this.position, sequence?: number, reset=true) {
+    super.setPosition(position, sequence, reset);
     if (this.position.value) {
-      this.ctx.game.players.setCurrent(this.position.value);
-      this.ctx.game.board._ctx.player = this.position.value;
+      this.game.players.setCurrent(this.position.value);
+      this.game.board._ctx.player = this.position.value;
     }
   }
 
-  positionJSON() {
+  toJSON() {
     return {
       index: this.position.index,
       value: this.position.value ? serializeSingleArg(this.position.value) : undefined
     };
   }
 
-  setPositionFromJSON(position: any) {
-    this.setPosition({
+  fromJSON(position: any) {
+    return {
       index: position.index,
-      value: position.value ? deserializeSingleArg(position.value, this.ctx.game) as P : undefined
-    }, false);
+      value: position.value ? deserializeSingleArg(position.value, this.game) as P: undefined
+    }
   }
 
   toString(): string {

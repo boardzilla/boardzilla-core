@@ -1,171 +1,116 @@
 import { Game, Player, Board } from '../';
 
-import type Loop from './loop';
 import type {
+  Position,
+  FlowStep,
+  FlowDefinition,
   FlowBranchNode,
   FlowBranchJSON,
   ActionStepPosition
 } from './types';
 import type { ResolvedSelection, Argument } from '../action/types';
 
-// Abstract Base class
 export default class Flow<P extends Player> {
   name?: string;
-  position?: any;
-  type: string;
-  parent: Flow<P>;
-  subflow?: Flow<P>;
-  ctx: {
-    game: Game<P, Board<P>>,
-    top: Flow<P>
-  };
+  position?: Position<P>;
+  sequence?: number; // if block is an array, indicates the index of execution
+  type: FlowBranchNode<P>['type'] = 'sequence';
+  step?: FlowStep<P>; // cached by setPositionFromJSON
+  block?: FlowDefinition<P>;
+  top: Flow<P>;
+  parent?: Flow<P>;
+  game: Game<P, Board<P>>;
 
-  constructor({ name }: { name?: string }) {
+  constructor({ name, do: block }: { name?: string, do?: FlowDefinition<P> }) {
     this.name = name;
+    this.block = block;
     // each new can create its own context because they will be copied later by each parent as it loads its subflows
-    this.ctx = {
-      game: new Game(),
-      top: this
-    }
+    this.game = new Game();
+    this.top = this;
   }
 
-  flowStepArgs(): Record<any, any> {
-    const args: Record<any, any> = { game: this.ctx.game };
-    this.ctx.top.branch().forEach(node => {
+  flowStepArgs(): Record<string, any> {
+    const args: Record<string, any> = {};
+    this.top.branchJSON().forEach(node => {
       if (node.type === 'action') {
-        args[node.position.action] = node.position.args;
+        args[node.position!.action] = node.position!.args;
       }
-      if (typeof node.position === 'object' && 'value' in node.position && node.name) {
+      if ('position' in node && 'value' in node.position && node.name) {
         args[node.name] = node.position.value;
       }
     });
-
     return args;
   }
 
-  /**
-   * get the position of this flow and all subflows recursively
-   */
-  branch(): FlowBranchNode<P>[] {
-    if (this.position === undefined) return [];
-    let branch = [
-      {
-        type: this.type,
-        position: this.position
-      } as FlowBranchNode<P>
-    ]
-    if (this.name) branch[0].name = this.name;
-    if (this.subflow) branch = branch.concat(this.subflow.branch());
-    return branch;
-  }
-
-  branchJSON(forPlayer=true): FlowBranchNode<P>[] {
-    if (this.position === undefined) return [];
-    let branch = [
-      {
-        type: this.type,
-        position: this.positionJSON(forPlayer)
-      } as FlowBranchJSON
-    ]
-    if (this.name) branch[0].name = this.name;
-    if (this.subflow) branch = branch.concat(this.subflow.branchJSON(forPlayer));
-    return branch;
-  }
-
-  /**
-   * set the position of this flow and all subflows recursively - obsolete?
-   */
-  setBranch(branch: FlowBranchNode<P>[]) {
-    const node = branch[0];
-    if (node) {
-      this.setPosition(node.position, false);
-      if (branch.length) {
-        if (!this.subflow) {
-          console.error(this, branch.slice(1));
-          throw Error('Excess position elements sent to flow');
-        }
-        this.subflow.setBranch(branch.slice(1)); // continue down the hierarchy
-      }
-    } else {
-      this.reset();
-    }
+  branchJSON(forPlayer=true): FlowBranchJSON[] {
+    if (this.position === undefined && this.sequence === undefined) return []; // probably invalid
+    let branch: Record<string, any> = {
+      type: this.type,
+    };
+    if (this.name) branch.name = this.name;
+    if (this.position !== undefined) branch.position = this.toJSON(forPlayer);
+    if (this.sequence !== undefined && this.currentBlock() instanceof Array) branch.sequence = this.sequence;
+    const thisBranch = branch as FlowBranchJSON;
+    if (this.step instanceof Flow) return [thisBranch].concat(this.step.branchJSON(forPlayer));
+    return [thisBranch];
   }
 
   setBranchFromJSON(branch: FlowBranchJSON[]) {
     const node = branch[0];
-    if (node) {
-      this.setPositionFromJSON(node.position);
-      if (branch.length) {
-        if (!this.subflow) {
-          console.error(this, branch.slice(1));
-          throw Error('Excess position elements sent to flow');
-        }
-        this.subflow.setBranchFromJSON(branch.slice(1)); // continue down the hierarchy
-      }
-    } else {
-      this.reset();
+    if (!node) throw Error(`Insufficient position elements sent to flow for ${this.name}`);
+    if (node.type !== this.type || node.name !== this.name) {
+      throw Error(`Flow mismatch. Trying to set ${node.type}:${node.name} on ${this.type}:${this.name}`);
+    }
+    this.setPositionFromJSON(node.position, node.sequence);
+    if (this.step instanceof Flow) {
+      this.step.setBranchFromJSON(branch.slice(1)); // continue down the hierarchy
     }
   }
 
-  setPosition(position: any, reset=true) {
+  setPosition(position: any, sequence?: number, reset=true) {
     this.position = position;
-    this.subflow = this.currentSubflow();
-    if (this.subflow) {
-      this.subflow.ctx = this.ctx;
-      if (reset) this.subflow.reset();
+    const block = this.currentBlock();
+    if (!block) {
+      this.step = undefined; // awaiting action or unreachable step
+    } else if (block instanceof Array) {
+      if (sequence === undefined) sequence = 0;
+      this.sequence = sequence;
+      if (!block[sequence]) throw Error(`Invalid sequence for ${this.type}:${this.name} ${sequence}/${block.length}`);
+      this.step = block[sequence];
+    } else {
+      if (sequence && sequence > 0) throw Error(`Sequence ${sequence} in position of ${this.type}:${this.name} but no sequence block`); // remove after debugging
+      this.step = block;
+    }
+
+    if (this.step instanceof Flow) {
+      this.step.game = this.game;
+      this.step.top = this.top;
+      this.step.parent = this;
+      if (reset) this.step.reset();
     }
   }
 
-  currentStep(): Flow<P> {
-    this.subflow = this.currentSubflow();
-    if (this.subflow) {
-      return this.subflow.currentStep();
-    }
-    return this;
+  setPositionFromJSON(positionJSON: any, sequence?: number) {
+    this.setPosition(this.fromJSON(positionJSON), sequence, false);
   }
 
-  // instantiateSubflow(): Flow | undefined {
-  //   const flowDefinition = this.currentSubflow();
-  //   let flow:Flow | undefined;
-  //   if (flowDefinition instanceof Array) {
-  //     flow = new Sequence({ steps: flowDefinition });
-  //   } else if (flowDefinition instanceof Function) {
-  //     flow = new Step({ command: flowDefinition });
-  //   } else flow = flowDefinition;
+  currentFlow(): Flow<P> {
+    return !this.step || typeof this.step === 'function' ? this : this.step.currentFlow();
+  }
 
-  //   if (flow) {
-  //     flow.ctx = this.ctx;
-  //     flow.parent = this;
-  //   }
-  //   return flow;
-  // }
-
-  currentLoop(): Loop<P> | undefined {
-    let loop: Loop<P> | undefined = undefined;
-    let flow: Flow<P> | undefined = this.ctx.top;
-    while (flow) {
-      if ('repeat' in flow) loop = flow as Loop<P>;
-      flow = flow.currentSubflow();
-    }
-    return loop;
+  currentLoop(): Flow<P> & { repeat: Function } | undefined {
+    return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function };
   }
 
   actionNeeded(): string[] | void {
-    return this.currentStep().awaitingAction();
+    const flow = this.currentFlow();
+    if ('awaitingAction' in flow) return (flow.awaitingAction as () => string[] | void)();
   }
 
   processMove(move: ActionStepPosition<P>): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
-    const step = this.currentStep();
-    if (!step || step.type !== 'action') throw Error(`Cannot process action currently ${JSON.stringify(this.branch())}`);
+    const step = this.currentFlow();
+    if (!step || step.type !== 'action') throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);
     return step.processMove(move);
-  }
-
-  start() {
-    this.reset();
-    if (this.subflow) {
-      this.subflow.ctx = this.ctx;
-      this.subflow.start();
-    }
   }
 
   /**
@@ -174,13 +119,11 @@ export default class Flow<P extends Player> {
    * actions if now waiting for player input. override for self-contained flows
    * that do not have subflows.
    */
-  playOneStep(): 'ok' | 'complete' | 'repeat' | 'skip' | string[] {
-    if (this.subflow) {
-      const actions = this.subflow.awaitingAction();
-      if (actions) return actions;
+  playOneStep(): 'ok' | 'complete' | string[] {
+    const step = this.step;
+    if (step instanceof Function) {
       try {
-        const result = this.subflow.playOneStep();
-        if (result !== 'complete') return result;
+        step(this.flowStepArgs());
       } catch (e) {
         if (e instanceof FlowInterruptAndRepeat || e instanceof FlowInterruptAndSkip) {
           const loop = this.currentLoop();
@@ -190,37 +133,52 @@ export default class Flow<P extends Player> {
         }
         throw e;
       }
+    } else if (step instanceof Flow) {
+      const actions = step.actionNeeded();
+      if (actions) return actions;
+      const result = step.playOneStep();
+      if (result !== 'complete') return result;
     }
+
+    // completed step, advance this block if able
+    const block = this.currentBlock();
+    if (block instanceof Array) {
+      if (this.sequence === undefined) throw Error('sequence unset'); // remove after debugging
+      if (this.sequence + 1 !== block.length) {
+        this.setPosition(this.position, this.sequence + 1);
+        return 'ok';
+      }
+    }
+
+    // completed block, advance self
     return this.advance();
   }
 
   // play until action required (returns list) or game over
   play(): string[] | void {
     let step;
-    do { step = this.playOneStep() } while (step === 'ok' || step === 'repeat' || step === 'skip')
+    do { step = this.playOneStep() } while (step === 'ok')
     if (step !== 'complete') return step;
   }
 
-  // must override and call super. reset runs any logic needed and call setPosition. Must not modify state besides position.
-  reset() { }
+  // must override and call super. reset runs any logic needed and call setPosition. Must not modify state.
+  reset() {
+    this.setPosition(undefined);
+  }
 
-  // must override. must rely on this.position
-  currentSubflow(): Flow<P> | undefined {
-    return undefined;
+  // must override. must rely solely on this.position
+  currentBlock(): FlowDefinition<P> | undefined {
+    return this.block;
   }
 
   // override if position contains objects that need serialization
-  positionJSON(forPlayer=true) {
+  toJSON(forPlayer=true): any {
     return this.position;
   }
 
-  // override if position contains objects that need serialization
-  setPositionFromJSON(position: any) {
-    this.setPosition(position, false);
-  }
-
-  // override for steps that await
-  awaitingAction(): string[] | void {
+  // override if position contains objects that need deserialization
+  fromJSON(json: any): typeof this.position {
+    return json;
   }
 
   // override for steps that advance through their subflows. call setPosition if needed. return ok/complete

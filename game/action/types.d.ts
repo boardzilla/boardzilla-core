@@ -2,10 +2,11 @@ import { Player } from '../player/';
 import { GameElement } from '../board/';
 import type Selection from './selection';
 
-export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | Player;
+export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | P;
 export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
 export type SerializedSingleArg = string | number | boolean;
 export type SerializedArg = SerializedSingleArg | SerializedSingleArg[];
+export type Serializable<P extends Player> = SingleArgument<P> | null | undefined | Serializable<P>[] | { [key: string]: Serializable<P> };
 
 export type BoardQuerySingle<P extends Player, T extends GameElement<P>> = string | T | undefined | ((...a: Argument<P>[]) => T | undefined)
 export type BoardQueryMulti<P extends Player, T extends GameElement<P>> = string | T[] | ((...a: Argument<P>[]) => T[])
@@ -38,23 +39,22 @@ export type BoardSelection<P extends Player, T extends GameElement<P>> = {
   chooseFrom: BoardQueryMulti<P, T>;
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
-  noChoice?: never;
 }
 
 export type ChoiceSelection<P extends Player> = {
   choices: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
-  default?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
+  initial?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
 }
 
 export type NumberSelection<P extends Player> = {
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
-  default?: number | ((...a: Argument<P>[]) => number);
+  initial?: number | ((...a: Argument<P>[]) => number);
 }
 
 export type TextSelection<P extends Player> = {
   regexp?: RegExp;
-  default?: string | ((...a: Argument<P>[]) => string);
+  initial?: string | ((...a: Argument<P>[]) => string);
 }
 
 export type ButtonSelection = any;
@@ -100,7 +100,7 @@ export type ResolvedSelection<P extends Player> = Selection<P> & {
   boardChoices: GameElement<P>[];
   min?: number;
   max?: number;
-  default?: Argument<P>;
+  initial?: Argument<P>;
   regexp?: RegExp;
 }
 

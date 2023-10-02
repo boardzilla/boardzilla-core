@@ -1,26 +1,26 @@
 import Flow from './flow';
-import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
-import type { SingleArgument } from '../action/types';
-import type { SwitchCaseCases } from './types';
+import { serialize, deserialize } from '../action/utils';
+
+import type { FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion } from './types';
 import type { Player } from '../player';
+import type { Serializable } from '../action/types';
 
-export default class SwitchCase<P extends Player, T extends SingleArgument<P>> extends Flow<P> {
-  position: { index?: number, default?: boolean, value: T };
-  switch: ((r: Record<any, any>) => T) | T;
+export default class SwitchCase<P extends Player, T extends Serializable<P>> extends Flow<P> {
+  position: SwitchCasePostion<T>;
+  switch: ((a?: Record<string, any>) => T) | T;
   cases: SwitchCaseCases<P, T>;
-  default?: Flow<P>;
-  type = "switch-case";
+  default?: FlowDefinition<P>;
+  type: FlowBranchNode<P>['type'] = "switch-case";
 
   constructor({ name, switch: switchExpr, cases, default: def }: {
-    name: string,
-    switch: ((r: Record<any, any>) => T) | T,
+    name?: string,
+    switch: ((r: Record<string, any>) => T) | T,
     cases: SwitchCaseCases<P, T>;
-    default?: Flow<P>
+    default?: FlowDefinition<P>
   }) {
     super({ name });
     this.switch = switchExpr;
-    cases.forEach(c => c.flow.parent = this);
     this.cases = cases;
     this.default = def;
   }
@@ -34,34 +34,34 @@ export default class SwitchCase<P extends Player, T extends SingleArgument<P>> e
         position.index = c;
       }
     }
-    if (position.index === -1 && this.default) position = { default: true, value: test };
+    if (position.index === -1 && this.default) position.default = true;
     this.setPosition(position);
   }
   
-  currentSubflow() {
-    if (this.position.index !== undefined && this.position.index >= 0) {
-      return this.cases[this.position.index].flow;
-    }
+  currentBlock() {
     if (this.position.default) return this.default;
+    if (this.position.index !== undefined && this.position.index >= 0) {
+      return this.cases[this.position.index].do;
+    }
   }
 
-  positionJSON(forPlayer=true) {
+  toJSON(forPlayer=true) {
     return {
       index: this.position.index,
-      default: this.position.default,
-      value: serializeSingleArg<P>(this.position.value, forPlayer)
+      value: serialize<P>(this.position.value, forPlayer),
+      default: !!this.position.default
     };
   }
 
-  setPositionFromJSON(position: any) {
-    this.setPosition({
+  fromJSON(position: any) {
+    return {
       index: position.index,
+      value: deserialize(position.value, this.game),
       default: position.default,
-      value: deserializeSingleArg<P>(position.value, this.ctx.game)
-    }, false);
+    };
   }
 
   toString(): string {
-    return `switch-case${this.name ? ":" + this.name : ""} (${this.position.value})`;
+    return `switch-case${this.name ? ":" + this.name : ""} (${this.position.index})`;
   }
 }

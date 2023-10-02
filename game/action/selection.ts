@@ -13,7 +13,7 @@ export default class Selection<P extends Player> {
   boardChoices: BoardQueryMulti<P, GameElement<P>>;
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
-  default?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
+  initial?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
   regexp?: RegExp;
 
   constructor(s: SelectionDefinition<P> | Selection<P>) {
@@ -23,7 +23,7 @@ export default class Selection<P extends Player> {
       this.boardChoices = s.boardChoices;
       this.min = s.min;
       this.max = s.max;
-      this.default = s.default;
+      this.initial = s.initial;
       this.regexp = s.regexp;
     } else {
       if (s.selectFromChoices) {
@@ -31,7 +31,7 @@ export default class Selection<P extends Player> {
         this.choices = s.selectFromChoices.choices;
         //this.min = s.selectFromChoices.min;
         //this.max = s.selectFromChoices.max;
-        this.default = s.selectFromChoices.default;
+        this.initial = s.selectFromChoices.initial;
       } else if (s.selectOnBoard) {
         this.type = 'board';
         this.boardChoices = s.selectOnBoard.chooseFrom;
@@ -41,11 +41,11 @@ export default class Selection<P extends Player> {
         this.type = 'number';
         this.min = s.selectNumber.min;
         this.max = s.selectNumber.max;
-        this.default = s.selectNumber.default;
+        this.initial = s.selectNumber.min === undefined ? s.selectNumber.initial : s.selectNumber.min;
       } else if (s.enterText) {
         this.type = 'text';
         this.regexp = s.enterText.regexp;
-        this.default = s.enterText.default;
+        this.initial = s.enterText.initial;
       } else {
         this.type = 'button';
       }
@@ -116,7 +116,7 @@ export default class Selection<P extends Player> {
       typeof this.min !== 'function' &&
       typeof this.max !== 'function' &&
       typeof this.choices !== 'function' &&
-      typeof this.default !== 'function' &&
+      typeof this.initial !== 'function' &&
       typeof this.boardChoices !== 'function';
   }
 
@@ -127,7 +127,7 @@ export default class Selection<P extends Player> {
     if (typeof this.min === 'function') resolved.min = this.min(...args)
     if (typeof this.max === 'function') resolved.max = this.max(...args)
     if (typeof this.choices === 'function') resolved.choices = this.choices(...args)
-    if (typeof this.default === 'function') resolved.default = this.default(...args)
+    if (typeof this.initial === 'function') resolved.initial = this.initial(...args)
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.boardChoices === 'function') resolved.boardChoices = this.boardChoices(...args)
     return resolved as ResolvedSelection<P>;

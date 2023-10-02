@@ -1,22 +1,23 @@
-import Loop from './loop';
-import Flow from './flow';
-import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
+import ForLoop from './for-loop';
+import { serialize, deserialize } from '../action/utils';
 
-import type { SingleArgument } from '../action/types';
+import type { FlowDefinition, ForEachPosition, FlowBranchNode } from './types';
+import type { Serializable } from '../action/types';
 import type { Player } from '../player';
 
-export default class ForEach<P extends Player> extends Loop<P, SingleArgument<P>> {
-  collection: ((a: Record<any, any>) => SingleArgument<P>[]) | SingleArgument<P>[]
-  position: { index: number, value?: SingleArgument<P>, collection: SingleArgument<P>[] };
-  type = 'foreach';
+export default class ForEach<P extends Player, T extends Serializable<P>> extends ForLoop<P, T> {
+  collection: ((a?: Record<string, any>) => T[]) | T[]
+  position: ForEachPosition<T>;
+  type: FlowBranchNode<P>['type'] = 'foreach';
 
   constructor({ name, collection, do: block }: {
-    name?: string,
-    collection: ((a: Record<any, any>) => SingleArgument<P>[]) | SingleArgument<P>[],
-    do: Flow<P>,
+    name: string,
+    collection: ((a: Record<string, any>) => T[]) | T[],
+    do: FlowDefinition<P>
   }) {
     super({
       name,
+      initial: () => ((typeof collection === 'function') ? collection(this.flowStepArgs()) : collection)[0],
       next: () => this.position.collection[this.position.index + 1],
       while: () => this.position.index >= 0 && this.position.index < this.position.collection.length,
       do: block
@@ -29,25 +30,23 @@ export default class ForEach<P extends Player> extends Loop<P, SingleArgument<P>
     this.setPosition({ index: collection.length ? 0 : -1, value: collection[0], collection });
   }
 
-  positionJSON(forPlayer=true) {
+  toJSON(forPlayer=true) {
     return {
       index: this.position.index,
-      value: this.position.value ? serializeSingleArg<P>(this.position.value) : undefined,
-      collection: this.position.collection.map(a => serializeSingleArg<P>(a, forPlayer))
+      value: serialize(this.position.value, forPlayer),
+      collection: serialize(this.position.collection, forPlayer)
     };
   }
 
-  setPositionFromJSON(position: any) {
-    this.setPosition({
+  fromJSON(position: any) {
+    return {
       index: position.index,
-      value: deserializeSingleArg(position.value, this.ctx.game),
-      collection: position.collection.map((a: any) => deserializeSingleArg(a, this.ctx.game))
-    }, false);
+      value: deserialize(position.value, this.game),
+      collection: deserialize(position.collection, this.game)
+    };
   }
 
   toString(): string {
     return `foreach${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value})$`;
   }
 }
-
-// export default<T> (name: string, collection: T[], block: (i: T) => FlowStep) => new ForEach(name, collection, block);

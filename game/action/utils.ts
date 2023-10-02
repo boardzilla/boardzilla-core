@@ -1,5 +1,6 @@
 import { Player } from '../player';
 import { GameElement } from '../board';
+import type { Serializable } from './types';
 
 import type { Argument, SingleArgument, SerializedArg, SerializedSingleArg } from './types';
 import type { Game } from '../';
@@ -52,7 +53,7 @@ export const deserializeObject = <P extends Player>(obj: Record<string, any>, ga
   return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, deserialize(v, game)]));
 }
 
-export const serialize = (arg: any, forPlayer=true): any => {
+export const serialize = <P extends Player>(arg: Serializable<P>, forPlayer=true): any => {
   if (arg === undefined) return undefined;
   if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => serialize(a, forPlayer));
@@ -63,7 +64,7 @@ export const serialize = (arg: any, forPlayer=true): any => {
   throw Error(`unable to serialize ${arg}`);
 }
 
-export const deserialize = <P extends Player>(arg: any, game: Game<P, Board<P>>): any => {
+export const deserialize = <P extends Player>(arg: any, game: Game<P, Board<P>>): Serializable<P> => {
   if (arg === undefined) return undefined;
   if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => deserialize(a, game));
@@ -81,5 +82,3 @@ export const escapeArgument = <P extends Player>(arg: Argument<P>): string => {
   if (typeof arg === 'object') return `[[${serializeSingleArg(arg)}|${humanizeArg(arg)}]]`;
   return String(arg);
 }
-
-

@@ -24,6 +24,11 @@ check(({ game }) => { // S - game re-enters here with the supplied player action
   }
 }),
 
+check({
+  test: () => game.test(),
+  case: 
+
+
 
 game.defineFlow(
   [

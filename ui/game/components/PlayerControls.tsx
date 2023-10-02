@@ -82,7 +82,7 @@ const PlayerControls = ({move, selection, onSubmit}: {
                 type="number"
                 min={selection.min}
                 max={selection.max}
-                defaultValue={selection.default === undefined ? "" : String(selection.default)}
+                defaultValue={String(selection.initial || '')}
               />
               <button type="submit">Submit</button>
             </>
@@ -90,7 +90,7 @@ const PlayerControls = ({move, selection, onSubmit}: {
 
           {selection?.type === 'text' && (
             <>
-              <input name="selection" defaultValue={selection.default === undefined ? "" : String(selection.default)}/>
+              <input name="selection" defaultValue={String(selection.initial || '')}/>
               <button type="submit">Submit</button>
             </>
           )}

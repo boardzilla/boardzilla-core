@@ -1,46 +1,41 @@
 import Flow from './flow';
 
 import type { Player } from '../player';
+import type { Serializable } from '../action/types';
+import type { FlowDefinition, ForLoopPosition, FlowBranchNode } from './types';
 
-export default class Loop<P extends Player, T = string | number | boolean | Record<any, any>> extends Flow<P> {
-  do: Flow<P>;
-  position: { index: number, value?: T };
-  initial?: ((a?: Record<any, any>) => T) | T;
-  next?: (a: T) => T;
-  while: (a?: T) => boolean;
-  type = "loop";
+export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow<P> {
+  block: FlowDefinition<P>;
+  position: ForLoopPosition<T>;
+  initial: ((a?: Record<string, any>) => T) | T;
+  next: (a: T) => T;
+  while: (a: T) => boolean;
+  type: FlowBranchNode<P>['type'] = 'loop';
 
   constructor({ name, initial, next, do: block, while: whileCondition }: {
-    name?: string,
-    initial?: never,
-    next?: () => T,
-    while: () => boolean,
-    do: Flow<P>
-  } | {
-    name?: string,
-    initial: ((a: Record<any, any>) => T) | T,
+    name: string,
+    initial: ((a: Record<string, any>) => T) | T,
     next: (a: T) => T,
     while: (a: T) => boolean,
-    do: Flow<P>
+    do: FlowDefinition<P>
   }) {
-    super({ name })
+    super({ name, do: block });
     this.initial = initial;
     this.next = next;
-    block.parent = this;
-    this.do = block;
     this.while = whileCondition;
   }
 
   reset() {
-    const position: typeof this.position = { index: 0 };
-    if (this.initial !== undefined) position.value =
-      this.initial instanceof Function ? this.initial(this.flowStepArgs()) : this.initial;
+    const position: typeof this.position = {
+      index: 0,
+      value: (this.initial instanceof Function ? this.initial(this.flowStepArgs()) : this.initial) as T
+    }
     this.setPosition(position);
     if (!this.while(position.value)) this.setPosition({...position, index: -1});
   }
   
-  currentSubflow() {
-    if (this.position.index !== -1) return this.do;
+  currentBlock() {
+    if (this.position.index !== -1) return this.block;
   }
 
   advance() {
@@ -67,5 +62,3 @@ export default class Loop<P extends Player, T = string | number | boolean | Reco
     return `loop${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value})$`;
   }
 }
-
-// export default<T> (name: string, options: LoopOptions<T>, block: (i: T) => FlowStep) => new Loop(name, options, block);

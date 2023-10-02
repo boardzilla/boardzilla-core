@@ -1,4 +1,4 @@
-import { Action, Selection, MoveAction } from './action/';
+import { action, Selection } from './action/';
 import { escapeArgument } from './action/utils';
 import {
   Board,
@@ -12,6 +12,7 @@ import {
   PlayerPositionState,
   Message
 } from '../types';
+import { Action } from './action';
 import { ElementClass } from './board/types';
 import { Player, PlayerCollection } from './player/';
 
@@ -34,7 +35,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
   settings: Record<string, any>;
-  actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P>>;
+  actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P, Argument<P>[]>>;
   phase: 'define' | 'new' | 'started' = 'define';
   random: () => number;
   messages: Message[] = [];
@@ -62,7 +63,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     });
   }
 
-  defineActions(actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P>>) {
+  defineActions(actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P, Argument<P>[]>>) {
     if (this.phase !== 'define') throw Error('cannot call defineActions once started');
     this.actions = actions;
   }
@@ -74,7 +75,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     },
     classRegistry: ElementClass<P, GameElement<P>>[]
   ): B {
-    if (this.phase !== 'define') throw Error('cannot call defineActions once started');
+    if (this.phase !== 'define') throw Error('cannot call defineBoard once started');
     this.board = new className(GameElement, Space, Piece, ...classRegistry)
     this.board.game = this;
     return this.board;
@@ -98,48 +99,36 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.random = random.create(rseed).random;
   }
 
-  godModeActions(): Record<string, Action<P>> {
+  godModeActions(): Record<string, Action<P, any>> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
     return {
-      _godMove: new MoveAction<P, Piece<P>, GameElement<P>>({
+      _godMove: action<P>({
         prompt: "Move anything",
-        promptTo: "To anywhere",
-        piece: {
-          chooseFrom: this.board.all(Piece<P>)
-        },
-        to: {
-          chooseFrom: this.board.all(GameElement<P>)
-        },
+      }).move({
+        prompt: "To anywhere",
+        choosePiece: this.board.all(Piece<P>),
+        chooseInto: this.board.all(GameElement<P>)
       }),
-      _godEdit: new Action<P>({
+      _godEdit: action<P>({
         prompt: "Change anything",
-        selections: [{
-          prompt: "Select element",
-          selectOnBoard: {
-            chooseFrom: this.board.all(GameElement)
-          }
-        }, {
-          prompt: "Change what?",
-          selectFromChoices: {
-            choices: (el: GameElement<P>) => Object.keys(el).filter(a => !['_t', '_ctx', '_eventHandlers', 'mine', 'board', 'game', 'pile'].includes(a))
-          }
-        }, {
-          prompt: "Change to",
-          enterText: {
-            default: (el: GameElement<P>, attr: keyof GameElement<P>) => String(el[attr])
-          }
-        }],
-        move: (el: GameElement<P>, attr: keyof GameElement<P>, value: any) => {
-          if (value === 'true') {
-            value = true;
-          } else if (value === 'false') {
-            value = false;
-          } else if (parseInt(value).toString() === value) {
-            value = parseInt(value);
-          }
-          // @ts-ignore
-          el[attr] = value
+      }).chooseOnBoard({
+        prompt: "Select element",
+        choices: this.board.all(GameElement)
+      }).chooseFrom({
+        prompt: "Change what?",
+        choices: el => Object.keys(el).filter(a => !['_t', '_ctx', '_eventHandlers', 'mine', 'board', 'game', 'pile', 'mine'].includes(a))
+      }).enterText({
+        prompt: "Change to",
+        initial: (el: GameElement<P>, attr: keyof GameElement<P>) => String(el[attr])
+      }).do((el, attr: keyof GameElement<P>, value: any) => {
+        if (value === 'true') {
+          value = true;
+        } else if (value === 'false') {
+          value = false;
+        } else if (parseInt(value).toString() === value) {
+          value = parseInt(value);
         }
+        if (attr !== 'mine') el[attr] = value
       })
     };
   }
@@ -151,12 +140,12 @@ export default class Game<P extends Player, B extends Board<P>> {
     }
     this.phase = 'started';
     this.buildFlow();
-    this.flow.start();
+    this.flow.reset();
   }
 
   buildFlow() {
     this.flow = this.flowDefinition(this, this.board);
-    this.flow.ctx.game = this;
+    this.flow.game = this;
   }
 
   setState(state: GameState<P>) {
@@ -217,11 +206,11 @@ export default class Game<P extends Player, B extends Board<P>> {
           selection
         };
       } else {
-        const step = this.flow.currentStep();
-        if (step instanceof PlayerAction) {
+        const actionStep = this.flow.currentFlow();
+        if (actionStep instanceof PlayerAction) {
           return {
-            selection: new Selection({ // selection is between multiple actions, return action choices
-              prompt: step.prompt || 'Choose action',
+            selection: new Selection<P>({ // selection is between multiple actions, return action choices
+              prompt: actionStep.prompt || 'Choose action',
               selectFromChoices: {
                 choices: Object.fromEntries(actions.map(a => [a, this.action(a, player).prompt]))
               }
@@ -264,7 +253,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   allowedActions(player: P): string[] {
-    const allowedActions = this.godMode ? Object.keys(this.godModeActions()) : [];
+    const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
     if (this.players.currentPosition && player !== this.players.current()) return allowedActions;
     return this.inContextOfPlayer(player, () => {
       let actions = this.flow.actionNeeded();

@@ -1,7 +1,7 @@
 import type { GameElement } from './'
 import type { Player } from '../'
 
-type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<any, any>);
+type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 
 type ElementClass<P extends Player, T extends GameElement<P>> = {
   new(ctx: Partial<ElementContext<P>>): T;

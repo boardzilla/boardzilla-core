@@ -1,29 +1,28 @@
 export {default as Game} from './game';
 
 export {
-  Action,
-  MoveAction,
+  Action, // remove
+  action,
 } from './action/';
 
 export {
-  Board,
-  Space,
-  Piece,
-  GameElement,
+  Board, // remove
+  Space, // remove
+  Piece, // remove
+  GameElement, // remove
   union,
-  boardClasses
 } from './board/';
 
 export {
   Player,
-  PlayerCollection
+  PlayerCollection // remove
 } from './player/';
 
 export {
-  Sequence,
+  Flow,
   PlayerAction,
-  Step,
-  Loop,
+  WhileLoop,
+  ForLoop,
   ForEach,
   SwitchCase,
   IfElse,
@@ -39,12 +38,20 @@ export {
 
 // starter function
 
-import { Player, Game, Board, Action, GameElement } from '.';
+import { Player, Game, Board, Piece, Space, action, Action, GameElement } from '.';
 import type { SetupState, GameState } from '../types';
 import type { SetupFunction } from './types';
 import type { ElementClass } from './board/types';
 import type { PlayerAttributes } from './player/types';
+import type { Argument } from './action/types';
 import type { Flow } from './flow';
+
+export const imports = <P extends Player>() => ({
+  Board: Board<P>,
+  Space: Space<P>,
+  Piece: Piece<P>,
+  action: action<P>
+});
 
 export default <P extends Player, B extends Board<P>>({ minPlayers, maxPlayers, playerClass, boardClass, elementClasses, setupBoard, setupFlow, actions }: {
   minPlayers: number,
@@ -54,7 +61,7 @@ export default <P extends Player, B extends Board<P>>({ minPlayers, maxPlayers, 
   elementClasses: ElementClass<P, GameElement<P>>[],
   setupBoard: (game: Game<P, B>, board: B) => any,
   setupFlow: (game: Game<P, B>, board: B) => Flow<P>,
-  actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P>>
+  actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>
 }): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, rseed: string, start: boolean): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
