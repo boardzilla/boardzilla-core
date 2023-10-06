@@ -4,6 +4,7 @@ import classNames from 'classnames';
 
 import {
   Piece,
+  Space,
   GameElement,
   isA,
 } from '../../../game'
@@ -14,7 +15,7 @@ import type { Player } from '../../../game/player';
 
 const elementAttributes = (el: GameElement<Player>) => {
   return Object.fromEntries(Object.entries(el).filter(([key, val]) => (
-    !['_t', '_ctx', 'name', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function'
+    !['_t', '_ctx', '_ui', 'name', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function'
   )).map(([key, val]) => (
     [`data-${key.toLowerCase()}`, serialize(val)]
   )));
@@ -53,14 +54,20 @@ const Element = ({element, json, clickables, hilites, selected, onSelectElement}
   const appearance = (uiOptions.appearance && uiOptions.appearance[json.className]) ?
                       uiOptions.appearance[json.className] : defaultAppearance;
 
+  let style = {};
+  if (element._ui?.computedStyle) {
+    style = Object.fromEntries(Object.entries(element._ui.computedStyle).map(([key, val]) => ([key, `${val}%`])))
+  }
+
   return React.createElement(
     htmlElement.tag,
     {
       id: element.name,
+      style,
       className: classNames(
         htmlElement.base,
-        element.constructor.name,
         {
+          [element.constructor.name]: htmlElement.base !== element.constructor.name,
           hilite: isHilited || isClickable,
           selected: isSelected,
         }

@@ -17,7 +17,7 @@ const Board = ({clickables, hilites, selected, onSelectElement}: {
   if (JSON.stringify(game.board.allJSON()) !== JSON.stringify(boardJSON)) console.error('-------------------------------------------------- json out of sync --------------------------------------------------');
 
   return (
-    <div id="play-area">
+    <div id="play-area" className={true ? 'fixed' : 'fluid'}>
       { game && (
         <Element
           element={game.board}

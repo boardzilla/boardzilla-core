@@ -5,6 +5,11 @@ import type { ElementJSON, ElementClass } from './types';
 import type { GameElement } from './';
 import type { Player } from '../player';
 
+// TODO add B generic to all board elements
+// e.g. can:
+//   game: Game<P, typeof this>
+//   board: typeof this
+
 export default class Board<P extends Player> extends Space<P> {
   pile: GameElement<P>;
 
@@ -29,7 +34,7 @@ export default class Board<P extends Player> extends Space<P> {
 
     // reset all on self
     for (const key of Object.keys(this)) {
-      if (!['_ctx', '_t', '_eventHandlers', 'board', 'game', 'pile'].includes(key) && !(key in rest))
+      if (!['_ctx', '_t', '_ui', '_eventHandlers', 'board', 'game', 'pile'].includes(key) && !(key in rest))
         rest[key] = undefined;
     }
     Object.assign(this, {...rest});

@@ -37,7 +37,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
 
   setCurrent(player: number | P) {
     if (typeof player !== 'number') player = player.position;
-    if (player > this.length || player < 1) {
+    if (!player || player > this.length || player < 1) {
       throw Error(`No such player ${player}`);
     }
     this.currentPosition = player;

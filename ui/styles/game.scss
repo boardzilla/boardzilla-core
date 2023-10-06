@@ -1,20 +1,44 @@
-.Space {
-  outline: .5vmin solid black;
-  padding: 1vmin;
-  margin: 1.5vmin;
-}
+#play-area {
+  .hilite {
+    outline: 1vmin solid yellow;
+  }
 
-.Piece {
-  display: inline-block;
-  outline: .5vmin solid blue;
-  padding: 1vmin;
-  margin: 1vmin;
-}
+  .selected {
+    outline: 1vmin solid red;
+  }
 
-.hilite {
-  outline: 1vmin solid yellow;
-}
+  &.fixed {
+    width: 100vmin;
+    height: 100vmin;
+    position: relative;
 
-.selected {
-  outline: 1vmin solid red;
+    > .Space {
+      width: 100%;
+      height: 100%;
+    }
+
+    .Piece {
+      outline: .25vmin solid blue;
+      position: absolute;
+    }
+
+    .Space {
+      position: absolute;
+    }
+  }
+
+  &.fluid {
+    .Piece {
+      display: inline-block;
+      outline: .5vmin solid blue;
+      padding: 1vmin;
+      margin: 1vmin;
+    }
+
+    .Space {
+      outline: .5vmin solid black;
+      padding: 1vmin;
+      margin: 1.5vmin;
+    }
+  }
 }

@@ -12,5 +12,5 @@
     "strictNullChecks": true,
     "jsx": "react"
   },
-  "include": ["*/game/**/*", "*/ui/**/*"],
-}
+    "include": ["*/game/**/*", "*/ui/**/*"],
+  }

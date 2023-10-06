@@ -10,14 +10,7 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
     startingPlayer?: ((a: Record<any, any>) => P) | P,
     nextPlayer?: (p: P) => P,
     turns?: number,
-    continueUntil: (p: P) => boolean,
-    do: FlowDefinition<P>,
-  } | {
-    name: string,
-    startingPlayer?: ((a: Record<any, any>) => P) | P,
-    nextPlayer?: never,
-    turns?: number,
-    continueUntil?: never,
+    continueUntil?: (p: P) => boolean,
     do: FlowDefinition<P>,
   }) {
     let initial: (r: Record<any, any>) => P
@@ -39,6 +32,7 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
 
   setPosition(position: typeof this.position, sequence?: number, reset=true) {
     super.setPosition(position, sequence, reset);
+    if (typeof this.position.value === 'string') throw Error(this.position.value);
     if (this.position.value) {
       this.game.players.setCurrent(this.position.value);
       this.game.board._ctx.player = this.position.value;

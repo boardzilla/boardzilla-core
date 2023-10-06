@@ -39,9 +39,8 @@ export default class Game<P extends Player, B extends Board<P>> {
   phase: 'define' | 'new' | 'started' = 'define';
   random: () => number;
   messages: Message[] = [];
-  minPlayers = 1;
-  maxPlayers: number;
   godMode = false;
+  setupLayout?: (board: B) => void
 
   /**
    * configuration functions

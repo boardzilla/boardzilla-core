@@ -7,7 +7,7 @@ export default class Piece<P extends Player> extends GameElement<P> {
   putInto(to: GameElement<P>, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
     if (to.isDescendantOf(this)) throw Error(`Cannot put ${this} into itself`);
     let pos: number = to._t.children.length;
-    if (options?.position !== undefined) pos = options.position;
+    if (options?.position !== undefined) pos = options.position >= 0 ? options.position : to._t.children.length + options.position + 1;
     if (options?.fromBottom !== undefined) pos = options.fromBottom;
     if (options?.fromTop !== undefined) pos = to._t.children.length - options.fromTop;
     const previousParent = this._t.parent;

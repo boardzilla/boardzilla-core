@@ -31,14 +31,18 @@ export default class Flow<P extends Player> {
 
   flowStepArgs(): Record<string, any> {
     const args: Record<string, any> = {};
-    this.top.branchJSON().forEach(node => {
-      if (node.type === 'action') {
-        args[node.position!.action] = node.position!.args;
+    let flow: FlowStep<P> | undefined = this.top;
+    while (flow instanceof Flow) {
+      if ('position' in flow && flow.position) {
+        if (flow.type === 'action' && 'action' in flow.position && 'args' in flow.position) {
+          args[flow.position.action!] = flow.position.args;
+        }
+        if ('value' in flow.position && flow.name) {
+          args[flow.name] = flow.position.value;
+        }
       }
-      if ('position' in node && 'value' in node.position && node.name) {
-        args[node.name] = node.position.value;
-      }
-    });
+      flow = flow.step;
+    }
     return args;
   }
 

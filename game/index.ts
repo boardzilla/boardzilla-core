@@ -53,24 +53,21 @@ export const imports = <P extends Player>() => ({
   action: action<P>
 });
 
-export default <P extends Player, B extends Board<P>>({ minPlayers, maxPlayers, playerClass, boardClass, elementClasses, setupBoard, setupFlow, actions }: {
-  minPlayers: number,
-  maxPlayers: number,
+export default <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setupBoard, setupFlow, actions, setupLayout }: {
   playerClass: {new(a: PlayerAttributes<P>): P},
   boardClass: ElementClass<P, B>,
-  elementClasses: ElementClass<P, GameElement<P>>[],
-  setupBoard: (game: Game<P, B>, board: B) => any,
+  elementClasses?: ElementClass<P, GameElement<P>>[],
+  setupBoard?: (game: Game<P, B>, board: B) => any,
   setupFlow: (game: Game<P, B>, board: B) => Flow<P>,
-  actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>
+  actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>,
+  setupLayout?: (board: B) => void
 }): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, rseed: string, start: boolean): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
   game.setRandomSeed(rseed);
-  game.minPlayers = minPlayers;
-  game.maxPlayers = maxPlayers;
   game.definePlayers(playerClass);
   //console.timeLog('setup', 'setup players');
-  game.defineBoard(boardClass, elementClasses);
+  game.defineBoard(boardClass, elementClasses || []);
   //console.timeLog('setup', 'define board');
   game.defineFlow(setupFlow);
   //console.timeLog('setup', 'setup flow');
@@ -81,14 +78,14 @@ export default <P extends Player, B extends Board<P>>({ minPlayers, maxPlayers, 
   if (!('board' in state)) { // phase=new
     game.players.fromJSON(state.players);
     if (start) {
-      setupBoard(game, game.board as B);
+      if (setupBoard) setupBoard(game, game.board as B);
       game.start();
     }
   } else { // phase=started
     game.players.fromJSON(state.players);
     if (start) {
       // require setup to build spaces, graphs, event handlers
-      setupBoard(game, game.board as B);
+      if (setupBoard) setupBoard(game, game.board as B);
       //console.timeLog('setup', 'setupBoard');
     }
     game.setState(state);
@@ -101,5 +98,6 @@ export default <P extends Player, B extends Board<P>>({ minPlayers, maxPlayers, 
     game.phase = 'new';
   }
   console.timeEnd('setup');
+  game.setupLayout = setupLayout;
   return game;
 };

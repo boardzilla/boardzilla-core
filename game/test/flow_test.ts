@@ -35,7 +35,7 @@ describe('Flow', () => {
       playerActions({
         name: 'play-or-pass',
         actions: {
-          play: ({ play }) => playSpy(play),
+          play: (a) => { console.log(a, a.play); playSpy(a.play) },
           pass: [
             () => {}
           ]

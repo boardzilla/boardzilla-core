@@ -54,6 +54,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     const player = s.game.players.atPosition(s.position);
     if (!player) return {};
     const {move, selection} = s.game.currentSelection(player);
+
+    if (s.game.setupLayout) s.game.setupLayout(s.game.board);
+    s.game.board.applyLayouts();
+
     console.log('updateBoard', s.position, move, selection);
     return ({
       move,

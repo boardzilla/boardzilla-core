@@ -62,6 +62,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
       //console.log('game-update', phase);
       let newGame = game || setup({ players: data.state.state.players, settings: data.state.state.settings }, 'ui', true);
       newGame.setState(data.state.state);
+      newGame.board._ctx.player = newGame.players.atPosition(data.state.position);
       if (!position) setPosition(data.state.position)
       if (newGame !== game) setGame(newGame);
       updateBoard();

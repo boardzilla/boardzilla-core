@@ -2,6 +2,8 @@ import type { Player } from '../game/player';
 import type { SerializedArg } from '../game/action/types';
 import type { GameState } from '../types';
 
+export type Layout = Record<string, any>
+
 export type SetupComponentProps = {
   name: string
   settings: Record<string, any>
