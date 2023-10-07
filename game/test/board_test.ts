@@ -657,7 +657,7 @@ describe('Board', () => {
       board.layout(GameElement, {
         aspectRatio: 4 / 5,
         offsetColumn: {x: 100, y: 100},
-        scaling: 'fit'
+        scaling: 'fit',
       });
       const spaces = board.createMany(9, Space, 'space');
       board.applyLayouts();
@@ -682,15 +682,9 @@ describe('Board', () => {
       const spaces = board.createMany(9, Space, 'space');
       board.applyLayouts();
 
-      console.log('<div style="width: 100; height: 100; position: relative; outline: 1px solid black">');
-      for (const c of board._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}; top: ${c._ui.computedStyle?.top}; width: ${c._ui.computedStyle?.width}; height: ${c._ui.computedStyle?.height}; background: red; outline: 1px solid blue"></div>`);
-      console.log('</div>');
+      // console.log('<div style="width: 200; height: 200; position: relative; outline: 1px solid black">');
+      // for (const c of board._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}%; top: ${c._ui.computedStyle?.top}%; width: ${c._ui.computedStyle?.width}%; height: ${c._ui.computedStyle?.height}%; background: red; outline: 1px solid blue"></div>`);
+      // console.log('</div>');
     });
   });
 });
-// for (const c of board._t.children) console.log(c.name, c._ui.computedStyle);
-// for (const c of outer[2]._t.children) console.log(c.name, c._ui.computedStyle);
-
-      // console.log('<div style="width: 100; height: 100; position: relative; outline: 1px solid black">');
-      // for (const c of board._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}; top: ${c._ui.computedStyle?.top}; width: ${c._ui.computedStyle?.width}; height: ${c._ui.computedStyle?.height}; background: red; outline: 1px solid blue"></div>`);
-      // console.log('</div>');

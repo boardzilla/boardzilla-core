@@ -1,11 +1,45 @@
-<div style="width: 100; height: 100; position: relative; outline: 1px solid black">
-<div style="position: absolute; left: 32.85714285714286; top: 28.571428571428573; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 30.000000000000004; top: 25; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 27.142857142857146; top: 21.42857142857143; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 24.28571428571429; top: 17.857142857142858; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 21.42857142857143; top: 14.285714285714286; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 18.571428571428577; top: 10.714285714285715; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 15.714285714285715; top: 7.142857142857142; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 12.857142857142861; top: 3.571428571428573; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
-<div style="position: absolute; left: 10.000000000000004; top: 0; width: 57.142857142857146; height: 71.42857142857143; background: red; outline: 1px solid blue"></div>
+<pre>
+      board.layout(GameElement, {
+        aspectRatio: 4 / 5,
+        offsetColumn: {x: 50, y: 50},
+        offsetRow: {x: -60, y: 30},
+        scaling: 'fill'
+      });
+      const spaces = board.createMany(9, Space, 'space');
+</pre>
+
+<div style="width: 200; height: 200; position: relative; outline: 1px solid black">
+<div style="position: absolute; left: 37.75%; top: 10%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 51.8125%; top: 22.451171875%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 65.875%; top: 34.90234375%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 20.875%; top: 17.470703125%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 34.9375%; top: 29.921875000000004%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 49%; top: 42.37304687500001%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 4%; top: 24.94140625%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 18.0625%; top: 37.392578125%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 32.125%; top: 49.84375000000001%; width: 28.125%; height: 35.15624999999999%; background: red; outline: 1px solid blue"></div>
+</div>
+
+<pre>
+      board.layout(GameElement, {
+        aspectRatio: 4 / 5,
+        offsetColumn: {x: -5, y: -5},
+        scaling: 'fit',
+        direction: 'ltr'
+      });
+      const spaces = board.createMany(9, Space, 'space');
+  </pre>
+
+<div style="width: 200; height: 200; position: relative; outline: 1px solid black">
+<div style="position: absolute; left: 28.571428571428573%; top: 10.714285714285712%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 25%; top: 9.374999999999998%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 21.42857142857143%; top: 8.035714285714285%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 17.857142857142858%; top: 6.69642857142857%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 14.285714285714286%; top: 5.357142857142856%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 10.714285714285715%; top: 4.017857142857143%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 7.142857142857142%; top: 2.678571428571429%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 3.571428571428573%; top: 1.339285714285717%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+<div style="position: absolute; left: 0%; top: 0%; width: 71.42857142857143%; height: 89.28571428571429%; background: red; outline: 1px solid blue"></div>
+</div>
+
 </div>

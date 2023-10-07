@@ -459,13 +459,15 @@ export default class GameElement<P extends Player> {
       const children = layoutItems[l];
       if (!children) break;
 
+      let cellBoxRC: ({ row, column }: { row: number, column: number }) => Box | undefined;
       let cellBox: (n: number) => Box | undefined;
+      let cell: ((n: number) => { row: number, column: number });
 
       const { slots, margin, direction, gap, scaling } = attributes;
       let { area, size, aspectRatio, offsetColumn, offsetRow } = attributes;
 
       if (slots) {
-        cellBox = (n: number): Box | undefined => n < slots.length ? slots[n] : undefined
+        cellBox = n => n < slots.length ? slots[n] : undefined
       } else {
         // calculate working area
         if (!area) {
@@ -495,7 +497,6 @@ export default class GameElement<P extends Player> {
         const maxColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.max || Infinity;
         let rows = minRows;
         let columns = minColumns;
-        let cell: ((n: number) => { row: number, column: number });
 
         // expand grid as needed in direction specified
         if (rows * columns < children.length) {
@@ -541,6 +542,7 @@ export default class GameElement<P extends Player> {
           if (vColumns > columns) columns = vColumns;
 
           // center used cells within the minimum grid, possibly using fractional row/col
+          //console.log('virtual grid', vColumns, vRows, columns, rows);
           cell = n => ({
             column: n % vColumns + (columns - vColumns) / 2,
             row: Math.floor(n / vColumns) + (rows - vRows) / 2
@@ -585,9 +587,7 @@ export default class GameElement<P extends Player> {
 
         //console.log('size, area after init', size, area, cellGap, transform)
 
-        cellBox = (n: number): Box | undefined => {
-          if (!cell) return;
-          const { row, column } = cell(n);
+        cellBoxRC = ({ row, column }: { row: number, column: number }): Box | undefined => {
           //console.log('cell # ', n, row, column, size, area, cellGap);
           if (column > maxColumns || row > maxRows) return;
 
@@ -607,67 +607,73 @@ export default class GameElement<P extends Player> {
           }
         }
 
-        // find the edge boxes and calculate the total size needed, including the number of rows, cols
-        const boxes: Box[] = [];
-        for (let c = 0; c !== children.length; c++) {
-          const box = cellBox(c);
-          if (box) boxes[c] = box;
+        // find the edge boxes and calculate the total size needed
+        const getTotalArea = (): Box => {
+          const boxes = [
+            cellBoxRC({ row: 0, column: 0 })!,
+            cellBoxRC({ row: rows - 1, column: 0 })!,
+            cellBoxRC({ row: rows - 1, column: columns - 1 })!,
+            cellBoxRC({ row: 0, column: columns - 1 })!,
+          ];
+          //console.log('boxes', boxes);
+
+          const cellArea = {
+            top: Math.min(...boxes.map(b => b.top)),
+            bottom: Math.max(...boxes.map(b => b.top + b.height)),
+            left: Math.min(...boxes.map(b => b.left)),
+            right: Math.max(...boxes.map(b => b.left + b.width)),
+          };
+
+          return {
+            width: cellArea.right - cellArea.left,
+            height: cellArea.bottom - cellArea.top,
+            left: cellArea.left,
+            top: cellArea.top
+          }
         }
-        //console.log('boxes', boxes);
-
-        const cellsTopToBottom = [...boxes].sort((a, b) => a.top - b.top);
-        const cellsLeftToRight = [...boxes].sort((a, b) => a.left - b.left);
-
-        const edgeCells = {
-          top: boxes.findIndex(b => b === cellsTopToBottom[0]),
-          bottom: boxes.findIndex(b => b === cellsTopToBottom[cellsTopToBottom.length - 1]),
-          left: boxes.findIndex(b => b === cellsLeftToRight[0]),
-          right: boxes.findIndex(b => b === cellsLeftToRight[cellsLeftToRight.length - 1]),
-        }
-
-        const cellArea = {
-          top: cellsTopToBottom[0].top,
-          bottom: cellsTopToBottom[cellsTopToBottom.length - 1].top + cellsTopToBottom[cellsTopToBottom.length - 1].height,
-          left: cellsLeftToRight[0].left,
-          right: cellsLeftToRight[cellsLeftToRight.length - 1].left + cellsLeftToRight[cellsLeftToRight.length - 1].width
-        };
-
-        const totalAreaNeeded: Box = {
-          width: cellArea.right - cellArea.left,
-          height: cellArea.bottom - cellArea.top,
-          left: cellArea.left,
-          top: cellArea.top
-        }
+        const totalAreaNeeded = getTotalArea();
 
         //console.log(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
         //console.log('size, area', size, area, totalAreaNeeded)
 
+        let scale: Vector = {x: 1, y: 1};
+
         if (scaling === 'fill') {
-          if (cellGap) {
-            // expand by the largest ratio, spilling one dimesion out of bounds
-            const scale = Math.max(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
-            size.width *= scale;
-            size.height *= scale;
-          } else {
-            // TODO ?? expand in both directions?
-          }
+          // match the dimension furthest, spilling one dimesion out of bounds
+          const s = Math.max(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
+          scale = {x: s, y: s};
         } else if (scaling === 'fit') {
-          // reduce in the largest direction, pushing one dimesion inside
-          const scale = Math.min(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
-          size.width *= scale;
-          size.height *= scale;
-
-          if (!cellGap) {
-            // straightforward reduction in area for the offset case
-            area.left += scale * (area.left - totalAreaNeeded.left) + (area.width - totalAreaNeeded.width * scale) / 2;
-            area.width = totalAreaNeeded.width * scale;
-            area.top += scale * (area.top - totalAreaNeeded.top) + (area.height - totalAreaNeeded.height * scale) / 2;
-            area.height = totalAreaNeeded.height * scale;
-          }
+          // match the closest dimension, pushing one dimesion inside
+          const s = Math.min(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
+          scale = {x: s, y: s};
         }
-        //console.log('size, area after fit/fill', size, area, cellGap)
+        size.width *= scale.x;
+        size.height *= scale.y;
 
-        if (cellGap) {
+        if (!cellGap) {
+          // reduce offset along dimesion needed to squish
+          if (area.width / totalAreaNeeded.width > area.height / totalAreaNeeded.height) {
+            const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
+            scale.y = area.height / totalAreaNeeded.height;
+            offsetColumn!.y *= offsetScale;
+            offsetRow!.y *= offsetScale;
+          } else {
+            const offsetScale = (area.width - size.width) / (totalAreaNeeded.width * scale.x - size.width);
+            scale.x = area.width / totalAreaNeeded.width;
+            offsetColumn!.x *= offsetScale;
+            offsetRow!.x *= offsetScale;
+          }
+
+          const revisedAreaNeeded = getTotalArea();
+          //console.log(totalAreaNeeded, revisedAreaNeeded);
+
+          // straightforward reduction in area for the offset case
+          area.left += (area.left - revisedAreaNeeded.left) + (area.width - revisedAreaNeeded.width) / 2;
+          area.width = revisedAreaNeeded.width;
+          area.top += (area.top - revisedAreaNeeded.top) + (area.height - revisedAreaNeeded.height) / 2;
+          area.height = revisedAreaNeeded.height;
+
+        } else {
           if (size.width > largestCellSize.width) {
             size.height *= largestCellSize.width / size.width;
             size.width = largestCellSize.width;
@@ -690,7 +696,8 @@ export default class GameElement<P extends Player> {
           area.height = newHeight;
         }
 
-        //console.log('size, area after fit/fill adj', size, area, cellGap)
+        //console.log('size, area after fit/fill adj', size, area, scale, cellGap)
+        cellBox = n => cellBoxRC(cell(n));
       }
 
       for (let i = 0; i !== children.length; i++) {
