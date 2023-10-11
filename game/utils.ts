@@ -8,8 +8,8 @@ import type { SetupState, GameState, GameUpdate } from '../types';
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState<Player> | GameState<Player>, rseed: string): GameUpdate<Player> => {
-      const game = setup(state, rseed, true);
+    initialState: (state: SetupState<Player> | GameState<Player>): GameUpdate<Player> => {
+      const game = setup(state, true);
       return {
         game: game.getState(),
         players: game.getPlayerStates(),
@@ -21,10 +21,9 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       move: {
         position: number
         data: SerializedMove
-      },
-      rseed: string
+      }
     ): GameUpdate<Player> => {
-      const game = setup(previousState, rseed, true);
+      const game = setup(previousState, true);
       const result = game.processMove({
         player: game.players.atPosition(move.position)!,
         action: move.data.action,
@@ -42,7 +41,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
     },
     getPlayerState: (state: GameState<Player>, position: number): GameState<Player> => {
       if (!position) throw Error('getPlayerState without position');
-      const game = setup(state, '', false);
+      const game = setup(state, false);
       return game.getState(position)
     }
   };

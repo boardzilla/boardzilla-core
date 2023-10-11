@@ -12,8 +12,8 @@ export type SetupComponentProps = {
 }
 
 export type User = {
-  userID: string
-  userName: string
+  id: string
+  name: string
 }
 
 export type SetupPlayer = {
@@ -29,16 +29,10 @@ export type UserPlayer = SetupPlayer & {
 
 export type GameSettings = Record<string, any>
 
-export type UserEvent = {
-  type: "user"
-  userID: string
-  userName: string
-  added: boolean
-}
-
 export type PlayersEvent = {
   type: "players"
   players: UserPlayer[]
+  users: User[]
 }
 
 // an update to the setup state

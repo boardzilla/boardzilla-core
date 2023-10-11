@@ -38,7 +38,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
   const moves = useMemo<((e: string) => void)[]>(() => [], []);
 
   const listener = useCallback((event: MessageEvent<
-    UserEvent |
     PlayersEvent |
     SettingsUpdateEvent |
     GameUpdateEvent |
@@ -55,29 +54,17 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
     case 'players':
       //console.log('players-update');
       setPlayers(data.players);
-      // const position = data.players.find(p => p.userID === userID)?.position;
-      // if (position) setPosition(position)
+      setUsers(data.users);
       break;
     case 'gameUpdate':
       //console.log('game-update', phase);
-      let newGame = game || setup({ players: data.state.state.players, settings: data.state.state.settings }, 'ui', true);
-      newGame.setState(data.state.state);
+      let newGame = game || setup(data.state.state, true);
       newGame.board._ctx.player = newGame.players.atPosition(data.state.position);
       if (!position) setPosition(data.state.position)
       if (newGame !== game) setGame(newGame);
       updateBoard();
 
       setPhase('started'); // set phase last to render the game
-      break;
-    case 'user':
-      if (data.added) {
-        setUsers(users => {
-          if (users.find(p => p.userID === data.userID)) return users
-          return [...users, { userID: data.userID, userName: data.userName }]
-        });
-      } else {
-        setUsers((users) => users.filter(p => p.userID !== data.userID))
-      }
       break;
     case 'messageProcessed':
       if (data.error) catchError(data.error);

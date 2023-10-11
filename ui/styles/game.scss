@@ -1,10 +1,19 @@
+body {
+  margin: 0;
+  padding: 0;
+}
+
 #play-area {
+  .Piece {
+    background: #ccc;
+  }
+
   .hilite {
-    outline: 1vmin solid yellow;
+    background: #ffc;
   }
 
   .selected {
-    outline: 1vmin solid red;
+    background: #faa;
   }
 
   &.fixed {
@@ -18,25 +27,32 @@
     }
 
     .Piece {
-      outline: .25vmin solid blue;
       position: absolute;
+      > img {
+        width: 100%;
+        height: 100%;
+      }
     }
 
     .Space {
       position: absolute;
+      > img {
+        width: 100%;
+        height: 100%;
+      }
     }
   }
 
   &.fluid {
     .Piece {
+      outline: .25vmin solid blue;
       display: inline-block;
-      outline: .5vmin solid blue;
       padding: 1vmin;
       margin: 1vmin;
     }
 
     .Space {
-      outline: .5vmin solid black;
+      outline: .25vmin solid black;
       padding: 1vmin;
       margin: 1.5vmin;
     }

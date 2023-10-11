@@ -43,11 +43,11 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
         const attrs = finder;
         return el => Object.entries(attrs).every(([k1, v1]) => {
           let kvpairs = Object.entries(el);
-          if (attrs.mine) {
+          if ('mine' in attrs) {
             if (!el._ctx.player) throw Error('Using "mine" in a non-player context');
             kvpairs = kvpairs.concat([["mine", el.mine]]);
           }
-          if (attrs.empty) {
+          if ('empty' in attrs) {
             kvpairs = kvpairs.concat([["empty", el.isEmpty()]]);
           }
           return kvpairs.find(([k2, v2]) => k1 === k2 && v1 === v2)
@@ -187,5 +187,17 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
       if (!(el instanceof Piece)) throw Error('cannot move Space');
       el.putInto(to, options);
     }
+  }
+
+  // UI
+  layout(
+    applyTo: GameElement<P>['_ui']['layouts'][number]['applyTo'],
+    attributes: Partial<GameElement<P>['_ui']['layouts'][number]['attributes']> | null
+  ) {
+    for (const el of this) el.layout(applyTo, attributes);
+  }
+
+  appearance(component: (el: T) => JSX.Element) {
+    for (const el of this) el._ui.component = component;
   }
 }

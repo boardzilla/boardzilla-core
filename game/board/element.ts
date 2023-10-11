@@ -2,6 +2,7 @@ import ElementCollection from './element-collection';
 import { isA, shuffleArray, times } from '../utils';
 import { translate, cellSizeForArea } from './utils';
 import { serializeObject, deserializeObject } from '../action/utils';
+import random from 'random-seed';
 
 import type {
   ElementAttributes,
@@ -227,6 +228,7 @@ export default class GameElement<P extends Player> {
     this.hiddenAttributes = attrs;
   }
 
+  // unused?
   hidden(): this {
     return Object.create(
       Object.getPrototypeOf(this),
@@ -247,8 +249,8 @@ export default class GameElement<P extends Player> {
     return el;
   }
 
-  createMany<T extends GameElement<P>>(n: number, className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T[] {
-    return times(n, () => this.create(className, name, attrs));
+  createMany<T extends GameElement<P>>(n: number, className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): ElementCollection<P, T> {
+    return new ElementCollection<P, T>(...times(n, () => this.create(className, name, attrs)));
   }
 
   createElement<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T {
@@ -356,7 +358,7 @@ export default class GameElement<P extends Player> {
   }
 
   /**
-   * layout controls
+   * UI
    */
 
   static aspectRatio: number;
@@ -373,14 +375,18 @@ export default class GameElement<P extends Player> {
         columns?: number | {min: number, max?: number} | {min?: number, max: number},
         slots?: Box[],
         size?: { width: number, height: number },
-        aspectRatio?: number, // w/h
+        aspectRatio?: number, // w / h
         scaling: 'fit' | 'fill' | 'none'
         gap?: number | { x: number, y: number },
         offsetColumn?: Vector,
         offsetRow?: Vector,
-        direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl'
-      }
+        direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
+        limit?: number,
+        haphazardly?: number,
+      } | null
     }[],
+    component?: (el: GameElement<P>) => JSX.Element,
+    showConnections: boolean,
     computedStyle?: Box
   } = {
     layouts: [{
@@ -388,12 +394,14 @@ export default class GameElement<P extends Player> {
       attributes: {
         margin: 0,
         scaling: 'none',
-        gap: 1,
+        gap: 0,
         direction: 'square'
       }
-    }]
+    }],
+    showConnections: false,
   }
 
+  // viewport relative to the board
   absoluteTransform(): Box {
     let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
     let parent = this._t.parent;
@@ -404,23 +412,34 @@ export default class GameElement<P extends Player> {
     return transform;
   }
 
-  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']>) {
-
-    const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
-    if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
-    if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
-    if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
-    if (!size) {
-      if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
-      if (scaling && !aspectRatio) throw Error("Layout `scaling` is ignored with no `aspectRatio` or `size`");
-      if (!scaling) attributes.scaling = 'fit';
+  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']> | null) {
+    if (attributes) {
+      const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
+      if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
+      if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
+      if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
+      if (!size) {
+        if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
+        if (!scaling) attributes.scaling = 'fit';
+      }
+      this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', direction: 'square' }, attributes) });
+    } else {
+      this._ui.layouts.push({ applyTo, attributes });
     }
-
-    this._ui.layouts.push({
-      applyTo,
-      attributes: Object.assign({ margin: 0, scaling: 'none', direction: 'square' }, attributes)
+    this._ui.layouts.sort((a, b) => {
+      let aVal = 0, bVal = 0;
+      if (a.applyTo instanceof GameElement) aVal = 3
+      if (b.applyTo instanceof GameElement) bVal = 3
+      if (typeof a.applyTo === 'string') aVal = 2
+      if (typeof b.applyTo === 'string') bVal = 2
+      if (a.applyTo instanceof Array) aVal = 1
+      if (b.applyTo instanceof Array) bVal = 1
+      if (aVal !== 0 || bVal !== 0) return aVal - bVal;
+      const ac = a.applyTo as ElementClass<P, any>;
+      const bc = b.applyTo as ElementClass<P, any>;
+      return ac.prototype instanceof bc ? 1 : (bc.prototype instanceof ac ? -1 : 0);
     });
-    // TODO sort
+
     for (const child of this._t.children) child._ui.computedStyle = undefined;
     // TODO invalidate on children mutate
   }
@@ -432,63 +451,27 @@ export default class GameElement<P extends Player> {
       this._ui.computedStyle = { left: 0, top: 0, width: 100, height: 100 };
     }
 
+    const layoutItems = this.getLayoutItems();
     const absoluteTransform = this.absoluteTransform();
-    const transform: Vector = {
-      x: absoluteTransform.width / 100,
-      y: absoluteTransform.height / 100
-    }
-
-    const layoutItems: GameElement<P>[][] = [];
-    for (const child of this._t.children) {
-      for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
-        const { applyTo } = this._ui.layouts[l];
-
-        if ((typeof applyTo === 'function' && child instanceof applyTo) ||
-          (typeof applyTo === 'string' && child.name === applyTo) ||
-          child === applyTo ||
-          (applyTo instanceof ElementCollection && applyTo.includes(child))) {
-
-          layoutItems[l] = layoutItems[l] ? layoutItems[l].concat([child]) : [child];
-          break;
-        }
-      }
-    }
 
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
       const { attributes } = this._ui.layouts[l];
-      const children = layoutItems[l];
-      if (!children) break;
+      if (!attributes) continue;
+      let children = layoutItems[l];
+      if (!children) continue;
 
-      let cellBoxRC: ({ row, column }: { row: number, column: number }) => Box | undefined;
       let cellBox: (n: number) => Box | undefined;
       let cell: ((n: number) => { row: number, column: number });
 
-      const { slots, margin, direction, gap, scaling } = attributes;
-      let { area, size, aspectRatio, offsetColumn, offsetRow } = attributes;
+      const { slots, direction, gap, scaling, limit } = attributes;
+      let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
+      const area = this.getArea(attributes);
+      if (limit) children = children.slice(0, limit);
 
       if (slots) {
         cellBox = n => n < slots.length ? slots[n] : undefined
       } else {
         // calculate working area
-        if (!area) {
-          if (margin) {
-            // margins are absolute, so translate
-            const relativeMargin = typeof margin === 'number' ?
-              { left: margin, right: margin, top: margin, bottom: margin } : {...margin}
-            relativeMargin.left /= transform.x;
-            relativeMargin.right /= transform.x;
-            relativeMargin.top /= transform.y;
-            relativeMargin.bottom /= transform.y;
-            area = {
-              left: relativeMargin.left,
-              top: relativeMargin.top,
-              width: 100 - relativeMargin.left - relativeMargin.right,
-              height: 100 - relativeMargin.top - relativeMargin.bottom
-            };
-          } else {
-            area = { left: 0, top: 0, width: 100, height: 100 };
-          }
-        }
 
         // calculate # of rows/cols
         const minRows = typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.min || 1;
@@ -558,18 +541,14 @@ export default class GameElement<P extends Player> {
         } else {
           // gaps are absolute and convert by ratio
           cellGap = {
-            x: (gap && (typeof gap === 'number' ? gap : gap.x) || 0) / transform.x,
-            y: (gap && (typeof gap === 'number' ? gap : gap.y) || 0) / transform.y,
+            x: (gap && (typeof gap === 'number' ? gap : gap.x) || 0) / absoluteTransform.width * 100,
+            y: (gap && (typeof gap === 'number' ? gap : gap.y) || 0) / absoluteTransform.height * 100,
           };
         }
-
-        // hard limit to handle min row/col
-        const largestCellSize = cellSizeForArea(minRows, minColumns, area, cellGap, offsetColumn, offsetRow);
 
         if (!size) {
           // start with largest size needed to accommodate
           size = cellSizeForArea(rows, columns, area, cellGap, offsetColumn, offsetRow);
-          //console.log(size,' = cellSizeForArea(', rows, columns, area, cellGap, offsetColumn, offsetRow);
 
           if (!aspectRatio) {
             const childAspectRatios = children.map(c => (c.constructor as typeof GameElement<P>).aspectRatio).filter(c => c);
@@ -582,22 +561,37 @@ export default class GameElement<P extends Player> {
             }
           }
 
-          if (aspectRatio) size.width = aspectRatio * size.height;
+          if (aspectRatio) {
+            aspectRatio *= absoluteTransform.height / absoluteTransform.width;
+            if (aspectRatio > 1) {
+              size.height = size.width / aspectRatio;
+            } else {
+              size.width = aspectRatio * size.height;
+            }
+          }
         }
 
-        //console.log('size, area after init', size, area, cellGap, transform)
+        if (haphazardly) {
+          haphazardly *= .2 + Math.max(0, cellGap ?
+            cellGap.x / size.width + cellGap.y / size.height :
+            (Math.abs(offsetColumn!.x) + Math.abs(offsetColumn!.y) + Math.abs(offsetRow!.y) + Math.abs(offsetColumn!.y) - 200) / 100);
+        } else {
+          haphazardly = 0;
+        }
+        //console.log('haphazardly', haphazardly);
 
-        cellBoxRC = ({ row, column }: { row: number, column: number }): Box | undefined => {
+        const startingOffset = {x: 0, y: 0};
+        const cellBoxRC = ({ row, column }: { row: number, column: number }): Box | undefined => {
           //console.log('cell # ', n, row, column, size, area, cellGap);
           if (column > maxColumns || row > maxRows) return;
 
           return {
-            left: area!.left + (
+            left: area!.left + startingOffset.x + (
               cellGap ?
                 column * (size!.width + cellGap!.x) :
                 (size!.width * (column * offsetColumn!.x + row * offsetRow!.x)) / 100
             ),
-            top: area!.top + (
+            top: area!.top + startingOffset.y + (
               cellGap ?
                 row * (size!.height + cellGap!.y) :
                 (size!.height * (row * offsetRow!.y + column * offsetColumn!.y)) / 100
@@ -615,7 +609,6 @@ export default class GameElement<P extends Player> {
             cellBoxRC({ row: rows - 1, column: columns - 1 })!,
             cellBoxRC({ row: 0, column: columns - 1 })!,
           ];
-          //console.log('boxes', boxes);
 
           const cellArea = {
             top: Math.min(...boxes.map(b => b.top)),
@@ -631,9 +624,8 @@ export default class GameElement<P extends Player> {
             top: cellArea.top
           }
         }
-        const totalAreaNeeded = getTotalArea();
+        let totalAreaNeeded = getTotalArea();
 
-        //console.log(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
         //console.log('size, area', size, area, totalAreaNeeded)
 
         let scale: Vector = {x: 1, y: 1};
@@ -647,84 +639,185 @@ export default class GameElement<P extends Player> {
           const s = Math.min(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
           scale = {x: s, y: s};
         }
+
+        // bound by max size for min rows/cols
+        const largestCellSize = cellSizeForArea(minRows, minColumns, area, cellGap, offsetColumn, offsetRow);
+
+        if (size.width * scale.x > largestCellSize.width) {
+          const reduction = largestCellSize.width / size.width / scale.x;
+          scale.x *= reduction;
+          scale.y *= reduction;
+        }
+        if (size.height * scale.y > largestCellSize.height) {
+          const reduction = largestCellSize.height / size.height / scale.y;
+          scale.x *= reduction;
+          scale.y *= reduction;
+        }
+
         size.width *= scale.x;
         size.height *= scale.y;
 
-        if (!cellGap) {
-          // reduce offset along dimesion needed to squish
-          if (area.width / totalAreaNeeded.width > area.height / totalAreaNeeded.height) {
-            const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
-            scale.y = area.height / totalAreaNeeded.height;
-            offsetColumn!.y *= offsetScale;
-            offsetRow!.y *= offsetScale;
-          } else {
-            const offsetScale = (area.width - size.width) / (totalAreaNeeded.width * scale.x - size.width);
-            scale.x = area.width / totalAreaNeeded.width;
-            offsetColumn!.x *= offsetScale;
-            offsetRow!.x *= offsetScale;
+        if (!cellGap) { // non-othogonal grid
+          if (scaling === 'fill') {
+            // reduce offset along dimesion needed to squish
+            if (area.width * scale.x / totalAreaNeeded.width > area.height * scale.y / totalAreaNeeded.height) {
+              const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
+              if (offsetScale < 1) {
+                scale.y = area.height / totalAreaNeeded.height;
+                offsetColumn!.y *= offsetScale;
+                offsetRow!.y *= offsetScale;
+              }
+            } else {
+              const offsetScale = (area.width - size.width) / (totalAreaNeeded.width * scale.x - size.width);
+              if (offsetScale < 1) {
+                scale.x = area.width / totalAreaNeeded.width;
+                offsetColumn!.x *= offsetScale;
+                offsetRow!.x *= offsetScale;
+              }
+            }
+
+            totalAreaNeeded = getTotalArea();
+          }
+          // center in reduced area
+          startingOffset.x += area.left - totalAreaNeeded.left + (area.width - totalAreaNeeded.width) / 2;
+          startingOffset.y += area.top - totalAreaNeeded.top + (area.height - totalAreaNeeded.height) / 2;
+
+        } else { // orthogonal
+
+          if (scaling === 'fill') {
+            // reduce gap to squish it to fit, creating overlap
+            if (rows > 1) cellGap.y = Math.min(cellGap.y || 0, (area.height - rows * size.height) / (rows - 1));
+            if (columns > 1) cellGap.x = Math.min(cellGap.x || 0, (area.width - columns * size.width) / (columns - 1));
           }
 
-          const revisedAreaNeeded = getTotalArea();
-          //console.log(totalAreaNeeded, revisedAreaNeeded);
-
-          // straightforward reduction in area for the offset case
-          area.left += (area.left - revisedAreaNeeded.left) + (area.width - revisedAreaNeeded.width) / 2;
-          area.width = revisedAreaNeeded.width;
-          area.top += (area.top - revisedAreaNeeded.top) + (area.height - revisedAreaNeeded.height) / 2;
-          area.height = revisedAreaNeeded.height;
-
-        } else {
-          if (size.width > largestCellSize.width) {
-            size.height *= largestCellSize.width / size.width;
-            size.width = largestCellSize.width;
-          }
-          if (size.height > largestCellSize.height) {
-            size.width *= largestCellSize.height / size.height;
-            size.height = largestCellSize.height;
-          }
-
-          // reduce gap to squish it to fit, creating overlap
-          if (rows > 1) cellGap.y = Math.min(cellGap.y || 0, (area.height - rows * size.height) / (rows - 1));
-          if (columns > 1) cellGap.x = Math.min(cellGap.x || 0, (area.width - columns * size.width) / (columns - 1));
-
-          // reduce area
+          // center in reduced area
           const newWidth = columns * (size.width + cellGap.x!) - cellGap.x!;
-          area.left += (area.width - newWidth) / 2;
-          area.width = newWidth;
+          startingOffset.x += (area.width - newWidth) / 2;
           const newHeight = rows * (size.height + cellGap.y!) - cellGap.y!;
-          area.top += (area.height - newHeight) / 2;
-          area.height = newHeight;
+          startingOffset.y += (area.height - newHeight) / 2;
         }
 
         //console.log('size, area after fit/fill adj', size, area, scale, cellGap)
         cellBox = n => cellBoxRC(cell(n));
       }
 
+      // apply the final box to each child
+      const prandom = random.create('ge' + this.name).random;
       for (let i = 0; i !== children.length; i++) {
         const box = cellBox(i);
-        //console.log('box', i, box);
-        if (!box) return;
+        if (!box) continue;
         const child = children[i];
-        const aspectRatio = (child.constructor as typeof GameElement<P>).aspectRatio;
+        let aspectRatio = (child.constructor as typeof GameElement<P>).aspectRatio;
+        if (aspectRatio) aspectRatio *= absoluteTransform.height / absoluteTransform.width;
+
         let { width, height } = box;
         if (aspectRatio && aspectRatio !== width / height) {
           if (aspectRatio > width / height) {
-            height = aspectRatio / width;
+            height = width / aspectRatio;
           } else {
             width = aspectRatio * height;
           }
         }
-        child._ui.computedStyle = {
-          width,
-          height,
-          left: box.left + (box.width - width) / 2,
-          top: box.top + (box.height - height) / 2
+        let left = box.left + (box.width - width) / 2;
+        let top = box.top + (box.height - height) / 2;
+        if (haphazardly) {
+          let wiggle = {x: 0, y: 0};
+          let overlap = Infinity;
+          for (let tries = 0; tries < 10; tries ++) {
+            const rx = prandom();
+            const ry = prandom();
+            const w = {
+              x: haphazardly ? Math.min(
+                area.left + area.width - left - width,
+                Math.max(area.left - left, (rx - ((left - area.left) / (area.width - width) - .5) / 2 - .5) * haphazardly * (size!.width + size!.height))
+              ): 0,
+              y: haphazardly ? Math.min(
+                area.top + area.height - top - height,
+                Math.max(area.top - top, (ry - ((top - area.top) / (area.height - height) - .5) / 2 - .5) * haphazardly * (size!.width + size!.height))
+              ): 0
+            }
+            let worstOverlapThisTry = Infinity;
+            if (children.every(c => {
+              if (!c._ui.computedStyle) return true;
+              const cbox = c._ui.computedStyle;
+              const childOverlap = Math.min(
+                Math.max(0, cbox.left + cbox.width - left - w.x),
+                Math.max(0, cbox.top + cbox.height - top - w.y),
+                Math.max(0, left + width + w.x - cbox.left),
+                Math.max(0, top + height + w.y - cbox.top)
+              );
+              if (childOverlap === 0) return true;
+              worstOverlapThisTry = Math.min(childOverlap, worstOverlapThisTry);
+            })) {
+              wiggle = w;
+              break;
+            }
+            if (worstOverlapThisTry < overlap) {
+              overlap = worstOverlapThisTry;
+              wiggle = w;
+            }
+          }
+          left += wiggle.x
+          top += wiggle.y
+        }
+        child._ui.computedStyle = { width, height, left, top };
+
+        child.applyLayouts(force);
+      }
+    }
+  }
+
+  getLayoutItems() {
+    const layoutItems: GameElement<P>[][] = [];
+    for (const child of this._t.children) {
+      for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
+        const { applyTo } = this._ui.layouts[l];
+
+        if ((typeof applyTo === 'function' && child instanceof applyTo) ||
+          (typeof applyTo === 'string' && child.name === applyTo) ||
+          child === applyTo ||
+          (applyTo instanceof ElementCollection && applyTo.includes(child))) {
+
+          layoutItems[l] = layoutItems[l] ? layoutItems[l].concat([child]) : [child];
+          break;
         }
       }
     }
+    return layoutItems;
+  }
 
-    for (const child of this._t.children) {
-      child.applyLayouts(force);
+  // calculate working area
+  getArea(attributes: { margin?: number | { top: number, bottom: number, left: number, right: number }, area?: Box }): Box {
+    let { area, margin } = attributes;
+    if (area) return area;
+    if (!margin) return { left: 0, top: 0, width: 100, height: 100 };
+
+    // margins are absolute, so translate
+    const absoluteTransform = this.absoluteTransform();
+    const transform: Vector = {
+      x: absoluteTransform.width / 100,
+      y: absoluteTransform.height / 100
     }
+
+    if (typeof margin === 'number') margin = { left: margin, right: margin, top: margin, bottom: margin };
+    margin.left /= transform.x;
+    margin.right /= transform.x;
+    margin.top /= transform.y;
+    margin.bottom /= transform.y;
+
+    return {
+      left: margin.left,
+      top: margin.top,
+      width: 100 - margin.left - margin.right,
+      height: 100 - margin.top - margin.bottom
+    };
+  }
+
+  appearance(component: (el: this) => JSX.Element) {
+    this._ui.component = component;
+  }
+
+  showConnections() {
+    this._ui.showConnections = true;
   }
 }

@@ -61,10 +61,10 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   setupFlow: (game: Game<P, B>, board: B) => Flow<P>,
   actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>,
   setupLayout?: (board: B) => void
-}): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, rseed: string, start: boolean): Game<P, B> => {
+}): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, start: boolean): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
-  game.setRandomSeed(rseed);
+  if ('rseed' in state) game.setRandomSeed(state.rseed);
   game.definePlayers(playerClass);
   //console.timeLog('setup', 'setup players');
   game.defineBoard(boardClass, elementClasses || []);

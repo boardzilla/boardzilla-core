@@ -17,7 +17,7 @@ const Seating = ({ users, players, minPlayers, maxPlayers, onUpdatePlayers }: {
   const [pickingColor, setPickingColor] = useState<number>();
 
   const seatPlayer = (position: number, userID: string) => {
-    const user = users.find(u => u.userID === userID);
+    const user = users.find(u => u.id === userID);
     const unseats = players.filter(p => p.userID === userID && p.position !== position || p.userID !== userID && p.position === position);
     const usedColors = players.filter(p => p.userID !== userID && p.position !== position).map(p => p.color);
     const color = colors.find(c => !usedColors.includes(c))!;
@@ -29,7 +29,7 @@ const Seating = ({ users, players, minPlayers, maxPlayers, onUpdatePlayers }: {
       position,
       userID,
       color,
-      name: user.userName,
+      name: user.name,
       settings: {}
     });
     onUpdatePlayers(operations);
@@ -57,8 +57,8 @@ const Seating = ({ users, players, minPlayers, maxPlayers, onUpdatePlayers }: {
             <select value={player?.userID || ""} onChange={e => seatPlayer(p, e.target.value)}>
               <option key="" value="">[empty]</option>
               {users.filter(u => (
-                player?.userID === u.userID || !players.find(player => player.userID === u.userID)
-              )).map(u => <option key={u.userID} value={u.userID}>{u.userName}</option>)}
+                player?.userID === u.id || !players.find(player => player.userID === u.id)
+              )).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
             {player && (
               <>

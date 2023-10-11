@@ -37,6 +37,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   settings: Record<string, any>;
   actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P, Argument<P>[]>>;
   phase: 'define' | 'new' | 'started' = 'define';
+  rseed: string;
   random: () => number;
   messages: Message[] = [];
   godMode = false;
@@ -95,6 +96,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   setRandomSeed(rseed: string) {
+    this.rseed = rseed;
     this.random = random.create(rseed).random;
   }
 
@@ -137,6 +139,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     if (!this.players.length) {
       throw Error("No players");
     }
+    this.setRandomSeed(String(Math.random()));
     this.phase = 'started';
     this.buildFlow();
     this.flow.reset();
@@ -155,6 +158,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.buildFlow();
     this.phase = 'started';
     this.flow.setBranchFromJSON(state.position);
+    this.setRandomSeed(state.rseed);
   }
 
   getState(forPlayer?: number): GameState<P> {
@@ -164,6 +168,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       settings: this.settings,
       position: this.flow.branchJSON(!!forPlayer),
       board: this.board.allJSON(forPlayer),
+      rseed: this.rseed,
     };
   }
 

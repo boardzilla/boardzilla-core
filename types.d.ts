@@ -14,6 +14,7 @@ export type GameState<P extends Player> = {
   currentPlayerPosition?: number,
   position: FlowBranchJSON[],
   board: ElementJSON[],
+  rseed: string,
 }
 
 export type PlayerPositionState<P extends Player> = {

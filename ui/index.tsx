@@ -32,8 +32,8 @@ type GameStore = {
   setSelected: (s: GameElement<Player>[]) => void;
   hilites: GameElement<Player>[];
   setHilites: (h: GameElement<Player>[]) => void;
-  uiOptions: UIOptions<Player>;
-  setUIOptions: (o: UIOptions<Player>) => void;
+  uiOptions: UIOptions;
+  setUIOptions: (o: UIOptions) => void;
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
@@ -76,13 +76,12 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setUIOptions: uiOptions => set({ uiOptions }),
 }), shallow);
 
-type UIOptions<P extends Player> = {
+type UIOptions = {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
-  appearance?: Record<string, (el: GameElement<P>, contents: JSX.Element[]) => JSX.Element>
 };
 
-export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UIOptions<P>): void => {
-  gameStore.getState().setUIOptions(options as UIOptions<Player>);
+export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UIOptions): void => {
+  gameStore.getState().setUIOptions(options as UIOptions);
   
   ReactDOM.render(
     // we can anonymize Player class internally
