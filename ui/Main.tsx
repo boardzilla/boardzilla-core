@@ -10,7 +10,6 @@ import type {
   UserPlayer,
   GameSettings,
   GameUpdateEvent,
-  UserEvent,
   PlayersEvent,
   SettingsUpdateEvent,
   MessageProcessedEvent,

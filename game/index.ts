@@ -1,22 +1,15 @@
-export {default as Game} from './game';
+import Game from './game';
+import { Player } from './player';
+import { Board, Piece, Space, GameElement } from './board';
 
-export {
-  Action, // remove
+import {
+  Action,
   action,
 } from './action/';
 
 export {
-  Board, // remove
-  Space, // remove
-  Piece, // remove
-  GameElement, // remove
   union,
 } from './board/';
-
-export {
-  Player,
-  PlayerCollection // remove
-} from './player/';
 
 export {
   Flow,
@@ -36,9 +29,11 @@ export {
   times,
 } from './utils';
 
+export { Game, Player, action };
+
 // starter function
 
-import { Player, Game, Board, Piece, Space, action, Action, GameElement } from '.';
+
 import type { SetupState, GameState } from '../types';
 import type { SetupFunction } from './types';
 import type { ElementClass } from './board/types';
@@ -64,7 +59,19 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
 }): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, start: boolean): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
-  if ('rseed' in state) game.setRandomSeed(state.rseed);
+  let rseed = '';
+  if ('rseed' in state) {
+    rseed = state.rseed;
+  } else {
+    if (globalThis.window?.sessionStorage) { // web context, use a fixed seed for dev
+      rseed = sessionStorage.getItem('rseed') as string;
+      if (!rseed) {
+        rseed = String(Math.random()) as string;
+        sessionStorage.setItem('rseed', rseed);
+      }
+    }
+  }
+  game.setRandomSeed(rseed);
   game.definePlayers(playerClass);
   //console.timeLog('setup', 'setup players');
   game.defineBoard(boardClass, elementClasses || []);

@@ -76,8 +76,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
 
     // truncate invalid args
     for (let i = 0; i !== args.length; i++) {
-      error = this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[]);
-      if (error) {
+      if (!this.selections[i] || this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[])) {
         args = args.slice(0, i) as A;
         break;
       }

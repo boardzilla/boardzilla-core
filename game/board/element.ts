@@ -224,6 +224,11 @@ export default class GameElement<P extends Player> {
     }
   }
 
+  isVisible() {
+    if (!this._ctx.player) throw Error('Cannot use isVisible outside of a player context');
+    return this.isVisibleTo(this._ctx.player.position);
+  }
+
   static hide<P extends Player, T extends GameElement<P>>(this: ElementClass<P, T>, ...attrs: (string & keyof T)[]): void {
     this.hiddenAttributes = attrs;
   }
@@ -385,8 +390,15 @@ export default class GameElement<P extends Player> {
         haphazardly?: number,
       } | null
     }[],
-    component?: (el: GameElement<P>) => JSX.Element,
-    showConnections: boolean,
+    component?: (el: GameElement<P>) => JSX.Element | null,
+    showConnections?: {
+      thickness?: number,
+      style?: string,
+      color?: string,
+      fill?: string,
+      label?: (arg: any) => JSX.Element | null,
+      labelScale?: number,
+    },
     computedStyle?: Box
   } = {
     layouts: [{
@@ -398,7 +410,6 @@ export default class GameElement<P extends Player> {
         direction: 'square'
       }
     }],
-    showConnections: false,
   }
 
   // viewport relative to the board
@@ -813,11 +824,11 @@ export default class GameElement<P extends Player> {
     };
   }
 
-  appearance(component: (el: this) => JSX.Element) {
+  appearance(component: (el: this) => JSX.Element | null) {
     this._ui.component = component;
   }
 
-  showConnections() {
-    this._ui.showConnections = true;
+  showConnections(attributes?: typeof this._ui.showConnections) {
+    this._ui.showConnections = attributes;
   }
 }

@@ -139,7 +139,6 @@ export default class Game<P extends Player, B extends Board<P>> {
     if (!this.players.length) {
       throw Error("No players");
     }
-    this.setRandomSeed(String(Math.random()));
     this.phase = 'started';
     this.buildFlow();
     this.flow.reset();
