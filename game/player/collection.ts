@@ -2,7 +2,8 @@ import Player from './player';
 
 import { shuffleArray } from '../utils';
 
-import type { Game, Board } from '..';
+import type { Game } from '..';
+import type { Board } from '../board';
 import type { Sorter } from '../types';
 import type { PlayerAttributes } from './types';
 

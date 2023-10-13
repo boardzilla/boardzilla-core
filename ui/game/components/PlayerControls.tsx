@@ -60,7 +60,7 @@ const PlayerControls = ({move, selection, onSubmit}: {
   }
 
   return (
-    <div id="player-controls">
+    <div>
       {selection?.prompt}
       
       <form onSubmit={onSubmitForm}>

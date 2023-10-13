@@ -1,10 +1,11 @@
 import React from 'react';
 import { gameStore } from '../';
 
-import Board from './components/Board';
+import Element from './components/Element';
 import PlayerControls from './components/PlayerControls';
 import '../styles/game.scss';
 import { serializeArg } from '../../game/action/utils';
+import { Board } from '../../game/board'
 
 import type { GameElement } from '../../game/board'
 import type { Move, SerializedMove } from '../../game/action/types';
@@ -14,7 +15,8 @@ export default ({ onMove, onError }: {
   onMove: (m: SerializedMove) => void,
   onError: (e?: string) => void
 }) => {
-  const [game, updateBoard, position, move, setMove, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.position, s.move, s.setMove, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
+  const [game, updateBoard, position, move, setMove, selected, setSelected, boardJSON] =
+        gameStore(s => [s.game, s.updateBoard, s.position, s.move, s.setMove, s.selected, s.setSelected, s.boardJSON]);
 
   console.log('GAME', position);
   if (!game || !position) return null;
@@ -24,11 +26,7 @@ export default ({ onMove, onError }: {
     return null;
   }
 
-  let clickables: GameElement<Player>[] = [];
-
-  console.log("RENDER GAME", move, selection);
-
-  if (selection?.type === 'board') clickables = selection.boardChoices;
+  console.log("RENDER GAME", move);
 
   const submitMove = (move?: Move<Player>) => {
     console.log("processAction", move);
@@ -37,7 +35,8 @@ export default ({ onMove, onError }: {
       onError();
       return updateBoard();
     }
-    if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
+    // TODO where does this go
+    // if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
 
     // serialize now before we alter our state to ensure proper references
     const serializedMove: SerializedMove = {
@@ -51,13 +50,11 @@ export default ({ onMove, onError }: {
 
     if (newSelection) {
       onError(error);
-      setSelection(newSelection);
       setMove(newMove);
     } else {
       console.log('success, submitting to server');
       setMove(undefined);
       onError();
-      setSelection(undefined);
       updateBoard();
       onMove(serializedMove);
     }
@@ -67,33 +64,47 @@ export default ({ onMove, onError }: {
     const newSelected = selected.includes(element) ?
           selected.filter(s => s !== element) :
           selected.concat([element]);
-    if (selection?.type === 'board' && move?.action) {
-      setSelected(newSelected)
-      if (selection?.min === undefined &&
-          selection?.max === undefined &&
-          newSelected.length === 1) {
-        submitMove({
-          action: move.action,
-          args: [...move.args, newSelected[0]],
-          player,
-        })
-      }
+    // TODO and this
+    // if (move?.action) {
+    //   setSelected(newSelected)
+    //   if (selection?.min === undefined &&
+    //       selection?.max === undefined &&
+    //       newSelected.length === 1) {
+    //     submitMove({
+    //       action: move.action,
+    //       args: [...move.args, newSelected[0]],
+    //       player,
+    //     })
+    //   }
+    // }
+  }
+
+  let width = 100;
+  let height = 100;
+  if (Board.aspectRatio) {
+    if (Board.aspectRatio > 0) {
+      width *= Board.aspectRatio;
+    } else {
+      height /= Board.aspectRatio;
     }
   }
 
   return (
-    <div>
-      <Board
-        clickables={clickables}
-        hilites={hilites}
-        selected={selected}
-        onSelectElement={onSelectElement}
-      />
-      <PlayerControls
-        move={move}
-        selection={selection}
-        onSubmit={submitMove}
-      />
+    <div id="game" style={{ position: 'relative', width: width + 'vmin', height: height + 'vmin' }}>
+      <div id="play-area" className={true ? 'fixed' : 'fluid'} style={{width: '100%', height: '100%'}}>
+        <Element
+          element={game.board}
+          json={boardJSON[0]}
+          selected={selected}
+          onSelectElement={onSelectElement}
+        />
+      </div>
+      <div id="player-controls">
+        <PlayerControls
+          move={move}
+          onSubmit={submitMove}
+        />
+      </div>
     </div>
   );
 }

@@ -3,7 +3,8 @@ import { gameStore } from './';
 import Game from './game/Game';
 import Setup from './setup/Setup';
 import type { SetupFunction } from '../game/types'
-import type { Board, Player } from '../game'
+import type { Player } from '../game'
+import type { Board } from '../game/board'
 
 import type {
   User,
@@ -57,8 +58,14 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
       break;
     case 'gameUpdate':
       //console.log('game-update', phase);
-      let newGame = game || setup(data.state.state, true);
-      newGame.board._ctx.player = newGame.players.atPosition(data.state.position);
+      let newGame;
+      if (!game) {
+        newGame = setup(data.state.state, true);
+      } else {
+        game.setState(data.state.state);
+        newGame = game;
+      }
+      newGame.contextualizeBoardToPlayer(newGame.players.atPosition(data.state.position));
       if (!position) setPosition(data.state.position)
       if (newGame !== game) setGame(newGame);
       updateBoard();

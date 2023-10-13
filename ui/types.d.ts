@@ -11,6 +11,10 @@ export type SetupComponentProps = {
   updateKey: (key: string, value: any) => void
 }
 
+export type UIOptions = {
+  settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
+};
+
 export type User = {
   id: string
   name: string

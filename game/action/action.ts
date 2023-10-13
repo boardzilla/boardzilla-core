@@ -99,7 +99,6 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     return [nextSelection, args, error];
   }
 
-  // skip validate for sub-actions?
   process(...args: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
     const [resolvedSelection, forcedArgs, error] = this.forceArgs(...args);
     if (resolvedSelection) return [resolvedSelection, forcedArgs, error];

@@ -418,6 +418,7 @@ export default class GameElement<P extends Player> {
     let parent = this._t.parent;
     while (parent?._ui.computedStyle) {
       transform = translate(transform, parent._ui.computedStyle)
+      if ('frame' in parent?._ui) transform = translate(transform, parent._ui.frame as Box)
       parent = parent._t.parent;
     }
     return transform;

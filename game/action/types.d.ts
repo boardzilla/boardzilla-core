@@ -94,10 +94,10 @@ export type SelectionDefinition<P extends Player> = {
   click: ButtonSelection;
 });
 
-export type ResolvedSelection<P extends Player> = Selection<P> & {
+export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp'> & {
   prompt?: string;
   choices?: Argument<P>[] | Record<string, Argument<P>>;
-  boardChoices: GameElement<P>[];
+  boardChoices?: GameElement<P>[];
   min?: number;
   max?: number;
   initial?: Argument<P>;

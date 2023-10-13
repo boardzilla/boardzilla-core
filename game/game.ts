@@ -1,4 +1,4 @@
-import { action, Selection } from './action/';
+import { action } from './action/';
 import { escapeArgument } from './action/utils';
 import {
   Board,
@@ -6,7 +6,6 @@ import {
   Piece,
   GameElement
 } from './board/';
-import ActionStep from './flow/action-step';
 import {
   GameState,
   PlayerPositionState,
@@ -21,9 +20,7 @@ import random from 'random-seed';
 import type Flow from './flow/flow';
 import type {
   Move,
-  IncompleteMove,
   Argument,
-  ResolvedSelection,
   MoveResponse,
   SerializedArg
 } from './action/types';
@@ -41,7 +38,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   random: () => number;
   messages: Message[] = [];
   godMode = false;
-  setupLayout?: (board: B) => void
+  setupLayout?: (board: B, aspectRatio: number) => void
 
   /**
    * configuration functions
@@ -188,43 +185,43 @@ export default class Game<P extends Player, B extends Board<P>> {
 
   // Returns selection for a player, providing any forced args if there's a single action available
   // If only one action and no selection even needed, just returns a confirmation request
-  currentSelection(player: P): MoveResponse<P> {
-    let move: IncompleteMove<P> = { player, args: [] };
-    return this.inContextOfPlayer(player, () => {
-      const actions = this.allowedActions(player);
+  // currentSelection(player: P): MoveResponse<P> {
+  //   let move: IncompleteMove<P> = { player, args: [] };
+  //   return this.inContextOfPlayer(player, () => {
+  //     const actions = this.allowedActions(player);
 
-      if (!actions || actions.length === 0) return {move}
-      if (actions.length === 1) { // only one action to choose, so choose it
-        const action = this.action(actions[0], player);
-        let [selection, forcedArgs, error] = action.forceArgs();
-        if (error) throw Error(`${error} at currentSelection which should not be allowed. allowedActions should not have provided this action`)
-        // if no selection needed, provide a confirmation prompt (TODO get the final prompt)
-        if (!selection) selection = new Selection<P>({ prompt: `Please confirm: ${action.prompt}`, click: true }) as ResolvedSelection<P>;
-        return {
-          move: {
-            action: actions[0],
-            args: forcedArgs || [],
-            player
-          },
-          selection
-        };
-      } else {
-        const actionStep = this.flow.currentFlow();
-        if (actionStep instanceof ActionStep) {
-          return {
-            selection: new Selection<P>({ // selection is between multiple actions, return action choices
-              prompt: actionStep.prompt || 'Choose action',
-              selectFromChoices: {
-                choices: Object.fromEntries(actions.map(a => [a, this.action(a, player).prompt]))
-              }
-            }) as ResolvedSelection<P>,
-            move,
-          };
-        }
-        return {move};
-      }
-    });
-  }
+  //     if (!actions || actions.length === 0) return {move}
+  //     if (actions.length === 1) { // only one action to choose, so choose it
+  //       const action = this.action(actions[0], player);
+  //       let [selection, forcedArgs, error] = action.forceArgs();
+  //       if (error) throw Error(`${error} at currentSelection which should not be allowed. allowedActions should not have provided this action`)
+  //       // if no selection needed, provide a confirmation prompt (TODO get the final prompt)
+  //       if (!selection) selection = new Selection<P>({ prompt: `Please confirm: ${action.prompt}`, click: true }) as ResolvedSelection<P>;
+  //       return {
+  //         move: {
+  //           action: actions[0],
+  //           args: forcedArgs || [],
+  //           player
+  //         },
+  //         selection
+  //       };
+  //     } else {
+  //       const actionStep = this.flow.currentFlow();
+  //       if (actionStep instanceof ActionStep) {
+  //         return {
+  //           selection: new Selection<P>({ // selection is between multiple actions, return action choices
+  //             prompt: actionStep.prompt || 'Choose action',
+  //             selectFromChoices: {
+  //               choices: Object.fromEntries(actions.map(a => [a, this.action(a, player).prompt]))
+  //             }
+  //           }) as ResolvedSelection<P>,
+  //           move,
+  //         };
+  //       }
+  //       return {move};
+  //     }
+  //   });
+  // }
 
   // given a player's move (minimum a selected action), attempts to process
   // it. if not, returns next selection for that player, plus any implied partial
@@ -255,21 +252,28 @@ export default class Game<P extends Player, B extends Board<P>> {
     });
   }
 
-  allowedActions(player: P): string[] {
+  allowedActions(player: P): {prompt?: string, actions?: string[]}  {
     const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
-    if (this.players.currentPosition && player !== this.players.current()) return allowedActions;
+    if (this.players.currentPosition && player !== this.players.current()) return { actions: allowedActions };
     return this.inContextOfPlayer(player, () => {
-      let actions = this.flow.actionNeeded();
-      if (!actions) return allowedActions;
-      return allowedActions.concat(actions.filter(a => this.action(a, player).isPossible()));
+      let {prompt, actions} = this.flow.actionNeeded();
+      return {
+        prompt,
+        actions: allowedActions.concat(actions?.filter(a => this.action(a, player).isPossible()) || [])
+      };
     });
   }
 
-  inContextOfPlayer<T>(player: P, fn: () => T): T {
+  contextualizeBoardToPlayer(player?: P) {
     const prev = this.board._ctx.player;
     this.board._ctx.player = player;
+    return prev;
+  }
+
+  inContextOfPlayer<T>(player: P, fn: () => T): T {
+    const prev = this.contextualizeBoardToPlayer(player);
     const results = fn();
-    this.board._ctx.player = prev;
+    this.contextualizeBoardToPlayer(prev);
     return results;
   }
 

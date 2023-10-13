@@ -1,5 +1,7 @@
-import { Player, Board } from '../';
+import { Player } from '../';
+import { Board } from '../board';
 
+import type ActionStep from './action-step';
 import type {
   Position,
   FlowStep,
@@ -106,9 +108,13 @@ export default class Flow<P extends Player> {
     return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function };
   }
 
-  actionNeeded(): string[] | void {
-    const flow = this.currentFlow();
-    if ('awaitingAction' in flow) return (flow.awaitingAction as () => string[] | void)();
+  actionNeeded(): {prompt?: string, actions?: string[]} {
+    const flow = this.currentFlow() as ActionStep<P>;
+    if ('awaitingAction' in flow) return {
+      prompt: flow.prompt,
+      actions: flow.awaitingAction()
+    };
+    return {};
   }
 
   processMove(move: ActionStepPosition<P>): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
