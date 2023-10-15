@@ -8,7 +8,8 @@ import {
 } from '../../../game/board'
 import { serialize } from '../../../game/action/utils'
 
-import type { ElementJSON } from '../../../game/board/types'
+import type { ElementJSON } from '../../../game/board/types';
+import type { PendingMove } from '../../../game/action/types';
 import type { Player } from '../../../game/player';
 
 const elementAttributes = (el: GameElement<Player>) => {
@@ -19,21 +20,20 @@ const elementAttributes = (el: GameElement<Player>) => {
   )));
 }
 
-const defaultAppearance = (element: GameElement<Player>) => null;
+const defaultAppearance = () => null;
 
 const Element = ({element, json, selected, onSelectElement}: {
   element: GameElement<Player>,
   json: ElementJSON,
   selected: GameElement<Player>[],
-  onSelectElement: (e: GameElement<Player>) => void,
+  onSelectElement: (element: GameElement<Player>, moves: PendingMove<Player>[]) => void,
 }) => {
+  const [boardSelections, move] = gameStore(s => [s.boardSelections, s.move]);
   //console.log("updated", element.branch());
-  const [uiOptions, boardSelections] = gameStore(s => [s.uiOptions, s.boardSelections]);
-
-  const clickMove = boardSelections.get(element);
-  const isSelected = selected.includes(element);
+  const clickMoves = boardSelections.get(element);
+  const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));;
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
-  const appearance = element._ui.component || defaultAppearance;
+  const appearance = element._ui.appearance.render || defaultAppearance;
   const transform = element.absoluteTransform();
 
   let style: React.CSSProperties = {};
@@ -45,12 +45,13 @@ const Element = ({element, json, selected, onSelectElement}: {
 
   let contents: JSX.Element[] = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
-    console.error(element, json);
-    throw Error('JSON does not match board');
+    console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
+    //throw Error('JSON does not match board');
+    return null;
   }
   for (let i = 0; i !== element._t.children.length; i++) {
     const el = element._t.children[i];
-    if (!el._ui.computedStyle) continue;
+    if (!el._ui.computedStyle || el._ui.appearance.render === false) continue;
     contents.push(
       <Element
         key={el.branch()}
@@ -62,9 +63,9 @@ const Element = ({element, json, selected, onSelectElement}: {
     );
   }
 
-  if (element._ui.showConnections) {
+  if (element._ui.appearance.connections) {
     if (!element._t.graph) return;
-    let { thickness, style, color, fill, label, labelScale } = element._ui.showConnections;
+    let { thickness, style, color, fill, label, labelScale } = element._ui.appearance.connections;
     if (!thickness) thickness = .1;
     if (!style) style = 'solid';
     if (!color) color = 'black';
@@ -143,11 +144,12 @@ const Element = ({element, json, selected, onSelectElement}: {
         baseClass,
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
-          clickable: !!clickMove,
+          clickable: clickMoves?.length,
           selected: isSelected,
+          zoomable: element._ui.appearance.zoomable,
         }
       ),
-      onClick: clickMove ? (e: Event) => { e.stopPropagation(); onSelectElement(element) } : null,
+      onClick: clickMoves ? (e: Event) => { e.stopPropagation(); onSelectElement(element, clickMoves) } : null,
       ...elementAttributes(element)
     },
     <>

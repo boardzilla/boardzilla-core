@@ -68,7 +68,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
       newGame.contextualizeBoardToPlayer(newGame.players.atPosition(data.state.position));
       if (!position) setPosition(data.state.position)
       if (newGame !== game) setGame(newGame);
-      updateBoard();
+      updateBoard(data.state.state.board);
 
       setPhase('started'); // set phase last to render the game
       break;

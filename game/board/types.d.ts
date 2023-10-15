@@ -1,4 +1,4 @@
-import type { GameElement } from './'
+import type { GameElement, ElementCollection } from './'
 import type { Player } from '../'
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
@@ -35,3 +35,39 @@ export type ElementEventHandler<P extends Player, T extends GameElement<P>> = {c
 
 export type Box = { left: number, top: number, width: number, height: number };
 export type Vector = { x: number, y: number };
+
+export type ElementUI<P extends Player, T extends GameElement<P>> = {
+  layouts: {
+    applyTo: ElementClass<P, GameElement<P>> | GameElement<P> | ElementCollection<P, GameElement<P>> | string,
+    attributes: {
+      margin?: number | { top: number, bottom: number, left: number, right: number },
+      area?: Box,
+      rows?: number | {min: number, max?: number} | {min?: number, max: number},
+      columns?: number | {min: number, max?: number} | {min?: number, max: number},
+      slots?: Box[],
+      size?: { width: number, height: number },
+      aspectRatio?: number, // w / h
+      scaling: 'fit' | 'fill' | 'none'
+      gap?: number | { x: number, y: number },
+      offsetColumn?: Vector,
+      offsetRow?: Vector,
+      direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
+      limit?: number,
+      haphazardly?: number,
+    }
+  }[],
+  appearance: {
+    render?: ((el: T) => JSX.Element | null) | false,
+    aspectRatio?: number;
+    zoomable?: boolean;
+    connections?: {
+      thickness?: number,
+      style?: string,
+      color?: string,
+      fill?: string,
+      label?: (arg: any) => JSX.Element | null,
+      labelScale?: number,
+    },
+  },
+  computedStyle?: Box
+}

@@ -145,7 +145,7 @@ export default class Flow<P extends Player> {
       }
     } else if (step instanceof Flow) {
       const actions = step.actionNeeded();
-      if (actions) return actions;
+      if (actions.actions) return actions.actions;
       const result = step.playOneStep();
       if (result !== 'complete') return result;
     }

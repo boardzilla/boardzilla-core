@@ -5,19 +5,15 @@ import { serializeArg, deserializeArg } from '../../../game/action/utils';
 
 import type { Player } from '../../../game/player';
 import type {
-  ResolvedSelection,
   Argument,
   SerializedArg,
-  IncompleteMove
+  Move,
+  PendingMove
 } from '../../../game/action/types';
 
-const PlayerControls = ({move, selection, onSubmit}: {
-  move?: IncompleteMove<Player>;
-  selection?: ResolvedSelection<Player>;
-  onSubmit: (move?: IncompleteMove<Player>) => void;
-}) => {
-  const [game, position, selected] = gameStore(s => [s.game, s.position, s.selected, s.boardJSON]);
-  console.log('render PlayerControls');
+const PlayerControls = ({onSubmit}: { onSubmit: (move?: Move<Player>) => void }) => {
+  const [game, position, move, selected, prompt, pendingMoves] = gameStore(s => [s.game, s.position, s.move, s.selected, s.prompt, s.pendingMoves, s.boardJSON]);
+  console.log('render PlayerControls', pendingMoves);
 
   if (!game || !position) return null;
   const player = game.players.atPosition(position);
@@ -27,87 +23,89 @@ const PlayerControls = ({move, selection, onSubmit}: {
     return <div>{`Not my turn, waiting for ${game.players.current()!.name}`}</div>;
   }
 
-  if (!selection) return null;
+  // if we're in the middle of a move, ignore other options for now
+  let selections = move ? [move] : pendingMoves;
+  if (!selections.length) return null;
+  const boardSelections = selections.filter(s => s.selection?.type === 'board');
+  const topPrompt = (boardSelections.length === 1) ? boardSelections[0].selection?.prompt || prompt : prompt;
 
-  const onSubmitForm = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmitForm = (e: React.FormEvent<HTMLFormElement>, pendingMove: PendingMove<Player>) => {
     e.preventDefault();
     const form = e.currentTarget;
     if (!form) throw Error("No form in submit");
-    if (!selection) throw Error("Submitted without a selection");
     let arg: Argument<Player> | undefined = undefined;
-    if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) {
+    if (pendingMove.selection?.type === 'board' && (pendingMove.selection.min !== undefined || pendingMove.selection.max !== undefined)) {
       arg = selected;
+    } else if (pendingMove.selection?.type === 'button') {
+      arg = pendingMove.selection.click;
     } else {
       const value = new FormData(form, (e.nativeEvent as SubmitEvent).submitter).get('selection')?.toString();
       if (value) {
         arg = value;
-        if (selection.type === 'number') arg = parseInt(arg.toString());
-        if (selection.type === 'choices') arg = deserializeArg(arg as SerializedArg, game);
+        if (pendingMove.selection?.type === 'number') arg = parseInt(arg.toString());
+        if (pendingMove.selection?.type === 'choices') arg = deserializeArg(arg as SerializedArg, game);
       }
     }
-    if (arg) {
-      if (move?.action) {
-        move.args.push(arg);
-      } else {
-        move = {
-          action: arg.toString(),
-          args: [],
-          player: player!
-        }
-      }
-    }
-    onSubmit(move);
+    const moveToSubmit = {
+      action: pendingMove.action,
+      args: pendingMove.args,
+      player
+    };
+    if (arg) moveToSubmit.args.push(arg);
+    onSubmit(moveToSubmit);
   }
 
   return (
     <div>
-      {selection?.prompt}
-      
-      <form onSubmit={onSubmitForm}>
-        <div>
-          {selection?.type === 'choices' && <>{
-            (selection.choices instanceof Array ?
-             selection.choices.map(c => ([c, c])) :
-             Object.entries(selection.choices)).map(([k,v]) => (
-               <button key={String(serializeArg(k))} type="submit" name="selection" value={String(serializeArg(k))}>
-                 {humanizeArg(v)}
-               </button>
-             ))
-          }</>}
+      <div className="prompt">{topPrompt}</div>
+      {selections.map(pendingMove => (
+        <form key={pendingMove.action} id={pendingMove.action} onSubmit={e => onSubmitForm(e, pendingMove)}>
+          <div>
+            {pendingMove.selection.type === 'choices' && pendingMove.selection.choices && <>{
+              (pendingMove.selection.choices instanceof Array ?
+               pendingMove.selection.choices.map(c => ([c, c])) :
+               Object.entries(pendingMove.selection.choices)).map(([k, v]) => (
+                 <button key={String(serializeArg(k))} type="submit" name="selection" value={String(serializeArg(k))}>
+                   {humanizeArg(v)}
+                 </button>
+               ))
+            }</>}
 
-          {selection?.type === 'number' && (
-            <>
-              <input
-                name="selection"
-                type="number"
-                min={selection.min}
-                max={selection.max}
-                defaultValue={String(selection.initial || '')}
-              />
-              <button type="submit">Submit</button>
-            </>
-          )}
+            {pendingMove.selection.type === 'number' && (
+              <>
+                <input
+                  name="selection"
+                  type="number"
+                  min={pendingMove.selection.min}
+                  max={pendingMove.selection.max}
+                  defaultValue={String(pendingMove.selection.initial || '')}
+                  autoComplete='off'
+                />
+                <button type="submit">{pendingMove.selection.prompt}</button>
+              </>
+            )}
 
-          {selection?.type === 'text' && (
-            <>
-              <input name="selection" defaultValue={String(selection.initial || '')}/>
-              <button type="submit">Submit</button>
-            </>
-          )}
+            {pendingMove.selection.type === 'text' && (
+              <>
+                <input name="selection" defaultValue={String(pendingMove.selection.initial || '')} autoComplete='off'/>
+                <button type="submit">{pendingMove.selection.prompt}</button>
+              </>
+            )}
 
-          {selection?.type === 'button' && <button name="selection" value="confirm" type="submit">Submit</button>}
+            {pendingMove.selection.type === 'button' && <button name="selection" value='confirm' type="submit">{pendingMove.selection.prompt}</button>}
 
-          {selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined) && (
-            <button type="submit">Confirm</button>
-          )}
+            {pendingMove.selection.type === 'board' && (pendingMove.selection.min !== undefined || pendingMove.selection.max !== undefined) && (
+              <button type="submit">{pendingMove.selection.prompt}</button>
+            )}
 
-          {move && (
-            <>
-              <button onClick={() => onSubmit()}>Cancel</button>
-            </>
-          )}
-        </div>
-      </form>
+            {pendingMove && pendingMove.args.length > 1 && selections.length === 1 && (
+              <>
+                <button onClick={() => onSubmit()}>Cancel</button>
+              </>
+            )}
+          </div>
+        </form>
+      ))}
     </div>
   );
 };

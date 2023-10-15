@@ -47,12 +47,13 @@ export default class Board<P extends Player> extends Space<P> {
   _ui: GameElement<P>['_ui'] & { frame?: Box };
 
   applyLayouts(force=false) {
-    if (Board.aspectRatio) {
+    const aspectRatio = this._ui.appearance.aspectRatio;
+    if (aspectRatio) {
       this._ui.frame = {
         left: 0,
         top: 0,
-        width: Board.aspectRatio > 1 ? Board.aspectRatio * 100 : 100,
-        height: Board.aspectRatio < 1 ? 100 / Board.aspectRatio : 100
+        width: aspectRatio > 1 ? aspectRatio * 100 : 100,
+        height: aspectRatio < 1 ? 100 / aspectRatio : 100
       };
     }
     return super.applyLayouts(force);

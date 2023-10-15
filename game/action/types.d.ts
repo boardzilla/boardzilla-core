@@ -25,6 +25,12 @@ export type IncompleteMove<P extends Player> = {
   args: Argument<P>[]
 };
 
+export type PendingMove<P extends Player> = {
+  action: string,
+  args: Argument<P>[],
+  selection: ResolvedSelection<P>,
+};
+
 export type SerializedMove = {
   action: string,
   args: SerializedArg[]
@@ -57,11 +63,12 @@ export type TextSelection<P extends Player> = {
   initial?: string | ((...a: Argument<P>[]) => string);
 }
 
-export type ButtonSelection = any;
+export type ButtonSelection<P extends Player> = Argument<P>;
 
 export type SelectionDefinition<P extends Player> = {
   prompt?: string | ((...a: Argument<P>[]) => string);
-  clientContext?: Record<any, any> // additional meta info that describes the context for this selection
+  clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
+  maySkip?: boolean;
 } & ({
   selectOnBoard: BoardSelection<P, GameElement<P>>;
   selectFromChoices?: never;
@@ -91,7 +98,7 @@ export type SelectionDefinition<P extends Player> = {
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
-  click: ButtonSelection;
+  click: ButtonSelection<P>;
 });
 
 export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp'> & {

@@ -9,22 +9,28 @@ export default class Selection<P extends Player> {
   type: 'board' | 'choices' | 'text' | 'number' | 'button'
   prompt?: string | ((...a: Argument<P>[]) => string);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
+  maySkip?: boolean = false;
   choices: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
   boardChoices: BoardQueryMulti<P, GameElement<P>>;
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
   initial?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
   regexp?: RegExp;
+  click?: Argument<P>;
 
   constructor(s: SelectionDefinition<P> | Selection<P>) {
     if (s instanceof Selection) {
+      // copy everything that's not a function
       this.type = s.type;
+      this.maySkip = s.maySkip;
       this.choices = s.choices;
       this.boardChoices = s.boardChoices;
       this.min = s.min;
       this.max = s.max;
       this.initial = s.initial;
       this.regexp = s.regexp;
+      this.click = s.click;
+      this.clientContext = s.clientContext;
     } else {
       if (s.selectFromChoices) {
         this.type = 'choices';
@@ -48,9 +54,12 @@ export default class Selection<P extends Player> {
         this.initial = s.enterText.initial;
       } else {
         this.type = 'button';
+        this.click = s.click;
+        console.log(s.click, this);
       }
     }
     this.prompt = s.prompt;
+    this.maySkip = s.maySkip;
     this.clientContext = s.clientContext;
   }
 
@@ -147,6 +156,7 @@ export default class Selection<P extends Player> {
   }
 
   isForced(): Argument<P> | undefined {
+    if (this.maySkip !== true) return;
     if (!this.isResolved()) return this.resolve([]).isForced();
     if (this.boardChoices?.length === 1 &&
       this.min === undefined &&

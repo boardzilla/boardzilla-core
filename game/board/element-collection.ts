@@ -191,13 +191,13 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
 
   // UI
   layout(
-    applyTo: GameElement<P>['_ui']['layouts'][number]['applyTo'],
+    applyTo: T['_ui']['layouts'][number]['applyTo'],
     attributes: Partial<GameElement<P>['_ui']['layouts'][number]['attributes']> | null
   ) {
     for (const el of this) el.layout(applyTo, attributes);
   }
 
-  appearance(component: (el: T) => JSX.Element) {
-    for (const el of this) el._ui.component = component;
+  appearance(appearance: T['_ui']['appearance']) {
+    for (const el of this) el.appearance(appearance);
   }
 }

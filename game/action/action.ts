@@ -71,12 +71,14 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   // validate args and truncate if invalid, append any add'l args that are
   // forced and return next selection. return error if args fail validation. no
   // selection and no error means args are validated and processable
-  forceArgs(...args: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
+  forceArgs(...argList: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
     let error: string | undefined = undefined;
+    let args = [...argList];
+    let prompt = this.prompt;
 
     // truncate invalid args
-    for (let i = 0; i !== args.length; i++) {
-      if (!this.selections[i] || this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[])) {
+    for (let i = 0; i !== this.selections.length && i !== args.length; i++) {
+      if (this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[])) {
         args = args.slice(0, i) as A;
         break;
       }
@@ -85,13 +87,30 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     // check next selection for viable options. append any forced args
     let forcedArg: Argument<P> | undefined = undefined;
     let nextSelection: ResolvedSelection<P> | undefined = undefined;
+    let selection = this.nextSelection(...args);
     do {
-      const selection = this.nextSelection(...args);
+      forcedArg = undefined;
       if (selection === false) return [undefined, [] as unknown as A, error || "Action invalid. How did you get here?"];
-      if (selection === true) return [undefined, args, error];
+      if (selection === true) {
+        if (args.length || this.maySkip) return [undefined, args, error]; // valid and processable
+        // otherwise add a minimal confirmation step for a valid action with no args
+        selection = new Selection<P>({ prompt, click: true }).resolve(...args);
+      }
       forcedArg = selection.isForced();
+      // carry the prompt forward if no more specific prompt provided
+      if (!selection.prompt) {
+        selection.prompt = prompt;
+      } else {
+        prompt = (selection as ResolvedSelection<P>).prompt!;
+      }
       if (forcedArg !== undefined) {
-        args.push(forcedArg);
+        if (forcedArg) args.push(forcedArg);
+        selection = this.nextSelection(...args);
+        // no more selections required as last selection is forced, but if no args were entered, turn this selection into a minimal confirmation
+        if (selection === true && argList.length === 0) {
+          nextSelection = new Selection<P>({ prompt, click: forcedArg }).resolve(...args);
+          forcedArg = undefined;
+        }
       } else {
         nextSelection = selection;
       }
@@ -118,12 +137,13 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     return this;
   }
 
-  chooseFrom<T extends Argument<P>>({ choices, prompt, initial }: {
+  chooseFrom<T extends Argument<P>>({ choices, prompt, initial, maySkip }: {
     choices: T[] | Record<string, T> | ((...arg: A) => T[] | Record<string, T>),
     initial?: T | ((...arg: A) => Argument<P>),
     prompt?: string | ((...arg: A) => string)
+    maySkip?: boolean,
   }): Action<P, [...A, T]> {
-    this.selections.push(new Selection<P>({ prompt, selectFromChoices: { choices, initial } }));
+    this.selections.push(new Selection<P>({ prompt, maySkip, selectFromChoices: { choices, initial } }));
     return this as unknown as Action<P, [...A, T]>;
   }
 
@@ -141,33 +161,37 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     return this as unknown as Action<P, [...A, 'confirm']>;
   }
 
-  chooseNumber({ min, max, prompt, initial }: {
+  chooseNumber({ min, max, prompt, initial, maySkip }: {
     min?: number | ((...arg: A) => number),
     max?: number | ((...arg: A) => number),
     prompt?: string | ((...arg: A) => string),
     initial?: number | ((...arg: A) => number),
+    maySkip?: boolean,
   }): Action<P, [...A, number]> {
-    this.selections.push(new Selection<P>({ prompt, selectNumber: { min, max, initial } }));
+    this.selections.push(new Selection<P>({ prompt, maySkip, selectNumber: { min, max, initial } }));
     return this as unknown as Action<P, [...A, number]>;
   }
 
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, maySkip }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
+    maySkip?: boolean,
   }): Action<P, [...A, T]>;
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, maySkip }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
     min?: number | ((...arg: A) => number);
     max?: number | ((...arg: A) => number);
+    maySkip?: boolean,
   }): Action<P, [...A, [T]]>;
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, maySkip }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
     min?: number | ((...arg: A) => number);
     max?: number | ((...arg: A) => number);
+    maySkip?: boolean,
   }): Action<P, [...A, T | [T]]> {
-    this.selections.push(new Selection<P>({ prompt, selectOnBoard: { chooseFrom: choices, min, max } }));
+    this.selections.push(new Selection<P>({ prompt, maySkip, selectOnBoard: { chooseFrom: choices, min, max } }));
     if (min !== undefined || max !== undefined) {
       return this as unknown as Action<P, [...A, [T]]>;
     }
@@ -177,7 +201,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   move<E extends Piece<P>, I extends GameElement<P>>({ piece, into, prompt }: {
     piece: BoardQuerySingle<P, E>,
     into: BoardQuerySingle<P, I>,
-    prompt?: string
+    prompt?: string,
   }): Action<P, A>;
   move<E extends Piece<P>, I extends GameElement<P>>({ choosePiece, into, prompt }: {
     choosePiece: BoardQueryMulti<P, E>,
