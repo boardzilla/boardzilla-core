@@ -392,20 +392,17 @@ export default class GameElement<P extends Player> {
     return transform;
   }
 
-  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']> | null) {
-    if (attributes) {
-      const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
-      if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
-      if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
-      if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
-      if (!size) {
-        if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
-        if (!scaling) attributes.scaling = 'fit';
-      }
-      this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', direction: 'square' }, attributes) });
-    } else {
-      this._ui.layouts.push({ applyTo, attributes });
+  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']>) {
+    const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
+    if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
+    if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
+    if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
+    if (!size) {
+      if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
+      if (!scaling) attributes.scaling = 'fit';
     }
+    this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', direction: 'square' }, attributes) });
+
     this._ui.layouts.sort((a, b) => {
       let aVal = 0, bVal = 0;
       if (a.applyTo instanceof GameElement) aVal = 3

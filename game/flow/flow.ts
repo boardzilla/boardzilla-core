@@ -108,11 +108,13 @@ export default class Flow<P extends Player> {
     return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function };
   }
 
-  actionNeeded(): {prompt?: string, actions?: string[]} {
+  actionNeeded(): {prompt?: string, actions?: string[], skipIfOnlyOne?: boolean, expand?: boolean} {
     const flow = this.currentFlow() as ActionStep<P>;
     if ('awaitingAction' in flow) return {
       prompt: flow.prompt,
-      actions: flow.awaitingAction()
+      actions: flow.awaitingAction(),
+      skipIfOnlyOne: flow.skipIfOnlyOne,
+      expand: flow.expand,
     };
     return {};
   }

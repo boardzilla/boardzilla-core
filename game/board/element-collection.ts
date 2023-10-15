@@ -192,7 +192,7 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
   // UI
   layout(
     applyTo: T['_ui']['layouts'][number]['applyTo'],
-    attributes: Partial<GameElement<P>['_ui']['layouts'][number]['attributes']> | null
+    attributes: Partial<GameElement<P>['_ui']['layouts'][number]['attributes']>
   ) {
     for (const el of this) el.layout(applyTo, attributes);
   }

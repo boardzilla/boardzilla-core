@@ -9,9 +9,10 @@ export default class Selection<P extends Player> {
   type: 'board' | 'choices' | 'text' | 'number' | 'button'
   prompt?: string | ((...a: Argument<P>[]) => string);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
-  maySkip?: boolean = false;
-  choices: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
-  boardChoices: BoardQueryMulti<P, GameElement<P>>;
+  skipIfOnlyOne?: boolean = false;
+  expand?: boolean = false;
+  choices?: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
+  boardChoices?: BoardQueryMulti<P, GameElement<P>>;
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
   initial?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
@@ -22,7 +23,7 @@ export default class Selection<P extends Player> {
     if (s instanceof Selection) {
       // copy everything that's not a function
       this.type = s.type;
-      this.maySkip = s.maySkip;
+      this.skipIfOnlyOne = s.skipIfOnlyOne;
       this.choices = s.choices;
       this.boardChoices = s.boardChoices;
       this.min = s.min;
@@ -59,7 +60,7 @@ export default class Selection<P extends Player> {
       }
     }
     this.prompt = s.prompt;
-    this.maySkip = s.maySkip;
+    this.skipIfOnlyOne = s.skipIfOnlyOne;
     this.clientContext = s.clientContext;
   }
 
@@ -106,17 +107,16 @@ export default class Selection<P extends Player> {
   }
 
   // have to make some assumptions here to tree shake possible moves
-  options(): Argument<P>[] {
-    if (!this.isResolved() || this.isUnbounded()) return [];
-    if (this.type === 'number') return range(this.min === undefined ? 1 : this.min, this.max!);
-    if (this.type === 'choices') return this.choices instanceof Array ? this.choices : Object.keys(this.choices);
-    if (this.type === 'board') return this.boardChoices;
+  options(this: ResolvedSelection<P>): Argument<P>[] {
+    if (this.isUnbounded()) return [];
+    if (this.type === 'number') return range(this.min ?? 1, this.max!);
+    if (this.boardChoices) return this.boardChoices;
+    if (this.choices) return this.choices instanceof Array ? this.choices : Object.keys(this.choices);
     return [];
   }
 
-  isUnbounded(): boolean {
-    if (!this.isResolved()) return true;
-    if (this.type === 'number') return this.max === undefined || this.max - (this.min === undefined ? 1 : this.min) > 100;
+  isUnbounded(this: ResolvedSelection<P>): boolean {
+    if (this.type === 'number') return this.max === undefined || this.max - (this.min ?? 1) > 100;
     return this.type === 'text' || this.type === 'button';
   }
 
@@ -142,27 +142,25 @@ export default class Selection<P extends Player> {
     return resolved as ResolvedSelection<P>;
   }
 
-  isPossible(): boolean {
-    if (!this.isResolved()) return this.resolve([]).isPossible();
+  isPossible(this: ResolvedSelection<P>): boolean {
     if (this.type === 'choices' && this.choices) return (
       this.choices instanceof Array ? this.choices : Object.keys(this.choices) as Argument<P>[]
     ).length > 0
 
-    const isInBounds = this.max !== undefined ? (this.min === undefined ? 1 : this.min) <= this.max : true;
-    if (this.type === 'board' && this.boardChoices) return isInBounds && this.boardChoices.length >= (this.min === undefined ? 1 : this.min);
+    const isInBounds = this.max !== undefined ? (this.min ?? 1) <= this.max : true;
+    if (this.type === 'board' && this.boardChoices) return isInBounds && this.boardChoices.length >= (this.min ?? 1);
     if (this.type === 'number') return isInBounds;
 
     return true;
   }
 
-  isForced(): Argument<P> | undefined {
-    if (this.maySkip !== true) return;
-    if (!this.isResolved()) return this.resolve([]).isForced();
+  isForced(this: ResolvedSelection<P>): Argument<P> | undefined {
+    if (this.skipIfOnlyOne !== true) return;
     if (this.boardChoices?.length === 1 &&
       this.min === undefined &&
       this.max === undefined) {
       return this.boardChoices[0];
-    } else if (this.type === 'board' &&
+    } else if (this.boardChoices &&
       this.boardChoices.length === this.min &&
       this.min === this.max) {
       return this.boardChoices;

@@ -19,6 +19,7 @@ export type Move<P extends Player> = {
   args: Argument<P>[]
 };
 
+// obsolete?
 export type IncompleteMove<P extends Player> = {
   player: P,
   action?: string,
@@ -30,6 +31,11 @@ export type PendingMove<P extends Player> = {
   args: Argument<P>[],
   selection: ResolvedSelection<P>,
 };
+
+export type MoveTree<P extends Player> = {
+  move: PendingMove<P>,
+  submoves: MoveTree<P>[]
+}
 
 export type SerializedMove = {
   action: string,
@@ -68,7 +74,8 @@ export type ButtonSelection<P extends Player> = Argument<P>;
 export type SelectionDefinition<P extends Player> = {
   prompt?: string | ((...a: Argument<P>[]) => string);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
-  maySkip?: boolean;
+  skipIfOnlyOne?: boolean;
+  expand?: boolean;
 } & ({
   selectOnBoard: BoardSelection<P, GameElement<P>>;
   selectFromChoices?: never;

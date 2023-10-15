@@ -11,7 +11,7 @@ import {
   PlayerPositionState,
   Message
 } from '../types';
-import { Action } from './action';
+import { Action, Selection } from './action';
 import { ElementClass } from './board/types';
 import { Player, PlayerCollection } from './player/';
 
@@ -22,7 +22,9 @@ import type {
   Move,
   Argument,
   MoveResponse,
-  SerializedArg
+  SerializedArg,
+  PendingMove,
+  ResolvedSelection,
 } from './action/types';
 import type { PlayerAttributes } from './player/types';
 
@@ -48,15 +50,20 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.flowDefinition = flowDefinition;
   }
 
-  action(name: string, player: P) {
+  action(name: string, player: P): Action<P, any> & {name: string} {
     if (this.godMode) {
       const action = this.godModeActions()[name];
-      if (action) return action;
+      if (action) {
+        action.name = name;
+        return action as Action<P, any> & {name: string};
+      }
     }
     return this.inContextOfPlayer(player, () => {
       const action = this.actions(this, this.board)[name];
       if (!action) throw Error(`No such action ${name}`);
-      return action(player);
+      const playerAction = action(player);
+      playerAction.name = name;
+      return playerAction as Action<P, any> & {name: string};
     });
   }
 
@@ -263,6 +270,41 @@ export default class Game<P extends Player, B extends Board<P>> {
       };
     });
   }
+
+  // getSelections(player: P, action?: string, ...args: Argument<P>[]): PendingMove<P>[] {
+  //   let move: PendingMove<P>;
+  //   if (!action) {
+  //     let {prompt, actions, skipIfOnlyOne, expand} = this.flow.actionNeeded();
+  //     // top-level action choice defaults
+  //     skipIfOnlyOne ??= false;
+  //     expand ??= true;
+  //     move = {
+  //       action: '/',
+  //       args: [],
+  //       selection: new Selection<P>({
+  //         prompt,
+  //         expand,
+  //         skipIfOnlyOne,
+  //         selectFromChoices: {
+  //           choices: actions || []
+  //         }
+  //       }) as ResolvedSelection<P>
+  //     };
+  //   } else {
+  //     const playerAction = this.action(action, player);
+  //     const selection = playerAction.nextSelection(...args);
+  //     if (selection instanceof Selection) {
+  //       move = {
+  //         action,
+  //         args,
+  //         selection: selection.resolve(...args)
+  //       };
+  //     }
+  //   }
+    // expand move into tree of selections {move, moves}
+    // prune tree
+    // apply skipIfOnlyOne/expand
+  // }
 
   contextualizeBoardToPlayer(player?: P) {
     const prev = this.board._ctx.player;

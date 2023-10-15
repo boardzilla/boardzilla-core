@@ -10,11 +10,21 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   actions: Record<string, FlowDefinition<P> | null>;
   type: FlowBranchNode<P>['type'] = "action";
   prompt?: string;
+  skipIfOnlyOne?: boolean;
+  expand?: boolean;
 
-  constructor({ name, actions, prompt }: { name?: string, actions: Record<string, FlowDefinition<P> | null>, prompt?: string }) {
+  constructor({ name, actions, prompt, expand, skipIfOnlyOne }: {
+    name?: string,
+    actions: Record<string, FlowDefinition<P> | null>,
+    prompt?: string,
+    expand?: boolean,
+    skipIfOnlyOne?: boolean,
+  }) {
     super({ name });
     this.actions = actions;
     this.prompt = prompt;
+    this.expand = expand;
+    this.skipIfOnlyOne = skipIfOnlyOne;
   }
 
   reset() {
