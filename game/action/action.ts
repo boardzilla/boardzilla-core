@@ -5,7 +5,7 @@ import type {
   ResolvedSelection,
   BoardQueryMulti,
   BoardQuerySingle,
-  MoveTree,
+  PendingMove,
 } from './types';
 import type { GameElement, Piece } from '../board/';
 import type { Player } from '../player';
@@ -36,133 +36,86 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
 
   isPossible(): boolean {
     return typeof this.condition === 'function' ? this.condition() : this.condition ?? true;
-    // const selections = this.selections;
-    // if (selections.length === 0) return true;
-
-    // // easy shortcircuit if any selection is already resolved to an impossibility
-    // if (selections.some(s => s.isResolved() && !s.isPossible())) return false;
-    // const selection = selections[0].resolve();
-    // if (selection.isUnbounded()) return true;
-    // return selections[0].resolve().options().some(o => this.nextSelection(o));
   }
 
   // given a set of args, return sub-selections possible trying each possible next arg
-  // return true if no more selections required, false if these args are impossible
-  getMoveTree(...args: Argument<P>[]): MoveTree<P> | boolean {
+  // return undefined if these args are impossible
+  getResolvedSelections(...args: Argument<P>[]): PendingMove<P>[] | undefined {
     const selection = this.nextSelection(...args);
-    if (!selection) return true;
+    if (!selection) return [];
 
-    const tree: MoveTree<P> = {
-      move: {
-        action: this.name!,
-        args,
-        selection
-      },
-      submoves: []
-    }
+    const move = {
+      action: this.name!,
+      args,
+      selection
+    };
 
-    if (!selection.isPossible()) return false;
-    if (selection.isUnbounded()) return tree;
+    if (!selection.isPossible()) return;
+    if (selection.isUnbounded()) return [move];
 
     let possibleOptions: Argument<P>[] = [];
     let pruned = false;
+    let resolvedSelections: PendingMove<P>[] = [];
+    let mayExpand = selection.expand;
     for (const option of selection.options()) {
-      const tree = this.getMoveTree(...args, option);
-      if (tree === true) {
-        possibleOptions.push(option);
-      } else if (tree === false) {
+      const submoves = this.getResolvedSelections(...args, option);
+      if (submoves === undefined) {
         pruned = true;
       } else {
-        tree.submoves.push(tree);
+        possibleOptions.push(option);
+        if (selection.expand && submoves.length === 0) mayExpand = false; // TODO smarter expansion needed when triggered/optional selections are added
+        resolvedSelections = resolvedSelections.concat(submoves);
       }
     }
-    if (!possibleOptions.length) return false;
+    if (!possibleOptions.length) return undefined;
     if (pruned) selection.overrideOptions(possibleOptions);
-    return tree;
+    if (!resolvedSelections.length) return [move];
+    if (mayExpand) return resolvedSelections;
+    if (selection.skipIfOnlyOne && possibleOptions.length === 1) return resolvedSelections;
+    return [move];
   }
 
   /**
    * given a partial arg list, returns a selection object for continuation if one exists.
    */
   nextSelection(...args: Argument<P>[]): ResolvedSelection<P> | undefined {
-    return this.selections[args.length]?.resolve(...args);
-
-    // if (selection.isUnbounded()) return selection;
-    // if (!selection.isPossible()) return false;
-    // const lastUnresolved = [...selections].reverse().find(s => !s.isResolved());
-    // if (!lastUnresolved) return selection;
-    // const depth = selections.indexOf(lastUnresolved);
-    // if (depth <= 0) return selection;
-
-    // const options = selection.options();
-    // const viableOptions = options.filter(o => this.nextSelection(...args, o));
-    // if (viableOptions.length < (selection.min ?? 1)) return false;
-    // if (viableOptions.length === options.length) return selection;
-    // return selection.overrideOptions(viableOptions);
+    const selection = this.selections[args.length];
+    if (selection) {
+      selection.prompt ??= [...this.selections.slice(0, args.length)].reverse().find(s => s.prompt)?.prompt || this.prompt;
+      return selection.resolve(...args);
+    }
   }
 
-  // validate args and truncate if invalid, append any add'l args that are
-  // forced and return next selection. return error if args fail validation. no
-  // selection and no error means args are validated and processable
-  // forceArgs(...argList: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
-  //   let error: string | undefined = undefined;
-  //   let args = [...argList];
-  //   let prompt = this.prompt;
+  /**
+   * process this action with supplied args. returns error if any
+   */
+  process(...args: Argument<P>[]): string | undefined {
+    // truncate invalid args - is this needed?
+    let error: string | undefined = undefined;
+    for (let i = 0; i !== this.selections.length && i !== args.length; i++) {
+      error = this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[]);
+      if (error) {
+        console.error('invalid arg', args[i], i, error);
+        args = args.slice(0, i) as A;
+        break;
+      }
+    }
 
-  //   // truncate invalid args
-  //   for (let i = 0; i !== this.selections.length && i !== args.length; i++) {
-  //     if (this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[])) {
-  //       args = args.slice(0, i) as A;
-  //       break;
-  //     }
-  //   }
-
-  //   // check next selection for viable options. append any forced args
-  //   let forcedArg: Argument<P> | undefined = undefined;
-  //   let nextSelection: ResolvedSelection<P> | undefined = undefined;
-  //   let selection = this.nextSelection(...args);
-  //   do {
-  //     forcedArg = undefined;
-  //     if (selection === false) return [undefined, [] as unknown as A, error || "Action invalid. How did you get here?"];
-  //     if (selection === true) {
-  //       if (args.length) return [undefined, args, error]; // valid and processable
-  //       // otherwise add a minimal confirmation step for a valid action with no args
-  //       selection = new Selection<P>({ prompt, click: true }).resolve(...args);
-  //     }
-  //     forcedArg = selection.isForced();
-  //     // carry the prompt forward if no more specific prompt provided
-  //     if (!selection.prompt) {
-  //       selection.prompt = prompt;
-  //     } else {
-  //       prompt = (selection as ResolvedSelection<P>).prompt!;
-  //     }
-  //     if (forcedArg !== undefined) {
-  //       if (forcedArg) args.push(forcedArg);
-  //       selection = this.nextSelection(...args);
-  //       // no more selections required as last selection is forced, but if no args were entered, turn this selection into a minimal confirmation
-  //       if (selection === true && argList.length === 0) {
-  //         nextSelection = new Selection<P>({ prompt, click: forcedArg }).resolve(...args);
-  //         forcedArg = undefined;
-  //       }
-  //     } else {
-  //       nextSelection = selection;
-  //     }
-  //   } while (forcedArg);
-  //   return [nextSelection, args, error];
-  // }
-
-  process(...args: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
-    // const [resolvedSelection, forcedArgs, error] = this.forceArgs(...args);
-    // if (resolvedSelection) return [resolvedSelection, forcedArgs, error];
-    // if (forcedArgs) args = forcedArgs;
+    const resolvedSelections = this.getResolvedSelections(...args);
+    if (!resolvedSelections) {
+      console.error('could not resolve this args', this.name, args);
+      return error || 'unknown error during action.process';
+    }
+    if (resolvedSelections.length) {
+      return error || 'incomplete action';
+    }
 
     try {
       for (const move of this.moves) move(...args);
     } catch(e) {
-      console.error(e.message, e.stack);
-      return [this.selections[0].resolve(), [] as unknown as A, e.message];
+      console.error(e);
+      return e.message;
     }
-    return [];
   }
 
   do(move: (...args: A) => void) {
@@ -191,7 +144,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   }
 
   confirm(prompt: string | ((...arg: A) => string)): Action<P, [...A, 'confirm']> {
-    this.selections.push(new Selection<P>({ prompt, click: true }));
+    this.selections.push(new Selection<P>({ prompt, value: true }));
     return this as unknown as Action<P, [...A, 'confirm']>;
   }
 

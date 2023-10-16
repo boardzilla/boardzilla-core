@@ -9,28 +9,29 @@ export default class Selection<P extends Player> {
   type: 'board' | 'choices' | 'text' | 'number' | 'button'
   prompt?: string | ((...a: Argument<P>[]) => string);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
-  skipIfOnlyOne?: boolean = false;
-  expand?: boolean = false;
+  skipIfOnlyOne: boolean = true;
+  expand: boolean = false;
   choices?: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
   boardChoices?: BoardQueryMulti<P, GameElement<P>>;
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
   initial?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
   regexp?: RegExp;
-  click?: Argument<P>;
+  value?: Argument<P>;
 
   constructor(s: SelectionDefinition<P> | Selection<P>) {
     if (s instanceof Selection) {
       // copy everything that's not a function
       this.type = s.type;
       this.skipIfOnlyOne = s.skipIfOnlyOne;
+      this.expand = s.expand;
       this.choices = s.choices;
       this.boardChoices = s.boardChoices;
       this.min = s.min;
       this.max = s.max;
       this.initial = s.initial;
       this.regexp = s.regexp;
-      this.click = s.click;
+      this.value = s.value;
       this.clientContext = s.clientContext;
     } else {
       if (s.selectFromChoices) {
@@ -55,12 +56,13 @@ export default class Selection<P extends Player> {
         this.initial = s.enterText.initial;
       } else {
         this.type = 'button';
-        this.click = s.click;
-        console.log(s.click, this);
+        this.value = s.value;
+        this.skipIfOnlyOne = false;
       }
     }
     this.prompt = s.prompt;
-    this.skipIfOnlyOne = s.skipIfOnlyOne;
+    this.skipIfOnlyOne = s.skipIfOnlyOne ?? true;
+    this.expand = s.expand ?? false;
     this.clientContext = s.clientContext;
   }
 

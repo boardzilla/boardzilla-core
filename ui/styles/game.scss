@@ -38,7 +38,7 @@ body {
   }
 
   .selected {
-    background: #faa;
+    transform: scale(1.2);
   }
 
   &.fixed {

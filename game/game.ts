@@ -21,10 +21,8 @@ import type Flow from './flow/flow';
 import type {
   Move,
   Argument,
-  MoveResponse,
   SerializedArg,
   PendingMove,
-  ResolvedSelection,
 } from './action/types';
 import type { PlayerAttributes } from './player/types';
 
@@ -48,23 +46,6 @@ export default class Game<P extends Player, B extends Board<P>> {
   defineFlow(flowDefinition: typeof this.flowDefinition) {
     if (this.phase !== 'define') throw Error('cannot call defineFlow once started');
     this.flowDefinition = flowDefinition;
-  }
-
-  action(name: string, player: P): Action<P, any> & {name: string} {
-    if (this.godMode) {
-      const action = this.godModeActions()[name];
-      if (action) {
-        action.name = name;
-        return action as Action<P, any> & {name: string};
-      }
-    }
-    return this.inContextOfPlayer(player, () => {
-      const action = this.actions(this, this.board)[name];
-      if (!action) throw Error(`No such action ${name}`);
-      const playerAction = action(player);
-      playerAction.name = name;
-      return playerAction as Action<P, any> & {name: string};
-    });
   }
 
   defineActions(actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P, Argument<P>[]>>) {
@@ -104,6 +85,89 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.random = random.create(rseed).random;
   }
 
+  /**
+   * flow functions
+   */
+  start() {
+    if (this.phase === 'started') throw Error('cannot call start once started');
+    if (!this.players.length) {
+      throw Error("No players");
+    }
+    this.phase = 'started';
+    this.buildFlow();
+    this.flow.reset();
+  }
+
+  buildFlow() {
+    this.flow = this.flowDefinition(this, this.board);
+    this.flow.game = this;
+  }
+
+  /**
+   * state management functions
+   */
+  setState(state: GameState<P>) {
+    this.players.fromJSON(state.players);
+    this.players.currentPosition = state.currentPlayerPosition;
+    this.setSettings(state.settings);
+    this.board.fromJSON(state.board);
+    this.buildFlow();
+    this.phase = 'started';
+    this.flow.setBranchFromJSON(state.position);
+    this.setRandomSeed(state.rseed);
+  }
+
+  getState(forPlayer?: number): GameState<P> {
+    return {
+      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
+      currentPlayerPosition: this.players.currentPosition,
+      settings: this.settings,
+      position: this.flow.branchJSON(!!forPlayer),
+      board: this.board.allJSON(forPlayer),
+      rseed: this.rseed,
+    };
+  }
+
+  getPlayerStates(): PlayerPositionState<P>[] {
+    return this.players.map(p => ({
+      position: p.position,
+      state: this.getState(p.position)
+    }));
+  }
+
+  contextualizeBoardToPlayer(player?: P) {
+    const prev = this.board._ctx.player;
+    this.board._ctx.player = player;
+    return prev;
+  }
+
+  inContextOfPlayer<T>(player: P, fn: () => T): T {
+    const prev = this.contextualizeBoardToPlayer(player);
+    const results = fn();
+    this.contextualizeBoardToPlayer(prev);
+    return results;
+  }
+
+  /**
+   * action functions
+   */
+  action(name: string, player: P): Action<P, any> & {name: string} {
+    if (this.godMode) {
+      const action = this.godModeActions()[name];
+      if (action) {
+        action.name = name;
+        return action as Action<P, any> & {name: string};
+      }
+    }
+    return this.inContextOfPlayer(player, () => {
+      const action = this.actions(this, this.board)[name];
+      if (!action) throw Error(`No such action ${name}`);
+      const playerAction = action(player);
+      playerAction.name = name;
+      return playerAction as Action<P, any> & {name: string};
+    });
+  }
+
   godModeActions(): Record<string, Action<P, any>> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
     return {
@@ -138,185 +202,102 @@ export default class Game<P extends Player, B extends Board<P>> {
     };
   }
 
-  start() {
-    if (this.phase === 'started') throw Error('cannot call start once started');
-    if (!this.players.length) {
-      throw Error("No players");
-    }
-    this.phase = 'started';
-    this.buildFlow();
-    this.flow.reset();
-  }
-
-  buildFlow() {
-    this.flow = this.flowDefinition(this, this.board);
-    this.flow.game = this;
-  }
-
-  setState(state: GameState<P>) {
-    this.players.fromJSON(state.players);
-    this.players.currentPosition = state.currentPlayerPosition;
-    this.setSettings(state.settings);
-    this.board.fromJSON(state.board);
-    this.buildFlow();
-    this.phase = 'started';
-    this.flow.setBranchFromJSON(state.position);
-    this.setRandomSeed(state.rseed);
-  }
-
-  getState(forPlayer?: number): GameState<P> {
-    return {
-      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-      currentPlayerPosition: this.players.currentPosition,
-      settings: this.settings,
-      position: this.flow.branchJSON(!!forPlayer),
-      board: this.board.allJSON(forPlayer),
-      rseed: this.rseed,
-    };
-  }
-
-  getPlayerStates(): PlayerPositionState<P>[] {
-    return this.players.map(p => ({
-      position: p.position,
-      state: this.getState(p.position)
-    }));
-  }
-
-  /**
-   * action functions
-   */
   play() {
     if (this.phase !== 'started') throw Error('cannot call play until started');
     return this.flow.play();
   }
 
-  // Returns selection for a player, providing any forced args if there's a single action available
-  // If only one action and no selection even needed, just returns a confirmation request
-  // currentSelection(player: P): MoveResponse<P> {
-  //   let move: IncompleteMove<P> = { player, args: [] };
-  //   return this.inContextOfPlayer(player, () => {
-  //     const actions = this.allowedActions(player);
-
-  //     if (!actions || actions.length === 0) return {move}
-  //     if (actions.length === 1) { // only one action to choose, so choose it
-  //       const action = this.action(actions[0], player);
-  //       let [selection, forcedArgs, error] = action.forceArgs();
-  //       if (error) throw Error(`${error} at currentSelection which should not be allowed. allowedActions should not have provided this action`)
-  //       // if no selection needed, provide a confirmation prompt (TODO get the final prompt)
-  //       if (!selection) selection = new Selection<P>({ prompt: `Please confirm: ${action.prompt}`, click: true }) as ResolvedSelection<P>;
-  //       return {
-  //         move: {
-  //           action: actions[0],
-  //           args: forcedArgs || [],
-  //           player
-  //         },
-  //         selection
-  //       };
-  //     } else {
-  //       const actionStep = this.flow.currentFlow();
-  //       if (actionStep instanceof ActionStep) {
-  //         return {
-  //           selection: new Selection<P>({ // selection is between multiple actions, return action choices
-  //             prompt: actionStep.prompt || 'Choose action',
-  //             selectFromChoices: {
-  //               choices: Object.fromEntries(actions.map(a => [a, this.action(a, player).prompt]))
-  //             }
-  //           }) as ResolvedSelection<P>,
-  //           move,
-  //         };
-  //       }
-  //       return {move};
-  //     }
-  //   });
-  // }
-
   // given a player's move (minimum a selected action), attempts to process
   // it. if not, returns next selection for that player, plus any implied partial
   // moves
-  processMove({ player, action, args }: Move<P>): MoveResponse<P> {
-    let resolvedSelection, truncatedArgs, error;
+  processMove({ player, action, args }: Move<P>): string | undefined {
+    let error: string | undefined;
     this.messages = [];
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[action]) {
         const godModeAction = this.godModeActions()[action];
-        [resolvedSelection, truncatedArgs, error] = godModeAction.process(...args);
+        error = godModeAction.process(...args);
       } else {
-        [resolvedSelection, truncatedArgs, error] = this.flow.processMove({
+        error = this.flow.processMove({
           action,
           player: player.position,
           args
         });
       }
-      if (resolvedSelection) return {
-        selection: resolvedSelection,
-        move: {action, player, args: truncatedArgs || []},
-        error
-      };
+      if (error) return error;
       // successful move
+    });
+  }
+
+  allowedActions(player: P): {prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
+    const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
+    if (this.players.currentPosition && player !== this.players.current()) return {
+      actions: allowedActions,
+      skipIfOnlyOne: true,
+      expand: true,
+    };
+    return this.inContextOfPlayer(player, () => {
+      const actionStep = this.flow.actionNeeded();
+      if (actionStep) {
+        return {
+          prompt: actionStep.prompt,
+          skipIfOnlyOne: actionStep.skipIfOnlyOne,
+          expand: actionStep.expand,
+          actions: allowedActions.concat(actionStep.actions?.filter(a => this.action(a, player).isPossible()) || [])
+        }
+      }
       return {
-        move: {action, player, args},
+        skipIfOnlyOne: true,
+        expand: true,
+        actions: []
       };
     });
   }
 
-  allowedActions(player: P): {prompt?: string, actions?: string[]}  {
-    const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
-    if (this.players.currentPosition && player !== this.players.current()) return { actions: allowedActions };
-    return this.inContextOfPlayer(player, () => {
-      let {prompt, actions} = this.flow.actionNeeded();
+  getResolvedSelections(player: P, action?: string, ...args: Argument<P>[]): {prompt?: string, moves: PendingMove<P>[]} | undefined {
+    const allowedActions = this.allowedActions(player);
+    if (!allowedActions.actions.length) return;
+    const { prompt, actions, skipIfOnlyOne, expand } = allowedActions;
+    console.log('allowedActions', prompt, actions);
+    if (!action) {
+      let possibleActions: string[] = [];
+      let resolvedSelections: PendingMove<P>[] = [];
+      for (const action of actions) {
+        const playerAction = this.action(action, player);
+        let submoves = playerAction.getResolvedSelections();
+        if (submoves !== undefined) {
+          possibleActions.push(action);
+          if (expand && submoves.length === 0) {
+            submoves = [{
+              action,
+              args:  [],
+              selection: new Selection<P>({ prompt: playerAction.prompt, value: action }).resolve()
+            }];
+          }
+          resolvedSelections = resolvedSelections.concat(submoves);
+        }
+      }
+      if (!possibleActions.length) return undefined;
+      if (skipIfOnlyOne && possibleActions.length === 1) {
+        if (resolvedSelections.length === 0 || resolvedSelections.length === 1 && resolvedSelections[0].selection.isForced()) {
+          console.error('auto-move');
+        }
+        return { prompt, moves: resolvedSelections};
+      }
+      if (expand && resolvedSelections.length) return { prompt, moves: resolvedSelections};
       return {
         prompt,
-        actions: allowedActions.concat(actions?.filter(a => this.action(a, player).isPossible()) || [])
+        moves: [{
+          action: '/',
+          args: [],
+          selection: new Selection<P>({ prompt, selectFromChoices: { choices: actions }}).resolve()
+        }]
       };
-    });
-  }
 
-  // getSelections(player: P, action?: string, ...args: Argument<P>[]): PendingMove<P>[] {
-  //   let move: PendingMove<P>;
-  //   if (!action) {
-  //     let {prompt, actions, skipIfOnlyOne, expand} = this.flow.actionNeeded();
-  //     // top-level action choice defaults
-  //     skipIfOnlyOne ??= false;
-  //     expand ??= true;
-  //     move = {
-  //       action: '/',
-  //       args: [],
-  //       selection: new Selection<P>({
-  //         prompt,
-  //         expand,
-  //         skipIfOnlyOne,
-  //         selectFromChoices: {
-  //           choices: actions || []
-  //         }
-  //       }) as ResolvedSelection<P>
-  //     };
-  //   } else {
-  //     const playerAction = this.action(action, player);
-  //     const selection = playerAction.nextSelection(...args);
-  //     if (selection instanceof Selection) {
-  //       move = {
-  //         action,
-  //         args,
-  //         selection: selection.resolve(...args)
-  //       };
-  //     }
-  //   }
-    // expand move into tree of selections {move, moves}
-    // prune tree
-    // apply skipIfOnlyOne/expand
-  // }
-
-  contextualizeBoardToPlayer(player?: P) {
-    const prev = this.board._ctx.player;
-    this.board._ctx.player = player;
-    return prev;
-  }
-
-  inContextOfPlayer<T>(player: P, fn: () => T): T {
-    const prev = this.contextualizeBoardToPlayer(player);
-    const results = fn();
-    this.contextualizeBoardToPlayer(prev);
-    return results;
+    } else {
+      const moves = this.action(action, player)?.getResolvedSelections(...args)
+      if (moves) return { prompt, moves };
+    }
   }
 
   message(message: string, ...args: [...Argument<P>[], Record<string, Argument<P>>] | Argument<P>[]) {

@@ -28,22 +28,21 @@ describe('Actions', () => {
   });
 
   it('returns selections', () => {
-    const [sel] = testAction.process();
-    expect(sel?.type).to.equal('number');
-    expect(sel?.min).to.equal(0);
-    expect(sel?.max).to.equal(3);
+    const error = testAction.process();
+    expect(error).to.not.be.undefined;
+    const selections = testAction.getResolvedSelections();
+    expect(selections![0].selection.type).to.equal('number');
+    expect(selections![0].selection.min).to.equal(0);
+    expect(selections![0].selection.max).to.equal(3);
   });
 
   it('resolves dependant selections', () => {
-    const [sel] = testAction.process(1);
-    expect(sel?.type).to.equal('number');
-    expect(sel?.min).to.equal(1);
-    expect(sel?.max).to.equal(2);
-  });
-
-  it('short circuits', () => {
-    testAction.process(0);
-    expect(actionSpy).to.have.been.called.with(0, 0);
+    const error = testAction.process(1);
+    expect(error).to.not.be.undefined;
+    const selections = testAction.getResolvedSelections(1);
+    expect(selections![0].selection.type).to.equal('number');
+    expect(selections![0].selection.min).to.equal(1);
+    expect(selections![0].selection.max).to.equal(2);
   });
 
   it('processes', () => {
@@ -51,66 +50,33 @@ describe('Actions', () => {
     expect(actionSpy).to.have.been.called.with(1, 2);
   });
 
-  describe('forceArgs', () => {
-    let options: number[];
-    const testAction = action({
-      prompt: 'pick an even number',
-    }).chooseFrom({
-      choices: () => options.filter(n => n % 2 === 0)
-    }).chooseFrom({
-      choices: () => options.filter(n => n % 3 === 0)
-    });
-
-    // it('provides forced args', () => {
-    //   options = [2,4];
-    //   let [selection, args, error] = testAction.forceArgs();
-    //   expect(selection).to.be.undefined;
-    //   expect(error).not.to.be.undefined;
-
-    //   options = [2,3,9];
-    //   [selection, args, error] = testAction.forceArgs();
-    //   expect(selection?.choices).to.deep.equal([3,9]);
-    //   expect(args).to.deep.equal([2]);
-    //   expect(error).to.be.undefined;
-
-    //   options = [2,3];
-    //   [selection, args, error] = testAction.forceArgs();
-    //   expect(selection).to.be.undefined
-    //   expect(args).to.deep.equal([2,3]);
-    //   expect(error).to.be.undefined;
-    // });
-  });
-
-  describe('isPossible', () => {
+  describe('getResolvedSelections', () => {
     let options: number[];
 
     it('tests choices', () => {
       testAction = action({ prompt: 'pick an even number' }).chooseFrom({ choices: [] });
-      console.log(testAction.getMoveTree());
-      expect(testAction.isPossible()).to.equal(false);
+      expect(testAction.getResolvedSelections()).to.be.undefined;
 
       testAction = action({ prompt: 'pick an even number' }).chooseFrom({ choices: [1] });
-      expect(testAction.isPossible()).to.equal(true);
+      expect(testAction.getResolvedSelections()?.length).to.equal(1);
     });
 
     it('tests bounds', () => {
       testAction = action({ prompt: 'pick an even number' }).chooseNumber({ min: -1, max: 0 });
-      console.log(testAction.getMoveTree());
-      expect(testAction.isPossible()).to.equal(true);
+      expect(testAction.getResolvedSelections()?.length).to.equal(1);
 
       testAction = action({ prompt: 'pick an even number' }).chooseNumber({ min: 0, max: -1 });
-      expect(testAction.isPossible()).to.equal(false);
+      expect(testAction.getResolvedSelections()).to.be.undefined;
     });
 
     it('resolves selection to determine viability', () => {
       testAction = action({ prompt: 'pick an even number' })
         .chooseFrom({ choices: () => options.filter(n => n % 2 === 0) })
-      console.log(testAction.getMoveTree());
 
       options = [1,2];
-      expect(testAction.isPossible()).to.equal(true);
+      expect(testAction.getResolvedSelections()?.length).to.equal(1);
       options = [1,3,5];
-      expect(testAction.isPossible()).to.equal(false);
+      expect(testAction.getResolvedSelections()).to.be.undefined;
     });
 
     it('resolves selection deeply to determine viability', () => {
@@ -120,12 +86,11 @@ describe('Actions', () => {
           min: (n: number) => n,
           max: 4
         });
-      console.log(testAction.getMoveTree());
 
       options = [1,8,9,10,11,4];
-      expect(testAction.isPossible()).to.equal(true);
+      expect(testAction.getResolvedSelections()?.length).to.equal(1);
       options = [1,8,9,10,11];
-      expect(testAction.isPossible()).to.equal(false);
+      expect(testAction.getResolvedSelections()).to.be.undefined;
     });
 
     it('does not fully resolve unbounded args', () => {
@@ -136,7 +101,69 @@ describe('Actions', () => {
           max: 4
         });
 
-      expect(testAction.isPossible()).to.equal(true);
+      expect(testAction.getResolvedSelections()?.length).to.equal(1);
+    });
+  });
+
+  describe('getResolvedSelections with skip/expand', () => {
+    let testAction: Action<any, any>;
+    beforeEach(() => {
+      testAction = action({ prompt: 'p' }).chooseFrom({
+        choices: ['oil', 'garbage']
+      }).chooseNumber({
+        max: r => r === 'oil' ? 3 : 1
+      });
+    });
+
+    it('shows first selection', () => {
+      const resolvedSelections = testAction.getResolvedSelections();
+      expect(resolvedSelections?.length).to.equal(1);
+      expect(resolvedSelections![0].selection.type).to.equal('choices');
+      expect(resolvedSelections![0].selection.choices).to.deep.equal(['oil', 'garbage']);
+    });
+
+    it('expands first selection', () => {
+      testAction.selections[0].expand = true;
+      const resolvedSelections = testAction.getResolvedSelections();
+      expect(resolvedSelections?.length).to.equal(2);
+      expect(resolvedSelections![0].selection.type).to.equal('number');
+      expect(resolvedSelections![1].selection.type).to.equal('number');
+    });
+
+    it('provides next selection', () => {
+      const resolvedSelections = testAction.getResolvedSelections('oil');
+      expect(resolvedSelections?.length).to.equal(1);
+      expect(resolvedSelections![0].selection.type).to.equal('number');
+      expect(resolvedSelections![0].args).to.deep.equal(['oil']);
+    });
+
+    it('skips next selection', () => {
+      const resolvedSelections = testAction.getResolvedSelections('garbage');
+      expect(resolvedSelections?.length).to.equal(1);
+      expect(resolvedSelections![0].selection.type).to.equal('number');
+      expect(resolvedSelections![0].args).to.deep.equal(['garbage']);
+    });
+
+    it('completes', () => {
+      const resolvedSelections = testAction.getResolvedSelections('oil', 2);
+      expect(resolvedSelections?.length).to.equal(0);
+    });
+
+    it('skips', () => {
+      testAction.selections[0].choices = ['oil'];
+      const resolvedSelections = testAction.getResolvedSelections();
+      expect(resolvedSelections?.length).to.equal(1);
+      expect(resolvedSelections![0].selection.type).to.equal('number');
+      expect(resolvedSelections![0].args).to.deep.equal(['oil']);
+    });
+
+    it('prevents skips', () => {
+      testAction.selections[0].choices = ['oil'];
+      testAction.selections[0].skipIfOnlyOne = false;
+      const resolvedSelections = testAction.getResolvedSelections();
+      expect(resolvedSelections?.length).to.equal(1);
+      expect(resolvedSelections![0].selection.type).to.equal('choices');
+      expect(resolvedSelections![0].selection.choices).to.deep.equal(['oil']);
     });
   });
 });

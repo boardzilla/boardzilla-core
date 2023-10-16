@@ -1,22 +1,18 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef } from 'react';
 import { gameStore } from '../';
 
 import Element from './components/Element';
 import PlayerControls from './components/PlayerControls';
 import '../styles/game.scss';
-import { serializeArg } from '../../game/action/utils';
 import click from '../assets/click_004.ogg';
 
 import type { GameElement } from '../../game/board'
-import type { PendingMove, Move, SerializedMove } from '../../game/action/types';
+import type { PendingMove, Argument } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
-export default ({ onMove, onError }: {
-  onMove: (m: SerializedMove) => void,
-  onError: (e?: string) => void
-}) => {
-  const [game, updateBoard, position, move, setMove, selected, setSelected, setDisambiguateElement, boardJSON] =
-    gameStore(s => [s.game, s.updateBoard, s.position, s.move, s.setMove, s.selected, s.setSelected, s.setDisambiguateElement, s.boardJSON]);
+export default () => {
+  const [game, position, move, selectMove, selected, setSelected, setDisambiguateElement, boardJSON] =
+    gameStore(s => [s.game, s.position, s.move, s.selectMove, s.selected, s.setSelected, s.setDisambiguateElement, s.boardJSON]);
 
   console.log('GAME', position);
 
@@ -31,38 +27,10 @@ export default ({ onMove, onError }: {
 
   console.log("RENDER GAME", move);
 
-  const submitMove = (move?: Move<Player>) => {
+  const submitMove = (pendingMove?: PendingMove<Player>, value?: Argument<Player>) => {
     console.log("processAction", move);
     clickAudio.current?.play();
-
-    if (!move?.action) { // cancel
-      setMove(undefined);
-      onError();
-      return updateBoard(); // optimally don't need to call
-    }
-    // TODO where does this go
-    // if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
-
-    // serialize now before we alter our state to ensure proper references
-    const serializedMove: SerializedMove = {
-      action: move.action,
-      args: move.args.map(a => serializeArg(a))
-    }
-
-    const {move: newMove, selection: newSelection, error} = game.processMove(move);
-    console.log('response', newMove, newSelection, error);
-    setSelected([]);
-
-    if (newSelection) {
-      onError(error);
-      setMove({ action: move.action, args: newMove.args, selection: newSelection });
-    } else {
-      console.log('success, submitting to server');
-      setMove(undefined);
-      onError();
-      updateBoard(); // optimally don't need to call
-      onMove(serializedMove);
-    }
+    selectMove(pendingMove, value);
   };
 
   const onSelectElement = (element: GameElement<Player>, moves: PendingMove<Player>[]) => {
@@ -73,11 +41,7 @@ export default ({ onMove, onError }: {
     const move = moves[0];
     if (move.selection?.type === 'board') {
       if (move.selection.min === undefined && move.selection.max === undefined) {
-        return submitMove({
-          action: move.action,
-          args: [...move.args, element],
-          player,
-        });
+        return submitMove(move, element);
       }
 
       const newSelected = selected.includes(element) ?
@@ -109,9 +73,7 @@ export default ({ onMove, onError }: {
         />
       </div>
       <div id="player-controls">
-        <PlayerControls
-          onSubmit={submitMove}
-        />
+        <PlayerControls onSubmit={submitMove} />
       </div>
     </div>
   );

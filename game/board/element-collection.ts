@@ -3,6 +3,7 @@ import {Piece, GameElement} from './'
 import {
   ElementClass,
   ElementFinder,
+  ElementUI,
 } from './types';
 import type { Sorter } from '../types';
 import type { Player } from '../player';
@@ -197,7 +198,7 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
     for (const el of this) el.layout(applyTo, attributes);
   }
 
-  appearance(appearance: T['_ui']['appearance']) {
+  appearance(appearance: ElementUI<P, T>['appearance']) {
     for (const el of this) el.appearance(appearance);
   }
 }

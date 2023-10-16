@@ -7,27 +7,20 @@ import type { Player } from '../../../game/player';
 import type {
   Argument,
   SerializedArg,
-  Move,
   PendingMove
 } from '../../../game/action/types';
 
-const PlayerControls = ({onSubmit}: { onSubmit: (move?: Move<Player>) => void }) => {
-  const [game, position, move, selected, prompt, pendingMoves] = gameStore(s => [s.game, s.position, s.move, s.selected, s.prompt, s.pendingMoves, s.boardJSON]);
+const PlayerControls = ({onSubmit}: { onSubmit: (move?: PendingMove<Player>, value?: Argument<Player>) => void }) => {
+  const [game, position, move, selected, pendingMoves, prompt] = gameStore(s => [s.game, s.position, s.move, s.selected, s.pendingMoves, s.prompt]);
   console.log('render PlayerControls', pendingMoves);
 
-  if (!game || !position) return null;
+  if (!game || !position || !pendingMoves?.length) return null;
   const player = game.players.atPosition(position);
   if (!player) return null;
 
   if (game.players.currentPosition && game.players.current() != player) {
-    return <div>{`Not my turn, waiting for ${game.players.current()!.name}`}</div>;
+    return <div className="prompt">{`Not my turn, waiting for ${game.players.current()!.name}`}</div>;
   }
-
-  // if we're in the middle of a move, ignore other options for now
-  let selections = move ? [move] : pendingMoves;
-  if (!selections.length) return null;
-  const boardSelections = selections.filter(s => s.selection?.type === 'board');
-  const topPrompt = (boardSelections.length === 1) ? boardSelections[0].selection?.prompt || prompt : prompt;
 
   const onSubmitForm = (e: React.FormEvent<HTMLFormElement>, pendingMove: PendingMove<Player>) => {
     e.preventDefault();
@@ -37,7 +30,7 @@ const PlayerControls = ({onSubmit}: { onSubmit: (move?: Move<Player>) => void })
     if (pendingMove.selection?.type === 'board' && (pendingMove.selection.min !== undefined || pendingMove.selection.max !== undefined)) {
       arg = selected;
     } else if (pendingMove.selection?.type === 'button') {
-      arg = pendingMove.selection.click;
+      arg = pendingMove.selection.value;
     } else {
       const value = new FormData(form, (e.nativeEvent as SubmitEvent).submitter).get('selection')?.toString();
       if (value) {
@@ -46,19 +39,16 @@ const PlayerControls = ({onSubmit}: { onSubmit: (move?: Move<Player>) => void })
         if (pendingMove.selection?.type === 'choices') arg = deserializeArg(arg as SerializedArg, game);
       }
     }
-    const moveToSubmit = {
-      action: pendingMove.action,
-      args: pendingMove.args,
-      player
-    };
-    if (arg) moveToSubmit.args.push(arg);
-    onSubmit(moveToSubmit);
+    onSubmit(pendingMove, arg);
   }
+
+  const boardPrompts = pendingMoves.map(m => m.selection.type === 'board' ? m.selection.prompt : undefined).filter(p => p);
+  const boardPrompt = new Set(boardPrompts).size === 1 ? boardPrompts[0] : prompt;
 
   return (
     <div>
-      <div className="prompt">{topPrompt}</div>
-      {selections.map(pendingMove => (
+      <div className="prompt">{boardPrompt}</div>
+      {pendingMoves.map(pendingMove => (
         <form key={pendingMove.action} id={pendingMove.action} onSubmit={e => onSubmitForm(e, pendingMove)}>
           <div>
             {pendingMove.selection.type === 'choices' && pendingMove.selection.choices && <>{
@@ -98,7 +88,7 @@ const PlayerControls = ({onSubmit}: { onSubmit: (move?: Move<Player>) => void })
               <button type="submit">{pendingMove.selection.prompt}</button>
             )}
 
-            {pendingMove && pendingMove.args.length > 1 && selections.length === 1 && (
+            {move && (
               <>
                 <button onClick={() => onSubmit()}>Cancel</button>
               </>

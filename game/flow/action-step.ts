@@ -3,15 +3,15 @@ import { serializeArg, deserializeArg } from '../action/utils';
 
 import type { ActionStepPosition, FlowBranchNode, FlowDefinition } from './types';
 import type { Player } from '../player';
-import type { ResolvedSelection } from '../action/types';
+import type { PendingMove } from '../action/types';
 
 export default class ActionStep<P extends Player> extends Flow<P> {
   position: ActionStepPosition<P>;
   actions: Record<string, FlowDefinition<P> | null>;
   type: FlowBranchNode<P>['type'] = "action";
-  prompt?: string;
-  skipIfOnlyOne?: boolean;
-  expand?: boolean;
+  prompt?: string; // needed if multiple board actions
+  skipIfOnlyOne: boolean;
+  expand: boolean;
 
   constructor({ name, actions, prompt, expand, skipIfOnlyOne }: {
     name?: string,
@@ -23,8 +23,8 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     super({ name });
     this.actions = actions;
     this.prompt = prompt;
-    this.expand = expand;
-    this.skipIfOnlyOne = skipIfOnlyOne;
+    this.expand = expand ?? true;
+    this.skipIfOnlyOne = skipIfOnlyOne ?? false;
   }
 
   reset() {
@@ -43,7 +43,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     }
   }
 
-  processMove(move: Required<ActionStepPosition<P>>) {
+  processMove(move: Required<ActionStepPosition<P>>): string | undefined {
     if (!(move.action in this.actions)) throw Error(`No action ${move.action} available at this point. Waiting for ${Object.keys(this.actions).join(", ")}`);
     const game = this.game;
 
@@ -53,10 +53,10 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
     const player = game.players.atPosition(move.player)!;
     const gameAction = game.action(move.action, player);
-    const response = gameAction.process(...move.args);
-    if (response[0]) {
+    const error = gameAction.process(...move.args);
+    if (error) {
       // failed with a selection required
-      return response;
+      return error;
     } else {
       // succeeded
       this.setPosition(move);
@@ -68,7 +68,6 @@ export default class ActionStep<P extends Player> extends Flow<P> {
           game.message(message, ...move.args, {player});
         }
       }
-      return [] as [ResolvedSelection<P>?]
     }
   }
 

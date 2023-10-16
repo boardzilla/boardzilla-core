@@ -32,11 +32,6 @@ export type PendingMove<P extends Player> = {
   selection: ResolvedSelection<P>,
 };
 
-export type MoveTree<P extends Player> = {
-  move: PendingMove<P>,
-  submoves: MoveTree<P>[]
-}
-
 export type SerializedMove = {
   action: string,
   args: SerializedArg[]
@@ -81,31 +76,31 @@ export type SelectionDefinition<P extends Player> = {
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices: ChoiceSelection<P>;
   selectNumber?: never;
   enterText?: never;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber: NumberSelection<P>;
   enterText?: never;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText: TextSelection<P>;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
-  click: ButtonSelection<P>;
+  value: ButtonSelection<P>;
 });
 
 export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp'> & {

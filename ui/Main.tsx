@@ -5,6 +5,7 @@ import Setup from './setup/Setup';
 import type { SetupFunction } from '../game/types'
 import type { Player } from '../game'
 import type { Board } from '../game/board'
+import { serializeArg } from '../game/action/utils';
 
 import type {
   User,
@@ -28,7 +29,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
   maxPlayers: number,
   setup: SetupFunction<Player, Board<Player>>
 }) => {
-  const [game, setGame, position, setPosition, updateBoard] = gameStore(s => [s.game, s.setGame, s.position, s.setPosition, s.updateBoard]);
+  const [game, setGame, move, selectMove, pendingMoves, position, setPosition, updateBoard] = gameStore(s => [s.game, s.setGame, s.move, s.selectMove, s.pendingMoves, s.position, s.setPosition, s.updateBoard]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
   const [phase, setPhase] = useState<string>();
@@ -65,7 +66,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
         game.setState(data.state.state);
         newGame = game;
       }
-      newGame.contextualizeBoardToPlayer(newGame.players.atPosition(data.state.position));
       if (!position) setPosition(data.state.position)
       if (newGame !== game) setGame(newGame);
       updateBoard(data.state.state.board);
@@ -92,15 +92,40 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
     return () => window.removeEventListener('message', listener)
   }, [listener])
 
-  const move = (move: SerializedMove) => {
-    moves.push((error: string) => console.error(`move ${move} failed: ${error}`));
-    const message: MoveMessage = {
-      type: "move",
-      id: String(moves.length),
-      data: move
-    };
-    window.top!.postMessage(message, "*");
-  };
+  useEffect(() => {
+    if (game && position && move && pendingMoves?.length === 0) { // move is processable
+      // TODO where does this go
+      // if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
+
+      const player = game.players.atPosition(position);
+      if (!player) return;
+
+      // serialize now before we alter our state to ensure proper references
+      const serializedMove: SerializedMove = {
+        action: move.action,
+        args: move.args.map(a => serializeArg(a))
+      }
+
+      console.log('processable move attempt', move);
+      const error = game.processMove({ player, ...move });
+      updateBoard();
+
+      if (error) {
+        console.error(error);
+        setError(error);
+      } else {
+        console.log('success, submitting to server');
+        moves.push((error: string) => console.error(`move ${move} failed: ${error}`));
+        const message: MoveMessage = {
+          type: "move",
+          id: String(moves.length),
+          data: serializedMove
+        };
+        window.top!.postMessage(message, "*");
+      };
+      selectMove();
+    }
+  }, [game, position, move, pendingMoves]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
     //console.log('update settings', settings);
@@ -133,22 +158,22 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
 
   console.log('RENDER MAIN', phase);
 
-  return <>
-    {phase === 'new' &&
-     <Setup
-       users={users}
-       minPlayers={minPlayers}
-       maxPlayers={maxPlayers}
-       players={players}
-       settings={settings}
-       onUpdatePlayers={updatePlayers}
-       onUpdateSettings={updateSettings}
-       onStart={start}
-     />
-    }
-    {phase === 'started' &&
-     <Game onMove={move} onError={catchError}/>
-    }
-    {error && <div className="error">{error}</div>}
-  </>
+  return (
+    <>
+      {phase === 'new' &&
+        <Setup
+          users={users}
+          minPlayers={minPlayers}
+          maxPlayers={maxPlayers}
+          players={players}
+          settings={settings}
+          onUpdatePlayers={updatePlayers}
+          onUpdateSettings={updateSettings}
+          onStart={start}
+        />
+      }
+      {phase === 'started' && <Game/>}
+      {error && <div className="error">{error}</div>}
+    </>
+  );
 }

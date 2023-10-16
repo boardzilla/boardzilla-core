@@ -6,18 +6,21 @@ import spies from 'chai-spies';
 
 import {
   Game,
-  Board,
-  Space,
-  Piece,
   Player,
   Flow,
   action
 } from '../';
 
 import {
-  PlayerAction,
-  WhileLoop,
-  EachPlayer,
+  Board,
+  Space,
+  Piece,
+} from '../board';
+
+import {
+  playerActions,
+  whileLoop,
+  eachPlayer,
 } from '../flow';
 
 chai.use(spies);
@@ -53,15 +56,15 @@ describe('Game', () => {
         board.tokens = 4;
         game.message('Starting game with $1 tokens', board.tokens);
       },
-      new WhileLoop({ while: () => board.tokens < 8, do: (
-        new PlayerAction({ actions: {
+      whileLoop({ while: () => board.tokens < 8, do: (
+        playerActions({ actions: {
           addSome: null,
           spend: null
         }})
       )}),
-      new WhileLoop({ while: () => board.tokens > 0, do: (
-        new EachPlayer({ name: 'player', do: (
-          new PlayerAction({ actions: {
+      whileLoop({ while: () => board.tokens > 0, do: (
+        eachPlayer({ name: 'player', do: (
+          playerActions({ actions: {
             takeOne: null,
           }})
         )})
@@ -98,6 +101,7 @@ describe('Game', () => {
     game.start();
     game.setState({
       players,
+      rseed: '',
       settings: {},
       board: [ { className: 'TestBoard', tokens: 0 } ],
       position: [ { type: 'sequence', name: 'main', sequence: 0 } ],
@@ -145,6 +149,7 @@ describe('Game', () => {
       game.setState({
         players,
         currentPlayerPosition: 2,
+        rseed: '',
         settings: {},
         position: [
           { type: 'sequence', name: 'main', sequence: 2 },

@@ -11,7 +11,7 @@ import type { Game, Player } from '../game'
 import type { Board, GameElement } from '../game/board'
 import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
-import type { PendingMove } from '../game/action/types'
+import type { Argument, Move, PendingMove, SerializedMove } from '../game/action/types'
 
 const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
 const userID: string = boostrap.userID;
@@ -23,12 +23,13 @@ type GameStore = {
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes
   setGame: (g: Game<Player, Board<Player>>) => void; // will call once on first server update to set the client instance
   updateBoard: (boardJSON?: ElementJSON[]) => void; // call any time state changes to update immutable references for listeners. updates move, selections
+  updateSelections: (move?: {action: string, args: Argument<Player>[]}) => void; // refresh move and selections
   position?: number; // this player
   setPosition: (p: number) => void;
-  move?: PendingMove<Player>; // move in progress
-  setMove: (m?: PendingMove<Player>) => void;
+  move?: {action: string, args: Argument<Player>[]}; // move in progress
+  selectMove: (sel?: PendingMove<Player>, arg?: Argument<Player>) => void;
+  pendingMoves?: PendingMove<Player>[]; // all pending moves
   boardSelections: Map<GameElement<Player>, PendingMove<Player>[]>; // pending moves on board
-  pendingMoves: PendingMove<Player>[]; // pending moves not on board
   prompt?: string; // prompt for choosing action if applicable
   selected: GameElement<Player>[]; // selected elements on board
   setSelected: (s: GameElement<Player>[]) => void;
@@ -53,27 +54,37 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       boardJSON: game.board.allJSON()
     });
   },
-  // function to ensure react detects a change. must be called immediately after any function that alters game state
+  // function to ensure react detects a change. must be called immediately after any function that alters board state
   updateBoard: (boardJSON?: ElementJSON[]) => set(s => {
+    if (!s.game || !s.position) return {};
+
+    console.log('updateBoard');
+    // rerun layouts. probably optimize TODO
+    s.game.contextualizeBoardToPlayer(s.game.players.atPosition(s.position));
+    if (s.game.setupLayout) s.game.setupLayout(s.game.board, window.innerWidth / window.innerHeight);
+    s.game.board.applyLayouts();
+
+    s.updateSelections(s.move);
+
+    return ({
+      boardJSON: boardJSON || s.game.board.allJSON()
+    })
+  }),
+  updateSelections: move => set(s => {
     if (!s.game || !s.position) return {};
     const player = s.game.players.atPosition(s.position);
     if (!player) return {};
-    const {prompt, actions} = s.game.allowedActions(player);
-    const pendingMoves: PendingMove<Player>[] = [];
-    if (actions) for (const action of actions) {
-      const [selection, forcedArgs] = s.game!.action(action, player).forceArgs();
-      if (selection) pendingMoves.push({
-        action,
-        args: forcedArgs || [],
-        selection
-      });
+
+    let error: string | undefined = undefined;
+    let resolvedSelections = s.game.getResolvedSelections(player, move?.action, ...(move?.args || []));
+    if (move && !resolvedSelections?.moves) {
+      console.log('move may no longer be valid. retrying getResolvedSelections');
+      move = undefined;
+      resolvedSelections = s.game.getResolvedSelections(player);
     }
 
-    let move = s.move;
-    if (move?.action && (!actions || !(move.action in actions))) move = undefined; // move in progress is no longer valid
-
     const boardSelections = new Map<GameElement<Player>, PendingMove<Player>[]>();
-    for (const p of pendingMoves) {
+    if (resolvedSelections) for (const p of resolvedSelections.moves) {
       if (p.selection.type === 'board') {
         for (const el of p.selection.boardChoices!) {
           boardSelections.get(el)?.push(p) || boardSelections.set(el, [p]);
@@ -81,21 +92,23 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       }
     }
 
-    // rerun layouts. probably optimize TODO
-    if (s.game.setupLayout) s.game.setupLayout(s.game.board, window.innerWidth / window.innerHeight);
-    s.game.board.applyLayouts();
-
-    console.log('updateBoard', s.position, move, boardSelections, pendingMoves);
+    console.log('updateSelections', move, resolvedSelections);
     return ({
       move,
+      prompt: resolvedSelections?.prompt,
       boardSelections,
-      pendingMoves,
-      prompt,
-      boardJSON: boardJSON || s.game.board.allJSON()
+      pendingMoves: resolvedSelections?.moves,
     })
   }),
+  selectMove: (pendingMove?: PendingMove<Player>, arg?: Argument<Player>) => set(s => {
+    const move = pendingMove && arg ? {
+      action: pendingMove.action,
+      args: [...pendingMove.args, arg]
+    } : undefined;
+    s.updateSelections(move);
+    return {};
+  }),
   setPosition: position => set({ position }),
-  setMove: move => set({ move }),
   actions: [],
   boardSelections: new Map(),
   pendingMoves: [],

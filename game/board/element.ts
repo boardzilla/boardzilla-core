@@ -367,7 +367,7 @@ export default class GameElement<P extends Player> {
    * UI
    */
 
-  _ui: ElementUI<P, this> = {
+  _ui: ElementUI<P, GameElement<P>> = {
     layouts: [{
       applyTo: GameElement,
       attributes: {
@@ -798,7 +798,7 @@ export default class GameElement<P extends Player> {
     };
   }
 
-  appearance(appearance: typeof this._ui.appearance) {
+  appearance(appearance: ElementUI<P, this>['appearance']) {
     Object.assign(this._ui.appearance, appearance);
   }
 }

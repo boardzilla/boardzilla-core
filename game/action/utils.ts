@@ -6,7 +6,7 @@ import type {
   Argument,
   SingleArgument,
   SerializedArg,
-  SerializedSingleArg
+  SerializedSingleArg,
 } from './types';
 import type { Game } from '../';
 import type { Board } from '../board';
