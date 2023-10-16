@@ -3,6 +3,7 @@ import {Piece, GameElement} from './'
 import {
   ElementClass,
   ElementFinder,
+  ElementUI,
 } from './types';
 import type { Sorter } from '../types';
 import type { Player } from '../player';
@@ -191,13 +192,13 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
 
   // UI
   layout(
-    applyTo: GameElement<P>['_ui']['layouts'][number]['applyTo'],
-    attributes: Partial<GameElement<P>['_ui']['layouts'][number]['attributes']> | null
+    applyTo: T['_ui']['layouts'][number]['applyTo'],
+    attributes: Partial<GameElement<P>['_ui']['layouts'][number]['attributes']>
   ) {
     for (const el of this) el.layout(applyTo, attributes);
   }
 
-  appearance(component: (el: T) => JSX.Element) {
-    for (const el of this) el._ui.component = component;
+  appearance(appearance: ElementUI<P, T>['appearance']) {
+    for (const el of this) el.appearance(appearance);
   }
 }

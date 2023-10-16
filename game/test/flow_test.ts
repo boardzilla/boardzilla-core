@@ -24,7 +24,7 @@ const { expect } = chai;
 describe('Flow', () => {
   const stepSpy1 = chai.spy();
   const stepSpy2 = chai.spy();
-  const actionSpy = chai.spy(() => []);
+  const actionSpy = chai.spy(() => {});
   const playSpy = chai.spy((a:any) => {a});
   const testFlow = new Flow({ name: 'test', do: [
     stepSpy1,
@@ -46,7 +46,7 @@ describe('Flow', () => {
     () => {}
   ]});
   // @ts-ignore mock game
-  testFlow.game = { flow: testFlow, players: { currentPosition: 1, atPosition: () => {} }, action: a => ({ play: { process: actionSpy }, pass: { process: () => [] } }[a]) };
+  testFlow.game = { flow: testFlow, players: { currentPosition: 1, atPosition: () => {} }, action: a => ({ play: { process: actionSpy }, pass: { process: () => {} } }[a]) };
 
   beforeEach(() => {
     testFlow.reset();
@@ -123,7 +123,7 @@ describe('Flow', () => {
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
       { type: 'action', name: 'play-or-pass', position: {} }
     ]);
-    testFlow.processMove({ action: 'play', args: ['violin'], player: 1 });
+    console.log(testFlow.processMove({ action: 'play', args: ['violin'], player: 1 }));
     expect(actionSpy).to.have.been.called();
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: "sequence", name: "test", sequence: 3 },
@@ -196,7 +196,7 @@ describe('Loop', () => {
   const stepSpy2 = chai.spy((x:number) => x);
   let counter = 10;
   const loop = whileLoop({ while: () => counter < 13, do: (
-    (a) => { stepSpy1(counter); counter += 1; }
+    () => { stepSpy1(counter); counter += 1; }
   )});
 
   const nonLoop = forLoop({ name: 'nonloop', initial: 0, next: loop => loop + 1, while: loop => loop < 0, do: (
@@ -359,7 +359,7 @@ describe('Loop', () => {
 describe('Loop short-circuiting', () => {
   it('can repeat', () => {
     const stepSpy1 = chai.spy((x:number) => x === 12 ? repeat() : undefined);
-    const stepSpy2 = chai.spy((s: string, x:number) => x);
+    const stepSpy2 = chai.spy((_: string, x:number) => x);
     const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
       ({ loop }) => stepSpy2('start', loop),
       ({ loop }) => stepSpy1(loop),
@@ -390,7 +390,7 @@ describe('Loop short-circuiting', () => {
 
   it('can skip', () => {
     const stepSpy1 = chai.spy((x:number) => x === 12 ? skip() : undefined);
-    const stepSpy2 = chai.spy((s: string, x:number) => x);
+    const stepSpy2 = chai.spy((_: string, x:number) => x);
     const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
       ({ loop }) => stepSpy2('start', loop),
       ({ loop }) => stepSpy1(loop),

@@ -1,22 +1,23 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { gameStore } from '../';
 
-import Board from './components/Board';
+import Element from './components/Element';
 import PlayerControls from './components/PlayerControls';
 import '../styles/game.scss';
-import { serializeArg } from '../../game/action/utils';
+import click from '../assets/click_004.ogg';
 
 import type { GameElement } from '../../game/board'
-import type { Move, SerializedMove } from '../../game/action/types';
+import type { PendingMove, Argument } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
-export default ({ onMove, onError }: {
-  onMove: (m: SerializedMove) => void,
-  onError: (e?: string) => void
-}) => {
-  const [game, updateBoard, position, move, setMove, selection, setSelection, selected, setSelected, hilites] = gameStore(s => [s.game, s.updateBoard, s.position, s.move, s.setMove, s.selection, s.setSelection, s.selected, s.setSelected, s.hilites]);
+export default () => {
+  const [game, position, move, selectMove, selected, setSelected, setDisambiguateElement, boardJSON] =
+    gameStore(s => [s.game, s.position, s.move, s.selectMove, s.selected, s.setSelected, s.setDisambiguateElement, s.boardJSON]);
 
   console.log('GAME', position);
+
+  const clickAudio = useRef<HTMLAudioElement>(null);
+
   if (!game || !position) return null;
   const player = game.players.atPosition(position);
   if (!player) {
@@ -24,76 +25,56 @@ export default ({ onMove, onError }: {
     return null;
   }
 
-  let clickables: GameElement<Player>[] = [];
+  console.log("RENDER GAME", move);
 
-  console.log("RENDER GAME", move, selection);
-
-  if (selection?.type === 'board') clickables = selection.boardChoices;
-
-  const submitMove = (move?: Move<Player>) => {
+  const submitMove = (pendingMove?: PendingMove<Player>, value?: Argument<Player>) => {
     console.log("processAction", move);
-    if (!move?.action) {
-      setMove({ player, args: [] });
-      onError();
-      return updateBoard();
-    }
-    if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
-
-    // serialize now before we alter our state to ensure proper references
-    const serializedMove: SerializedMove = {
-      action: move.action,
-      args: move.args.map(a => serializeArg(a))
-    }
-
-    const {move: newMove, selection: newSelection, error} = game.processMove(move);
-    console.log('response', newMove, newSelection, error);
-    setSelected([]);
-
-    if (newSelection) {
-      onError(error);
-      setSelection(newSelection);
-      setMove(newMove);
-    } else {
-      console.log('success, submitting to server');
-      setMove(undefined);
-      onError();
-      setSelection(undefined);
-      updateBoard();
-      onMove(serializedMove);
-    }
+    clickAudio.current?.play();
+    selectMove(pendingMove, value);
   };
 
-  const onSelectElement = (element: GameElement<Player>) => {
-    const newSelected = selected.includes(element) ?
-          selected.filter(s => s !== element) :
-          selected.concat([element]);
-    if (selection?.type === 'board' && move?.action) {
-      setSelected(newSelected)
-      if (selection?.min === undefined &&
-          selection?.max === undefined &&
-          newSelected.length === 1) {
-        submitMove({
-          action: move.action,
-          args: [...move.args, newSelected[0]],
-          player,
-        })
+  const onSelectElement = (element: GameElement<Player>, moves: PendingMove<Player>[]) => {
+    clickAudio.current?.play();
+
+    if (moves.length === 0) return;
+    if (moves.length > 1) return setDisambiguateElement({ element, moves });
+    const move = moves[0];
+    if (move.selection?.type === 'board') {
+      if (move.selection.min === undefined && move.selection.max === undefined) {
+        return submitMove(move, element);
       }
+
+      const newSelected = selected.includes(element) ?
+        selected.filter(s => s !== element) :
+        selected.concat([element]);
+      setSelected(newSelected);
+    }
+  }
+
+  let width = 100;
+  let height = 100;
+  if (game.board._ui.appearance.aspectRatio) {
+    if (game.board._ui.appearance.aspectRatio > 0) {
+      width *= game.board._ui.appearance.aspectRatio;
+    } else {
+      height /= game.board._ui.appearance.aspectRatio;
     }
   }
 
   return (
-    <div>
-      <Board
-        clickables={clickables}
-        hilites={hilites}
-        selected={selected}
-        onSelectElement={onSelectElement}
-      />
-      <PlayerControls
-        move={move}
-        selection={selection}
-        onSubmit={submitMove}
-      />
+    <div id="game" style={{ position: 'relative', width: width + 'vmin', height: height + 'vmin' }}>
+      <audio ref={clickAudio} src={click} id="click"/>
+      <div id="play-area" className={true ? 'fixed' : 'fluid'} style={{width: '100%', height: '100%'}}>
+        <Element
+          element={game.board}
+          json={boardJSON[0]}
+          selected={selected}
+          onSelectElement={onSelectElement}
+        />
+      </div>
+      <div id="player-controls">
+        <PlayerControls onSubmit={submitMove} />
+      </div>
     </div>
   );
 }

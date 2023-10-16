@@ -2,7 +2,12 @@ import { Player } from '../player';
 import { GameElement } from '../board';
 import type { Serializable } from './types';
 
-import type { Argument, SingleArgument, SerializedArg, SerializedSingleArg } from './types';
+import type {
+  Argument,
+  SingleArgument,
+  SerializedArg,
+  SerializedSingleArg,
+} from './types';
 import type { Game } from '../';
 import type { Board } from '../board';
 

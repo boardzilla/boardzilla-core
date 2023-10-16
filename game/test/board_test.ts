@@ -8,9 +8,12 @@ import {
   Space,
   Piece,
   GameElement,
+} from '../board';
+
+import {
   Player,
   PlayerCollection,
-} from '../';
+} from '../player';
 
 chai.use(spies);
 const { expect } = chai;

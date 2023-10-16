@@ -1,5 +1,7 @@
-import { Player, Board } from '../';
+import { Player } from '../';
+import { Board } from '../board';
 
+import type ActionStep from './action-step';
 import type {
   Position,
   FlowStep,
@@ -8,7 +10,7 @@ import type {
   FlowBranchJSON,
   ActionStepPosition
 } from './types';
-import type { ResolvedSelection, Argument } from '../action/types';
+import type { PendingMove } from '../action/types';
 import type { Game } from '../';
 
 export default class Flow<P extends Player> {
@@ -106,12 +108,20 @@ export default class Flow<P extends Player> {
     return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function };
   }
 
-  actionNeeded(): string[] | void {
-    const flow = this.currentFlow();
-    if ('awaitingAction' in flow) return (flow.awaitingAction as () => string[] | void)();
+  actionNeeded(): {prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
+    const flow = this.currentFlow() as ActionStep<P>;
+    if ('awaitingAction' in flow) {
+      const actions = flow.awaitingAction();
+      if (actions) return {
+        prompt: flow.prompt,
+        actions,
+        skipIfOnlyOne: flow.skipIfOnlyOne,
+        expand: flow.expand,
+      };
+    }
   }
 
-  processMove(move: ActionStepPosition<P>): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
+  processMove(move: ActionStepPosition<P>): string | undefined {
     const step = this.currentFlow();
     if (!step || step.type !== 'action') throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);
     return step.processMove(move);
@@ -139,7 +149,7 @@ export default class Flow<P extends Player> {
       }
     } else if (step instanceof Flow) {
       const actions = step.actionNeeded();
-      if (actions) return actions;
+      if (actions?.actions) return actions.actions;
       const result = step.playOneStep();
       if (result !== 'complete') return result;
     }

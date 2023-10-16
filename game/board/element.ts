@@ -10,6 +10,7 @@ import type {
   ElementClass,
   ElementFinder,
   ElementJSON,
+  ElementUI,
   Box,
   Vector
 } from './types';
@@ -366,41 +367,7 @@ export default class GameElement<P extends Player> {
    * UI
    */
 
-  static aspectRatio: number;
-  _ui: {
-    //position?: { left: number, top: number }, // absolute %
-    //size?: { width: number, height: number }, // absolute %
-    //aspectRatio?: number,
-    layouts: {
-      applyTo: ElementClass<P, GameElement<P>> | GameElement<P> | ElementCollection<P, GameElement<P>> | string,
-      attributes: {
-        margin?: number | { top: number, bottom: number, left: number, right: number },
-        area?: Box,
-        rows?: number | {min: number, max?: number} | {min?: number, max: number},
-        columns?: number | {min: number, max?: number} | {min?: number, max: number},
-        slots?: Box[],
-        size?: { width: number, height: number },
-        aspectRatio?: number, // w / h
-        scaling: 'fit' | 'fill' | 'none'
-        gap?: number | { x: number, y: number },
-        offsetColumn?: Vector,
-        offsetRow?: Vector,
-        direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
-        limit?: number,
-        haphazardly?: number,
-      } | null
-    }[],
-    component?: (el: GameElement<P>) => JSX.Element | null,
-    showConnections?: {
-      thickness?: number,
-      style?: string,
-      color?: string,
-      fill?: string,
-      label?: (arg: any) => JSX.Element | null,
-      labelScale?: number,
-    },
-    computedStyle?: Box
-  } = {
+  _ui: ElementUI<P, GameElement<P>> = {
     layouts: [{
       applyTo: GameElement,
       attributes: {
@@ -410,6 +377,7 @@ export default class GameElement<P extends Player> {
         direction: 'square'
       }
     }],
+    appearance: {}
   }
 
   // viewport relative to the board
@@ -418,25 +386,23 @@ export default class GameElement<P extends Player> {
     let parent = this._t.parent;
     while (parent?._ui.computedStyle) {
       transform = translate(transform, parent._ui.computedStyle)
+      if ('frame' in parent?._ui) transform = translate(transform, parent._ui.frame as Box)
       parent = parent._t.parent;
     }
     return transform;
   }
 
-  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']> | null) {
-    if (attributes) {
-      const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
-      if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
-      if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
-      if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
-      if (!size) {
-        if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
-        if (!scaling) attributes.scaling = 'fit';
-      }
-      this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', direction: 'square' }, attributes) });
-    } else {
-      this._ui.layouts.push({ applyTo, attributes });
+  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']>) {
+    const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
+    if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
+    if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
+    if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
+    if (!size) {
+      if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
+      if (!scaling) attributes.scaling = 'fit';
     }
+    this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', direction: 'square' }, attributes) });
+
     this._ui.layouts.sort((a, b) => {
       let aVal = 0, bVal = 0;
       if (a.applyTo instanceof GameElement) aVal = 3
@@ -457,6 +423,8 @@ export default class GameElement<P extends Player> {
 
   // recalc all elements computedStyle
   applyLayouts(force=false) {
+    if (this._ui.appearance.render === false) return;
+
     if (!this._ui.computedStyle) {
       force = true;
       this._ui.computedStyle = { left: 0, top: 0, width: 100, height: 100 };
@@ -467,7 +435,6 @@ export default class GameElement<P extends Player> {
 
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
       const { attributes } = this._ui.layouts[l];
-      if (!attributes) continue;
       let children = layoutItems[l];
       if (!children) continue;
 
@@ -562,10 +529,17 @@ export default class GameElement<P extends Player> {
           size = cellSizeForArea(rows, columns, area, cellGap, offsetColumn, offsetRow);
 
           if (!aspectRatio) {
-            const childAspectRatios = children.map(c => (c.constructor as typeof GameElement<P>).aspectRatio).filter(c => c);
-            if (childAspectRatios.length) {
-              const maxRatio = Math.max(...childAspectRatios);
-              const minRatio = Math.min(...childAspectRatios);
+            // find all aspect ratios of child elements and choose best fit
+            let minRatio = Infinity;
+            let maxRatio = 0;
+            for (const c of children) {
+              const r = c._ui.appearance.aspectRatio;
+              if (r !== undefined) {
+                if (r < minRatio) minRatio = r;
+                if (r > maxRatio) maxRatio = r;
+              }
+            }
+            if (minRatio < Infinity || maxRatio > 0) {
               if (maxRatio > 1 && minRatio < 1) aspectRatio = 1;
               else if (minRatio > 1) aspectRatio = minRatio;
               else aspectRatio = maxRatio;
@@ -718,7 +692,7 @@ export default class GameElement<P extends Player> {
         const box = cellBox(i);
         if (!box) continue;
         const child = children[i];
-        let aspectRatio = (child.constructor as typeof GameElement<P>).aspectRatio;
+        let aspectRatio = child._ui.appearance.aspectRatio;
         if (aspectRatio) aspectRatio *= absoluteTransform.height / absoluteTransform.width;
 
         let { width, height } = box;
@@ -824,11 +798,7 @@ export default class GameElement<P extends Player> {
     };
   }
 
-  appearance(component: (el: this) => JSX.Element | null) {
-    this._ui.component = component;
-  }
-
-  showConnections(attributes?: typeof this._ui.showConnections) {
-    this._ui.showConnections = attributes;
+  appearance(appearance: ElementUI<P, this>['appearance']) {
+    Object.assign(this._ui.appearance, appearance);
   }
 }

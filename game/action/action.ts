@@ -5,6 +5,7 @@ import type {
   ResolvedSelection,
   BoardQueryMulti,
   BoardQuerySingle,
+  PendingMove,
 } from './types';
 import type { GameElement, Piece } from '../board/';
 import type { Player } from '../player';
@@ -16,6 +17,7 @@ import type { Player } from '../player';
  * - accepting player Arguments and altering board state
  */
 export default class Action<P extends Player, A extends Argument<P>[]> {
+  name?: string;
   prompt: string;
   selections: Selection<P>[] = [];
   moves: ((...args: Argument<P>[]) => void)[] = [];
@@ -33,85 +35,87 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   }
 
   isPossible(): boolean {
-    if ((typeof this.condition === 'function' ? this.condition() : this.condition) === false) return false;
-    const selections = this.selections;
-    if (selections.length === 0) return true;
+    return typeof this.condition === 'function' ? this.condition() : this.condition ?? true;
+  }
 
-    // easy shortcircuit if any selection is already resolved to an impossibility
-    if (selections.some(s => s.isResolved() && !s.isPossible())) return false;
-    const selection = selections[0].resolve();
-    if (selection.isUnbounded()) return true;
-    return selections[0].resolve().options().some(o => this.nextSelection(o));
+  // given a set of args, return sub-selections possible trying each possible next arg
+  // return undefined if these args are impossible
+  getResolvedSelections(...args: Argument<P>[]): PendingMove<P>[] | undefined {
+    const selection = this.nextSelection(...args);
+    if (!selection) return [];
+
+    const move = {
+      action: this.name!,
+      args,
+      selection
+    };
+
+    if (!selection.isPossible()) return;
+    if (selection.isUnbounded()) return [move];
+
+    let possibleOptions: Argument<P>[] = [];
+    let pruned = false;
+    let resolvedSelections: PendingMove<P>[] = [];
+    let mayExpand = selection.expand;
+    for (const option of selection.options()) {
+      const submoves = this.getResolvedSelections(...args, option);
+      if (submoves === undefined) {
+        pruned = true;
+      } else {
+        possibleOptions.push(option);
+        if (selection.expand && submoves.length === 0) mayExpand = false; // TODO smarter expansion needed when triggered/optional selections are added
+        resolvedSelections = resolvedSelections.concat(submoves);
+      }
+    }
+    if (!possibleOptions.length) return undefined;
+    if (pruned) selection.overrideOptions(possibleOptions);
+    if (!resolvedSelections.length) return [move];
+    if (mayExpand) return resolvedSelections;
+    if (selection.skipIfOnlyOne && possibleOptions.length === 1) return resolvedSelections;
+    return [move];
   }
 
   /**
-   * given a partial arg list, returns a selection object for continuation.
-   * returns false if no continuation. returns true if no further
-   * selection required.
+   * given a partial arg list, returns a selection object for continuation if one exists.
    */
-  nextSelection(...args: Argument<P>[]): ResolvedSelection<P> | boolean {
-    const selections = this.selections.slice(args.length);
-    if (selections.length === 0) return true;
-    const selection = selections[0].resolve(...args);
-
-    if (selection.isUnbounded()) return selection;
-    if (!selection.isPossible()) return false;
-    const lastUnresolved = [...selections].reverse().find(s => !s.isResolved());
-    if (!lastUnresolved) return selection;
-    const depth = selections.indexOf(lastUnresolved);
-    if (depth <= 0) return selection;
-
-    const options = selection.options();
-    const viableOptions = options.filter(o => this.nextSelection(...args, o));
-    if (viableOptions.length < (selection.min || 1)) return false;
-    if (viableOptions.length === options.length) return selection;
-    return selection.overrideOptions(viableOptions);
+  nextSelection(...args: Argument<P>[]): ResolvedSelection<P> | undefined {
+    const selection = this.selections[args.length];
+    if (selection) {
+      selection.prompt ??= [...this.selections.slice(0, args.length)].reverse().find(s => s.prompt)?.prompt || this.prompt;
+      return selection.resolve(...args);
+    }
   }
 
-  // validate args and truncate if invalid, append any add'l args that are
-  // forced and return next selection. return error if args fail validation. no
-  // selection and no error means args are validated and processable
-  forceArgs(...args: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
+  /**
+   * process this action with supplied args. returns error if any
+   */
+  process(...args: Argument<P>[]): string | undefined {
+    // truncate invalid args - is this needed?
     let error: string | undefined = undefined;
-
-    // truncate invalid args
-    for (let i = 0; i !== args.length; i++) {
-      if (!this.selections[i] || this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[])) {
+    for (let i = 0; i !== this.selections.length && i !== args.length; i++) {
+      error = this.selections[i].validate(args[i], args.slice(0, i) as Argument<P>[]);
+      if (error) {
+        console.error('invalid arg', args[i], i, error);
         args = args.slice(0, i) as A;
         break;
       }
     }
 
-    // check next selection for viable options. append any forced args
-    let forcedArg: Argument<P> | undefined = undefined;
-    let nextSelection: ResolvedSelection<P> | undefined = undefined;
-    do {
-      const selection = this.nextSelection(...args);
-      if (selection === false) return [undefined, [] as unknown as A, error || "Action invalid. How did you get here?"];
-      if (selection === true) return [undefined, args, error];
-      forcedArg = selection.isForced();
-      if (forcedArg !== undefined) {
-        args.push(forcedArg);
-      } else {
-        nextSelection = selection;
-      }
-    } while (forcedArg);
-    return [nextSelection, args, error];
-  }
-
-  // skip validate for sub-actions?
-  process(...args: Argument<P>[]): [ResolvedSelection<P>?, Argument<P>[]?, string?] {
-    const [resolvedSelection, forcedArgs, error] = this.forceArgs(...args);
-    if (resolvedSelection) return [resolvedSelection, forcedArgs, error];
-    if (forcedArgs) args = forcedArgs;
+    const resolvedSelections = this.getResolvedSelections(...args);
+    if (!resolvedSelections) {
+      console.error('could not resolve this args', this.name, args);
+      return error || 'unknown error during action.process';
+    }
+    if (resolvedSelections.length) {
+      return error || 'incomplete action';
+    }
 
     try {
       for (const move of this.moves) move(...args);
     } catch(e) {
-      console.error(e.message, e.stack);
-      return [this.selections[0].resolve(), [] as unknown as A, e.message];
+      console.error(e);
+      return e.message;
     }
-    return [];
   }
 
   do(move: (...args: A) => void) {
@@ -119,12 +123,14 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     return this;
   }
 
-  chooseFrom<T extends Argument<P>>({ choices, prompt, initial }: {
+  chooseFrom<T extends Argument<P>>({ choices, prompt, initial, skipIfOnlyOne, expand }: {
     choices: T[] | Record<string, T> | ((...arg: A) => T[] | Record<string, T>),
     initial?: T | ((...arg: A) => Argument<P>),
     prompt?: string | ((...arg: A) => string)
+    skipIfOnlyOne?: boolean,
+    expand?: boolean,
   }): Action<P, [...A, T]> {
-    this.selections.push(new Selection<P>({ prompt, selectFromChoices: { choices, initial } }));
+    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, expand, selectFromChoices: { choices, initial } }));
     return this as unknown as Action<P, [...A, T]>;
   }
 
@@ -138,37 +144,45 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   }
 
   confirm(prompt: string | ((...arg: A) => string)): Action<P, [...A, 'confirm']> {
-    this.selections.push(new Selection<P>({ prompt, click: true }));
+    this.selections.push(new Selection<P>({ prompt, value: true }));
     return this as unknown as Action<P, [...A, 'confirm']>;
   }
 
-  chooseNumber({ min, max, prompt, initial }: {
+  chooseNumber({ min, max, prompt, initial, skipIfOnlyOne, expand }: {
     min?: number | ((...arg: A) => number),
     max?: number | ((...arg: A) => number),
     prompt?: string | ((...arg: A) => string),
     initial?: number | ((...arg: A) => number),
+    skipIfOnlyOne?: boolean,
+    expand?: boolean,
   }): Action<P, [...A, number]> {
-    this.selections.push(new Selection<P>({ prompt, selectNumber: { min, max, initial } }));
+    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, expand, selectNumber: { min, max, initial } }));
     return this as unknown as Action<P, [...A, number]>;
   }
 
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, skipIfOnlyOne, expand }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
+    skipIfOnlyOne?: boolean,
+    expand?: boolean,
   }): Action<P, [...A, T]>;
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, skipIfOnlyOne, expand }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
     min?: number | ((...arg: A) => number);
     max?: number | ((...arg: A) => number);
+    skipIfOnlyOne?: boolean,
+    expand?: boolean,
   }): Action<P, [...A, [T]]>;
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, skipIfOnlyOne, expand }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
     min?: number | ((...arg: A) => number);
     max?: number | ((...arg: A) => number);
+    skipIfOnlyOne?: boolean,
+    expand?: boolean,
   }): Action<P, [...A, T | [T]]> {
-    this.selections.push(new Selection<P>({ prompt, selectOnBoard: { chooseFrom: choices, min, max } }));
+    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, expand, selectOnBoard: { chooseFrom: choices, min, max } }));
     if (min !== undefined || max !== undefined) {
       return this as unknown as Action<P, [...A, [T]]>;
     }
@@ -178,7 +192,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   move<E extends Piece<P>, I extends GameElement<P>>({ piece, into, prompt }: {
     piece: BoardQuerySingle<P, E>,
     into: BoardQuerySingle<P, I>,
-    prompt?: string
+    prompt?: string,
   }): Action<P, A>;
   move<E extends Piece<P>, I extends GameElement<P>>({ choosePiece, into, prompt }: {
     choosePiece: BoardQueryMulti<P, E>,

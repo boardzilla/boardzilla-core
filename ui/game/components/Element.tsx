@@ -8,7 +8,8 @@ import {
 } from '../../../game/board'
 import { serialize } from '../../../game/action/utils'
 
-import type { ElementJSON } from '../../../game/board/types'
+import type { ElementJSON } from '../../../game/board/types';
+import type { PendingMove } from '../../../game/action/types';
 import type { Player } from '../../../game/player';
 
 const elementAttributes = (el: GameElement<Player>) => {
@@ -19,59 +20,52 @@ const elementAttributes = (el: GameElement<Player>) => {
   )));
 }
 
-const defaultAppearance = (element: GameElement<Player>) => null;
+const defaultAppearance = () => null;
 
-const Element = ({element, json, clickables, hilites, selected, onSelectElement}: {
+const Element = ({element, json, selected, onSelectElement}: {
   element: GameElement<Player>,
   json: ElementJSON,
-  clickables: GameElement<Player>[],
-  hilites: GameElement<Player>[],
   selected: GameElement<Player>[],
-  onSelectElement: (e: GameElement<Player>) => void,
+  onSelectElement: (element: GameElement<Player>, moves: PendingMove<Player>[]) => void,
 }) => {
+  const [boardSelections, move] = gameStore(s => [s.boardSelections, s.move]);
   //console.log("updated", element.branch());
-  const [uiOptions] = gameStore(s => [s.uiOptions]);
-
-  const isHilited = hilites.includes(element);
-  const isSelected = selected.includes(element);
-  const isClickable = clickables.includes(element)
-
+  const clickMoves = boardSelections.get(element);
+  const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));;
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
-
-  const appearance = element._ui.component || defaultAppearance;
-
+  const appearance = element._ui.appearance.render || defaultAppearance;
   const transform = element.absoluteTransform();
 
   let style: React.CSSProperties = {};
+
   if (element._ui.computedStyle) {
     style = Object.fromEntries(Object.entries(element._ui.computedStyle).map(([key, val]) => ([key, `${val}%`])))
   }
-  style.fontSize = transform.height * 0.1 + 'vh'
+  style.fontSize = transform.height * 0.1 + 'vmin'
 
   let contents: JSX.Element[] = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
-    console.error(element, json);
-    throw Error('JSON does not match board');
+    console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
+    //throw Error('JSON does not match board');
+    return null;
   }
   for (let i = 0; i !== element._t.children.length; i++) {
     const el = element._t.children[i];
-    if (!el._ui.computedStyle) continue;
+    if (!el._ui.computedStyle || el._ui.appearance.render === false) continue;
     contents.push(
       <Element
         key={el.branch()}
         element={el}
         json={json.children![i]}
-        clickables={clickables}
-        hilites={hilites}
         selected={selected}
         onSelectElement={onSelectElement}
       />
     );
   }
 
-  if (element._ui.showConnections) {
+  if (element._ui.appearance.connections) {
     if (!element._t.graph) return;
-    let { thickness, style, color, fill, label, labelScale } = element._ui.showConnections;
+    let { thickness, style, color, fill, label, labelScale } = element._ui.appearance.connections;
     if (!thickness) thickness = .1;
     if (!style) style = 'solid';
     if (!color) color = 'black';
@@ -126,18 +120,18 @@ const Element = ({element, json, clickables, hilites, selected, onSelectElement}
           labels.push(
             <g
               key={`label${i}`}
-              transform={`translate(${(origin.x + destination.x) / 2 - labelScale * transform.width * .5}
-  ${(origin.y + destination.y) / 2 - labelScale * transform.height * .5})
+              transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * transform.width * .5}
+  ${(origin.y + destination.y) / 2 - labelScale! * transform.height * .5})
   scale(${labelScale})`}
             >{label(args[1])}</g>);
         }
       }
     });
     contents.unshift(
-      <svg key="svg-edges" style={{position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${transform.width} ${transform.height}`}>{lines}</svg>
+      <svg key="svg-edges" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${transform.width} ${transform.height}`}>{lines}</svg>
     );
     if (label) contents.push(
-      <svg key="svg-edge-labels" style={{position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${transform.width} ${transform.height}`}>{labels}</svg>
+      <svg key="svg-edge-labels" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${transform.width} ${transform.height}`}>{labels}</svg>
     );
   }
 
@@ -150,11 +144,12 @@ const Element = ({element, json, clickables, hilites, selected, onSelectElement}
         baseClass,
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
-          hilite: isHilited || isClickable,
+          clickable: clickMoves?.length,
           selected: isSelected,
+          zoomable: element._ui.appearance.zoomable,
         }
       ),
-      onClick: isClickable ? (e: Event) => { e.stopPropagation(); onSelectElement(element) } : null,
+      onClick: clickMoves ? (e: Event) => { e.stopPropagation(); onSelectElement(element, clickMoves) } : null,
       ...elementAttributes(element)
     },
     <>

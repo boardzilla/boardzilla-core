@@ -8,7 +8,7 @@ import {
 import type { Player } from '../../../game/player';
 
 export default () => {
-  const [game, updateBoard, setHilites] = gameStore(s => [s.game, s.updateBoard, s.setHilites, s.boardJSON]);
+  const [game, updateBoard] = gameStore(s => [s.game, s.updateBoard, s.boardJSON]);
   if (!game) return null;
 
   const [error, setError] = useState('');
@@ -25,17 +25,16 @@ export default () => {
     } catch (e) {
       setError(e.message);
     }
-    setHilites([]);
     updateBoard();
 
-    if (result) {
-      if (result.constructor.name === 'ElementCollection') {
-        setHilites(Array.from(result as ElementCollection<Player, GameElement<Player>>));
-      }
-      if (result.branch) {
-        setHilites([result.branch()]);
-      }
-    }
+    // if (result) {
+    //   if (result.constructor.name === 'ElementCollection') {
+    //     setHilites(Array.from(result as ElementCollection<Player, GameElement<Player>>));
+    //   }
+    //   if (result.branch) {
+    //     setHilites([result.branch()]);
+    //   }
+    // }
   };
 
   return (

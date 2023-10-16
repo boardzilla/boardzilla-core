@@ -32,7 +32,7 @@
     "typescript": "^5.1.0"
   },
   "scripts": {
-    "test": "NODE_ENV=test ./node_modules/.bin/mocha -r ts-node/register",
-    "test-debug": "NODE_ENV=test ./node_modules/.bin/mocha --inspect-brk --timeout 3600000 -r ts-node/register"
+    "test": "NODE_ENV=test npx mocha -r ts-node/register",
+    "test-debug": "NODE_ENV=test npx mocha --inspect-brk --timeout 3600000 -r ts-node/register"
   }
 }

@@ -1,7 +1,11 @@
-TODO
-- sidebar
+UI
+- \ author defines UI separate from board? madness lies this way. try with no custom zoom first, maybe react-pinch-zoom
+- \ scale/scroll board
+- layout ratios
+- author defines sidebar placement?
 
-premise
+
+board layout
 - UI elements have reasonable defaults
 - HTML/SVG
 - stack/free/spread layouts describe how pieces lay out

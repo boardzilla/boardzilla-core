@@ -1,7 +1,7 @@
 import Space from './space'
 import { deserializeObject } from '../action/utils';
 
-import type { ElementJSON, ElementClass } from './types';
+import type { ElementJSON, ElementClass, Box } from './types';
 import type { GameElement } from './';
 import type { Player } from '../player';
 
@@ -40,5 +40,22 @@ export default class Board<P extends Player> extends Space<P> {
     Object.assign(this, {...rest});
     if (children) this.createChildrenFromJSON(children);
     this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1));
+  }
+
+  // UI
+
+  _ui: GameElement<P>['_ui'] & { frame?: Box };
+
+  applyLayouts(force=false) {
+    const aspectRatio = this._ui.appearance.aspectRatio;
+    if (aspectRatio) {
+      this._ui.frame = {
+        left: 0,
+        top: 0,
+        width: aspectRatio > 1 ? aspectRatio * 100 : 100,
+        height: aspectRatio < 1 ? 100 / aspectRatio : 100
+      };
+    }
+    return super.applyLayouts(force);
   }
 }

@@ -6,11 +6,12 @@ import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main'
 
-import type { SetupComponentProps } from './types'
-import type { Game, Board, GameElement, Player } from '../game'
+import type { UIOptions } from './types'
+import type { Game, Player } from '../game'
+import type { Board, GameElement } from '../game/board'
 import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
-import type { IncompleteMove, ResolvedSelection } from '../game/action/types'
+import type { Argument, Move, PendingMove, SerializedMove } from '../game/action/types'
 
 const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
 const userID: string = boostrap.userID;
@@ -19,19 +20,21 @@ const maxPlayers: number = boostrap.maxPlayers;
 
 type GameStore = {
   game?: Game<Player, Board<Player>>;
-  boardJSON: ElementJSON[];
-  setGame: (g: Game<Player, Board<Player>>) => void;
-  updateBoard: () => void;
-  position?: number;
+  boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes
+  setGame: (g: Game<Player, Board<Player>>) => void; // will call once on first server update to set the client instance
+  updateBoard: (boardJSON?: ElementJSON[]) => void; // call any time state changes to update immutable references for listeners. updates move, selections
+  updateSelections: (move?: {action: string, args: Argument<Player>[]}) => void; // refresh move and selections
+  position?: number; // this player
   setPosition: (p: number) => void;
-  move?: IncompleteMove<Player>;
-  setMove: (m?: IncompleteMove<Player>) => void;
-  selection?: ResolvedSelection<Player>;
-  setSelection: (s?: ResolvedSelection<Player>) => void;
-  selected: GameElement<Player>[];
+  move?: {action: string, args: Argument<Player>[]}; // move in progress
+  selectMove: (sel?: PendingMove<Player>, arg?: Argument<Player>) => void;
+  pendingMoves?: PendingMove<Player>[]; // all pending moves
+  boardSelections: Map<GameElement<Player>, PendingMove<Player>[]>; // pending moves on board
+  prompt?: string; // prompt for choosing action if applicable
+  selected: GameElement<Player>[]; // selected elements on board
   setSelected: (s: GameElement<Player>[]) => void;
-  hilites: GameElement<Player>[];
-  setHilites: (h: GameElement<Player>[]) => void;
+  disambiguateElement?: { element: GameElement<Player>, moves: PendingMove<Player>[] }; // element selected has multiple moves
+  setDisambiguateElement: (s: { element: GameElement<Player>, moves: PendingMove<Player>[] }) => void;
   uiOptions: UIOptions;
   setUIOptions: (o: UIOptions) => void;
 }
@@ -43,42 +46,78 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     window.game = game;
     // @ts-ignore;
     window.board = game.board;
+    // @ts-ignore;
+    for (const className of game.board._ctx.classRegistry) window[className.name] = className;
+
     return set({
       game,
       boardJSON: game.board.allJSON()
     });
   },
-  // function to ensure react detects a change. must be called immediately after any function that alters game state
-  updateBoard: () => set(s => {
+  // function to ensure react detects a change. must be called immediately after any function that alters board state
+  updateBoard: (boardJSON?: ElementJSON[]) => set(s => {
+    if (!s.game || !s.position) return {};
+
+    console.log('updateBoard');
+    // rerun layouts. probably optimize TODO
+    s.game.contextualizeBoardToPlayer(s.game.players.atPosition(s.position));
+    if (s.game.setupLayout) s.game.setupLayout(s.game.board, window.innerWidth / window.innerHeight);
+    s.game.board.applyLayouts();
+
+    s.updateSelections(s.move);
+
+    return ({
+      boardJSON: boardJSON || s.game.board.allJSON()
+    })
+  }),
+  updateSelections: move => set(s => {
     if (!s.game || !s.position) return {};
     const player = s.game.players.atPosition(s.position);
     if (!player) return {};
-    const {move, selection} = s.game.currentSelection(player);
 
-    if (s.game.setupLayout) s.game.setupLayout(s.game.board);
-    s.game.board.applyLayouts();
+    let error: string | undefined = undefined;
+    let resolvedSelections = s.game.getResolvedSelections(player, move?.action, ...(move?.args || []));
+    if (move && !resolvedSelections?.moves) {
+      console.log('move may no longer be valid. retrying getResolvedSelections');
+      move = undefined;
+      resolvedSelections = s.game.getResolvedSelections(player);
+    }
 
-    console.log('updateBoard', s.position, move, selection);
+    const boardSelections = new Map<GameElement<Player>, PendingMove<Player>[]>();
+    if (resolvedSelections) for (const p of resolvedSelections.moves) {
+      if (p.selection.type === 'board') {
+        for (const el of p.selection.boardChoices!) {
+          boardSelections.get(el)?.push(p) || boardSelections.set(el, [p]);
+        }
+      }
+    }
+
+    console.log('updateSelections', move, resolvedSelections);
     return ({
       move,
-      selection,
-      boardJSON: s.game.board.allJSON()
+      prompt: resolvedSelections?.prompt,
+      boardSelections,
+      pendingMoves: resolvedSelections?.moves,
     })
   }),
-  setPosition: position => { console.log('setPosition', position); return set({ position }) },
-  setMove: move => set({ move }),
-  setSelection: selection => set({ selection }),
+  selectMove: (pendingMove?: PendingMove<Player>, arg?: Argument<Player>) => set(s => {
+    const move = pendingMove && arg ? {
+      action: pendingMove.action,
+      args: [...pendingMove.args, arg]
+    } : undefined;
+    s.updateSelections(move);
+    return {};
+  }),
+  setPosition: position => set({ position }),
+  actions: [],
+  boardSelections: new Map(),
+  pendingMoves: [],
   selected: [],
   setSelected: sel => set({ selected: [...new Set(sel)] }),
-  hilites: [],
-  setHilites: hilites => set({ hilites }),
+  setDisambiguateElement: disambiguateElement => set({ disambiguateElement }),
   uiOptions: {},
   setUIOptions: uiOptions => set({ uiOptions }),
 }), shallow);
-
-type UIOptions = {
-  settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
-};
 
 export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UIOptions): void => {
   gameStore.getState().setUIOptions(options as UIOptions);

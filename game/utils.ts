@@ -1,7 +1,8 @@
-import { GameElement } from './';
+import { GameElement } from './board';
 import { deserializeArg } from './action/utils';
 
-import type { Player, Board } from './';
+import type { Player } from './';
+import type { Board } from './board';
 import type { SerializedArg, SerializedMove } from './action/types';
 import type { SetupFunction, GameInterface } from './types';
 import type { SetupState, GameState, GameUpdate } from '../types';
@@ -24,13 +25,13 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       }
     ): GameUpdate<Player> => {
       const game = setup(previousState, true);
-      const result = game.processMove({
+      const error = game.processMove({
         player: game.players.atPosition(move.position)!,
         action: move.data.action,
         args: move.data.args.map(a => deserializeArg(a as SerializedArg, game))
       });
-      if (result.selection) {
-        throw Error(`Unable to process move: ${result.error}`);
+      if (error) {
+        throw Error(`Unable to process move: ${error}`);
       }
       game.play();
       return {

@@ -19,10 +19,17 @@ export type Move<P extends Player> = {
   args: Argument<P>[]
 };
 
+// obsolete?
 export type IncompleteMove<P extends Player> = {
   player: P,
   action?: string,
   args: Argument<P>[]
+};
+
+export type PendingMove<P extends Player> = {
+  action: string,
+  args: Argument<P>[],
+  selection: ResolvedSelection<P>,
 };
 
 export type SerializedMove = {
@@ -57,47 +64,49 @@ export type TextSelection<P extends Player> = {
   initial?: string | ((...a: Argument<P>[]) => string);
 }
 
-export type ButtonSelection = any;
+export type ButtonSelection<P extends Player> = Argument<P>;
 
 export type SelectionDefinition<P extends Player> = {
   prompt?: string | ((...a: Argument<P>[]) => string);
-  clientContext?: Record<any, any> // additional meta info that describes the context for this selection
+  clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
+  skipIfOnlyOne?: boolean;
+  expand?: boolean;
 } & ({
   selectOnBoard: BoardSelection<P, GameElement<P>>;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices: ChoiceSelection<P>;
   selectNumber?: never;
   enterText?: never;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber: NumberSelection<P>;
   enterText?: never;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText: TextSelection<P>;
-  click?: never;
+  value?: never;
 } | {
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
-  click: ButtonSelection;
+  value: ButtonSelection<P>;
 });
 
-export type ResolvedSelection<P extends Player> = Selection<P> & {
+export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp'> & {
   prompt?: string;
   choices?: Argument<P>[] | Record<string, Argument<P>>;
-  boardChoices: GameElement<P>[];
+  boardChoices?: GameElement<P>[];
   min?: number;
   max?: number;
   initial?: Argument<P>;
