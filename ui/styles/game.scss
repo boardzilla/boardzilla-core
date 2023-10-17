@@ -1,119 +1,121 @@
-body {
-  margin: 0;
-  padding: 0;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  15% { transform: scale(1.1); }
-  80% { transform: scale(1); }
-}
-
-@keyframes zoom {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.5); }
-}
-
-@keyframes fadeIn {
-  0% { opacity: 0; transform: translate(-100%, 0) }
-  100% { opacity: 1; transform: none }
-}
-
-#play-area {
-  overflow: hidden;
-
-  .Piece {
-    background: #ccc;
-  }
-
-  .zoomable:hover {
-    animation: zoom ease .2s;
-    animation-fill-mode: forwards;
-    z-index: 100;
-  }
-
-  .clickable {
-    animation: pulse ease 1s infinite;
-    cursor: pointer;
-  }
-
-  .selected {
-    transform: scale(1.2);
-  }
-
-  &.fixed {
-    position: relative;
-
-    > .Space {
-      width: 100%;
-      height: 100%;
-    }
-
-    .Piece {
-      position: absolute;
-      > img {
-        width: 100%;
-        height: 100%;
-      }
-    }
-
-    .Space {
-      position: absolute;
-      > img {
-        width: 100%;
-        height: 100%;
-      }
-    }
-  }
-
-  &.fluid {
-    .Piece {
-      outline: .25vmin solid blue;
-      display: inline-block;
-      padding: 1vmin;
-      margin: 1vmin;
-    }
-
-    .Space {
-      outline: .25vmin solid black;
-      padding: 1vmin;
-      margin: 1.5vmin;
-    }
-  }
-}
-
-#player-controls {
-  form, .prompt {
-    animation: fadeIn .2s;
-  }
-  form {
+@layer game {
+  body {
     margin: 0;
+    padding: 0;
   }
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: #fff8;
-  padding: 1vmin;
-  font-size: 2vmin;
-  input, select, button {
-    padding: 1vmin;
-    font-family: inherit;
-    font-size: inherit;
-    box-sizing: border-box;
-    height: 4vmin;
-    margin-right: 1vmin;
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    15% { transform: scale(1.3); }
+    100% { transform: scale(1.1); }
   }
-  button {
-    border: none;
-    background: #ccc;
-    animation: pulse ease 1s infinite;
-    cursor: pointer;
-    &:hover {
-      transform: scale(1.1);
-      animation: pulse ease 1s;
+
+  @keyframes zoom {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.5); }
+  }
+
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translate(-100%, 0) }
+    100% { opacity: 1; transform: none }
+  }
+
+  #play-area {
+    overflow: hidden;
+
+    .Piece {
+      background: #ccc;
+    }
+
+    .zoomable:hover {
+      animation: zoom ease .2s forwards;
+      z-index: 100;
+    }
+
+    .clickable {
+      animation: pulse ease 1s infinite;
+      cursor: pointer;
+    }
+
+    .selected {
+      transform: scale(1.2);
+    }
+
+    &.fixed {
+      position: relative;
+
+      > .Space {
+        width: 100%;
+        height: 100%;
+      }
+
+      .Piece {
+        position: absolute;
+        > img {
+          width: 100%;
+          height: 100%;
+        }
+      }
+
+      .Space {
+        position: absolute;
+        > img {
+          width: 100%;
+          height: 100%;
+        }
+      }
+    }
+
+    &.fluid {
+      .Piece {
+        outline: .25vmin solid blue;
+        display: inline-block;
+        padding: 1vmin;
+        margin: 1vmin;
+      }
+
+      .Space {
+        outline: .25vmin solid black;
+        padding: 1vmin;
+        margin: 1.5vmin;
+      }
     }
   }
-  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {
-    opacity: 1;
+
+  #player-controls {
+    form, .prompt {
+      animation: fadeIn .2s;
+    }
+    form {
+      margin: 0;
+    }
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #fff8;
+    padding: .5rem;
+    font-size: 1rem;
+    input, select, button {
+      padding: .5rem;
+      font-family: inherit;
+      font-size: inherit;
+      box-sizing: border-box;
+      height: 2rem;
+      margin-right: .5rem;
+    }
+    button {
+      border: none;
+      background: #ccc;
+      animation: pulse ease 1s infinite;
+      cursor: pointer;
+      &:hover {
+        transform: scale(1.1);
+        animation: zoom ease .2s forwards;
+        box-shadow: 0.2rem 0.2rem .5rem #0008;
+      }
+    }
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
   }
 }

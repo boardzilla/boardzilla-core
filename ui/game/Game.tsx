@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { gameStore } from '../';
 
 import Element from './components/Element';
@@ -17,6 +17,21 @@ export default () => {
   console.log('GAME', position);
 
   const clickAudio = useRef<HTMLAudioElement>(null);
+
+  const [dimensions, setDimensions] = useState<{width: number, height: number}>();
+
+  useEffect(() => {
+    document.addEventListener('animationstart', (e: AnimationEvent) => {
+      if (e.animationName === 'pulse') {
+        const el = e.target as HTMLElement;
+        const anim = el.getAnimations()?.find((a: CSSAnimation) => a.animationName === 'pulse');
+        if (anim) anim.currentTime = Array.from(
+          document.querySelectorAll('#play-area .clickable, #player-controls button')
+        ).find(a => a !== e.target && a?.getAnimations().find((a: CSSAnimation) => a.animationName==='pulse'))
+          ?.getAnimations().find((a: CSSAnimation) => a.animationName==='pulse')?.currentTime || 0
+      }
+    })
+  }, []);
 
   if (!game || !position) return null;
   const player = game.players.atPosition(position);
@@ -51,18 +66,32 @@ export default () => {
     }
   }
 
-  let width = 100;
-  let height = 100;
-  if (game.board._ui.appearance.aspectRatio) {
-    if (game.board._ui.appearance.aspectRatio > 0) {
-      width *= game.board._ui.appearance.aspectRatio;
-    } else {
-      height /= game.board._ui.appearance.aspectRatio;
+  useEffect(() => {
+    const resize = () => {
+      const ratio = (game.board._ui.appearance.aspectRatio ?? 1) / (window.innerWidth / window.innerHeight);
+      let rem = window.innerHeight / 40;
+      if (ratio > 1) {
+        setDimensions({
+          width: 100,
+          height: 100 / ratio
+        });
+        rem /= ratio;
+      } else {
+        setDimensions({
+          width: 100 * ratio,
+          height: 100
+        })
+      }
+      (window.document.childNodes[0] as HTMLHtmlElement).style.fontSize = rem + 'px';
     }
-  }
+    window.addEventListener('resize', resize);
+    resize();
+  }, []);
+
+  if (!dimensions) return;
 
   return (
-    <div id="game" style={{ position: 'relative', width: width + 'vmin', height: height + 'vmin' }}>
+    <div id="game" style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}>
       <audio ref={clickAudio} src={click} id="click"/>
       <div id="play-area" className={true ? 'fixed' : 'fluid'} style={{width: '100%', height: '100%'}}>
         <Element

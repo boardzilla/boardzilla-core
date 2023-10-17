@@ -79,8 +79,18 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
    * given a partial arg list, returns a selection object for continuation if one exists.
    */
   nextSelection(...args: Argument<P>[]): ResolvedSelection<P> | undefined {
-    const selection = this.selections[args.length];
+    let argsLeft = args.length;
+    let i = 0;
+    if (!this.selections.length) return;
+    do {
+      const selection = this.selections[i].resolve(...args);
+      if (selection.skipIf !== true) argsLeft--;
+      if (argsLeft >= 0) i++;
+    } while (argsLeft >= 0 && i < this.selections.length);
+
+    const selection = this.selections[i];
     if (selection) {
+      // use the last defined prompt in the action
       selection.prompt ??= [...this.selections.slice(0, args.length)].reverse().find(s => s.prompt)?.prompt || this.prompt;
       return selection.resolve(...args);
     }
@@ -123,14 +133,15 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     return this;
   }
 
-  chooseFrom<T extends Argument<P>>({ choices, prompt, initial, skipIfOnlyOne, expand }: {
+  chooseFrom<T extends Argument<P>>({ choices, prompt, initial, skipIfOnlyOne, skipIf, expand }: {
     choices: T[] | Record<string, T> | ((...arg: A) => T[] | Record<string, T>),
     initial?: T | ((...arg: A) => Argument<P>),
     prompt?: string | ((...arg: A) => string)
     skipIfOnlyOne?: boolean,
+    skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
     expand?: boolean,
   }): Action<P, [...A, T]> {
-    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, expand, selectFromChoices: { choices, initial } }));
+    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, skipIf, expand, selectFromChoices: { choices, initial } }));
     return this as unknown as Action<P, [...A, T]>;
   }
 
@@ -148,43 +159,49 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     return this as unknown as Action<P, [...A, 'confirm']>;
   }
 
-  chooseNumber({ min, max, prompt, initial, skipIfOnlyOne, expand }: {
+  chooseNumber({ min, max, prompt, initial, skipIfOnlyOne, skipIf, expand }: {
     min?: number | ((...arg: A) => number),
     max?: number | ((...arg: A) => number),
     prompt?: string | ((...arg: A) => string),
     initial?: number | ((...arg: A) => number),
     skipIfOnlyOne?: boolean,
+    skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
     expand?: boolean,
   }): Action<P, [...A, number]> {
-    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, expand, selectNumber: { min, max, initial } }));
+    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, skipIf, expand, selectNumber: { min, max, initial } }));
     return this as unknown as Action<P, [...A, number]>;
   }
 
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, skipIfOnlyOne, expand }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, skipIfOnlyOne, skipIf, expand }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
     skipIfOnlyOne?: boolean,
+    skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
     expand?: boolean,
   }): Action<P, [...A, T]>;
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, skipIfOnlyOne, expand }: {
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, number, skipIfOnlyOne, skipIf, expand }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
     min?: number | ((...arg: A) => number);
     max?: number | ((...arg: A) => number);
+    number?: number | ((...arg: A) => number);
     skipIfOnlyOne?: boolean,
+    skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
     expand?: boolean,
-  }): Action<P, [...A, [T]]>;
-  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, skipIfOnlyOne, expand }: {
+  }): Action<P, [...A, T[]]>;
+  chooseOnBoard<T extends GameElement<P>>({ choices, prompt, min, max, number, skipIfOnlyOne, skipIf, expand }: {
     choices: BoardQueryMulti<P, T>,
     prompt?: string | ((...arg: A) => string);
     min?: number | ((...arg: A) => number);
     max?: number | ((...arg: A) => number);
+    number?: number | ((...arg: A) => number);
     skipIfOnlyOne?: boolean,
+    skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
     expand?: boolean,
-  }): Action<P, [...A, T | [T]]> {
-    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, expand, selectOnBoard: { chooseFrom: choices, min, max } }));
-    if (min !== undefined || max !== undefined) {
-      return this as unknown as Action<P, [...A, [T]]>;
+  }): Action<P, [...A, T | T[]]> {
+    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne, skipIf, expand, selectOnBoard: { chooseFrom: choices, min, max, number } }));
+    if (min !== undefined || max !== undefined || number !== undefined) {
+      return this as unknown as Action<P, [...A, T[]]>;
     }
     return this as unknown as Action<P, [...A, T]>;
   }

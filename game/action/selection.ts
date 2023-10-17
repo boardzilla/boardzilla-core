@@ -10,6 +10,7 @@ export default class Selection<P extends Player> {
   prompt?: string | ((...a: Argument<P>[]) => string);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
   skipIfOnlyOne: boolean = true;
+  skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
   expand: boolean = false;
   choices?: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
   boardChoices?: BoardQueryMulti<P, GameElement<P>>;
@@ -43,8 +44,12 @@ export default class Selection<P extends Player> {
       } else if (s.selectOnBoard) {
         this.type = 'board';
         this.boardChoices = s.selectOnBoard.chooseFrom;
-        this.min = s.selectOnBoard.min;
-        this.max = s.selectOnBoard.max;
+        if (s.selectOnBoard.number !== undefined) {
+          this.min = s.selectOnBoard.number;
+          this.max = s.selectOnBoard.number;
+        }
+        this.min ??= s.selectOnBoard.min;
+        this.max ??= s.selectOnBoard.max;
       } else if (s.selectNumber) {
         this.type = 'number';
         this.min = s.selectNumber.min;
@@ -61,8 +66,9 @@ export default class Selection<P extends Player> {
       }
     }
     this.prompt = s.prompt;
-    this.skipIfOnlyOne = s.skipIfOnlyOne ?? true;
-    this.expand = s.expand ?? false;
+    if ('skipIfOnlyOne' in s) this.skipIfOnlyOne = s.skipIfOnlyOne ?? true;
+    if ('skipIf' in s) this.skipIf = s.skipIf;
+    if ('expand' in s) this.expand = s.expand ?? false;
     this.clientContext = s.clientContext;
   }
 
@@ -74,6 +80,7 @@ export default class Selection<P extends Player> {
    */
   validate(arg: Argument<P>, previousArgs: Argument<P>[]): string | undefined {
     const s = this.resolve(...previousArgs);
+    if (s.skipIf === true) return;
 
     if (s.type === 'choices' && s.choices) {
       return (
@@ -126,8 +133,9 @@ export default class Selection<P extends Player> {
     return typeof this.prompt !== 'function' &&
       typeof this.min !== 'function' &&
       typeof this.max !== 'function' &&
-      typeof this.choices !== 'function' &&
       typeof this.initial !== 'function' &&
+      typeof this.skipIf !== 'function' &&
+      typeof this.choices !== 'function' &&
       typeof this.boardChoices !== 'function';
   }
 
@@ -137,8 +145,9 @@ export default class Selection<P extends Player> {
     if (typeof this.prompt === 'function') resolved.prompt = this.prompt(...args);
     if (typeof this.min === 'function') resolved.min = this.min(...args)
     if (typeof this.max === 'function') resolved.max = this.max(...args)
-    if (typeof this.choices === 'function') resolved.choices = this.choices(...args)
     if (typeof this.initial === 'function') resolved.initial = this.initial(...args)
+    if (typeof this.skipIf === 'function') resolved.skipIf = this.skipIf(...args)
+    if (typeof this.choices === 'function') resolved.choices = this.choices(...args)
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.boardChoices === 'function') resolved.boardChoices = this.boardChoices(...args)
     return resolved as ResolvedSelection<P>;

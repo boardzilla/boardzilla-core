@@ -46,11 +46,15 @@ export type BoardSelection<P extends Player, T extends GameElement<P>> = {
   chooseFrom: BoardQueryMulti<P, T>;
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
+  number?: number | ((...a: Argument<P>[]) => number);
 }
 
 export type ChoiceSelection<P extends Player> = {
   choices: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
   initial?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
+  // min?: number | ((...a: Argument<P>[]) => number);
+  // max?: number | ((...a: Argument<P>[]) => number);
+  // number?: number | ((...a: Argument<P>[]) => number);
 }
 
 export type NumberSelection<P extends Player> = {
@@ -69,21 +73,28 @@ export type ButtonSelection<P extends Player> = Argument<P>;
 export type SelectionDefinition<P extends Player> = {
   prompt?: string | ((...a: Argument<P>[]) => string);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
-  skipIfOnlyOne?: boolean;
-  expand?: boolean;
 } & ({
+  skipIfOnlyOne?: boolean;
+  skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
+  expand?: boolean;
   selectOnBoard: BoardSelection<P, GameElement<P>>;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
   value?: never;
 } | {
+  skipIfOnlyOne?: boolean;
+  skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
+  expand?: boolean;
   selectOnBoard?: never;
   selectFromChoices: ChoiceSelection<P>;
   selectNumber?: never;
   enterText?: never;
   value?: never;
 } | {
+  skipIfOnlyOne?: boolean;
+  skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
+  expand?: boolean;
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber: NumberSelection<P>;

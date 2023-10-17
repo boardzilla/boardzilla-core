@@ -50,6 +50,30 @@ describe('Actions', () => {
     expect(actionSpy).to.have.been.called.with(1, 2);
   });
 
+  describe('nextSelections', () => {
+    it('skipIf', () => {
+      testAction = action({ prompt: 'pick an even number' })
+        .chooseFrom({ choices: [1,2] })
+        .chooseFrom({ choices: [3,4], skipIf: x => x === 1 })
+        .chooseFrom({ choices: [5,6]})
+      expect(testAction.nextSelection()?.choices).to.deep.equal([1,2]);
+      expect(testAction.nextSelection(2)?.choices).to.deep.equal([3,4]);
+      expect(testAction.nextSelection(1)?.choices).to.deep.equal([5,6]);
+      expect(testAction.nextSelection(2,3)?.choices).to.deep.equal([5,6]);
+      expect(testAction.nextSelection(2,3,5)).to.be.undefined;
+      expect(testAction.nextSelection(1,5)).to.be.undefined;
+    });
+
+    it('skipIf last', () => {
+      testAction = action({ prompt: 'pick an even number' })
+        .chooseFrom({ choices: [1,2] })
+        .chooseFrom({ choices: [5,6]})
+        .chooseFrom({ choices: [3,4], skipIf: x => x === 1 })
+      expect(testAction.nextSelection(2,5)?.choices).to.deep.equal([3,4]);
+      expect(testAction.nextSelection(1,5)).to.be.undefined;
+    });
+  });
+
   describe('getResolvedSelections', () => {
     let options: number[];
 

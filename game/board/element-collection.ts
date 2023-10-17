@@ -176,6 +176,11 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
     return el && el[key];
   }
 
+  areAllEqual(key: keyof T): boolean {
+    if (this.length === 0) return true;
+    return this.every(el => el[key] === this[0][key]);
+  }
+
   remove() {
     for (const el of this) {
       if (!(el instanceof Piece)) throw Error('cannot move Space');
