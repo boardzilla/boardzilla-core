@@ -2,6 +2,7 @@
 // import { BrowserTracing } from "@sentry/tracing";
 import React from 'react'
 import ReactDOM from 'react-dom'
+import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main'
@@ -122,16 +123,16 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
 export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UIOptions): void => {
   gameStore.getState().setUIOptions(options as UIOptions);
   
-  ReactDOM.render(
+  const root = createRoot(document.getElementById('root')!)
+  root.render(
     // we can anonymize Player class internally
     <Main
       userID={userID}
       minPlayers={minPlayers}
       maxPlayers={maxPlayers}
       setup={setup as unknown as SetupFunction<Player, Board<Player>>}
-    />,
-    document.getElementById('root')
-  )
+    />
+  );
 };
 
 export * from './setup/components/settingComponents';

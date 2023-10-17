@@ -14,13 +14,15 @@ const PlayerControls = ({onSubmit}: { onSubmit: (move?: PendingMove<Player>, val
   const [game, position, move, selected, pendingMoves, prompt] = gameStore(s => [s.game, s.position, s.move, s.selected, s.pendingMoves, s.prompt]);
   console.log('render PlayerControls', pendingMoves);
 
-  if (!game || !position || !pendingMoves?.length) return null;
+  if (!game || !position) return null;
   const player = game.players.atPosition(position);
   if (!player) return null;
 
   if (game.players.currentPosition && game.players.current() != player) {
     return <div className="prompt">{`Not my turn, waiting for ${game.players.current()!.name}`}</div>;
   }
+
+  if (!pendingMoves?.length) return null;
 
   const onSubmitForm = (e: React.FormEvent<HTMLFormElement>, pendingMove: PendingMove<Player>) => {
     e.preventDefault();

@@ -28,7 +28,7 @@ const Element = ({element, json, selected, onSelectElement}: {
   selected: GameElement<Player>[],
   onSelectElement: (element: GameElement<Player>, moves: PendingMove<Player>[]) => void,
 }) => {
-  const [boardSelections, move] = gameStore(s => [s.boardSelections, s.move]);
+  const [boardSelections, move, position] = gameStore(s => [s.boardSelections, s.move, s.position]);
   //console.log("updated", element.branch());
   const clickMoves = boardSelections.get(element);
   const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));;
@@ -41,7 +41,7 @@ const Element = ({element, json, selected, onSelectElement}: {
   if (element._ui.computedStyle) {
     style = Object.fromEntries(Object.entries(element._ui.computedStyle).map(([key, val]) => ([key, `${val}%`])))
   }
-  style.fontSize = transform.height * 0.1 + 'vmin'
+  style.fontSize = transform.height * 0.04 + 'rem'
 
   let contents: JSX.Element[] = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
@@ -135,6 +135,9 @@ const Element = ({element, json, selected, onSelectElement}: {
     );
   }
 
+  const attrs = elementAttributes(element);
+  if (element.player?.position === position) attrs.mine = 'true';
+
   return React.createElement(
     'div',
     {
@@ -146,11 +149,11 @@ const Element = ({element, json, selected, onSelectElement}: {
           [element.constructor.name]: baseClass !== element.constructor.name,
           clickable: clickMoves?.length,
           selected: isSelected,
-          zoomable: element._ui.appearance.zoomable,
+          zoomable: typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable,
         }
       ),
       onClick: clickMoves ? (e: Event) => { e.stopPropagation(); onSelectElement(element, clickMoves) } : null,
-      ...elementAttributes(element)
+      ...attrs
     },
     <>
       {appearance(element)}
