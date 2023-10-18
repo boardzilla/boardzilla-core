@@ -2,11 +2,7 @@ layoutAction('power', {})
 layoutStep('power', {})
 layoutPrompt('power', {})
 
-layoutAction(
-  {
-    step: 'power',
-    prompt: 'power'
-  },
+layoutStep('power',
   {}
 )
 

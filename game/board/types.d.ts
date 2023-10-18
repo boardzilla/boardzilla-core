@@ -49,6 +49,7 @@ export type ElementUI<P extends Player, T extends GameElement<P>> = {
       aspectRatio?: number, // w / h
       scaling: 'fit' | 'fill' | 'none'
       gap?: number | { x: number, y: number },
+      alignment: 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'bottom left' | 'top right' | 'bottom right' | 'center',
       offsetColumn?: Vector,
       offsetRow?: Vector,
       direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',

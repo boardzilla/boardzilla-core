@@ -13,7 +13,6 @@ import {
   FlowInterruptAndRepeat
 } from './flow';
 
-import type { FlowDefinition } from './types';
 import type { Player } from '../player';
 import type { Serializable } from '../action/types';
 

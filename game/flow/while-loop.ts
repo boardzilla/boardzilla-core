@@ -47,6 +47,10 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
     return 'ok';
   }
 
+  allSteps() {
+    return this.block;
+  }
+
   toString(): string {
     return `loop${this.name ? ":" + this.name : ""} (index: ${this.position.index})$`;
   }

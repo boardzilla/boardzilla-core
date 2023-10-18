@@ -10,7 +10,6 @@ import type {
   FlowBranchJSON,
   ActionStepPosition
 } from './types';
-import type { PendingMove } from '../action/types';
 import type { Game } from '../';
 
 export default class Flow<P extends Player> {
@@ -29,6 +28,13 @@ export default class Flow<P extends Player> {
     this.block = block;
     // each new can create its own context because they will be copied later by each parent as it loads its subflows
     this.top = this;
+  }
+
+  validateNoDuplicate() {
+    const name = this.name;
+    this.name = undefined;
+    if (name && this.getStep(name)) throw Error(`Duplicate flow name: ${name}`);
+    this.name = name;
   }
 
   flowStepArgs(): Record<string, any> {
@@ -84,7 +90,6 @@ export default class Flow<P extends Player> {
       if (!block[sequence]) throw Error(`Invalid sequence for ${this.type}:${this.name} ${sequence}/${block.length}`);
       this.step = block[sequence];
     } else {
-      if (sequence && sequence > 0) throw Error(`Sequence ${sequence} in position of ${this.type}:${this.name} but no sequence block`); // remove after debugging
       this.step = block;
     }
 
@@ -108,11 +113,12 @@ export default class Flow<P extends Player> {
     return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function };
   }
 
-  actionNeeded(): {prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
+  actionNeeded(): {step?: string, prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
     const flow = this.currentFlow() as ActionStep<P>;
     if ('awaitingAction' in flow) {
       const actions = flow.awaitingAction();
       if (actions) return {
+        step: flow.name,
         prompt: flow.prompt,
         actions,
         skipIfOnlyOne: flow.skipIfOnlyOne,
@@ -125,6 +131,21 @@ export default class Flow<P extends Player> {
     const step = this.currentFlow();
     if (!step || step.type !== 'action') throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);
     return step.processMove(move);
+  }
+
+  getStep(name: string): Flow<P> | undefined {
+    if (this.name === name) {
+      this.validateNoDuplicate();
+      return this;
+    }
+    const steps = this.allSteps();
+    if (!steps) return;
+    for (const step of steps instanceof Array ? steps : [steps]) {
+      if (step instanceof Flow) {
+        const found = step.getStep(name);
+        if (found) return found;
+      }
+    }
   }
 
   /**
@@ -198,6 +219,11 @@ export default class Flow<P extends Player> {
   // override for steps that advance through their subflows. call setPosition if needed. return ok/complete
   advance(): 'ok' | 'complete' {
     return 'complete';
+  }
+
+  // override return all subflows
+  allSteps(): FlowDefinition<P> {
+    return this.block ?? null;
   }
 
   toString(): string {

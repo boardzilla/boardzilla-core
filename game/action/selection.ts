@@ -62,7 +62,7 @@ export default class Selection<P extends Player> {
       } else {
         this.type = 'button';
         this.value = s.value;
-        this.skipIfOnlyOne = false;
+        this.skipIfOnlyOne ??= true;
       }
     }
     this.prompt = s.prompt;
@@ -167,7 +167,9 @@ export default class Selection<P extends Player> {
 
   isForced(this: ResolvedSelection<P>): Argument<P> | undefined {
     if (this.skipIfOnlyOne !== true) return;
-    if (this.boardChoices?.length === 1 &&
+    if (this.type === 'button') {
+      return this.value;
+    } else if (this.boardChoices?.length === 1 &&
       this.min === undefined &&
       this.max === undefined) {
       return this.boardChoices[0];

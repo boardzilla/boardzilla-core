@@ -542,10 +542,25 @@ describe('Board', () => {
       expect(d._ui.computedStyle).to.deep.equal({ left: 54, top: 54, width: 36, height: 26 })
     });
 
-    it('sizes to fit', () => {
+    it('aligns', () => {
       board.layout(GameElement, {
         size: { width: 20, height: 25 },
-        scaling: 'fit'
+        scaling: 'fit',
+        alignment: 'right',
+      });
+      const spaces = board.createMany(3, Space, 'space');
+      board.applyLayouts();
+
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 60, top: 0, width: 40, height: 50 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 40, height: 50 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 60, top: 50, width: 40, height: 50 })
+    });
+
+    it('aligns vertical', () => {
+      board.layout(GameElement, {
+        size: { width: 25, height: 20 },
+        scaling: 'fit',
+        alignment: 'bottom right',
       });
       const spaces = board.createMany(3, Space, 'space');
       board.applyLayouts();
@@ -553,6 +568,18 @@ describe('Board', () => {
       // console.log('<div style="width: 200; height: 200; position: relative; outline: 1px solid black">');
       // for (const c of board._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}%; top: ${c._ui.computedStyle?.top}%; width: ${c._ui.computedStyle?.width}%; height: ${c._ui.computedStyle?.height}%; background: red; outline: 1px solid blue"></div>`);
       // console.log('</div>');
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 50, top: 60, width: 50, height: 40 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 0, top: 60, width: 50, height: 40 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 50, top: 20, width: 50, height: 40 })
+    });
+
+    it('sizes to fit', () => {
+      board.layout(GameElement, {
+        size: { width: 20, height: 25 },
+        scaling: 'fit'
+      });
+      const spaces = board.createMany(3, Space, 'space');
+      board.applyLayouts();
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 10, top: 0, width: 40, height: 50 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 40, height: 50 })
       expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 10, top: 50, width: 40, height: 50 })

@@ -1,6 +1,6 @@
 import ElementCollection from './element-collection';
 import { isA, shuffleArray, times } from '../utils';
-import { translate, cellSizeForArea } from './utils';
+import { scale, translate, cellSizeForArea } from './utils';
 import { serializeObject, deserializeObject } from '../action/utils';
 import random from 'random-seed';
 
@@ -373,6 +373,7 @@ export default class GameElement<P extends Player> {
       attributes: {
         margin: 0,
         scaling: 'none',
+        alignment: 'center',
         gap: 0,
         direction: 'square'
       }
@@ -401,7 +402,7 @@ export default class GameElement<P extends Player> {
       if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
       if (!scaling) attributes.scaling = 'fit';
     }
-    this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', direction: 'square' }, attributes) });
+    this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', alignment: 'center', direction: 'square' }, attributes) });
 
     this._ui.layouts.sort((a, b) => {
       let aVal = 0, bVal = 0;
@@ -441,7 +442,7 @@ export default class GameElement<P extends Player> {
       let cellBox: (n: number) => Box | undefined;
       let cell: ((n: number) => { row: number, column: number });
 
-      const { slots, direction, gap, scaling, limit } = attributes;
+      const { slots, direction, gap, scaling, alignment, limit } = attributes;
       let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
       const area = this.getArea(attributes);
       if (limit) children = children.slice(0, limit);
@@ -449,8 +450,6 @@ export default class GameElement<P extends Player> {
       if (slots) {
         cellBox = n => n < slots.length ? slots[n] : undefined
       } else {
-        // calculate working area
-
         // calculate # of rows/cols
         const minRows = typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.min || 1;
         const minColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.min || 1;
@@ -458,6 +457,10 @@ export default class GameElement<P extends Player> {
         const maxColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.max || Infinity;
         let rows = minRows;
         let columns = minColumns;
+        const alignOffset = {
+          left: alignment.includes('left') ? 0 : (alignment.includes('right') ? 1 : 0.5),
+          top: alignment.includes('top') ? 0 : (alignment.includes('bottom') ? 1 : 0.5),
+        };
 
         // expand grid as needed in direction specified
         if (rows * columns < children.length) {
@@ -505,8 +508,8 @@ export default class GameElement<P extends Player> {
           // center used cells within the minimum grid, possibly using fractional row/col
           //console.log('virtual grid', vColumns, vRows, columns, rows);
           cell = n => ({
-            column: n % vColumns + (columns - vColumns) / 2,
-            row: Math.floor(n / vColumns) + (rows - vRows) / 2
+            column: (alignOffset.left === 1 ? vColumns - 1 - n % vColumns : n % vColumns) + alignOffset.left * (columns - vColumns),
+            row: (alignOffset.top === 1 ? vRows - 1 - Math.floor(n / vColumns) : Math.floor(n / vColumns)) + alignOffset.top * (rows - vRows)
           });
         }
 
@@ -663,9 +666,9 @@ export default class GameElement<P extends Player> {
 
             totalAreaNeeded = getTotalArea();
           }
-          // center in reduced area
-          startingOffset.x += area.left - totalAreaNeeded.left + (area.width - totalAreaNeeded.width) / 2;
-          startingOffset.y += area.top - totalAreaNeeded.top + (area.height - totalAreaNeeded.height) / 2;
+          // align in reduced area
+          startingOffset.x += area.left - totalAreaNeeded.left + alignOffset.left * (area.width - totalAreaNeeded.width);
+          startingOffset.y += area.top - totalAreaNeeded.top + alignOffset.top * (area.height - totalAreaNeeded.height);
 
         } else { // orthogonal
 
@@ -677,9 +680,9 @@ export default class GameElement<P extends Player> {
 
           // center in reduced area
           const newWidth = columns * (size.width + cellGap.x!) - cellGap.x!;
-          startingOffset.x += (area.width - newWidth) / 2;
+          startingOffset.x += alignOffset.left * (area.width - newWidth);
           const newHeight = rows * (size.height + cellGap.y!) - cellGap.y!;
-          startingOffset.y += (area.height - newHeight) / 2;
+          startingOffset.y += alignOffset.top * (area.height - newHeight);
         }
 
         //console.log('size, area after fit/fill adj', size, area, scale, cellGap)

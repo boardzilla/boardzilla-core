@@ -4,22 +4,6 @@
     padding: 0;
   }
 
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    15% { transform: scale(1.3); }
-    100% { transform: scale(1.1); }
-  }
-
-  @keyframes zoom {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.5); }
-  }
-
-  @keyframes fadeIn {
-    0% { opacity: 0; transform: translate(-100%, 0) }
-    100% { opacity: 1; transform: none }
-  }
-
   #play-area {
     overflow: hidden;
 
@@ -27,14 +11,20 @@
       background: #ccc;
     }
 
-    .zoomable:hover {
-      animation: zoom ease .2s forwards;
-      z-index: 100;
+    .zoomable {
+      transition: transform 0.2s;
+      &:hover {
+        transform: scale(1.5);
+        z-index: 100;
+      }
     }
 
     .clickable {
-      animation: pulse ease 1s infinite;
       cursor: pointer;
+      outline: .5em solid yellow;
+      &:hover {
+        outline: .5em solid red;
+      }
     }
 
     .selected {
@@ -83,34 +73,31 @@
   }
 
   #player-controls {
-    form, .prompt {
-      animation: fadeIn .2s;
-    }
+    box-sizing: border-box;
+    position: absolute;
+    padding: .25rem;
+    font-size: .75rem;
     form {
       margin: 0;
+      display: inline-block;
     }
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: #fff8;
-    padding: .5rem;
-    font-size: 1rem;
+    input {
+      border-width: .05rem;
+    }
     input, select, button {
-      padding: .5rem;
+      padding: 0.2rem 0.4rem;
       font-family: inherit;
       font-size: inherit;
       box-sizing: border-box;
-      height: 2rem;
-      margin-right: .5rem;
+      margin: 0.1rem;
     }
     button {
       border: none;
       background: #ccc;
-      animation: pulse ease 1s infinite;
       cursor: pointer;
+      transition: transform 0.2s;
       &:hover {
         transform: scale(1.1);
-        animation: zoom ease .2s forwards;
         box-shadow: 0.2rem 0.2rem .5rem #0008;
       }
     }

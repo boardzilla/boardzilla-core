@@ -229,7 +229,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     });
   }
 
-  allowedActions(player: P): {prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
+  allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
     const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
     if (this.players.currentPosition && player !== this.players.current()) return {
       actions: allowedActions,
@@ -240,6 +240,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       const actionStep = this.flow.actionNeeded();
       if (actionStep) {
         return {
+          step: actionStep.step,
           prompt: actionStep.prompt,
           skipIfOnlyOne: actionStep.skipIfOnlyOne,
           expand: actionStep.expand,
@@ -254,11 +255,10 @@ export default class Game<P extends Player, B extends Board<P>> {
     });
   }
 
-  getResolvedSelections(player: P, action?: string, ...args: Argument<P>[]): {prompt?: string, moves: PendingMove<P>[]} | undefined {
+  getResolvedSelections(player: P, action?: string, ...args: Argument<P>[]): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
-    const { prompt, actions, skipIfOnlyOne, expand } = allowedActions;
-    console.log('allowedActions', prompt, actions);
+    const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;
     if (!action) {
       let possibleActions: string[] = [];
       let resolvedSelections: PendingMove<P>[] = [];
@@ -278,14 +278,10 @@ export default class Game<P extends Player, B extends Board<P>> {
         }
       }
       if (!possibleActions.length) return undefined;
-      if (skipIfOnlyOne && possibleActions.length === 1) {
-        if (resolvedSelections.length === 0 || resolvedSelections.length === 1 && resolvedSelections[0].selection.isForced()) {
-          console.error('auto-move');
-        }
-        return { prompt, moves: resolvedSelections};
-      }
-      if (expand && resolvedSelections.length) return { prompt, moves: resolvedSelections};
+      if (skipIfOnlyOne && possibleActions.length === 1) return { step, prompt, moves: resolvedSelections};
+      if (expand && resolvedSelections.length) return { step, prompt, moves: resolvedSelections};
       return {
+        step,
         prompt,
         moves: [{
           action: '/',
@@ -296,7 +292,7 @@ export default class Game<P extends Player, B extends Board<P>> {
 
     } else {
       const moves = this.action(action, player)?.getResolvedSelections(...args)
-      if (moves) return { prompt, moves };
+      if (moves) return { step, prompt, moves };
     }
   }
 

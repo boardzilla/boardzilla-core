@@ -93,7 +93,19 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
   }, [listener])
 
   useEffect(() => {
-    if (game && position && move && pendingMoves?.length === 0) { // move is processable
+    // move is processable
+    if (game && position && (pendingMoves?.length === 0 || pendingMoves?.length === 1 && pendingMoves[0].selection.skipIfOnlyOne)) {
+      // if last option is forced and skippable, automove
+      if (pendingMoves.length === 1) {
+        const arg = pendingMoves[0].selection.isForced();
+        if (arg === undefined) return;
+        if (move) {
+          return selectMove(pendingMoves[0], arg)
+        } else {
+          return selectMove(pendingMoves[0])
+        }
+      }
+      if (!move) return;
       // TODO where does this go
       // if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
 
@@ -108,6 +120,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
 
       console.log('processable move attempt', move);
       const error = game.processMove({ player, ...move });
+      selectMove();
       updateBoard();
 
       if (error) {
@@ -123,7 +136,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
         };
         window.top!.postMessage(message, "*");
       };
-      selectMove();
     }
   }, [game, position, move, pendingMoves]);
 

@@ -69,7 +69,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     }
     if (!possibleOptions.length) return undefined;
     if (pruned) selection.overrideOptions(possibleOptions);
-    if (!resolvedSelections.length) return [move];
+    if (!resolvedSelections.length) return [move]; // always return the final choice, receiver may choose to skip
     if (mayExpand) return resolvedSelections;
     if (selection.skipIfOnlyOne && possibleOptions.length === 1) return resolvedSelections;
     return [move];
@@ -155,7 +155,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   }
 
   confirm(prompt: string | ((...arg: A) => string)): Action<P, [...A, 'confirm']> {
-    this.selections.push(new Selection<P>({ prompt, value: true }));
+    this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne: false, value: true }));
     return this as unknown as Action<P, [...A, 'confirm']>;
   }
 
@@ -238,7 +238,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   }): any {
     const numberOfPriorSelections = this.selections.length;
     if (choosePiece) {
-      this.selections.push(new Selection<P>({ prompt, selectOnBoard: { chooseFrom: choosePiece } }));
+      this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne: false, selectOnBoard: { chooseFrom: choosePiece } }));
     }
     if (chooseInto) {
       this.selections.push(new Selection<P>({ prompt: promptInto || prompt, selectOnBoard: { chooseFrom: chooseInto } }));

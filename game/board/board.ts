@@ -18,6 +18,7 @@ export default class Board<P extends Player> extends Space<P> {
     this.board = this;
     this._ctx.removed = this.createElement(Space, 'removed');
     this.pile = this._ctx.removed;
+    this._ui.stepLayouts = {};
   }
 
   // also gets removed elements
@@ -44,7 +45,18 @@ export default class Board<P extends Player> extends Space<P> {
 
   // UI
 
-  _ui: GameElement<P>['_ui'] & { frame?: Box };
+  _ui: GameElement<P>['_ui'] & {
+    frame?: Box;
+    stepLayouts: Record<string, {
+      element: GameElement<P> | (() => GameElement<P>),
+      top?: number,
+      bottom?: number,
+      left?: number,
+      right?: number,
+      width?: number,
+      height?: number
+    }>
+  };
 
   applyLayouts(force=false) {
     const aspectRatio = this._ui.appearance.aspectRatio;
@@ -52,10 +64,15 @@ export default class Board<P extends Player> extends Space<P> {
       this._ui.frame = {
         left: 0,
         top: 0,
-        width: aspectRatio > 1 ? aspectRatio * 100 : 100,
-        height: aspectRatio < 1 ? 100 / aspectRatio : 100
+        width: aspectRatio < 1 ? aspectRatio * 100 : 100,
+        height: aspectRatio > 1 ? 100 / aspectRatio : 100
       };
     }
     return super.applyLayouts(force);
+  }
+
+  layoutStep(stepName: string, attributes: typeof this['_ui']['stepLayouts'][string]) {
+    if (stepName !== 'out-of-turn' && !this.game.flow.getStep(stepName)) throw Error(`No such step: ${stepName}`);
+    this._ui.stepLayouts[stepName] = attributes;
   }
 }

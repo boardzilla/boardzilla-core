@@ -1,7 +1,6 @@
 // import * as Sentry from "@sentry/browser";
 // import { BrowserTracing } from "@sentry/tracing";
 import React from 'react'
-import ReactDOM from 'react-dom'
 import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
@@ -12,7 +11,7 @@ import type { Game, Player } from '../game'
 import type { Board, GameElement } from '../game/board'
 import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
-import type { Argument, Move, PendingMove, SerializedMove } from '../game/action/types'
+import type { Argument, PendingMove } from '../game/action/types'
 
 const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
 const userID: string = boostrap.userID;
@@ -29,6 +28,7 @@ type GameStore = {
   setPosition: (p: number) => void;
   move?: {action: string, args: Argument<Player>[]}; // move in progress
   selectMove: (sel?: PendingMove<Player>, arg?: Argument<Player>) => void;
+  step?: string,
   pendingMoves?: PendingMove<Player>[]; // all pending moves
   boardSelections: Map<GameElement<Player>, PendingMove<Player>[]>; // pending moves on board
   prompt?: string; // prompt for choosing action if applicable
@@ -76,10 +76,9 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     const player = s.game.players.atPosition(s.position);
     if (!player) return {};
 
-    let error: string | undefined = undefined;
     let resolvedSelections = s.game.getResolvedSelections(player, move?.action, ...(move?.args || []));
     if (move && !resolvedSelections?.moves) {
-      console.log('move may no longer be valid. retrying getResolvedSelections');
+      console.log('move may no longer be valid. retrying getResolvedSelections', move, resolvedSelections);
       move = undefined;
       resolvedSelections = s.game.getResolvedSelections(player);
     }
@@ -96,15 +95,16 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     console.log('updateSelections', move, resolvedSelections);
     return ({
       move,
+      step: resolvedSelections?.step,
       prompt: resolvedSelections?.prompt,
       boardSelections,
       pendingMoves: resolvedSelections?.moves,
     })
   }),
   selectMove: (pendingMove?: PendingMove<Player>, arg?: Argument<Player>) => set(s => {
-    const move = pendingMove && arg ? {
+    const move = pendingMove ? {
       action: pendingMove.action,
-      args: [...pendingMove.args, arg]
+      args: arg ? [...pendingMove.args, arg] : pendingMove.args
     } : undefined;
     s.updateSelections(move);
     return {};

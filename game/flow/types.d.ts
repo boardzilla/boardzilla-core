@@ -2,7 +2,7 @@ import type Flow from './flow';
 import type { Argument } from '../action/types.d';
 import type { Player } from '../player';
 
-export type FlowStep<P extends Player> = Flow<P> | ((args: Record<string, any>) => void);
+export type FlowStep<P extends Player> = Flow<P> | ((args: Record<string, any>) => void) | null;
 export type FlowDefinition<P extends Player> = FlowStep<P> | FlowStep<P>[]
 
 export type ActionStepPosition<P extends Player> = {

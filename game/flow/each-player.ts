@@ -53,6 +53,10 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
     }
   }
 
+  allSteps() {
+    return this.block;
+  }
+
   toString(): string {
     return `each-player${this.name ? ":" + this.name : ""} (player: ${this.position?.value?.position}`;
   }

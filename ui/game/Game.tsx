@@ -6,7 +6,7 @@ import PlayerControls from './components/PlayerControls';
 import '../styles/game.scss';
 import click from '../assets/click_004.ogg';
 
-import type { GameElement } from '../../game/board'
+import type { GameElement, Board } from '../../game/board'
 import type { PendingMove, Argument } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
@@ -19,19 +19,6 @@ export default () => {
   const clickAudio = useRef<HTMLAudioElement>(null);
 
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
-
-  useEffect(() => {
-    document.addEventListener('animationstart', (e: AnimationEvent) => {
-      if (e.animationName === 'pulse') {
-        const el = e.target as HTMLElement;
-        const anim = el.getAnimations()?.find((a: CSSAnimation) => a.animationName === 'pulse');
-        if (anim) anim.currentTime = Array.from(
-          document.querySelectorAll('#play-area .clickable, #player-controls button')
-        ).find(a => a !== e.target && a?.getAnimations().find((a: CSSAnimation) => a.animationName==='pulse'))
-          ?.getAnimations().find((a: CSSAnimation) => a.animationName==='pulse')?.currentTime || 0
-      }
-    })
-  }, []);
 
   if (!game || !position) return null;
   const player = game.players.atPosition(position);
@@ -69,7 +56,7 @@ export default () => {
   useEffect(() => {
     const resize = () => {
       const ratio = (game.board._ui.appearance.aspectRatio ?? 1) / (window.innerWidth / window.innerHeight);
-      let rem = window.innerHeight / 40;
+      let rem = window.innerHeight / 25;
       if (ratio > 1) {
         setDimensions({
           width: 100,
@@ -86,6 +73,7 @@ export default () => {
     }
     window.addEventListener('resize', resize);
     resize();
+    return () => window.removeEventListener('resize', resize);
   }, []);
 
   if (!dimensions) return;
@@ -101,9 +89,7 @@ export default () => {
           onSelectElement={onSelectElement}
         />
       </div>
-      <div id="player-controls">
-        <PlayerControls onSubmit={submitMove} />
-      </div>
+      <PlayerControls onSubmit={submitMove} />
     </div>
   );
 }

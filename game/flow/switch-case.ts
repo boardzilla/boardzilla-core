@@ -2,7 +2,7 @@ import Flow from './flow';
 
 import { serialize, deserialize } from '../action/utils';
 
-import type { FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion } from './types';
+import type { FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion, FlowStep } from './types';
 import type { Player } from '../player';
 import type { Serializable } from '../action/types';
 
@@ -59,6 +59,12 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
       value: deserialize(position.value, this.game),
       default: position.default,
     };
+  }
+
+  allSteps(): FlowDefinition<P> {
+    const cases = this.cases.reduce<FlowStep<P>[]>((a, f) => a.concat(f.do ? ((f.do instanceof Array) ? f.do : [f.do]) : []), []);
+    const defaultExpr = this.default ? ((this.default instanceof Array) ? this.default : [this.default]) : [];
+    return cases.concat(defaultExpr);
   }
 
   toString(): string {

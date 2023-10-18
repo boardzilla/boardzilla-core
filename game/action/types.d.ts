@@ -19,13 +19,6 @@ export type Move<P extends Player> = {
   args: Argument<P>[]
 };
 
-// obsolete?
-export type IncompleteMove<P extends Player> = {
-  player: P,
-  action?: string,
-  args: Argument<P>[]
-};
-
 export type PendingMove<P extends Player> = {
   action: string,
   args: Argument<P>[],

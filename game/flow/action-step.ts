@@ -1,11 +1,11 @@
 import Flow from './flow';
 import { serializeArg, deserializeArg } from '../action/utils';
 
-import type { ActionStepPosition, FlowBranchNode, FlowDefinition } from './types';
+import type { ActionStepPosition, FlowBranchNode, FlowDefinition, FlowStep } from './types';
 import type { Player } from '../player';
-import type { PendingMove } from '../action/types';
 
 export default class ActionStep<P extends Player> extends Flow<P> {
+  player?: (args: Record<string, any>) => P
   position: ActionStepPosition<P>;
   actions: Record<string, FlowDefinition<P> | null>;
   type: FlowBranchNode<P>['type'] = "action";
@@ -13,7 +13,8 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   skipIfOnlyOne: boolean;
   expand: boolean;
 
-  constructor({ name, actions, prompt, expand, skipIfOnlyOne }: {
+  constructor({ player, name, actions, prompt, expand, skipIfOnlyOne }: {
+    player?: (args: Record<string, any>) => P,
     name?: string,
     actions: Record<string, FlowDefinition<P> | null>,
     prompt?: string,
@@ -21,6 +22,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     skipIfOnlyOne?: boolean,
   }) {
     super({ name });
+    this.player = player;
     this.actions = actions;
     this.prompt = prompt;
     this.expand = expand ?? true;
@@ -28,6 +30,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   reset() {
+    if (this.player) this.game.players.setCurrent(this.player(this.flowStepArgs()));
     this.position = {};
   }
 
@@ -86,6 +89,10 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       action: position.action,
       args: position.args?.map((a: any) => deserializeArg(a, this.game))
     };
+  }
+
+  allSteps() {
+    return Object.values(this.actions).reduce<FlowStep<P>[]>((a, f) => a.concat(f), []);
   }
 
   toString(): string {
