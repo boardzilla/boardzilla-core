@@ -192,8 +192,8 @@ export default class Flow<P extends Player> {
   // play until action required (returns list) or game over
   play(): string[] | void {
     let step;
-    do { step = this.playOneStep() } while (step === 'ok')
-    if (step !== 'complete') return step;
+    do { step = this.playOneStep() } while (step === 'ok' && this.game.phase !== 'finished')
+    if (step !== 'complete' && step !== 'ok') return step;
   }
 
   // must override and call super. reset runs any logic needed and call setPosition. Must not modify state.

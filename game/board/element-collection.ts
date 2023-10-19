@@ -80,13 +80,13 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
     if (options.order === 'desc') {
       for (let e = this.length - 1; e >= 0; e--) {
         const el = this[e];
-        finderFn(el, 'desc');
         if (options.limit !== undefined && coll.length >= options.limit) break;
+        finderFn(el, 'desc');
       }
     } else {
       for (const el of this) {
-        finderFn(el, 'asc');
         if (options.limit !== undefined && coll.length >= options.limit) break;
+        finderFn(el, 'asc');
       };
     }
 

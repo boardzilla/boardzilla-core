@@ -33,12 +33,13 @@ export default class Game<P extends Player, B extends Board<P>> {
   board: B;
   settings: Record<string, any>;
   actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P, Argument<P>[]>>;
-  phase: 'define' | 'new' | 'started' = 'define';
+  phase: 'define' | 'new' | 'started' | 'finished' = 'define';
   rseed: string;
   random: () => number;
   messages: Message[] = [];
   godMode = false;
-  setupLayout?: (board: B, aspectRatio: number) => void
+  setupLayout?: (board: B, aspectRatio: number) => void;
+  winner?: P | P[];
 
   /**
    * configuration functions
@@ -98,6 +99,11 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.flow.reset();
   }
 
+  finish(winner?: P | P[]) {
+    this.phase = 'finished';
+    this.winner = winner;
+  }
+
   buildFlow() {
     this.flow = this.flowDefinition(this, this.board);
     this.flow.game = this;
@@ -112,7 +118,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.setSettings(state.settings);
     this.board.fromJSON(state.board);
     this.buildFlow();
-    this.phase = 'started';
+    this.phase = state.phase || 'started'; // TODO temp
     this.flow.setBranchFromJSON(state.position);
     this.setRandomSeed(state.rseed);
   }
@@ -124,6 +130,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       settings: this.settings,
       position: this.flow.branchJSON(!!forPlayer),
       board: this.board.allJSON(forPlayer),
+      phase: this.phase,
       rseed: this.rseed,
     };
   }

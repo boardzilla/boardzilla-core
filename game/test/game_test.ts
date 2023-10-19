@@ -8,14 +8,8 @@ import {
   Game,
   Player,
   Flow,
-  action
+  imports
 } from '../';
-
-import {
-  Board,
-  Space,
-  Piece,
-} from '../board';
 
 import {
   playerActions,
@@ -28,23 +22,34 @@ const { expect } = chai;
 
 describe('Game', () => {
   const players = [
-    { name: 'Joe', color: 'red', position: 1 },
-    { name: 'Jane', color: 'green', position: 2 },
-    { name: 'Jag', color: 'yellow', position: 3 },
-    { name: 'Jin', color: 'purple', position: 4 },
+    { name: 'Joe', color: 'red', position: 1, tokens: 0 },
+    { name: 'Jane', color: 'green', position: 2, tokens: 0 },
+    { name: 'Jag', color: 'yellow', position: 3, tokens: 0 },
+    { name: 'Jin', color: 'purple', position: 4, tokens: 0 },
   ];
 
-  class TestBoard extends Board<Player> {
+  class TestPlayer extends Player {
     tokens: number = 0;
   }
 
-  class Card extends Piece<Player> {
+  const {
+    Board,
+    Space,
+    Piece,
+    action
+  } = imports<TestPlayer>();
+
+  class TestBoard extends Board {
+    tokens: number = 0;
+  }
+
+  class Card extends Piece {
     suit: string;
     value: number;
     flipped: boolean;
   }
 
-  let game: Game<Player, TestBoard>;
+  let game: Game<TestPlayer, TestBoard>;
   let board: TestBoard;
   const spendSpy = chai.spy();
 
@@ -63,12 +68,13 @@ describe('Game', () => {
         }})
       )}),
       whileLoop({ while: () => board.tokens > 0, do: (
-        eachPlayer({ name: 'player', do: (
+        eachPlayer({ name: 'player', do: [
           playerActions({ actions: {
             takeOne: null,
-          }})
-        )})
-      )})
+          }}),
+          () => board.tokens <= 0 && game.finish(game.players.withHighest('tokens')),
+        ]})
+      )}),
     ]}));
 
     game.defineActions((_, board) => ({
@@ -80,9 +86,12 @@ describe('Game', () => {
         min: 1,
         max: 3,
       }).do(n => board.tokens += n),
-      takeOne: () => action({
+      takeOne: player => action({
         prompt: 'take one counter',
-      }).do(() => board.tokens -= 1),
+      }).do(() => {
+        board.tokens --;
+        player.tokens ++;
+      }),
       spend: () => action({
         prompt: 'Spend resource',
       }).chooseFrom({
@@ -95,7 +104,7 @@ describe('Game', () => {
       }).do(spendSpy),
     }));
 
-    game.definePlayers(Player);
+    game.definePlayers(TestPlayer);
     game.players.fromJSON(players);
 
     game.start();
@@ -103,6 +112,7 @@ describe('Game', () => {
       players,
       rseed: '',
       settings: {},
+      phase: 'started',
       board: [ { className: 'TestBoard', tokens: 0 } ],
       position: [ { type: 'sequence', name: 'main', sequence: 0 } ],
     });
@@ -134,6 +144,28 @@ describe('Game', () => {
     ]);
   });
 
+  it('finishes', () => {
+    game.setState({
+      players,
+      currentPlayerPosition: 2,
+      rseed: '',
+      settings: {},
+      position: [
+        { type: 'sequence', name: 'main', sequence: 2 },
+        { type: 'loop', position: { index: 0 } },
+        { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
+        { type: 'action', position: {} }
+      ],
+      phase: 'started',
+      board: [ { className: 'TestBoard', tokens: 9 } ],
+    });
+    do {
+      game.processMove({ action: 'takeOne', args: [], player: game.players.current() });
+      game.play();
+    } while (game.phase === 'started');
+    expect(game.winner).to.equal(game.players[1]);
+  });
+
   describe('state', () => {
     it('is stateless', () => {
       game.play();
@@ -157,6 +189,7 @@ describe('Game', () => {
           { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
           { type: 'action', position: {} }
         ],
+        phase: 'started',
         board: [ { className: 'TestBoard', tokens: 9 } ],
       });
       expect(game.players.currentPosition).to.equal(2);

@@ -29,7 +29,7 @@ export {
   times,
 } from './utils';
 
-export { Game, Player, action };
+export { Game, Player };
 
 // starter function
 
@@ -100,9 +100,9 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   //console.timeLog('setup', 'setState');
 
   if (start) {
-    game.play();
+    if (game.phase !== 'finished') game.play();
   } else {
-    game.phase = 'new';
+    game.phase ??= 'new';
   }
   console.timeEnd('setup');
   game.setupLayout = setupLayout;
