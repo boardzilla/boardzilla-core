@@ -122,7 +122,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
 
 export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UIOptions): void => {
   gameStore.getState().setUIOptions(options as UIOptions);
-  
+
   const root = createRoot(document.getElementById('root')!)
   root.render(
     // we can anonymize Player class internally

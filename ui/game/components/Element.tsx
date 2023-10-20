@@ -170,7 +170,14 @@ const Element = ({element, json, selected, onSelectElement}: {
 
   return (
     <div
-      style={{...style, transform, transition: animating ? 'transform 1.2s': undefined, transformOrigin: 'top left', position: 'absolute'}}
+      style={{
+        ...style,
+        transform,
+        transition: animating || !transform ? 'transform .3s, top .3s, left .3s, width .3s, height.3s': 'top .3s, left .3s, width .3s, height.3s',
+        zIndex: animating ? 100: undefined,
+        transformOrigin: 'top left',
+        position: 'absolute'
+      }}
       ref={wrapper}
     >
       <div

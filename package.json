@@ -24,7 +24,7 @@
     "@types/random-seed": "^0.3.3",
     "@types/react": "^18.2.25",
     "@types/react-color": "^3.0.6",
-    "@types/react-dom": "^18.2.25",
+    "@types/react-dom": "^18.2.14",
     "chai": "^4.3.8",
     "chai-spies": "^1.0.0",
     "mocha": "^10.2.0",

@@ -116,10 +116,3 @@ export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 
   initial?: Argument<P>;
   regexp?: RegExp;
 }
-
-// move if altered, selection if invalid and more info required to become valid, error if message
-export type MoveResponse<P extends Player> = {
-  move: IncompleteMove<P>,
-  selection?: ResolvedSelection<P>,
-  error?: string
-};
