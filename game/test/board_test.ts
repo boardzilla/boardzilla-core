@@ -263,13 +263,25 @@ describe('Board', () => {
       deck.create(Card, 'AH', { suit: 'H', pip: 1 });
       deck.create(Card, '2H', { suit: 'H', pip: 2 });
       deck.create(Card, '3H', { suit: 'H', pip: 3 });
+      expect(board.allJSON()).to.deep.equals(
+        [
+          { className: 'Board', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
+      );
 
       deck.lastN(2, Card).putInto(discard);
       expect(board.allJSON()).to.deep.equals(
         [
           { className: 'Board', _id: 0, children: [
             { className: 'Space', name: 'deck', _id: 2, children: [
-              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
             ]},
             { className: 'Space', name: 'discard', _id: 3, children: [
               { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
@@ -278,17 +290,113 @@ describe('Board', () => {
           ]},
         ]
       );
+    });
 
-      discard.first(Card)!.putInto(deck, {fromBottom: 0});
+    it('moves with stacking order', () => {
+      const deck = board.create(Space, 'deck');
+      const discard = board.create(Space, 'discard');
+      deck.setOrder('stacking');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.create(Card, '3H', { suit: 'H', pip: 3 });
+      expect(board.allJSON()).to.deep.equals(
+        [
+          { className: 'Board', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, order: 'stacking', children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
+      );
+
+      deck.lastN(2, Card).putInto(discard);
+      expect(board.allJSON()).to.deep.equals(
+        [
+          { className: 'Board', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, order: 'stacking', children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
+            ]}
+          ]},
+        ]
+      );
+
+      discard.all(Card).putInto(deck);
+      expect(board.allJSON()).to.deep.equals(
+        [
+          { className: 'Board', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, order: 'stacking', children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
+      );
+    });
+
+    it('moves fromTop', () => {
+      const deck = board.create(Space, 'deck');
+      const discard = board.create(Space, 'discard');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.create(Card, '3H', { suit: 'H', pip: 3 });
       expect(board.allJSON()).to.deep.equals(
         [
           { className: 'Board', _id: 0, children: [
             { className: 'Space', name: 'deck', _id: 2, children: [
-              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
               { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
+      );
+
+      deck.lastN(2, Card).putInto(discard, {fromTop: 0});
+      expect(board.allJSON()).to.deep.equals(
+        [
+          { className: 'Board', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
             ]},
             { className: 'Space', name: 'discard', _id: 3, children: [
-              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 }
+            ]}
+          ]},
+        ]
+      );
+    });
+
+    it('tracks movement', () => {
+      const deck = board.create(Space, 'deck');
+      const discard = board.create(Space, 'discard');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.create(Card, '3H', { suit: 'H', pip: 3 });
+      const json = board.allJSON();
+      board._ctx.trackMovement = true;
+      board.fromJSON(json);
+
+      deck.lastN(2, Card).putInto(discard);
+      expect(board.allJSON()).to.deep.equals(
+        [
+          { className: 'Board', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4, was: '0/0/0' }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5, was: '0/0/1' },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6, was: '0/0/2' }
             ]}
           ]},
         ]

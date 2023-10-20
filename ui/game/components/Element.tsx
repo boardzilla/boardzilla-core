@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { gameStore } from '../../';
 import classNames from 'classnames';
 
@@ -28,20 +28,50 @@ const Element = ({element, json, selected, onSelectElement}: {
   selected: GameElement<Player>[],
   onSelectElement: (element: GameElement<Player>, moves: PendingMove<Player>[]) => void,
 }) => {
-  const [boardSelections, move, position] = gameStore(s => [s.boardSelections, s.move, s.position]);
-  //console.log("updated", element.branch());
+  const [boardSelections, move, position] = gameStore(s => [s.boardSelections, s.move, s.position, s.boardJSON]);
+  const [transform, setTransform] = useState<string>(); // temporary transform from new to old used to animate
+  const [animating, setAnimating] = useState(false); // currently animating
+  const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
+  const wrapper = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (wrapper.current && transform) {
+      const cancel = (e: TransitionEvent) => {
+        if (e.propertyName === 'transform') {
+          element.doneMoving();
+          setAnimating(false);
+          wrapper.current?.removeEventListener('transitionend', cancel);
+        }
+      };
+      setAnimating(true);
+      setTransform(undefined); // remove transform and let it transition to new location
+      wrapper.current?.addEventListener('transitionend', cancel);
+    }
+  }, [wrapper, transform])
+
   const clickMoves = boardSelections.get(element);
   const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));;
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || defaultAppearance;
-  const transform = element.absoluteTransform();
+  const absoluteTransform = element.absoluteTransform();
 
   let style: React.CSSProperties = {};
 
-  if (element._ui.computedStyle) {
-    style = Object.fromEntries(Object.entries(element._ui.computedStyle).map(([key, val]) => ([key, `${val}%`])))
+  // initially place into old position
+  const moveTransform = element.getMoveTransform();
+  const computedStyle = element._ui.computedStyle;
+  if (!moveTransform) element.doneMoving();
+  if (moveTransform && !transform && !animating && animatedFrom !== element._t.was) {
+    const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
+    setTransform(transformToNew);
+    setAnimatedFrom(element._t.was);
+    return null; // don't render this one, to prevent untransformed render
   }
-  style.fontSize = transform.height * 0.04 + 'rem'
+
+  if (computedStyle) {
+    style = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])))
+  }
+  style.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
   let contents: JSX.Element[] = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
@@ -81,12 +111,12 @@ const Element = ({element, json, selected, onSelectElement}: {
 
       if (source._ui.computedStyle && target._ui.computedStyle) {
         const origin = {
-          x: (source._ui.computedStyle.left + source._ui.computedStyle?.width / 2) * transform.width / 100,
-          y: (source._ui.computedStyle.top + source._ui.computedStyle?.height / 2) * transform.height / 100
+          x: (source._ui.computedStyle.left + source._ui.computedStyle?.width / 2) * absoluteTransform.width / 100,
+          y: (source._ui.computedStyle.top + source._ui.computedStyle?.height / 2) * absoluteTransform.height / 100
         }
         const destination = {
-          x: (target._ui.computedStyle.left + target._ui.computedStyle?.width / 2) * transform.width / 100,
-          y: (target._ui.computedStyle.top + target._ui.computedStyle?.height / 2) * transform.height / 100
+          x: (target._ui.computedStyle.left + target._ui.computedStyle?.width / 2) * absoluteTransform.width / 100,
+          y: (target._ui.computedStyle.top + target._ui.computedStyle?.height / 2) * absoluteTransform.height / 100
         }
 
         const distance = Math.sqrt(Math.pow(origin.x - destination.x, 2) + Math.pow(origin.y - destination.y, 2))
@@ -120,45 +150,47 @@ const Element = ({element, json, selected, onSelectElement}: {
           labels.push(
             <g
               key={`label${i}`}
-              transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * transform.width * .5}
-  ${(origin.y + destination.y) / 2 - labelScale! * transform.height * .5})
+              transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * absoluteTransform.width * .5}
+  ${(origin.y + destination.y) / 2 - labelScale! * absoluteTransform.height * .5})
   scale(${labelScale})`}
             >{label(args[1])}</g>);
         }
       }
     });
     contents.unshift(
-      <svg key="svg-edges" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${transform.width} ${transform.height}`}>{lines}</svg>
+      <svg key="svg-edges" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${absoluteTransform.width} ${absoluteTransform.height}`}>{lines}</svg>
     );
     if (label) contents.push(
-      <svg key="svg-edge-labels" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${transform.width} ${transform.height}`}>{labels}</svg>
+      <svg key="svg-edge-labels" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${absoluteTransform.width} ${absoluteTransform.height}`}>{labels}</svg>
     );
   }
 
   const attrs = elementAttributes(element);
   if (element.player?.position === position) attrs.mine = 'true';
 
-  return React.createElement(
-    'div',
-    {
-      id: element.name,
-      style,
-      className: classNames(
-        baseClass,
-        {
-          [element.constructor.name]: baseClass !== element.constructor.name,
-          clickable: clickMoves?.length,
-          selected: isSelected,
-          zoomable: typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable,
-        }
-      ),
-      onClick: clickMoves ? (e: Event) => { e.stopPropagation(); onSelectElement(element, clickMoves) } : null,
-      ...attrs
-    },
-    <>
-      {appearance(element)}
-      {contents}
-    </>
+  return (
+    <div
+      style={{...style, transform, transition: animating ? 'transform 1.2s': undefined, transformOrigin: 'top left', position: 'absolute'}}
+      ref={wrapper}
+    >
+      <div
+        id={element.name}
+        className={classNames(
+          baseClass,
+          {
+            [element.constructor.name]: baseClass !== element.constructor.name,
+            clickable: clickMoves?.length,
+            selected: isSelected,
+            zoomable: typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable,
+          }
+        )}
+        onClick={clickMoves ? (e: React.MouseEvent<Element, MouseEvent>) => { e.stopPropagation(); onSelectElement(element, clickMoves) } : undefined}
+        {...attrs}
+      >
+        {appearance(element)}
+        {contents}
+      </div>
+    </div>
   );
 };
 // would like to memo but not yet clear how well this work - dont optimize yet

@@ -14,6 +14,9 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       return {
         game: game.getState(),
         players: game.getPlayerStates(),
+        currentPlayer: game.players.currentPosition ? [game.players.currentPosition] : [],
+        winner: game.winner.map(p => p.position),
+        phase: game.phase,
         messages: game.messages
       }
     },
@@ -24,7 +27,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
         data: SerializedMove
       }
     ): GameUpdate<Player> => {
-      const game = setup(previousState, true);
+      const game = setup(previousState, true, true);
       const error = game.processMove({
         player: game.players.atPosition(move.position)!,
         action: move.data.action,
@@ -34,9 +37,14 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
         throw Error(`Unable to process move: ${error}`);
       }
       game.play();
+      // @ts-ignore
+      if (globalThis.window) window.board = game.board; // debugging - may remove
       return {
         game: game.getState(),
         players: game.getPlayerStates(),
+        currentPlayer: game.players.currentPosition ? [game.players.currentPosition] : [],
+        winner: game.winner.map(p => p.position),
+        phase: game.phase,
         messages: game.messages
       }
     },

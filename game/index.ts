@@ -56,7 +56,7 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   setupFlow: (game: Game<P, B>, board: B) => Flow<P>,
   actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>,
   setupLayout?: (board: B, aspectRatio: number) => void
-}): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, start: boolean): Game<P, B> => {
+}): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, start: boolean, trackMovement=false): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
   let rseed = '';
@@ -95,6 +95,7 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
       if (setupBoard) setupBoard(game, game.board as B);
       //console.timeLog('setup', 'setupBoard');
     }
+    game.trackMovement(trackMovement);
     game.setState(state);
   }
   //console.timeLog('setup', 'setState');
@@ -104,6 +105,7 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   } else {
     game.phase ??= 'new';
   }
+  game.board._ctx.moves = {};
   console.timeEnd('setup');
   game.setupLayout = setupLayout;
   return game;

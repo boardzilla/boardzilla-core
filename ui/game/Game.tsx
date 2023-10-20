@@ -17,8 +17,8 @@ export default () => {
   console.log('GAME', position);
 
   const clickAudio = useRef<HTMLAudioElement>(null);
-
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
+  const [animations, setAnimations] = useState({});
 
   if (!game || !position) return null;
   const player = game.players.atPosition(position);
@@ -88,6 +88,7 @@ export default () => {
           selected={selected}
           onSelectElement={onSelectElement}
         />
+        <div style={{position: 'absolute', backgroundColor: 'red'}}/>
       </div>
       <PlayerControls onSubmit={submitMove} />
     </div>

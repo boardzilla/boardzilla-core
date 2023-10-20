@@ -1,3 +1,13 @@
+state'
+  moves: [
+    [br, br']
+...
+Game: computedStyles: {el: cS}
+props.anims =>
+  set wrap and transform
+  useEffect(anim, [old, new])
+
+
 layoutAction('power', {})
 layoutStep('power', {})
 layoutPrompt('power', {})

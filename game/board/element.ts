@@ -27,10 +27,10 @@ export default class GameElement<P extends Player> {
   player?: P;
   board: Board<P>;
   game: Game<P, Board<P>>;
-  top: typeof this.last;
-  bottom: typeof this.first;
-  topN: typeof this.lastN;
-  bottomN: typeof this.firstN;
+  top: typeof this.first;
+  bottom: typeof this.last;
+  topN: typeof this.firstN;
+  bottomN: typeof this.lastN;
 
   // ctx shared for all elements in the tree
   _ctx: ElementContext<P>
@@ -40,7 +40,9 @@ export default class GameElement<P extends Player> {
     children: ElementCollection<P, GameElement<P>>,
     parent?: GameElement<P>,
     id: number,
-    graph?: UndirectedGraph
+    order?: 'normal' | 'stacking',
+    was?: string,
+    graph?: UndirectedGraph,
   };
 
   _visible?: {
@@ -63,10 +65,10 @@ export default class GameElement<P extends Player> {
       id: this._ctx.sequence++,
     }
 
-    Object.getPrototypeOf(this).top = this.last;
-    Object.getPrototypeOf(this).topN = this.lastN;
-    Object.getPrototypeOf(this).bottom = this.first;
-    Object.getPrototypeOf(this).bottomN = this.firstN;
+    Object.getPrototypeOf(this).top = this.first;
+    Object.getPrototypeOf(this).topN = this.firstN;
+    Object.getPrototypeOf(this).bottom = this.last;
+    Object.getPrototypeOf(this).bottomN = this.lastN;
   }
 
   setId(id?: number) {
@@ -148,6 +150,10 @@ export default class GameElement<P extends Player> {
 
   _otherFinder<T extends GameElement<P>>(finders: ElementFinder<P, T>[]): ElementFinder<P, GameElement<P>> {
     return (el: T) => el !== (this as GameElement<P>);
+  }
+
+  setOrder(order: typeof this._t.order) {
+    this._t.order = order;
   }
 
   container<T extends GameElement<P>>(className?: ElementClass<P, T>): T | undefined {
@@ -251,7 +257,11 @@ export default class GameElement<P extends Player> {
     if (this.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
     const el = this.createElement(className, name, attrs);
     el._t.parent = this;
-    this._t.children.push(el);
+    if (this._t.order === 'stacking') {
+      this._t.children.unshift(el);
+    } else {
+      this._t.children.push(el);
+    }
     return el;
   }
 
@@ -281,7 +291,7 @@ export default class GameElement<P extends Player> {
       branches.unshift(node._t.parent._t.children.indexOf(node));
       node = node._t.parent;
     }
-    branches.unshift(this._ctx.removed._t.children.indexOf(node) + 1);
+    branches.unshift(this._ctx.removed._t.children.indexOf(node) >= 0 ? 1 : 0);
     return branches.join("/");
   }
 
@@ -328,19 +338,22 @@ export default class GameElement<P extends Player> {
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
     if (seenBy === undefined || 'isSpace' in this) json._id = _t.id;
     if (_t.children.length) json.children = Array.from(_t.children.map(c => c.toJSON(seenBy)));
+    if (_t.order) json.order = _t.order;
+    if (_t.was) json.was = _t.was;
     return json;
   }
 
-  createChildrenFromJSON(childrenJSON: ElementJSON[]) {
+  createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string) {
     // truncate non-spaces
     const spaces = this._t.children.filter(c => 'isSpace' in c);
     this._t.children = new ElementCollection();
 
-    for (const json of childrenJSON) {
-      let { className, children, _id, name, ...rest } = json;
+    for (let i = 0; i !== childrenJSON.length; i++) {
+      const json = childrenJSON[i];
+      let { className, children, was, _id, name, order, ...rest } = json;
       if (this.game) rest = deserializeObject({...rest}, this.game);
       let child: GameElement<P> | undefined = undefined;
-      if (_id !== undefined) {
+      if (_id !== undefined) { // try to match space, preserve the object and any references
         child = spaces.find(c => c._t.id === _id);
         if (child) {
           // reset all on child
@@ -357,9 +370,12 @@ export default class GameElement<P extends Player> {
         child = this.createElement(elementClass, name, rest) as GameElement<P>;
         child.setId(_id);
         child._t.parent = this;
+        child._t.order = order;
+        child._t.was = was;
+        if (this._ctx.trackMovement) child._t.was = branch + '/' + i;
       }
       this._t.children.push(child);
-      child.createChildrenFromJSON(children || []);
+      child.createChildrenFromJSON(children || [], branch + '/' + i);
     };
   }
 
@@ -378,16 +394,19 @@ export default class GameElement<P extends Player> {
         direction: 'square'
       }
     }],
-    appearance: {}
+    appearance: {},
   }
 
   // viewport relative to the board
   absoluteTransform(): Box {
+    return this.board._ui.frame ? translate(this.relativeTransformToBoard(), this.board._ui.frame) : this.relativeTransformToBoard();
+  }
+
+  relativeTransformToBoard(): Box {
     let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
     let parent = this._t.parent;
     while (parent?._ui.computedStyle) {
       transform = translate(transform, parent._ui.computedStyle)
-      if ('frame' in parent?._ui) transform = translate(transform, parent._ui.frame as Box)
       parent = parent._t.parent;
     }
     return transform;
@@ -803,5 +822,26 @@ export default class GameElement<P extends Player> {
 
   appearance(appearance: ElementUI<P, this>['appearance']) {
     Object.assign(this._ui.appearance, appearance);
+  }
+
+  getMoveTransform() {
+    if (!this._ui.computedStyle || !this._t.was || this._t.was === this.branch()) return;
+    const previousPosition = this.board._ui.previousStyles[this._t.was];
+    if (!previousPosition) return;
+    const newPosition = this.relativeTransformToBoard();
+    return {
+      scaleX: previousPosition.width / newPosition.width,
+      scaleY: previousPosition.height / newPosition.height,
+      translateX: (previousPosition.left - newPosition.left) / newPosition.width * 100,
+      translateY: (previousPosition.top - newPosition.top) / newPosition.height * 100,
+    };
+  }
+
+  doneMoving() {
+    const branch = this.branch();
+    this._t.was = branch;
+    if (this._ui.computedStyle) {
+      this.board._ui.previousStyles[branch] = this.relativeTransformToBoard();
+    }
   }
 }

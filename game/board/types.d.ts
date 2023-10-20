@@ -23,6 +23,7 @@ export type ElementContext<P extends Player> = {
   sequence: number;
   player?: P;
   classRegistry: ElementClass<P, GameElement<P>>[];
+  moves: Record<string, string>;
 } & Record<string, any>;
 
 export type ElementFinder<P extends Player, T extends GameElement<P>> = (
@@ -59,8 +60,8 @@ export type ElementUI<P extends Player, T extends GameElement<P>> = {
   }[],
   appearance: {
     render?: ((el: T) => JSX.Element | null) | false,
-    aspectRatio?: number;
-    zoomable?: boolean | ((el: T) => boolean);
+    aspectRatio?: number,
+    zoomable?: boolean | ((el: T) => boolean),
     connections?: {
       thickness?: number,
       style?: string,
@@ -70,5 +71,5 @@ export type ElementUI<P extends Player, T extends GameElement<P>> = {
       labelScale?: number,
     },
   },
-  computedStyle?: Box
+  computedStyle?: Box,
 }

@@ -17,8 +17,10 @@ export default class Board<P extends Player> extends Space<P> {
     super({ classRegistry: classes });
     this.board = this;
     this._ctx.removed = this.createElement(Space, 'removed');
+    this._ctx.trackMovement = false;
     this.pile = this._ctx.removed;
     this._ui.stepLayouts = {};
+    this._ui.previousStyles = {};
   }
 
   // also gets removed elements
@@ -29,7 +31,7 @@ export default class Board<P extends Player> extends Space<P> {
   }
 
   fromJSON(boardJSON: ElementJSON[]) {
-    let { className, children, _id, ...rest } = boardJSON[0];
+    let { className, children, _id, order, ...rest } = boardJSON[0];
     if (this.game) rest = deserializeObject({...rest}, this.game);
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
 
@@ -39,8 +41,9 @@ export default class Board<P extends Player> extends Space<P> {
         rest[key] = undefined;
     }
     Object.assign(this, {...rest});
-    if (children) this.createChildrenFromJSON(children);
-    this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1));
+    if (children) this.createChildrenFromJSON(children, '0');
+    if (order) this._t.order = order;
+    this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1), '1');
   }
 
   // UI
@@ -55,7 +58,8 @@ export default class Board<P extends Player> extends Space<P> {
       right?: number,
       width?: number,
       height?: number
-    }>
+    }>;
+    previousStyles: Record<any, Box>;
   };
 
   applyLayouts(force=false) {

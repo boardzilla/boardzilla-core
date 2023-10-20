@@ -121,7 +121,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
       console.log('processable move attempt', move);
       const error = game.processMove({ player, ...move });
       selectMove();
-      updateBoard();
 
       if (error) {
         console.error(error);
@@ -136,6 +135,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
         };
         window.top!.postMessage(message, "*");
       };
+      updateBoard();
     }
   }, [game, position, move, pendingMoves]);
 

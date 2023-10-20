@@ -66,7 +66,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     s.game.board.applyLayouts();
 
     s.updateSelections(s.move);
-
+    
     return ({
       boardJSON: boardJSON || s.game.board.allJSON()
     })

@@ -39,7 +39,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   messages: Message[] = [];
   godMode = false;
   setupLayout?: (board: B, aspectRatio: number) => void;
-  winner?: P | P[];
+  winner: P[] = [];
 
   /**
    * configuration functions
@@ -101,7 +101,7 @@ export default class Game<P extends Player, B extends Board<P>> {
 
   finish(winner?: P | P[]) {
     this.phase = 'finished';
-    this.winner = winner;
+    if (winner) this.winner = winner instanceof Array ? winner : [winner];
   }
 
   buildFlow() {
@@ -153,6 +153,10 @@ export default class Game<P extends Player, B extends Board<P>> {
     const results = fn();
     this.contextualizeBoardToPlayer(prev);
     return results;
+  }
+
+  trackMovement(track=true) {
+    this.board._ctx.trackMovement = track;
   }
 
   /**
