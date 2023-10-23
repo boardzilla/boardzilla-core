@@ -11,11 +11,9 @@ export type SetupState<P extends Player> = {
 export type GameState<P extends Player> = {
   players: PlayerAttributes<P>[],
   settings: Record<string, any>
-  currentPlayerPosition?: number,
   position: FlowBranchJSON[],
   board: ElementJSON[],
   moves?: Record<string, string>,
-  phase?: 'define' | 'new' | 'started' | 'finished',
   rseed: string,
 }
 
@@ -29,11 +27,18 @@ export type Message = {
   body: string
 }
 
-export type GameUpdate<P extends Player> = {
-  game: GameState<P>
+type GameStartedState<P extends Player> = Omit<GameState<P>, 'currentPlayerPosition'> & {
+  phase: 'started',
+  currentPlayers: number[]
+}
+
+type GameFinishedState<P extends Player> = Omit<GameState<P>, 'currentPlayerPosition'> & {
+  phase: 'finished',
+  winners: number[]
+}
+
+type GameUpdate<P extends Player> = {
+  game: GameStartedState<P> | GameFinishedState<P>
   players: PlayerPositionState<P>[]
-  currentPlayer: number[]
-  winner: number[]
-  phase: 'define' | 'new' | 'started' | 'finished'
   messages: Message[]
 }

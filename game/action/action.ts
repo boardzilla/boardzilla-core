@@ -1,6 +1,7 @@
 import Selection from './selection';
 
 import type {
+  SingleArgument,
   Argument,
   ResolvedSelection,
   BoardQueryMulti,
@@ -40,6 +41,8 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
 
   // given a set of args, return sub-selections possible trying each possible next arg
   // return undefined if these args are impossible
+  // skipping/expanding is very complex
+  // skippable options will still appear in order to present the choices to the user to select that tree. This will be the final selection or the first board choice
   getResolvedSelections(...args: Argument<P>[]): PendingMove<P>[] | undefined {
     const selection = this.nextSelection(...args);
     if (!selection) return [];
@@ -68,8 +71,8 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
       }
     }
     if (!possibleOptions.length) return undefined;
-    if (pruned) selection.overrideOptions(possibleOptions);
-    if (!resolvedSelections.length) return [move]; // always return the final choice, receiver may choose to skip
+    if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
+    if (!resolvedSelections.length || move.selection.type === 'board') return [move]; // return board or final choice for a selection prompt, receiver may choose to skip anyways
     if (mayExpand) return resolvedSelections;
     if (selection.skipIfOnlyOne && possibleOptions.length === 1) return resolvedSelections;
     return [move];
@@ -133,9 +136,9 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
     return this;
   }
 
-  chooseFrom<T extends Argument<P>>({ choices, prompt, initial, skipIfOnlyOne, skipIf, expand }: {
+  chooseFrom<T extends SingleArgument<P>>({ choices, prompt, initial, skipIfOnlyOne, skipIf, expand }: {
     choices: T[] | Record<string, T> | ((...arg: A) => T[] | Record<string, T>),
-    initial?: T | ((...arg: A) => Argument<P>),
+    initial?: T | ((...arg: A) => T),
     prompt?: string | ((...arg: A) => string)
     skipIfOnlyOne?: boolean,
     skipIf?: boolean | ((...a: Argument<P>[]) => boolean);

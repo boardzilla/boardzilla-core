@@ -5,29 +5,23 @@ import type { Player } from './';
 import type { Board } from './board';
 import type { SerializedArg, SerializedMove } from './action/types';
 import type { SetupFunction, GameInterface } from './types';
-import type { SetupState, GameState, GameUpdate } from '../types';
+import type { SetupState, GameStartedState, GameFinishedState, GameUpdate } from '../types';
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState<Player> | GameState<Player>): GameUpdate<Player> => {
-      const game = setup(state, true);
-      return {
-        game: game.getState(),
-        players: game.getPlayerStates(),
-        currentPlayer: game.players.currentPosition ? [game.players.currentPosition] : [],
-        winner: game.winner.map(p => p.position),
-        phase: game.phase,
-        messages: game.messages
-      }
-    },
+    initialState: (state: SetupState<Player>): GameUpdate<Player> => setup(state, {start: true}).getUpdate(),
     processMove: (
-      previousState: GameState<Player>,
+      previousState: GameStartedState<Player>,
       move: {
-        position: number
+        position: number,
         data: SerializedMove
       }
     ): GameUpdate<Player> => {
-      const game = setup(previousState, true, true);
+      const game = setup(previousState, {
+        currentPlayerPosition: previousState.currentPlayers.length === 1 ? previousState.currentPlayers[0] : undefined,
+        start: true,
+        trackMovement: true
+      });
       const error = game.processMove({
         player: game.players.atPosition(move.position)!,
         action: move.data.action,
@@ -39,19 +33,23 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       game.play();
       // @ts-ignore
       if (globalThis.window) window.board = game.board; // debugging - may remove
-      return {
-        game: game.getState(),
-        players: game.getPlayerStates(),
-        currentPlayer: game.players.currentPosition ? [game.players.currentPosition] : [],
-        winner: game.winner.map(p => p.position),
-        phase: game.phase,
-        messages: game.messages
-      }
+      return game.getUpdate();
     },
-    getPlayerState: (state: GameState<Player>, position: number): GameState<Player> => {
+    getPlayerState: (state: GameStartedState<Player> | GameFinishedState<Player>, position: number): GameStartedState<Player> | GameFinishedState<Player> => {
       if (!position) throw Error('getPlayerState without position');
-      const game = setup(state, false);
-      return game.getState(position)
+      const game = setup(state);
+      if (state.phase === 'started') {
+        return {
+          ...game.getState(position),
+          phase: state.phase,
+          currentPlayers: state.currentPlayers
+        }
+      }
+      return {
+        ...game.getState(position),
+        phase: 'finished',
+        winners: game.winner.map(p => p.position)
+      }
     }
   };
 }

@@ -43,7 +43,7 @@ export type BoardSelection<P extends Player, T extends GameElement<P>> = {
 }
 
 export type ChoiceSelection<P extends Player> = {
-  choices: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
+  choices: SingleArgument<P>[] | Record<string, SingleArgument<P>> | ((...a: Argument<P>[]) => SingleArgument<P>[] | Record<string, SingleArgument<P>>);
   initial?: Argument<P> | ((...a: Argument<P>[]) => Argument<P>);
   // min?: number | ((...a: Argument<P>[]) => number);
   // max?: number | ((...a: Argument<P>[]) => number);
@@ -109,7 +109,7 @@ export type SelectionDefinition<P extends Player> = {
 
 export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp'> & {
   prompt?: string;
-  choices?: Argument<P>[] | Record<string, Argument<P>>;
+  choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>>;
   boardChoices?: GameElement<P>[];
   min?: number;
   max?: number;

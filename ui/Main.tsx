@@ -61,9 +61,13 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
       //console.log('game-update', phase);
       let newGame;
       if (!game) {
-        newGame = setup(data.state.state, true);
+        newGame = setup(data.state.state, {
+          currentPlayerPosition: data.currentPlayers.length === 1 ? data.currentPlayers[0] : undefined,
+          start: true
+        });
       } else {
         game.setState(data.state.state);
+        game.players.currentPosition = data.currentPlayers.length === 1 ? data.currentPlayers[0] : undefined,
         newGame = game;
       }
       if (!position) setPosition(data.state.position)
@@ -106,8 +110,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
         }
       }
       if (!move) return;
-      // TODO where does this go
-      // if (selection?.type === 'board' && (selection.min !== undefined || selection.max !== undefined)) move.args.push(selected);
 
       const player = game.players.atPosition(position);
       if (!player) return;

@@ -56,7 +56,14 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   setupFlow: (game: Game<P, B>, board: B) => Flow<P>,
   actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>,
   setupLayout?: (board: B, aspectRatio: number) => void
-}): SetupFunction<P, B> => (state: SetupState<P> | GameState<P>, start: boolean, trackMovement=false): Game<P, B> => {
+}): SetupFunction<P, B> => (
+  state: SetupState<P> | GameState<P>,
+  options?: {
+    currentPlayerPosition?: number
+    start?: boolean,
+    trackMovement?: boolean,
+  }
+): Game<P, B> => {
   console.time('setup');
   const game = new Game<P, B>();
   let rseed = '';
@@ -84,23 +91,25 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   game.setSettings(state.settings);
   if (!('board' in state)) { // phase=new
     game.players.fromJSON(state.players);
-    if (start) {
+    if (options?.start) {
       if (setupBoard) setupBoard(game, game.board as B);
       game.start();
     }
   } else { // phase=started
     game.players.fromJSON(state.players);
-    if (start) {
+    if (options?.start) {
       // require setup to build spaces, graphs, event handlers
       if (setupBoard) setupBoard(game, game.board as B);
       //console.timeLog('setup', 'setupBoard');
     }
-    game.trackMovement(trackMovement);
+    if (options?.trackMovement) game.trackMovement(true);
+    game.phase = 'started';
     game.setState(state);
   }
   //console.timeLog('setup', 'setState');
 
-  if (start) {
+  game.players.currentPosition = options?.currentPlayerPosition;
+  if (options?.start) {
     if (game.phase !== 'finished') game.play();
   } else {
     game.phase ??= 'new';

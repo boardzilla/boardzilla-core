@@ -8,6 +8,9 @@ import {
 } from './board/';
 import {
   GameState,
+  GameUpdate,
+  GameStartedState,
+  GameFinishedState,
   PlayerPositionState,
   Message
 } from '../types';
@@ -114,11 +117,9 @@ export default class Game<P extends Player, B extends Board<P>> {
    */
   setState(state: GameState<P>) {
     this.players.fromJSON(state.players);
-    this.players.currentPosition = state.currentPlayerPosition;
     this.setSettings(state.settings);
     this.board.fromJSON(state.board);
     this.buildFlow();
-    this.phase = state.phase || 'started'; // TODO temp
     this.flow.setBranchFromJSON(state.position);
     this.setRandomSeed(state.rseed);
   }
@@ -126,11 +127,9 @@ export default class Game<P extends Player, B extends Board<P>> {
   getState(forPlayer?: number): GameState<P> {
     return {
       players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-      currentPlayerPosition: this.players.currentPosition,
       settings: this.settings,
       position: this.flow.branchJSON(!!forPlayer),
       board: this.board.allJSON(forPlayer),
-      phase: this.phase,
       rseed: this.rseed,
     };
   }
@@ -140,6 +139,32 @@ export default class Game<P extends Player, B extends Board<P>> {
       position: p.position,
       state: this.getState(p.position)
     }));
+  }
+
+  getUpdate(): GameUpdate<P> {
+    if (this.phase === 'started') {
+      return {
+        game: {
+          ...this.getState(),
+          currentPlayers: this.players.currentPosition ? [this.players.currentPosition] : [],
+          phase: this.phase
+        },
+        players: this.getPlayerStates(),
+        messages: this.messages,
+      }
+    }
+    if (this.phase === 'finished') {
+      return {
+        game: {
+          ...this.getState(),
+          winners: this.winner.map(p => p.position),
+          phase: this.phase
+        },
+        players: this.getPlayerStates(),
+        messages: this.messages,
+      }
+    }
+    throw Error('unable to initialize game');
   }
 
   contextualizeBoardToPlayer(player?: P) {

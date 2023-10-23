@@ -8,7 +8,14 @@ import type {
   GameUpdate,
 } from '../types';
 
-export type SetupFunction<P extends Player, B extends Board<P>> = (state: SetupState<P> | GameState<P>, start: boolean, trackMovement?: boolean) => Game<P, B>
+export type SetupFunction<P extends Player, B extends Board<P>> = (
+  state: SetupState<P> | GameState<P>,
+  options?: {
+    currentPlayerPosition?: number,
+    start?: boolean,
+    trackMovement?: boolean,
+  }
+) => Game<P, B>
 
 export type GameInterface<P extends Player> = {
   initialState: (state: SetupState<P>, rseed: string) => GameUpdate<P>

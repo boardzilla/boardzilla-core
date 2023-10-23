@@ -50,7 +50,7 @@ const PlayerControls = ({onSubmit}: { onSubmit: (move?: PendingMove<Player>, val
     const form = e.currentTarget;
     if (!form) throw Error("No form in submit");
     let arg: Argument<Player> | undefined = undefined;
-    if (pendingMove.selection?.type === 'board' && (pendingMove.selection.min !== undefined || pendingMove.selection.max !== undefined)) {
+    if (pendingMove.selection?.type === 'board' && (pendingMove.selection.isMulti())) {
       arg = selected;
     } else if (pendingMove.selection?.type === 'button') {
       arg = pendingMove.selection.value;
@@ -109,7 +109,7 @@ const PlayerControls = ({onSubmit}: { onSubmit: (move?: PendingMove<Player>, val
             {pendingMove.selection.type === 'button' && <button name="selection" value='confirm' type="submit">{pendingMove.selection.prompt}</button>}
 
             {pendingMove.selection.type === 'board' &&
-              (pendingMove.selection.min !== undefined || pendingMove.selection.max !== undefined) &&
+              (pendingMove.selection.isMulti()) &&
               (selected.length >= (pendingMove.selection.min ?? 1) && selected.length <= (pendingMove.selection.max ?? Infinity)) && (
                 <button type="submit">Done</button>
               )

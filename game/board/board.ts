@@ -50,6 +50,7 @@ export default class Board<P extends Player> extends Space<P> {
 
   _ui: GameElement<P>['_ui'] & {
     frame?: Box;
+    disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, {
       element: GameElement<P> | (() => GameElement<P>),
       top?: number,
@@ -78,5 +79,9 @@ export default class Board<P extends Player> extends Space<P> {
   layoutStep(stepName: string, attributes: typeof this['_ui']['stepLayouts'][string]) {
     if (stepName !== 'out-of-turn' && !this.game.flow.getStep(stepName)) throw Error(`No such step: ${stepName}`);
     this._ui.stepLayouts[stepName] = attributes;
+  }
+
+  disableDefaultAppearance() {
+    this._ui.disabledDefaultAppearance = true;
   }
 }

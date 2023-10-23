@@ -42,7 +42,7 @@ export default () => {
     if (moves.length > 1) return setDisambiguateElement({ element, moves });
     const move = moves[0];
     if (move.selection?.type === 'board') {
-      if (move.selection.min === undefined && move.selection.max === undefined) {
+      if (!move.selection.isMulti()) {
         return submitMove(move, element);
       }
 
@@ -72,6 +72,7 @@ export default () => {
       (window.document.childNodes[0] as HTMLHtmlElement).style.fontSize = rem + 'px';
     }
     window.addEventListener('resize', resize);
+    window.addEventListener('resize',  () => game.board.applyLayouts());
     resize();
     return () => window.removeEventListener('resize', resize);
   }, []);
@@ -79,9 +80,9 @@ export default () => {
   if (!dimensions) return;
 
   return (
-    <div id="game" style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}>
+    <div id="game" className={game.board._ui.appearance.className} style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}>
       <audio ref={clickAudio} src={click} id="click"/>
-      <div id="play-area" className={true ? 'fixed' : 'fluid'} style={{width: '100%', height: '100%'}}>
+      <div id="play-area" style={{width: '100%', height: '100%'}}>
         <Element
           element={game.board}
           json={boardJSON[0]}

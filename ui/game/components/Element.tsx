@@ -20,7 +20,7 @@ const elementAttributes = (el: GameElement<Player>) => {
   )));
 }
 
-const defaultAppearance = () => null;
+const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.name || el.constructor.name}</div>;
 
 const Element = ({element, json, selected, onSelectElement}: {
   element: GameElement<Player>,
@@ -52,7 +52,7 @@ const Element = ({element, json, selected, onSelectElement}: {
   const clickMoves = boardSelections.get(element);
   const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));;
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
-  const appearance = element._ui.appearance.render || defaultAppearance;
+  const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
   const absoluteTransform = element.absoluteTransform();
 
   let style: React.CSSProperties = {};
@@ -170,20 +170,15 @@ const Element = ({element, json, selected, onSelectElement}: {
 
   return (
     <div
-      style={{
-        ...style,
-        transform,
-        transition: animating || !transform ? 'transform .3s, top .3s, left .3s, width .3s, height.3s': 'top .3s, left .3s, width .3s, height.3s',
-        zIndex: animating ? 100: undefined,
-        transformOrigin: 'top left',
-        position: 'absolute'
-      }}
       ref={wrapper}
+      className={classNames("transformWrapper", { animating })}
+      style={{ ...style, transform }}
     >
       <div
         id={element.name}
         className={classNames(
           baseClass,
+          element._ui.appearance.className,
           {
             [element.constructor.name]: baseClass !== element.constructor.name,
             clickable: clickMoves?.length,

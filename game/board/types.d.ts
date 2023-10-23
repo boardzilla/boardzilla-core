@@ -59,6 +59,7 @@ export type ElementUI<P extends Player, T extends GameElement<P>> = {
     }
   }[],
   appearance: {
+    className?: string,
     render?: ((el: T) => JSX.Element | null) | false,
     aspectRatio?: number,
     zoomable?: boolean | ((el: T) => boolean),

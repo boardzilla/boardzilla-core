@@ -51,6 +51,16 @@ export type GameUpdateEvent = {
     position: number,
     state: GameState<Player>
   }
+  currentPlayers: number[]
+}
+
+type GameFinishedEvent = {
+  type: "gameFinished"
+  state: {
+    position: number,
+    state: GameState<Player>
+  }
+  winners: number[]
 }
 
 // indicates the disposition of a message that was processed

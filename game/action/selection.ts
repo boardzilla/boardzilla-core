@@ -1,7 +1,8 @@
 import { range } from '../utils';
+import { combinations } from './utils';
 
 import type { ResolvedSelection, BoardQueryMulti } from '../action/types';
-import type { Argument, SelectionDefinition } from './types';
+import type { SingleArgument, Argument, SelectionDefinition } from './types';
 import type { GameElement } from '../board/';
 import type { Player } from '../player/';
 
@@ -12,7 +13,7 @@ export default class Selection<P extends Player> {
   skipIfOnlyOne: boolean = true;
   skipIf?: boolean | ((...a: Argument<P>[]) => boolean);
   expand: boolean = false;
-  choices?: Argument<P>[] | Record<string, Argument<P>> | ((...a: Argument<P>[]) => Argument<P>[] | Record<string, Argument<P>>);
+  choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>> | ((...a: Argument<P>[]) => SingleArgument<P>[] | Record<string, SingleArgument<P>>);
   boardChoices?: BoardQueryMulti<P, GameElement<P>>;
   min?: number | ((...a: Argument<P>[]) => number);
   max?: number | ((...a: Argument<P>[]) => number);
@@ -83,15 +84,16 @@ export default class Selection<P extends Player> {
     if (s.skipIf === true) return;
 
     if (s.type === 'choices' && s.choices) {
+      if (arg instanceof Array) return "multi-choice stil unsupported";
       return (
-        s.choices instanceof Array ? s.choices : Object.keys(s.choices) as Argument<P>[]
+        s.choices instanceof Array ? s.choices : Object.keys(s.choices) as SingleArgument<P>[]
       ).includes(arg) ? undefined : "Not a valid choice";
     }
 
     if (s.type === 'board' && s.boardChoices) {
       const results = s.boardChoices;
       if (!results) console.warn('Attempted to validate an impossible move', s);
-      if (s.min !== undefined || s.max !== undefined) {
+      if (this.isMulti()) {
         if (!(arg instanceof Array)) throw Error("Required multi select");
         if (results && arg.some(a => !results.includes(a as GameElement<P>))) return "Selected elements are not valid";
         if (s.min !== undefined && arg.length < s.min) return "Below minimum";
@@ -115,10 +117,12 @@ export default class Selection<P extends Player> {
     return undefined;
   }
 
-  // have to make some assumptions here to tree shake possible moves
+  // All possible valid Arguments to this selection. Have to make some assumptions here to tree shake possible moves
   options(this: ResolvedSelection<P>): Argument<P>[] {
     if (this.isUnbounded()) return [];
     if (this.type === 'number') return range(this.min ?? 1, this.max!);
+    const choices = this.choices && (this.choices instanceof Array ? this.choices : Object.keys(this.choices));
+    if (this.isMulti()) return combinations(this.boardChoices || choices || [], this.min ?? 1, this.max ?? Infinity);
     if (this.boardChoices) return this.boardChoices;
     if (this.choices) return this.choices instanceof Array ? this.choices : Object.keys(this.choices);
     return [];
@@ -137,6 +141,10 @@ export default class Selection<P extends Player> {
       typeof this.skipIf !== 'function' &&
       typeof this.choices !== 'function' &&
       typeof this.boardChoices !== 'function';
+  }
+
+  isMulti() {
+    return this.min !== undefined || this.max !== undefined;
   }
 
   resolve(...args: Argument<P>[]): ResolvedSelection<P> {
@@ -169,9 +177,7 @@ export default class Selection<P extends Player> {
     if (this.skipIfOnlyOne !== true) return;
     if (this.type === 'button') {
       return this.value;
-    } else if (this.boardChoices?.length === 1 &&
-      this.min === undefined &&
-      this.max === undefined) {
+    } else if (this.boardChoices?.length === 1 && !this.isMulti()) {
       return this.boardChoices[0];
     } else if (this.boardChoices &&
       this.boardChoices.length === this.min &&
@@ -187,7 +193,7 @@ export default class Selection<P extends Player> {
     }
   }
 
-  overrideOptions(options: Argument<P>[]): ResolvedSelection<P> {
+  overrideOptions(options: SingleArgument<P>[]): ResolvedSelection<P> {
     if (this.type === 'board') {
       this.boardChoices = options as GameElement<P>[];
       return this as ResolvedSelection<P>;
