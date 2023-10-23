@@ -1,5 +1,5 @@
 {
-  "name": "boardzilla-core",
+  "name": "@boardzilla/core",
   "version": "0.0.1",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
