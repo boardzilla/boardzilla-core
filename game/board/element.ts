@@ -397,11 +397,12 @@ export default class GameElement<P extends Player> {
     appearance: {},
   }
 
-  // viewport relative to the board
+  // viewport relative to the board with unskewed x/y
   absoluteTransform(): Box {
     return this.board._ui.frame ? translate(this.relativeTransformToBoard(), this.board._ui.frame) : this.relativeTransformToBoard();
   }
 
+  // viewport relative to the board with % x/y to board
   relativeTransformToBoard(): Box {
     let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
     let parent = this._t.parent;

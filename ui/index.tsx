@@ -34,8 +34,6 @@ type GameStore = {
   prompt?: string; // prompt for choosing action if applicable
   selected: GameElement<Player>[]; // selected elements on board
   setSelected: (s: GameElement<Player>[]) => void;
-  disambiguateElement?: { element: GameElement<Player>, moves: PendingMove<Player>[] }; // element selected has multiple moves
-  setDisambiguateElement: (s: { element: GameElement<Player>, moves: PendingMove<Player>[] }) => void;
   uiOptions: UIOptions;
   setUIOptions: (o: UIOptions) => void;
 }
@@ -84,10 +82,13 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     }
 
     const boardSelections = new Map<GameElement<Player>, PendingMove<Player>[]>();
-    if (resolvedSelections) for (const p of resolvedSelections.moves) {
-      if (p.selection.type === 'board') {
-        for (const el of p.selection.boardChoices!) {
-          boardSelections.get(el)?.push(p) || boardSelections.set(el, [p]);
+    if (resolvedSelections) {
+      resolvedSelections.moves = resolvedSelections.moves.filter(m => !move || m.action === move.action)
+      for (const p of resolvedSelections.moves) {
+        if (p.selection.type === 'board') {
+          for (const el of p.selection.boardChoices!) {
+            boardSelections.get(el)?.push(p) || boardSelections.set(el, [p]);
+          }
         }
       }
     }
@@ -115,7 +116,6 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   pendingMoves: [],
   selected: [],
   setSelected: sel => set({ selected: [...new Set(sel)] }),
-  setDisambiguateElement: disambiguateElement => set({ disambiguateElement }),
   uiOptions: {},
   setUIOptions: uiOptions => set({ uiOptions }),
 }), shallow);

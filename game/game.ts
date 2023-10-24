@@ -208,22 +208,20 @@ export default class Game<P extends Player, B extends Board<P>> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
     return {
       _godMove: action<P>({
-        prompt: "Move anything",
+        prompt: "Move",
       }).move({
-        prompt: "To anywhere",
         choosePiece: this.board.all(Piece<P>),
         chooseInto: this.board.all(GameElement<P>)
       }),
       _godEdit: action<P>({
-        prompt: "Change anything",
+        prompt: "Change",
       }).chooseOnBoard({
-        prompt: "Select element",
         choices: this.board.all(GameElement)
       }).chooseFrom({
-        prompt: "Change what?",
-        choices: el => Object.keys(el).filter(a => !['_t', '_ctx', '_eventHandlers', 'mine', 'board', 'game', 'pile', 'mine'].includes(a))
+        prompt: "Change property",
+        choices: el => Object.keys(el).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'board', 'game', 'pile', 'mine'].includes(a))
       }).enterText({
-        prompt: "Change to",
+        prompt: (_, prop) => `Change ${prop}`,
         initial: (el: GameElement<P>, attr: keyof GameElement<P>) => String(el[attr])
       }).do((el, attr: keyof GameElement<P>, value: any) => {
         if (value === 'true') {

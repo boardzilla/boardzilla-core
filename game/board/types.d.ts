@@ -74,3 +74,13 @@ export type ElementUI<P extends Player, T extends GameElement<P>> = {
   },
   computedStyle?: Box,
 }
+
+type ActionLayout<P extends Player> = {
+  element: GameElement<P> | (() => GameElement<P>),
+  top?: number,
+  bottom?: number,
+  left?: number,
+  right?: number,
+  width?: number,
+  height?: number
+};

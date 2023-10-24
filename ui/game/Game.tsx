@@ -11,14 +11,12 @@ import type { PendingMove, Argument } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
 export default () => {
-  const [game, position, move, selectMove, selected, setSelected, setDisambiguateElement, boardJSON] =
-    gameStore(s => [s.game, s.position, s.move, s.selectMove, s.selected, s.setSelected, s.setDisambiguateElement, s.boardJSON]);
-
-  console.log('GAME', position);
+  const [game, position, move, selectMove, selected, setSelected, boardJSON] =
+    gameStore(s => [s.game, s.position, s.move, s.selectMove, s.selected, s.setSelected, s.boardJSON]);
 
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
-  const [animations, setAnimations] = useState({});
+  const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: PendingMove<Player>[] }>();
 
   if (!game || !position) return null;
   const player = game.players.atPosition(position);
@@ -30,16 +28,20 @@ export default () => {
   console.log("RENDER GAME", move);
 
   const submitMove = (pendingMove?: PendingMove<Player>, value?: Argument<Player>) => {
-    console.log("processAction", move);
     clickAudio.current?.play();
+    setDisambiguateElement(undefined);
     selectMove(pendingMove, value);
   };
 
   const onSelectElement = (element: GameElement<Player>, moves: PendingMove<Player>[]) => {
     clickAudio.current?.play();
+    setDisambiguateElement(undefined);
 
     if (moves.length === 0) return;
-    if (moves.length > 1) return setDisambiguateElement({ element, moves });
+    if (moves.length > 1) {
+      setSelected([element]);
+      return setDisambiguateElement({ element, moves });
+    }
     const move = moves[0];
     if (move.selection?.type === 'board') {
       if (!move.selection.isMulti()) {
@@ -91,7 +93,8 @@ export default () => {
         />
         <div style={{position: 'absolute', backgroundColor: 'red'}}/>
       </div>
-      <PlayerControls onSubmit={submitMove} />
+      <PlayerControls onSubmit={submitMove} disambiguateElement={disambiguateElement} />
+      {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
     </div>
   );
 }

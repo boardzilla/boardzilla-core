@@ -4,108 +4,130 @@
     padding: 0;
   }
 
-  #play-area {
-    overflow: hidden;
-    position: relative;
+  #game {
+    #play-area {
+      overflow: hidden;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
 
-    .transformWrapper {
-      position: absolute;
-      transform-origin: 'top left';
-      transition: top .3s, left .3s, width .3s, height .3s;
-      &.animating {
-        transition: transform .3s, top .3s, left .3s, width .3s, height .3s;
-        z-index: 100;
-      }
-      > div {
-        width: 100%;
-        height: 100%;
-      }
-    }
-
-    .zoomable {
-      transition: transform 0.2s;
-      &:hover {
-        transform: scale(1.5);
-        z-index: 100;
-      }
-    }
-
-    .clickable {
-      cursor: pointer;
-      outline: .5em solid yellow;
-      &:hover {
-        outline: .5em solid red;
-      }
-    }
-
-    .selected {
-      transform: scale(1.2);
-    }
-
-    .Space {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      > img {
-        width: 100%;
-        height: 100%;
-      }
-      > .bz-default {
-        width: 100%;
-        height: 100%;
+      * {
         box-sizing: border-box;
-        background: #ccc;
+      }
+
+      .transformWrapper {
+        position: absolute;
+        transform-origin: 'top left';
+        transition: top .3s, left .3s, width .3s, height .3s;
+        &.animating {
+          transition: transform .3s, top .3s, left .3s, width .3s, height .3s;
+          z-index: 100;
+        }
+        > div {
+          width: 100%;
+          height: 100%;
+        }
+      }
+
+      .zoomable {
+        transition: transform 0.2s;
+        &:hover:not(.animating) {
+          transform: scale(1.5);
+          z-index: 50;
+        }
+      }
+
+      .clickable {
+        cursor: pointer;
+      }
+
+      .selectable {
+        outline: .5em solid yellow;
+        &:hover {
+          outline: .5em solid red;
+        }
+      }
+
+      .selected {
+        transform: scale(1.2);
+      }
+
+      .Space {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        > img {
+          width: 100%;
+          height: 100%;
+        }
+        > .bz-default {
+          width: 100%;
+          height: 100%;
+          background: #ccc;
+        }
+      }
+
+      .Piece {
+        position: absolute;
+        > img {
+          width: 100%;
+          height: 100%;
+        }
+        > .bz-default {
+          width: 100%;
+          height: 100%;
+          background: #ccf;
+          border: .1em solid white;
+          display: inline;
+        }
       }
     }
 
-    .Piece {
+    .player-controls {
+      z-index: 150;
       position: absolute;
-      > img {
-        width: 100%;
-        height: 100%;
-      }
-      > .bz-default {
-        width: 100%;
-        height: 100%;
-        background: #ccf;
-        box-sizing: border-box;
-        border: .1em solid white;
+      padding: .25rem;
+      font-size: .75rem;
+      form {
+        margin: 0;
         display: inline-block;
       }
-    }
-  }
-
-  #player-controls {
-    box-sizing: border-box;
-    position: absolute;
-    padding: .25rem;
-    font-size: .75rem;
-    form {
-      margin: 0;
-      display: inline-block;
-    }
-    input {
-      border-width: .05rem;
-    }
-    input, select, button {
-      padding: 0.2rem 0.4rem;
-      font-family: inherit;
-      font-size: inherit;
-      box-sizing: border-box;
-      margin: 0.1rem;
-    }
-    button {
-      border: none;
-      background: #ccc;
-      cursor: pointer;
-      transition: transform 0.2s;
-      &:hover {
-        transform: scale(1.1);
-        box-shadow: 0.2rem 0.2rem .5rem #0008;
+      input {
+        border-width: .05rem;
+      }
+      input, select, button {
+        padding: 0.2rem 0.4rem;
+        font-family: inherit;
+        font-size: inherit;
+        margin: 0.1rem;
+      }
+      input, select {
+        max-width: 100%;
+      }
+      button {
+        border: none;
+        background: #ccc;
+        cursor: pointer;
+        transition: transform 0.2s;
+        &:hover {
+          transform: scale(1.1);
+          box-shadow: 0.2rem 0.2rem .5rem #0008;
+        }
+      }
+      input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {
+        opacity: 1;
       }
     }
-    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {
-      opacity: 1;
+
+    .god-mode-enabled {
+      position: absolute;
+      top: 0;
+      left: 0;
+      font-size: .5rem;
+      padding: 0.2rem;
+      background: red;
+      color: white;
     }
   }
 }

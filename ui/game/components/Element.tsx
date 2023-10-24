@@ -60,7 +60,7 @@ const Element = ({element, json, selected, onSelectElement}: {
   // initially place into old position
   const moveTransform = element.getMoveTransform();
   const computedStyle = element._ui.computedStyle;
-  if (!moveTransform) element.doneMoving();
+  if (!moveTransform || animatedFrom === element._t.was) element.doneMoving();
   if (moveTransform && !transform && !animating && animatedFrom !== element._t.was) {
     const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
     setTransform(transformToNew);
@@ -80,13 +80,14 @@ const Element = ({element, json, selected, onSelectElement}: {
     return null;
   }
   for (let i = 0; i !== element._t.children.length; i++) {
-    const el = element._t.children[i];
+    const el = element._t.order === 'stacking' ? element._t.children[element._t.children.length - i - 1] : element._t.children[i];
+    const childJSON = element._t.order === 'stacking' ? json.children![json.children!.length - i - 1] : json.children![i];
     if (!el._ui.computedStyle || el._ui.appearance.render === false) continue;
     contents.push(
       <Element
         key={el.branch()}
         element={el}
-        json={json.children![i]}
+        json={childJSON}
         selected={selected}
         onSelectElement={onSelectElement}
       />
@@ -182,6 +183,7 @@ const Element = ({element, json, selected, onSelectElement}: {
           {
             [element.constructor.name]: baseClass !== element.constructor.name,
             clickable: clickMoves?.length,
+            selectable: clickMoves?.filter(m => m.action.slice(0, 4) !== '_god').length,
             selected: isSelected,
             zoomable: typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable,
           }

@@ -1,7 +1,12 @@
 import Space from './space'
 import { deserializeObject } from '../action/utils';
 
-import type { ElementJSON, ElementClass, Box } from './types';
+import type {
+  ElementJSON,
+  ElementClass,
+  Box,
+  ActionLayout
+} from './types';
 import type { GameElement } from './';
 import type { Player } from '../player';
 
@@ -51,15 +56,7 @@ export default class Board<P extends Player> extends Space<P> {
   _ui: GameElement<P>['_ui'] & {
     frame?: Box;
     disabledDefaultAppearance?: boolean;
-    stepLayouts: Record<string, {
-      element: GameElement<P> | (() => GameElement<P>),
-      top?: number,
-      bottom?: number,
-      left?: number,
-      right?: number,
-      width?: number,
-      height?: number
-    }>;
+    stepLayouts: Record<string, ActionLayout<P>>;
     previousStyles: Record<any, Box>;
   };
 
@@ -76,9 +73,13 @@ export default class Board<P extends Player> extends Space<P> {
     return super.applyLayouts(force);
   }
 
-  layoutStep(stepName: string, attributes: typeof this['_ui']['stepLayouts'][string]) {
-    if (stepName !== 'out-of-turn' && !this.game.flow.getStep(stepName)) throw Error(`No such step: ${stepName}`);
-    this._ui.stepLayouts[stepName] = attributes;
+  layoutStep(step: string, attributes: ActionLayout<P>) {
+    if (step !== 'out-of-turn' && !this.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
+    this._ui.stepLayouts["step:" + step] = attributes;
+  }
+
+  layoutAction(action: string, attributes: ActionLayout<P>) {
+    this._ui.stepLayouts["action:" + action] = attributes;
   }
 
   disableDefaultAppearance() {
