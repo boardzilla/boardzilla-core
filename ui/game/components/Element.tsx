@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { gameStore } from '../../';
 import classNames from 'classnames';
+import { DraggableCore } from 'react-draggable';
 
 import {
   Piece,
@@ -11,6 +12,7 @@ import { serialize } from '../../../game/action/utils'
 import type { ElementJSON } from '../../../game/board/types';
 import type { PendingMove } from '../../../game/action/types';
 import type { Player } from '../../../game/player';
+import type { DraggableData } from 'react-draggable';
 
 const elementAttributes = (el: GameElement<Player>) => {
   return Object.fromEntries(Object.entries(el).filter(([key, val]) => (
@@ -22,15 +24,17 @@ const elementAttributes = (el: GameElement<Player>) => {
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.name || el.constructor.name}</div>;
 
-const Element = ({element, json, selected, onSelectElement}: {
+const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
   selected: GameElement<Player>[],
   onSelectElement: (element: GameElement<Player>, moves: PendingMove<Player>[]) => void,
+  onMouseLeave?: () => void,
 }) => {
-  const [boardSelections, move, position] = gameStore(s => [s.boardSelections, s.move, s.position, s.boardJSON]);
+  const [boardSelections, move, position, dragElement, setDragElement, dropElements, setCurrentDrop, onDragComplete] = gameStore(s => [s.boardSelections, s.move, s.position, s.dragElement, s.setDragElement, s.dropElements, s.setCurrentDrop, s.onDragComplete, s.boardJSON]);
   const [transform, setTransform] = useState<string>(); // temporary transform from new to old used to animate
   const [animating, setAnimating] = useState(false); // currently animating
+  const [dragging, setDragging] = useState(false); // currently dragging
   const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
   const wrapper = useRef<HTMLDivElement>(null);
 
@@ -43,25 +47,64 @@ const Element = ({element, json, selected, onSelectElement}: {
           wrapper.current?.removeEventListener('transitionend', cancel);
         }
       };
+      wrapper.current?.addEventListener('transitionend', cancel);
       setAnimating(true);
       setTransform(undefined); // remove transform and let it transition to new location
-      wrapper.current?.addEventListener('transitionend', cancel);
     }
   }, [wrapper, transform])
 
-  const clickMoves = boardSelections.get(element);
+  const branch = element.branch()
+  const selections = boardSelections[branch];
   const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));;
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
   const absoluteTransform = element.absoluteTransform();
+  const clickable = !dragElement && selections?.clickMoves.length;
+  const selectable = !dragElement && selections?.clickMoves.filter(m => m.action.slice(0, 4) !== '_god').length;
+  const draggable = !animating && !transform && (selections?.dragMoves.length || element.name === 'garbage-06');
+  const droppable = dropElements.find(({ element }) => element === branch);
 
   let style: React.CSSProperties = {};
+
+  const startDrag = useCallback((e: MouseEvent, data: DraggableData) => {
+    e.stopPropagation();
+    setDragging(true);
+    setDragElement(branch);
+    if (wrapper.current) {
+      wrapper.current?.setAttribute('data-lastx', String(data.lastX));
+      wrapper.current?.setAttribute('data-lasty', String(data.lastY))
+    }
+  }, [wrapper]);
+
+  const drag = useCallback((e: MouseEvent, data: DraggableData) => {
+    e.stopPropagation();
+    if (wrapper.current) {
+      wrapper.current.style.top = `calc(${style.top} - ${parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y}px)`;
+      wrapper.current.style.left = `calc(${style.left} - ${parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x}px)`;
+    }
+  }, [wrapper, style]);
+
+  const stopDrag = useCallback((e: MouseEvent) => {
+    console.log('stopDrag');
+    e.stopPropagation();
+    setDragging(false);
+    onDragComplete();
+  }, []);
+
+  const drop = useCallback(() => {
+    setCurrentDrop(branch);
+  }, []);
+
+  const leave = useCallback(() => {
+    setCurrentDrop(undefined);
+  }, []);
 
   // initially place into old position
   const moveTransform = element.getMoveTransform();
   const computedStyle = element._ui.computedStyle;
-  if (!moveTransform || animatedFrom === element._t.was) element.doneMoving();
-  if (moveTransform && !transform && !animating && animatedFrom !== element._t.was) {
+  if (!moveTransform || animatedFrom === element._t.was) {
+    element.doneMoving();
+  } else if (moveTransform && !transform && !animating && animatedFrom !== element._t.was) {
     const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
     setTransform(transformToNew);
     setAnimatedFrom(element._t.was);
@@ -73,7 +116,7 @@ const Element = ({element, json, selected, onSelectElement}: {
   }
   style.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
-  let contents: JSX.Element[] = [];
+  let contents: JSX.Element[] | JSX.Element = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
     //throw Error('JSON does not match board');
@@ -90,6 +133,7 @@ const Element = ({element, json, selected, onSelectElement}: {
         json={childJSON}
         selected={selected}
         onSelectElement={onSelectElement}
+        onMouseLeave={droppable ? drop : undefined}
       />
     );
   }
@@ -169,33 +213,56 @@ const Element = ({element, json, selected, onSelectElement}: {
   const attrs = elementAttributes(element);
   if (element.player?.position === position) attrs.mine = 'true';
 
-  return (
+  contents = (
     <div
-      ref={wrapper}
-      className={classNames("transformWrapper", { animating })}
-      style={{ ...style, transform }}
+      id={element.name}
+      className={classNames(
+        baseClass,
+        element._ui.appearance.className,
+        {
+          [element.constructor.name]: baseClass !== element.constructor.name,
+          selected: isSelected,
+          clickable, selectable, droppable
+          // zoomable: !dragElement && (typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable),
+        }
+      )}
+      onClick={clickable ? (e: React.MouseEvent<Element, MouseEvent>) => { e.stopPropagation(); onSelectElement(element, selections.clickMoves) } : undefined}
+      onMouseEnter={droppable ? drop : undefined}
+      onMouseLeave={() => { if (droppable) leave(); if (onMouseLeave) onMouseLeave(); }}
+      {...attrs}
     >
-      <div
-        id={element.name}
-        className={classNames(
-          baseClass,
-          element._ui.appearance.className,
-          {
-            [element.constructor.name]: baseClass !== element.constructor.name,
-            clickable: clickMoves?.length,
-            selectable: clickMoves?.filter(m => m.action.slice(0, 4) !== '_god').length,
-            selected: isSelected,
-            zoomable: typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable,
-          }
-        )}
-        onClick={clickMoves ? (e: React.MouseEvent<Element, MouseEvent>) => { e.stopPropagation(); onSelectElement(element, clickMoves) } : undefined}
-        {...attrs}
-      >
-        {appearance(element)}
-        {contents}
-      </div>
+      {appearance(element)}
+      {contents}
     </div>
   );
+
+  contents = (
+    <div
+      ref={wrapper}
+      key={branch}
+      className={classNames("transformWrapper", { animating, dragging })}
+      style={{ ...style, transform }}
+    >
+      {contents}
+    </div>
+  );
+
+  if (draggable) contents = (
+    <DraggableCore
+      // disabled={externallyControlled}
+      // onStart={e => e.stopPropagation()}
+      onStart={startDrag}
+      onDrag={drag}
+      onStop={stopDrag}
+      key={branch}
+      // position={position || {x:0, y:0}}
+      // scale={(parentFlipped ? -1 : 1) * this.state.playAreaScale}
+    >
+      {contents}
+    </DraggableCore>
+  );
+
+  return contents;
 };
 // would like to memo but not yet clear how well this work - dont optimize yet
 // memo(... (el1, el2) => (

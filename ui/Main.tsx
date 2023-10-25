@@ -48,17 +48,14 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
     console.log('message', data);
     switch(data.type) {
     case 'settingsUpdate':
-      //console.log('setup-update');
       setSettings(data.settings);
       setPhase('new');
       break;
     case 'players':
-      //console.log('players-update');
       setPlayers(data.players);
       setUsers(data.users);
       break;
     case 'gameUpdate':
-      //console.log('game-update', phase);
       let newGame;
       if (!game) {
         newGame = setup(data.state.state, {
@@ -87,7 +84,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
-    //console.log('ready', readySent);
     const message: ReadyMessage = {type: "ready"};
     if (!readySent) {
       window.top!.postMessage(message, "*");
@@ -120,7 +116,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
         args: move.args.map(a => serializeArg(a))
       }
 
-      console.log('processable move attempt', move);
       const error = game.processMove({ player, ...move });
       selectMove();
 
@@ -128,7 +123,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
         console.error(error);
         setError(error);
       } else {
-        console.log('success, submitting to server');
+        console.log('success, submitting to server', move);
         moves.push((error: string) => console.error(`move ${move} failed: ${error}`));
         const message: MoveMessage = {
           type: "move",
@@ -142,14 +137,12 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
   }, [game, position, move, pendingMoves]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
-    //console.log('update settings', settings);
     setSettings(settings);
     const message: UpdateSettingsMessage = {type: "updateSettings", id: 'settings', settings};
     window.top!.postMessage(message, "*");
   }, []);
 
   const updatePlayers = useCallback((operations: UpdatePlayersMessage['operations']) => {
-    //console.log('update player', operations);
     const message: UpdatePlayersMessage = {
       type: 'updatePlayers',
       id: 'updatePlayers',
@@ -159,7 +152,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
   }, [])
 
   const start = useCallback(() => {
-    //console.log('start');
     const message: StartMessage = {type: "start", id: 'start'};
     window.top!.postMessage(message, "*");
   }, []);
@@ -169,8 +161,6 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
     alert(error);
     setError(error);
   }, []);
-
-  console.log('RENDER MAIN', phase);
 
   return (
     <>

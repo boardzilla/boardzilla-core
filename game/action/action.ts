@@ -241,10 +241,19 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   }): any {
     const numberOfPriorSelections = this.selections.length;
     if (choosePiece) {
-      this.selections.push(new Selection<P>({ prompt, skipIfOnlyOne: false, selectOnBoard: { chooseFrom: choosePiece } }));
+      this.selections.push(new Selection<P>({
+        prompt,
+        skipIfOnlyOne: false,
+        selectOnBoard: { chooseFrom: choosePiece },
+        clientContext: { dragInto: chooseInto || into }
+      }));
     }
     if (chooseInto) {
-      this.selections.push(new Selection<P>({ prompt: promptInto || prompt, selectOnBoard: { chooseFrom: chooseInto } }));
+      this.selections.push(new Selection<P>({
+        prompt: promptInto || prompt,
+        selectOnBoard: { chooseFrom: chooseInto },
+        clientContext: { dragFrom: choosePiece || piece }
+      }));
     }
     if (!choosePiece && !chooseInto) {
       this.moves.push(() => (resolve(piece))!.putInto(resolve(into)!));

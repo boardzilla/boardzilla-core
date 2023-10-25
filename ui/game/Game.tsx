@@ -11,8 +11,8 @@ import type { PendingMove, Argument } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
 export default () => {
-  const [game, position, move, selectMove, selected, setSelected, boardJSON] =
-    gameStore(s => [s.game, s.position, s.move, s.selectMove, s.selected, s.setSelected, s.boardJSON]);
+  const [game, position, move, selectMove, selected, setSelected, dragElement, boardJSON] =
+    gameStore(s => [s.game, s.position, s.move, s.selectMove, s.selected, s.setSelected, s.dragElement, s.boardJSON]);
 
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
@@ -24,8 +24,6 @@ export default () => {
     console.log('no player to render');
     return null;
   }
-
-  console.log("RENDER GAME", move);
 
   const submitMove = (pendingMove?: PendingMove<Player>, value?: Argument<Player>) => {
     clickAudio.current?.play();
@@ -74,7 +72,6 @@ export default () => {
       (window.document.childNodes[0] as HTMLHtmlElement).style.fontSize = rem + 'px';
     }
     window.addEventListener('resize', resize);
-    window.addEventListener('resize',  () => game.board.applyLayouts());
     resize();
     return () => window.removeEventListener('resize', resize);
   }, []);
@@ -84,7 +81,7 @@ export default () => {
   return (
     <div id="game" className={game.board._ui.appearance.className} style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}>
       <audio ref={clickAudio} src={click} id="click"/>
-      <div id="play-area" style={{width: '100%', height: '100%'}}>
+      <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         <Element
           element={game.board}
           json={boardJSON[0]}

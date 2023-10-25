@@ -16,6 +16,20 @@
         box-sizing: border-box;
       }
 
+      img {
+        -webkit-user-drag: none;
+        pointer-events: none;
+      }
+
+      .dragging {
+        z-index: 100;
+        pointer-events: none;
+      }
+
+      .droppable {
+        outline: 1px solid red;
+      }
+
       .transformWrapper {
         position: absolute;
         transform-origin: 'top left';
@@ -30,13 +44,19 @@
         }
       }
 
-      .zoomable {
-        transition: transform 0.2s;
-        &:hover:not(.animating) {
-          transform: scale(1.5);
-          z-index: 50;
+      &.in-drag-movement {
+        .transformWrapper {
+          transition: none;
         }
       }
+
+      /* .zoomable { */
+      /*   transition: transform 0.2s; */
+      /*   &:hover:not(.animating) { */
+      /*     transform: scale(1.5); */
+      /*     z-index: 50; */
+      /*   } */
+      /* } */
 
       .clickable {
         cursor: pointer;
