@@ -66,7 +66,6 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   }
 ): Game<P, B> => {
   console.time('setup');
-  console.log('board' in state ? 'gamestate' : 'initial');
   const game = new Game<P, B>();
   let rseed = '';
   if ('rseed' in state) {

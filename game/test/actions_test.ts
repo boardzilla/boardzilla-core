@@ -4,8 +4,7 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import { action } from '../';
-import { Action } from '../action';
+import { action, Action } from '../action';
 
 chai.use(spies);
 const { expect } = chai;

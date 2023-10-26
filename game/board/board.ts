@@ -72,8 +72,11 @@ export default class Board<P extends Player> extends Space<P> {
   setBreakpoint(breakpoint: string) {
     if (breakpoint !== this._ui.breakpoint) {
       this._ui.breakpoint = breakpoint;
-      this.resetUI();
-      if (this._ui.setupLayout) this._ui.setupLayout(this, breakpoint);
+      if (this._ui.setupLayout) {
+        if (this._ui.layoutsSet) this.resetUI();
+        this._ui.setupLayout(this, this._ui.breakpoint);
+        this._ui.layoutsSet = true;
+      }
     }
   }
 
@@ -84,11 +87,7 @@ export default class Board<P extends Player> extends Space<P> {
   }
 
   applyLayouts(force=false) {
-    if (!this._ui.breakpoint) return;
-    if (this._ui.setupLayout && !this._ui.layoutsSet) {
-      this._ui.setupLayout(this, this._ui.breakpoint);
-      this._ui.layoutsSet = true;
-    }
+    if (!this._ui.breakpoint) this.setBreakpoint('_default');
 
     const aspectRatio = this._ui.appearance.aspectRatio;
     if (aspectRatio) {

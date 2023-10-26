@@ -133,7 +133,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       return null; // don't render this one, to prevent untransformed render
     }
   }
-  
+
   if (computedStyle) {
     style = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])))
   }
