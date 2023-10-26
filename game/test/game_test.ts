@@ -112,7 +112,6 @@ describe('Game', () => {
       players,
       rseed: '',
       settings: {},
-      phase: 'started',
       board: [ { className: 'TestBoard', tokens: 0 } ],
       position: [ { type: 'sequence', name: 'main', sequence: 0 } ],
     });
@@ -147,7 +146,6 @@ describe('Game', () => {
   it('finishes', () => {
     game.setState({
       players,
-      currentPlayerPosition: 2,
       rseed: '',
       settings: {},
       position: [
@@ -156,14 +154,15 @@ describe('Game', () => {
         { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
         { type: 'action', position: {} }
       ],
-      phase: 'started',
       board: [ { className: 'TestBoard', tokens: 9 } ],
     });
+    game.players.currentPosition = 2;
     do {
       game.processMove({ action: 'takeOne', args: [], player: game.players.current() });
       game.play();
     } while (game.phase === 'started');
-    expect(game.winner).to.equal(game.players[1]);
+    expect(game.winner.length).to.equal(1);
+    expect(game.winner[0]).to.equal(game.players[1]);
   });
 
   describe('state', () => {
@@ -180,7 +179,6 @@ describe('Game', () => {
     it("does player turns", () => {
       game.setState({
         players,
-        currentPlayerPosition: 2,
         rseed: '',
         settings: {},
         position: [
@@ -189,9 +187,9 @@ describe('Game', () => {
           { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
           { type: 'action', position: {} }
         ],
-        phase: 'started',
         board: [ { className: 'TestBoard', tokens: 9 } ],
       });
+      game.players.currentPosition = 2;
       expect(game.players.currentPosition).to.equal(2);
       game.play();
       game.processMove({ action: 'takeOne', args: [], player: game.players[1] });

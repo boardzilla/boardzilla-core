@@ -28,10 +28,10 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
   selected: GameElement<Player>[],
-  onSelectElement: (element: GameElement<Player>, moves: PendingMove<Player>[]) => void,
+  onSelectElement: (moves: PendingMove<Player>[], ...elements: GameElement<Player>[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [boardSelections, move, position, dragElement, setDragElement, dropElements, setCurrentDrop, onDragComplete] = gameStore(s => [s.boardSelections, s.move, s.position, s.dragElement, s.setDragElement, s.dropElements, s.setCurrentDrop, s.onDragComplete, s.boardJSON]);
+  const [game, boardSelections, move, position, dragElement, setDragElement, dropElements, currentDrop, setCurrentDrop] = gameStore(s => [s.game, s.boardSelections, s.move, s.position, s.dragElement, s.setDragElement, s.dropElements, s.currentDrop, s.setCurrentDrop, s.boardJSON]);
   const [transform, setTransform] = useState<string>(); // temporary transform from new to old used to animate
   const [animating, setAnimating] = useState(false); // currently animating
   const [dragging, setDragging] = useState(false); // currently dragging
@@ -42,14 +42,16 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     if (wrapper.current && transform) {
       const cancel = (e: TransitionEvent) => {
         if (e.propertyName === 'transform') {
+          console.log('transitionend', element.branch());
           element.doneMoving();
           setAnimating(false);
           wrapper.current?.removeEventListener('transitionend', cancel);
         }
       };
       wrapper.current?.addEventListener('transitionend', cancel);
+      console.log('animating now');
       setAnimating(true);
-      setTransform(undefined); // remove transform and let it transition to new location
+      setTransform(undefined); // remove transform, while setting animating to let this transition to new location
     }
   }, [wrapper, transform])
 
@@ -61,58 +63,83 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const absoluteTransform = element.absoluteTransform();
   const clickable = !dragElement && selections?.clickMoves.length;
   const selectable = !dragElement && selections?.clickMoves.filter(m => m.action.slice(0, 4) !== '_god').length;
-  const draggable = !animating && !transform && (selections?.dragMoves.length || element.name === 'garbage-06');
+  const draggable = !animating && !transform && selections?.dragMoves.length; // ???
   const droppable = dropElements.find(({ element }) => element === branch);
 
   let style: React.CSSProperties = {};
 
-  const startDrag = useCallback((e: MouseEvent, data: DraggableData) => {
+  const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
-    setDragging(true);
-    setDragElement(branch);
+    onSelectElement(selections.clickMoves, element);
+  }, [onSelectElement, selections]);
+
+  const onStartDrag = useCallback((e: MouseEvent, data: DraggableData) => {
+    e.stopPropagation();
     if (wrapper.current) {
       wrapper.current?.setAttribute('data-lastx', String(data.lastX));
       wrapper.current?.setAttribute('data-lasty', String(data.lastY))
     }
   }, [wrapper]);
 
-  const drag = useCallback((e: MouseEvent, data: DraggableData) => {
+  const onDrag = useCallback((e: MouseEvent, data: DraggableData) => {
     e.stopPropagation();
-    if (wrapper.current) {
-      wrapper.current.style.top = `calc(${style.top} - ${parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y}px)`;
-      wrapper.current.style.left = `calc(${style.left} - ${parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x}px)`;
+    setDragging(true);
+    setDragElement(branch);
+    if (wrapper.current && element._ui.computedStyle) {
+      wrapper.current.style.top = `calc(${element._ui.computedStyle.top}% - ${parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y}px)`;
+      wrapper.current.style.left = `calc(${element._ui.computedStyle.left}% - ${parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x}px)`;
     }
-  }, [wrapper, style]);
+  }, [branch, wrapper, style]);
 
-  const stopDrag = useCallback((e: MouseEvent) => {
-    console.log('stopDrag');
+  const onStopDrag = useCallback((e: MouseEvent) => {
     e.stopPropagation();
+    if (dragging) {
+      if (currentDrop) {
+        const move = dropElements.find(({ element }) => element === currentDrop)?.move;
+        if (move) onSelectElement([move], element, game!.board.atBranch(currentDrop));
+      }
+      if (wrapper.current && element._ui.computedStyle) {
+        wrapper.current.style.top = element._ui.computedStyle.top + '%';
+        wrapper.current.style.left = element._ui.computedStyle.left + '%';
+      }
+    } else {
+      onClick(e);
+    }
     setDragging(false);
-    onDragComplete();
-  }, []);
+    setCurrentDrop(undefined);
+    setDragElement(undefined);
+  }, [dragging, currentDrop, onClick, onSelectElement, wrapper]);
 
-  const drop = useCallback(() => {
+  const onDrop = useCallback(() => {
     setCurrentDrop(branch);
   }, []);
 
-  const leave = useCallback(() => {
+  const onLeave = useCallback(() => {
     setCurrentDrop(undefined);
   }, []);
 
   // initially place into old position
   const moveTransform = element.getMoveTransform();
   const computedStyle = element._ui.computedStyle;
-  if (!moveTransform || animatedFrom === element._t.was) {
-    element.doneMoving();
-  } else if (moveTransform && !transform && !animating && animatedFrom !== element._t.was) {
-    const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
-    setTransform(transformToNew);
-    setAnimatedFrom(element._t.was);
-    return null; // don't render this one, to prevent untransformed render
+  if (!animating) {
+    if (!moveTransform || animatedFrom === element._t.was) {
+      console.log('doneMoving', branch, !!moveTransform)
+      element.doneMoving();
+    } else if (!transform) {
+      const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
+      console.log('start animate transform', branch, transformToNew);
+      setTransform(transformToNew);
+      setAnimatedFrom(element._t.was);
+      return null; // don't render this one, to prevent untransformed render
+    }
   }
-
+  
   if (computedStyle) {
     style = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])))
+  }
+  if (dragging) {
+    delete style.left;
+    delete style.top;
   }
   style.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
@@ -133,7 +160,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         json={childJSON}
         selected={selected}
         onSelectElement={onSelectElement}
-        onMouseLeave={droppable ? drop : undefined}
+        onMouseLeave={droppable ? onDrop : undefined}
       />
     );
   }
@@ -213,6 +240,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const attrs = elementAttributes(element);
   if (element.player?.position === position) attrs.mine = 'true';
 
+  // "base" semantic GameElement dom element
   contents = (
     <div
       id={element.name}
@@ -226,9 +254,9 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
           // zoomable: !dragElement && (typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable),
         }
       )}
-      onClick={clickable ? (e: React.MouseEvent<Element, MouseEvent>) => { e.stopPropagation(); onSelectElement(element, selections.clickMoves) } : undefined}
-      onMouseEnter={droppable ? drop : undefined}
-      onMouseLeave={() => { if (droppable) leave(); if (onMouseLeave) onMouseLeave(); }}
+      onClick={clickable ? onClick : undefined}
+      onMouseEnter={droppable ? onDrop : undefined}
+      onMouseLeave={() => { if (droppable) onLeave(); if (onMouseLeave) onMouseLeave(); }}
       {...attrs}
     >
       {appearance(element)}
@@ -236,31 +264,33 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     </div>
   );
 
+  // wrapper dom element for transforms and animations
   contents = (
     <div
       ref={wrapper}
       key={branch}
-      className={classNames("transformWrapper", { animating, dragging })}
+      className={classNames("transform-wrapper", { animating, dragging })}
       style={{ ...style, transform }}
     >
       {contents}
     </div>
   );
 
-  if (draggable) contents = (
+  contents = (
     <DraggableCore
-      // disabled={externallyControlled}
+      disabled={!draggable}
       // onStart={e => e.stopPropagation()}
-      onStart={startDrag}
-      onDrag={drag}
-      onStop={stopDrag}
-      key={branch}
+      onStart={onStartDrag}
+      onDrag={onDrag}
+      onStop={onStopDrag}
       // position={position || {x:0, y:0}}
       // scale={(parentFlipped ? -1 : 1) * this.state.playAreaScale}
     >
       {contents}
     </DraggableCore>
   );
+
+  if (!element._t.parent) console.log('GAMEELEMENTS render');
 
   return contents;
 };

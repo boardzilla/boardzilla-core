@@ -13,7 +13,6 @@ export type GameState<P extends Player> = {
   settings: Record<string, any>
   position: FlowBranchJSON[],
   board: ElementJSON[],
-  moves?: Record<string, string>,
   rseed: string,
 }
 

@@ -23,6 +23,10 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     return this.find(p => p.position === position);
   }
 
+  setTurnMode(mode = true) {
+    this.currentPosition = mode ? this.currentPosition || 1 : undefined;
+  }
+
   current(): P {
     if (this.currentPosition === undefined) throw Error("Calling players.current() when not taking turns");
     return this.atPosition(this.currentPosition)!;

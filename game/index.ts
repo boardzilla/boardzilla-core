@@ -31,8 +31,8 @@ export {
 
 export { Game, Player };
 
-// starter function
-
+// starter function to create a new game instance
+// this is called from UI on first update and server on each call
 
 import type { SetupState, GameState } from '../types';
 import type { SetupFunction } from './types';
@@ -48,14 +48,15 @@ export const imports = <P extends Player>() => ({
   action: action<P>
 });
 
-export default <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setupBoard, setupFlow, actions, setupLayout }: {
+export default <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions, breakpoints, layout }: {
   playerClass: {new(a: PlayerAttributes<P>): P},
   boardClass: ElementClass<P, B>,
   elementClasses?: ElementClass<P, GameElement<P>>[],
-  setupBoard?: (game: Game<P, B>, board: B) => any,
-  setupFlow: (game: Game<P, B>, board: B) => Flow<P>,
+  setup?: (game: Game<P, B>, board: B) => any,
+  flow: (game: Game<P, B>, board: B) => Flow<P>,
   actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>,
-  setupLayout?: (board: B, aspectRatio: number) => void
+  breakpoints?: Record<string, (aspectRatio: number) => boolean>,
+  layout?: (board: B, breakpoint: string) => void
 }): SetupFunction<P, B> => (
   state: SetupState<P> | GameState<P>,
   options?: {
@@ -65,6 +66,7 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   }
 ): Game<P, B> => {
   console.time('setup');
+  console.log('board' in state ? 'gamestate' : 'initial');
   const game = new Game<P, B>();
   let rseed = '';
   if ('rseed' in state) {
@@ -83,7 +85,7 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   //console.timeLog('setup', 'setup players');
   game.defineBoard(boardClass, elementClasses || []);
   //console.timeLog('setup', 'define board');
-  game.defineFlow(setupFlow);
+  game.defineFlow(flow);
   //console.timeLog('setup', 'setup flow');
   game.defineActions(actions);
   //console.timeLog('setup', 'define actions');
@@ -92,15 +94,15 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   if (!('board' in state)) { // phase=new
     game.players.fromJSON(state.players);
     if (options?.start) {
-      if (setupBoard) setupBoard(game, game.board as B);
+      if (setup) setup(game, game.board as B);
       game.start();
     }
   } else { // phase=started
     game.players.fromJSON(state.players);
     if (options?.start) {
       // require setup to build spaces, graphs, event handlers
-      if (setupBoard) setupBoard(game, game.board as B);
-      //console.timeLog('setup', 'setupBoard');
+      if (setup) setup(game, game.board as B);
+      //console.timeLog('setup', 'setup');
     }
     if (options?.trackMovement) game.trackMovement(true);
     game.phase = 'started';
@@ -108,14 +110,15 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   }
   //console.timeLog('setup', 'setState');
 
-  game.players.currentPosition = options?.currentPlayerPosition;
   if (options?.start) {
     if (game.phase !== 'finished') game.play();
+    if (options?.currentPlayerPosition) game.players.setCurrent(options?.currentPlayerPosition);
   } else {
     game.phase ??= 'new';
   }
-  game.board._ctx.moves = {};
+
+  game.board._ui.breakpoints = breakpoints;
+  game.board._ui.setupLayout = layout;
   console.timeEnd('setup');
-  game.setupLayout = setupLayout;
   return game;
 };

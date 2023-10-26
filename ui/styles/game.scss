@@ -21,31 +21,61 @@
         pointer-events: none;
       }
 
+      .Space {
+        > img {
+          width: 100%;
+          height: 100%;
+        }
+        > .bz-default {
+          width: 100%;
+          height: 100%;
+          background: #ccc;
+        }
+      }
+
+      .Piece {
+        > img {
+          width: 100%;
+          height: 100%;
+        }
+        > .bz-default {
+          width: 100%;
+          height: 100%;
+          background: #ccf;
+          border: .1em solid white;
+          padding: .1em;
+          overflow: hidden;
+        }
+      }
+
       .dragging {
         z-index: 100;
         pointer-events: none;
       }
 
       .droppable {
-        outline: 1px solid red;
+        > .bz-default {
+          border: .1em solid red;
+        }
       }
 
-      .transformWrapper {
+      .transform-wrapper {
         position: absolute;
-        transform-origin: 'top left';
-        transition: top .3s, left .3s, width .3s, height .3s;
+        transform-origin: top left;
+        transition: top 2.3s, left 2.3s, width 2.3s, height 2.3s;
         &.animating {
-          transition: transform .3s, top .3s, left .3s, width .3s, height .3s;
+          transition: transform 2.3s, top 2.3s, left 2.3s, width 2.3s, height 2.3s;
           z-index: 100;
         }
         > div {
+          position: absolute;
           width: 100%;
           height: 100%;
         }
       }
 
       &.in-drag-movement {
-        .transformWrapper {
+        .transform-wrapper {
           transition: none;
         }
       }
@@ -63,44 +93,16 @@
       }
 
       .selectable {
-        outline: .5em solid yellow;
-        &:hover {
-          outline: .5em solid red;
+        > .bz-default {
+          border: .1em solid yellow;
+          &:hover {
+            border: .1em solid red;
+          }
         }
       }
 
       .selected {
         transform: scale(1.2);
-      }
-
-      .Space {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        > img {
-          width: 100%;
-          height: 100%;
-        }
-        > .bz-default {
-          width: 100%;
-          height: 100%;
-          background: #ccc;
-        }
-      }
-
-      .Piece {
-        position: absolute;
-        > img {
-          width: 100%;
-          height: 100%;
-        }
-        > .bz-default {
-          width: 100%;
-          height: 100%;
-          background: #ccf;
-          border: .1em solid white;
-          display: inline;
-        }
       }
     }
 

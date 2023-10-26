@@ -65,6 +65,7 @@ export default class GameElement<P extends Player> {
       id: this._ctx.sequence++,
     }
 
+    this.resetUI();
     Object.getPrototypeOf(this).top = this.first;
     Object.getPrototypeOf(this).topN = this.firstN;
     Object.getPrototypeOf(this).bottom = this.last;
@@ -384,7 +385,12 @@ export default class GameElement<P extends Player> {
    */
 
   _ui: ElementUI<P, GameElement<P>> = {
-    layouts: [{
+    layouts: [],
+    appearance: {},
+  }
+
+  resetUI() {
+    this._ui.layouts = [{
       applyTo: GameElement,
       attributes: {
         margin: 0,
@@ -393,8 +399,10 @@ export default class GameElement<P extends Player> {
         gap: 0,
         direction: 'square'
       }
-    }],
-    appearance: {},
+    }];
+    this._ui.appearance = {};
+    this._ui.computedStyle = undefined;
+    for (const child of this._t.children) child.resetUI();
   }
 
   // viewport relative to the board with unskewed x/y
@@ -414,6 +422,7 @@ export default class GameElement<P extends Player> {
   }
 
   layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']>) {
+    if (this._ui.layouts.length === 0) this.resetUI();
     const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
     if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
     if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');

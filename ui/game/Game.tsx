@@ -11,8 +11,8 @@ import type { PendingMove, Argument } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
 export default () => {
-  const [game, position, move, selectMove, selected, setSelected, dragElement, boardJSON] =
-    gameStore(s => [s.game, s.position, s.move, s.selectMove, s.selected, s.setSelected, s.dragElement, s.boardJSON]);
+  const [game, position, selectMove, selected, setSelected, setAspectRatio, dragElement, boardJSON] =
+    gameStore(s => [s.game, s.position, s.selectMove, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.boardJSON]);
 
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
@@ -25,37 +25,40 @@ export default () => {
     return null;
   }
 
-  const submitMove = (pendingMove?: PendingMove<Player>, value?: Argument<Player>) => {
+  const submitMove = (pendingMove?: PendingMove<Player>, ...args: Argument<Player>[]) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
-    selectMove(pendingMove, value);
+    selectMove(pendingMove, ...args);
   };
 
-  const onSelectElement = (element: GameElement<Player>, moves: PendingMove<Player>[]) => {
+  const onSelectElement = (moves: PendingMove<Player>[], ...elements: GameElement<Player>[]) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
 
     if (moves.length === 0) return;
     if (moves.length > 1) {
-      setSelected([element]);
-      return setDisambiguateElement({ element, moves });
+      setSelected([elements[0]]);
+      return setDisambiguateElement({ element: elements[0], moves });
     }
     const move = moves[0];
     if (move.selection?.type === 'board') {
       if (!move.selection.isMulti()) {
-        return submitMove(move, element);
+        return submitMove(move, ...elements);
       }
 
-      const newSelected = selected.includes(element) ?
-        selected.filter(s => s !== element) :
-        selected.concat([element]);
+      const newSelected = selected.includes(elements[0]) ?
+        selected.filter(s => s !== elements[0]) :
+        selected.concat([elements[0]]);
       setSelected(newSelected);
     }
   }
 
   useEffect(() => {
     const resize = () => {
-      const ratio = (game.board._ui.appearance.aspectRatio ?? 1) / (window.innerWidth / window.innerHeight);
+      const aspectRatio = window.innerWidth / window.innerHeight;
+      setAspectRatio(aspectRatio);
+
+      const ratio = (game.board._ui.appearance.aspectRatio ?? 1) / aspectRatio;
       let rem = window.innerHeight / 25;
       if (ratio > 1) {
         setDimensions({
@@ -77,6 +80,8 @@ export default () => {
   }, []);
 
   if (!dimensions) return;
+
+  console.log('GAME render');
 
   return (
     <div id="game" className={game.board._ui.appearance.className} style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}>

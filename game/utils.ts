@@ -37,6 +37,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
     },
     getPlayerState: (state: GameStartedState<Player> | GameFinishedState<Player>, position: number): GameStartedState<Player> | GameFinishedState<Player> => {
       if (!position) throw Error('getPlayerState without position');
+      console.log('getPlayerState', position);
       const game = setup(state);
       if (state.phase === 'started') {
         return {

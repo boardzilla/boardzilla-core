@@ -81,6 +81,7 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   /**
    * given a partial arg list, returns a selection object for continuation if one exists.
    */
+  /** @internal */
   nextSelection(...args: Argument<P>[]): ResolvedSelection<P> | undefined {
     let argsLeft = args.length;
     let i = 0;

@@ -9,8 +9,6 @@ import {
 import {
   GameState,
   GameUpdate,
-  GameStartedState,
-  GameFinishedState,
   PlayerPositionState,
   Message
 } from '../types';
@@ -41,7 +39,6 @@ export default class Game<P extends Player, B extends Board<P>> {
   random: () => number;
   messages: Message[] = [];
   godMode = false;
-  setupLayout?: (board: B, aspectRatio: number) => void;
   winner: P[] = [];
 
   /**
@@ -124,6 +121,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.setRandomSeed(state.rseed);
   }
 
+  // state variables for server updates. does not includes phase, current player or winners.
   getState(forPlayer?: number): GameState<P> {
     return {
       players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub

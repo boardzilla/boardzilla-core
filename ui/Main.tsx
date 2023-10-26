@@ -2,9 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { gameStore } from './';
 import Game from './game/Game';
 import Setup from './setup/Setup';
-import type { SetupFunction } from '../game/types'
-import type { Player } from '../game'
-import type { Board } from '../game/board'
 import { serializeArg } from '../game/action/utils';
 
 import type {
@@ -12,6 +9,7 @@ import type {
   UserPlayer,
   GameSettings,
   GameUpdateEvent,
+  GameFinishedEvent,
   PlayersEvent,
   SettingsUpdateEvent,
   MessageProcessedEvent,
@@ -23,16 +21,14 @@ import type {
 } from './types';
 import type { SerializedMove } from '../game/action/types';
 
-export default ({ userID, minPlayers, maxPlayers, setup }: {
+export default ({ userID, minPlayers, maxPlayers }: {
   userID: string,
   minPlayers: number,
   maxPlayers: number,
-  setup: SetupFunction<Player, Board<Player>>
 }) => {
-  const [game, setGame, move, selectMove, pendingMoves, position, setPosition, updateBoard] = gameStore(s => [s.game, s.setGame, s.move, s.selectMove, s.pendingMoves, s.position, s.setPosition, s.updateBoard]);
+  const [game, move, selectMove, pendingMoves, position, updateBoard, updateState] = gameStore(s => [s.game, s.move, s.selectMove, s.pendingMoves, s.position, s.updateBoard, s.updateState]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
-  const [phase, setPhase] = useState<string>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
   const [error, setError] = useState<string>();
@@ -42,6 +38,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
     PlayersEvent |
     SettingsUpdateEvent |
     GameUpdateEvent |
+    GameFinishedEvent |
     MessageProcessedEvent
   >) => {
     const data = event.data;
@@ -49,29 +46,14 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
     switch(data.type) {
     case 'settingsUpdate':
       setSettings(data.settings);
-      setPhase('new');
       break;
     case 'players':
       setPlayers(data.players);
       setUsers(data.users);
       break;
     case 'gameUpdate':
-      let newGame;
-      if (!game) {
-        newGame = setup(data.state.state, {
-          currentPlayerPosition: data.currentPlayers.length === 1 ? data.currentPlayers[0] : undefined,
-          start: true
-        });
-      } else {
-        game.setState(data.state.state);
-        game.players.currentPosition = data.currentPlayers.length === 1 ? data.currentPlayers[0] : undefined,
-        newGame = game;
-      }
-      if (!position) setPosition(data.state.position)
-      if (newGame !== game) setGame(newGame);
-      updateBoard(data.state.state.board);
-
-      setPhase('started'); // set phase last to render the game
+    case 'gameFinished':
+      updateState(data);
       break;
     case 'messageProcessed':
       if (data.error) catchError(data.error);
@@ -80,7 +62,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
       delete moves[parseInt(data.id)];
       break;
     }
-  }, [game, setGame]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
@@ -164,7 +146,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
 
   return (
     <>
-      {phase === 'new' &&
+      {!game &&
         <Setup
           users={users}
           minPlayers={minPlayers}
@@ -176,7 +158,7 @@ export default ({ userID, minPlayers, maxPlayers, setup }: {
           onStart={start}
         />
       }
-      {phase === 'started' && <Game/>}
+      {game && <Game/>}
       {error && <div className="error">{error}</div>}
     </>
   );

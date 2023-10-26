@@ -1,20 +1,26 @@
+board layout setup
+- initially needs a breakpoint and then setupLayout, then applyLayouts
+- on setState, rerun setupLayout (to cover recreated pieces. could be optimized but this is a cheap call) then applyLayouts 
+- on updateBoard, applyLayouts
+- on breakpoint change, clear layouts
+
 p1 -> sC m1 bc(s[]) dF
 pC -> s1 m2 bc(p[]) dI
 p2 m3 bc([p2])
 rC -> tC m4 bc(r[]) dI, bc(t[]) dF
 =>
-p1: m1 sC d: sC
+  p1: m1 sC d: sC
 pC1: m2 s1 d: s1 ,c
 PC2: m2 s1 d: s1, c
 ...
-p2: m3 c
+ p2: m3 c
 sC1: m1 c
 sC2: m1 c
 ...
-r1 m4 d: tC, c
-..
+ r1 m4 d: tC, c
+   ..
 
-state'
+    state'
   moves: [
     [br, br']
 ...

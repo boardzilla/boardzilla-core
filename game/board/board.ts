@@ -24,8 +24,6 @@ export default class Board<P extends Player> extends Space<P> {
     this._ctx.removed = this.createElement(Space, 'removed');
     this._ctx.trackMovement = false;
     this.pile = this._ctx.removed;
-    this._ui.stepLayouts = {};
-    this._ui.previousStyles = {};
   }
 
   // also gets removed elements
@@ -54,13 +52,44 @@ export default class Board<P extends Player> extends Space<P> {
   // UI
 
   _ui: GameElement<P>['_ui'] & {
+    breakpoint?: string,
+    breakpoints?: Record<string, (aspectRatio: number) => boolean>;
+    setupLayout?: (board: Board<P>, breakpoint: string) => void;
+    layoutsSet?: boolean;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout<P>>;
     previousStyles: Record<any, Box>;
   };
 
+  // restore default layout rules and remove all computed layouts/styles
+  resetUI() {
+    super.resetUI();
+    this._ui.stepLayouts = {};
+    this._ui.previousStyles = {};
+  }
+
+  setBreakpoint(breakpoint: string) {
+    if (breakpoint !== this._ui.breakpoint) {
+      this._ui.breakpoint = breakpoint;
+      this.resetUI();
+      if (this._ui.setupLayout) this._ui.setupLayout(this, breakpoint);
+    }
+  }
+
+  getBreakpoint(aspectRatio: number) {
+    const bPair = this._ui.breakpoints && Object.entries(this._ui.breakpoints).find(([_, f]) =>  f(aspectRatio));
+    if (bPair) return bPair[0];
+    return '_default';
+  }
+
   applyLayouts(force=false) {
+    if (!this._ui.breakpoint) return;
+    if (this._ui.setupLayout && !this._ui.layoutsSet) {
+      this._ui.setupLayout(this, this._ui.breakpoint);
+      this._ui.layoutsSet = true;
+    }
+
     const aspectRatio = this._ui.appearance.aspectRatio;
     if (aspectRatio) {
       this._ui.frame = {
