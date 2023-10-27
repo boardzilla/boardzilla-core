@@ -35,9 +35,12 @@ describe('Board', () => {
   });
 
   beforeEach(() => {
-    board = new Board(Space, Piece, GameElement);
-    // @ts-ignore
-    board.game = { players, board };
+    board = new Board({
+      // @ts-ignore
+      game: { players },
+      classRegistry: [Space, Piece, GameElement]
+    });
+    board._ctx.game.board = board;
   });
 
   it('renders', () => {
@@ -120,8 +123,8 @@ describe('Board', () => {
       rival: Country;
       general: Piece<Player>;
     }
+    board._ctx.classRegistry = [Space, Piece, GameElement, Country];
 
-    board._ctx.classRegistry.push(Country);
     const map = board.create(Space, 'map', {});
     const napolean = map.create(Piece, 'napolean')
     const england = map.create(Country, 'england', {});
@@ -554,11 +557,12 @@ describe('Board', () => {
 
   describe('layouts', () => {
     beforeEach(() => {
-      board = new Board(Space, Piece, GameElement);
+      board = new Board({ classRegistry: [Space, Piece, GameElement] });
       board.layout(GameElement, {
         margin: 0,
         gap: 0,
       });
+      board._ui.layoutsSet = true;
     })
     it('applies', () => {
       const a = board.create(Space, 'a');
@@ -847,7 +851,7 @@ describe('Board', () => {
       const spaces = board.createMany(4, Space, 'space');
       const space = board.create(Space, 'special');
 
-      board = new Board(Space, Piece, GameElement);
+      board = new Board({ classRegistry: [Space, Piece, GameElement] });
       board.layout(spaces[2], { direction: 'btt-rtl' });
       board.layout('special', { direction: 'ttb-rtl' });
       board.layout(spaces.slice(0, 2), { direction: 'ttb' });

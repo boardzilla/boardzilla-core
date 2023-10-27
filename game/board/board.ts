@@ -3,7 +3,7 @@ import { deserializeObject } from '../action/utils';
 
 import type {
   ElementJSON,
-  ElementClass,
+  ElementContext,
   Box,
   ActionLayout
 } from './types';
@@ -18,13 +18,20 @@ import type { Player } from '../player';
 
 export default class Board<P extends Player> extends Space<P> {
   pile: GameElement<P>;
+  players: typeof this._ctx.game.players;
+  message: typeof this._ctx.game.message;
+  finish: typeof this._ctx.game.finish;
 
-  constructor(...classes: ElementClass<P, GameElement<P>>[]) {
-    super({ classRegistry: classes });
+  constructor(ctx: Partial<ElementContext<P>>) {
+    super({ ...ctx, trackMovement: false });
+    this._ctx.removed = this.createElement(Space, 'removed'),
     this.board = this;
-    this._ctx.removed = this.createElement(Space, 'removed');
-    this._ctx.trackMovement = false;
     this.pile = this._ctx.removed;
+    if (this._ctx.game) {
+      this.players = this._ctx.game.players
+      this.message = this._ctx.game.message;
+      this.finish = this._ctx.game.finish;
+    }
   }
 
   // also gets removed elements
@@ -36,7 +43,7 @@ export default class Board<P extends Player> extends Space<P> {
 
   fromJSON(boardJSON: ElementJSON[]) {
     let { className, children, _id, order, ...rest } = boardJSON[0];
-    if (this.game) rest = deserializeObject({...rest}, this.game);
+    if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
 
     // reset all on self
@@ -73,8 +80,8 @@ export default class Board<P extends Player> extends Space<P> {
 
   setBreakpoint(breakpoint: string) {
     if (breakpoint !== this._ui.breakpoint) {
+      if (this._ui.breakpoint) this._ui.layoutsSet = false
       this._ui.breakpoint = breakpoint;
-      this._ui.layoutsSet = false
     }
   }
 
@@ -105,7 +112,7 @@ export default class Board<P extends Player> extends Space<P> {
   }
 
   layoutStep(step: string, attributes: ActionLayout<P>) {
-    if (step !== 'out-of-turn' && !this.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
+    if (step !== 'out-of-turn' && !this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
     this._ui.stepLayouts["step:" + step] = attributes;
   }
 

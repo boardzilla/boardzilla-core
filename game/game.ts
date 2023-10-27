@@ -29,11 +29,11 @@ import type { PlayerAttributes } from './player/types';
 
 export default class Game<P extends Player, B extends Board<P>> {
   flow: Flow<P>;
-  flowDefinition: (game: typeof this, board: B) => Flow<P>;
+  flowDefinition: (board: B) => Flow<P>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
   settings: Record<string, any>;
-  actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P, Argument<P>[]>>;
+  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>;
   phase: 'define' | 'new' | 'started' | 'finished' = 'define';
   rseed: string;
   random: () => number;
@@ -49,21 +49,17 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.flowDefinition = flowDefinition;
   }
 
-  defineActions(actions: (game: Game<P, B>, board: B) => Record<string, (p: P) => Action<P, Argument<P>[]>>) {
+  defineActions(actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>) {
     if (this.phase !== 'define') throw Error('cannot call defineActions once started');
     this.actions = actions;
   }
 
   defineBoard(
-    className: {
-      new(...classes: ElementClass<P, GameElement<P>>[]): B;
-      isGameElement: boolean;
-    },
+    className: ElementClass<P, B>,
     classRegistry: ElementClass<P, GameElement<P>>[]
   ): B {
     if (this.phase !== 'define') throw Error('cannot call defineBoard once started');
-    this.board = new className(GameElement, Space, Piece, ...classRegistry)
-    this.board.game = this;
+    this.board = new className({ game: this, classRegistry: [GameElement, Space, Piece, ...classRegistry]})
     return this.board;
   }
 
@@ -105,7 +101,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   buildFlow() {
-    this.flow = this.flowDefinition(this, this.board);
+    this.flow = this.flowDefinition(this.board);
     this.flow.game = this;
   }
 
@@ -187,16 +183,15 @@ export default class Game<P extends Player, B extends Board<P>> {
    */
   action(name: string, player: P): Action<P, any> & {name: string} {
     if (this.godMode) {
-      const action = this.godModeActions()[name];
-      if (action) {
-        action.name = name;
-        return action as Action<P, any> & {name: string};
+      const godModeAction = this.godModeActions()[name];
+      if (godModeAction) {
+        godModeAction.name = name;
+        return godModeAction as Action<P, any> & {name: string};
       }
     }
     return this.inContextOfPlayer(player, () => {
-      const action = this.actions(this, this.board)[name];
-      if (!action) throw Error(`No such action ${name}`);
-      const playerAction = action(player);
+      const playerAction = this.actions(this.board, action, player)[name];
+      if (!playerAction) throw Error(`No such action ${name}`);
       playerAction.name = name;
       return playerAction as Action<P, any> & {name: string};
     });

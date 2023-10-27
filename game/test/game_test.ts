@@ -8,7 +8,7 @@ import {
   Game,
   Player,
   Flow,
-  imports
+  boardClasses
 } from '../';
 
 import {
@@ -36,8 +36,7 @@ describe('Game', () => {
     Board,
     Space,
     Piece,
-    action
-  } = imports<TestPlayer>();
+  } = boardClasses(TestPlayer);
 
   class TestBoard extends Board {
     tokens: number = 0;
@@ -56,7 +55,7 @@ describe('Game', () => {
   beforeEach(() => {
     game = new Game();
     board = game.defineBoard(TestBoard, [ Card ]);
-    game.defineFlow((game, board) => new Flow({name: 'main', do: [
+    game.defineFlow(board => new Flow({name: 'main', do: [
       () => {
         board.tokens = 4;
         game.message('Starting game with $1 tokens', board.tokens);
@@ -77,8 +76,8 @@ describe('Game', () => {
       )}),
     ]}));
 
-    game.defineActions((_, board) => ({
-      addSome: () => action({
+    game.defineActions((board, action, player) => ({
+      addSome: action({
         prompt: 'add some counters',
         message: '$player added $1'
       }).chooseNumber({
@@ -86,13 +85,13 @@ describe('Game', () => {
         min: 1,
         max: 3,
       }).do(n => board.tokens += n),
-      takeOne: player => action({
+      takeOne: action({
         prompt: 'take one counter',
       }).do(() => {
         board.tokens --;
         player.tokens ++;
       }),
-      spend: () => action({
+      spend: action({
         prompt: 'Spend resource',
       }).chooseFrom({
         prompt: 'which resource',

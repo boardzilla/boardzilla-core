@@ -41,20 +41,19 @@ import type { PlayerAttributes } from './player/types';
 import type { Argument } from './action/types';
 import type { Flow } from './flow';
 
-export const imports = <P extends Player>() => ({
+export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
   Board: Board<P>,
   Space: Space<P>,
   Piece: Piece<P>,
-  action: action<P>
 });
 
 export default <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions, breakpoints, layout }: {
   playerClass: {new(a: PlayerAttributes<P>): P},
   boardClass: ElementClass<P, B>,
   elementClasses?: ElementClass<P, GameElement<P>>[],
-  setup?: (game: Game<P, B>, board: B) => any,
-  flow: (game: Game<P, B>, board: B) => Flow<P>,
-  actions: (game: Game<P, B>, board: B) => Record<string, (player: P) => Action<P, Argument<P>[]>>,
+  setup?: (board: B) => any,
+  flow: (board: B) => Flow<P>,
+  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>,
   breakpoints?: Record<string, (aspectRatio: number) => boolean>,
   layout?: (board: B, breakpoint: string) => void
 }): SetupFunction<P, B> => (
@@ -93,14 +92,14 @@ export default <P extends Player, B extends Board<P>>({ playerClass, boardClass,
   if (!('board' in state)) { // phase=new
     game.players.fromJSON(state.players);
     if (options?.start) {
-      if (setup) setup(game, game.board as B);
+      if (setup) setup(game.board);
       game.start();
     }
   } else { // phase=started
     game.players.fromJSON(state.players);
     if (options?.start) {
       // require setup to build spaces, graphs, event handlers
-      if (setup) setup(game, game.board as B);
+      if (setup) setup(game.board);
       //console.timeLog('setup', 'setup');
     }
     if (options?.trackMovement) game.trackMovement(true);

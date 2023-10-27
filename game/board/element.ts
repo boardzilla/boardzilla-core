@@ -1,6 +1,6 @@
 import ElementCollection from './element-collection';
 import { isA, shuffleArray, times } from '../utils';
-import { scale, translate, cellSizeForArea } from './utils';
+import { translate, cellSizeForArea } from './utils';
 import { serializeObject, deserializeObject } from '../action/utils';
 import random from 'random-seed';
 
@@ -16,7 +16,6 @@ import type {
 } from './types';
 
 import type { Player } from '../player';
-import type { Game } from '../';
 import type Board from './board';
 import type { Sorter } from '../types';
 
@@ -26,7 +25,6 @@ export default class GameElement<P extends Player> {
   name: string;
   player?: P;
   board: Board<P>;
-  game: Game<P, Board<P>>;
   top: typeof this.first;
   bottom: typeof this.last;
   topN: typeof this.firstN;
@@ -172,7 +170,7 @@ export default class GameElement<P extends Player> {
   }
 
   shuffle() {
-    shuffleArray(this._t.children, this.game?.random || Math.random);
+    shuffleArray(this._t.children, this._ctx.game?.random || Math.random);
   }
 
   owner() {
@@ -254,7 +252,7 @@ export default class GameElement<P extends Player> {
   }
 
   create<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T {
-    if (this.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
+    if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
     const el = this.createElement(className, name, attrs);
     el._t.parent = this;
     if (this._t.order === 'stacking') {
@@ -277,7 +275,6 @@ export default class GameElement<P extends Player> {
       className = classNameBasedOnName;
     }
     const el = new className(this._ctx);
-    el.game = this.game;
     el.board = this.board;
     el.name = name;
     Object.assign(el, attrs);
@@ -317,29 +314,26 @@ export default class GameElement<P extends Player> {
 
   toJSON(seenBy?: number) {
     let attrs: Record<any, any>;
-    let { _t, _ctx, _ui, game, board, ...rest } = this;
-    if ('pile' in rest) delete rest.pile;
-    if ('_eventHandlers' in rest) delete rest['_eventHandlers'];
+    ({ ...attrs } = this);
+    for (const attr of ['_t', '_ctx', '_ui', 'board', 'pile', '_eventHandlers', 'players', 'finish', 'message']) delete attrs[attr];
 
     // remove methods
-    rest = Object.fromEntries(Object.entries(rest).filter(
+    attrs = Object.fromEntries(Object.entries(attrs).filter(
       ([, value]) => typeof value !== 'function'
-    )) as typeof rest;
+    )) as typeof attrs;
 
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
-      rest = Object.fromEntries(Object.entries(rest).filter(
+      attrs = Object.fromEntries(Object.entries(attrs).filter(
         ([attr]) => !(this.constructor as typeof GameElement<P>).hiddenAttributes.includes(attr)
-      )) as typeof rest;
+      )) as typeof attrs;
     }
 
-    attrs = rest;
-
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
-    if (seenBy === undefined || 'isSpace' in this) json._id = _t.id;
-    if (_t.children.length) json.children = Array.from(_t.children.map(c => c.toJSON(seenBy)));
-    if (_t.order) json.order = _t.order;
-    if (_t.was) json.was = _t.was;
+    if (seenBy === undefined || 'isSpace' in this) json._id = this._t.id;
+    if (this._t.children.length) json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
+    if (this._t.order) json.order = this._t.order;
+    if (this._t.was) json.was = this._t.was;
     return json;
   }
 
@@ -351,14 +345,14 @@ export default class GameElement<P extends Player> {
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
       let { className, children, was, _id, name, order, ...rest } = json;
-      if (this.game) rest = deserializeObject({...rest}, this.game);
+      if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
       let child: GameElement<P> | undefined = undefined;
       if (_id !== undefined) { // try to match space, preserve the object and any references
         child = spaces.find(c => c._t.id === _id);
         if (child) {
           // reset all on child
           for (const key of Object.keys(child)) {
-            if (!['_ctx', '_t', '_ui', '_eventHandlers', 'board', 'game', 'name'].includes(key) && !(key in rest))
+            if (!['_ctx', '_t', '_ui', '_eventHandlers', 'board', 'name'].includes(key) && !(key in rest))
               rest[key] = undefined;
           }
           Object.assign(child, rest);
@@ -461,6 +455,7 @@ export default class GameElement<P extends Player> {
 
     const layoutItems = this.getLayoutItems();
     const absoluteTransform = this.absoluteTransform();
+    debugger;
 
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
       const { attributes } = this._ui.layouts[l];

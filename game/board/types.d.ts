@@ -1,12 +1,13 @@
-import type { GameElement, ElementCollection } from './'
-import type { Player } from '../'
+import type { Board, GameElement, ElementCollection } from './'
+import type { Game, Player } from '../'
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 
 export type ElementClass<P extends Player, T extends GameElement<P>> = {
   new(ctx: Partial<ElementContext<P>>): T;
   isGameElement: boolean; // here to help enforce types
-} & Record<any, any>
+  hiddenAttributes: string[];
+}
 
 export type GameElementSerialization = 'player' | 'name'; // | 'uuid' | 'x' | 'y' | 'left' | 'right' | 'top' | 'bottom' | 'columns' | 'rows' | 'layout' | 'zoom' | 'minWidth' | 'minHeight';
 // export type PieceSerialization = GameElementSerialization; // | 'cell';
@@ -18,13 +19,15 @@ export type ElementAttributes<P extends Player, T extends GameElement<P>> =
   Partial<Pick<T, {[K in keyof T]: K extends keyof GameElement<P> ? never : (T[K] extends (...a:any[]) => any ? never : K)}[keyof T] | 'name' | 'player'>>
 
 export type ElementContext<P extends Player> = {
+  game: Game<P, Board<P>>;
   top: GameElement<P>;
   removed: GameElement<P>;
   sequence: number;
   player?: P;
   classRegistry: ElementClass<P, GameElement<P>>[];
   moves: Record<string, string>;
-} & Record<string, any>;
+  trackMovement: boolean;
+};
 
 export type ElementFinder<P extends Player, T extends GameElement<P>> = (
   ((e: T) => boolean) |
