@@ -1,4 +1,10 @@
 @layer game {
+
+  /* z layers */
+  /* 100: animations */
+  /* 150: player messages */
+  /* 200: system messages */
+
   body {
     margin: 0;
     padding: 0;
@@ -111,6 +117,7 @@
       position: absolute;
       padding: .25rem;
       font-size: .75rem;
+      background: #fffc;
       form {
         margin: 0;
         display: inline-block;
@@ -150,6 +157,19 @@
       padding: 0.2rem;
       background: red;
       color: white;
+      z-index: 200;
+    }
+
+    .game-finished {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translateY(-50%) translateX(-50%);
+      font-size: 1.5rem;
+      padding: 0.5rem;
+      background: red;
+      color: white;
+      z-index: 200;
     }
   }
 }

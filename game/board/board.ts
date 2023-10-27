@@ -14,6 +14,7 @@ import type { Player } from '../player';
 // e.g. can:
 //   game: Game<P, typeof this>
 //   board: typeof this
+// see powergrid canBuild
 
 export default class Board<P extends Player> extends Space<P> {
   pile: GameElement<P>;
@@ -66,7 +67,7 @@ export default class Board<P extends Player> extends Space<P> {
   // restore default layout rules before running setupLayout
   resetUI() {
     super.resetUI();
-    this._ui.stepLayouts = {};
+    this._ui.stepLayouts = { 'step:out-of-turn': { element: this, top: 0, left: 0 } };
     this._ui.previousStyles ||= {};
   }
 

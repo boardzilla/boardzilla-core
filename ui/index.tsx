@@ -69,12 +69,22 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       for (const className of game.board._ctx.classRegistry) window[className.name] = className;
     } else {
       game.setState(update.state.state);
-      game.play();
-      if ('currentPlayers' in update) game.players.currentPosition = update.currentPlayers.length === 1 ? update.currentPlayers[0] : undefined;
-      if ('winners' in update) game.winner = update.winners.map(p => game!.players.atPosition(p)!);
+    }
+    if (update.type === 'gameUpdate') game.players.currentPosition = update.currentPlayers.length === 1 ? update.currentPlayers[0] : undefined;
+    if (update.type === 'gameFinished') {
+      game.winner = update.winners.map(p => game!.players.atPosition(p)!);
+      game.phase = 'finished';
     }
     game.board.applyLayouts();
     const position = s.position || update.state.position;
+
+    if (game.phase === 'finished') {
+      return {
+        game,
+        position,
+        boardJSON: update.state.state.board,
+      }
+    }
 
     return {
       game,

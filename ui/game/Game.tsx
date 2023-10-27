@@ -17,6 +17,7 @@ export default () => {
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: PendingMove<Player>[] }>();
+  const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
 
   if (!game || !position) return null;
   const player = game.players.atPosition(position);
@@ -84,7 +85,7 @@ export default () => {
   console.log('GAME render');
 
   return (
-    <div id="game" className={game.board._ui.appearance.className} style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}>
+    <div id="game" className={game.board._ui.appearance.className} style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }} onClick={() => game.phase === 'finished' && setVictoryMessageDismissed(true)}>
       <audio ref={clickAudio} src={click} id="click"/>
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         <Element
@@ -97,6 +98,7 @@ export default () => {
       </div>
       <PlayerControls onSubmit={submitMove} disambiguateElement={disambiguateElement} />
       {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
+      {game.phase === 'finished' && !victoryMessageDismissed && <div className="game-finished">Game finished</div>}
     </div>
   );
 }
