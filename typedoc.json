@@ -5,5 +5,5 @@
   "plugin": ["typedoc-plugin-markdown"],
   "hideInPageTOC": false,
   "entryDocument": "index.md",
-  "name": "boardzilla-core"
+  "name": "@boardzilla/core"
 }
