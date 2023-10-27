@@ -65,7 +65,6 @@ export default class GameElement<P extends Player> {
       id: this._ctx.sequence++,
     }
 
-    this.resetUI();
     Object.getPrototypeOf(this).top = this.first;
     Object.getPrototypeOf(this).topN = this.firstN;
     Object.getPrototypeOf(this).bottom = this.last;
@@ -816,7 +815,7 @@ export default class GameElement<P extends Player> {
       y: absoluteTransform.height / 100
     }
 
-    if (typeof margin === 'number') margin = { left: margin, right: margin, top: margin, bottom: margin };
+    margin = (typeof margin === 'number') ? { left: margin, right: margin, top: margin, bottom: margin } : {...margin};
     margin.left /= transform.x;
     margin.right /= transform.x;
     margin.top /= transform.y;

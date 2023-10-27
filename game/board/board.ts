@@ -47,6 +47,7 @@ export default class Board<P extends Player> extends Space<P> {
     if (children) this.createChildrenFromJSON(children, '0');
     if (order) this._t.order = order;
     this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1), '1');
+    this._ui.layoutsSet = false; // TODO optimize
   }
 
   // UI
@@ -62,21 +63,17 @@ export default class Board<P extends Player> extends Space<P> {
     previousStyles: Record<any, Box>;
   };
 
-  // restore default layout rules and remove all computed layouts/styles
+  // restore default layout rules before running setupLayout
   resetUI() {
     super.resetUI();
     this._ui.stepLayouts = {};
-    this._ui.previousStyles = {};
+    this._ui.previousStyles ||= {};
   }
 
   setBreakpoint(breakpoint: string) {
     if (breakpoint !== this._ui.breakpoint) {
       this._ui.breakpoint = breakpoint;
-      if (this._ui.setupLayout) {
-        if (this._ui.layoutsSet) this.resetUI();
-        this._ui.setupLayout(this, this._ui.breakpoint);
-        this._ui.layoutsSet = true;
-      }
+      this._ui.layoutsSet = false
     }
   }
 
@@ -88,6 +85,11 @@ export default class Board<P extends Player> extends Space<P> {
 
   applyLayouts(force=false) {
     if (!this._ui.breakpoint) this.setBreakpoint('_default');
+    if (!this._ui.layoutsSet) {
+      this.resetUI();
+      if (this._ui.setupLayout) this._ui.setupLayout(this, this._ui.breakpoint!);
+      this._ui.layoutsSet = true;
+    }
 
     const aspectRatio = this._ui.appearance.aspectRatio;
     if (aspectRatio) {

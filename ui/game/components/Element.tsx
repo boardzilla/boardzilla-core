@@ -42,14 +42,12 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     if (wrapper.current && transform) {
       const cancel = (e: TransitionEvent) => {
         if (e.propertyName === 'transform') {
-          console.log('transitionend', element.branch());
           element.doneMoving();
           setAnimating(false);
           wrapper.current?.removeEventListener('transitionend', cancel);
         }
       };
       wrapper.current?.addEventListener('transitionend', cancel);
-      console.log('animating now');
       setAnimating(true);
       setTransform(undefined); // remove transform, while setting animating to let this transition to new location
     }
@@ -121,18 +119,17 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   // initially place into old position
   const moveTransform = element.getMoveTransform();
   const computedStyle = element._ui.computedStyle;
-  if (!animating) {
-    if (!moveTransform || animatedFrom === element._t.was) {
-      console.log('doneMoving', branch, !!moveTransform)
-      element.doneMoving();
-    } else if (!transform) {
-      const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
-      console.log('start animate transform', branch, transformToNew);
-      setTransform(transformToNew);
-      setAnimatedFrom(element._t.was);
-      return null; // don't render this one, to prevent untransformed render
-    }
+
+  if (!moveTransform || animatedFrom === element._t.was) {
+    element.doneMoving();
+  } else if (!transform) {
+    const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
+    setTransform(transformToNew);
+    setAnimatedFrom(element._t.was);
+    return null; // don't render this one, to prevent untransformed render
   }
+
+  if (element._t.parent && !element._t.parent._t.children.includes(element)) console.error('old element reference', element);
 
   if (computedStyle) {
     style = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])))

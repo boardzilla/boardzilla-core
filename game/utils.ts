@@ -1,7 +1,7 @@
 import { GameElement } from './board';
 import { deserializeArg } from './action/utils';
 
-import type { Player } from './';
+import type { Game, Player } from './';
 import type { Board } from './board';
 import type { SerializedArg, SerializedMove } from './action/types';
 import type { SetupFunction, GameInterface } from './types';
@@ -15,25 +15,37 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       move: {
         position: number,
         data: SerializedMove
-      }
+      },
+      trackMovement=true
     ): GameUpdate<Player> => {
-      const game = setup(previousState, {
+      console.time('processMove');
+      let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
+      // @ts-ignore
+      if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board.game;
+      const game = cachedGame || setup(previousState, {
         currentPlayerPosition: previousState.currentPlayers.length === 1 ? previousState.currentPlayers[0] : undefined,
         start: true,
-        trackMovement: true
+        trackMovement
       });
+      console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       const error = game.processMove({
         player: game.players.atPosition(move.position)!,
         action: move.data.action,
         args: move.data.args.map(a => deserializeArg(a as SerializedArg, game))
       });
+      console.timeLog('processMove', 'process');
       if (error) {
         throw Error(`Unable to process move: ${error}`);
       }
       game.play();
       // @ts-ignore
-      if (globalThis.window) window.board = game.board; // debugging - may remove
-      return game.getUpdate();
+      if (globalThis.window) window.board = game.board;
+      const update = game.getUpdate();
+      console.timeLog('processMove', 'update');
+      // @ts-ignore
+      if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
+      console.timeEnd('processMove');
+      return update;
     },
     getPlayerState: (state: GameStartedState<Player> | GameFinishedState<Player>, position: number): GameStartedState<Player> | GameFinishedState<Player> => {
       if (!position) throw Error('getPlayerState without position');

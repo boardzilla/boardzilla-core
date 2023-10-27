@@ -99,6 +99,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
       }
 
       const error = game.processMove({ player, ...move });
+      game.play();
       selectMove();
 
       if (error) {
@@ -146,7 +147,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
 
   return (
     <>
-      {!game &&
+      {settings && !game &&
         <Setup
           users={users}
           minPlayers={minPlayers}

@@ -25,7 +25,7 @@ export type GameInterface<P extends Player> = {
       position: number
       data: SerializedMove
     },
-    rseed: string
+    trackMovement?: boolean
   ) => GameUpdate<P>
   getPlayerState: (
     state: GameState<P>,
