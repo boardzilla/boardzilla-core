@@ -21,19 +21,36 @@ import type { Sorter } from '../types';
 
 import type { UndirectedGraph } from 'graphology';
 
+/**
+ * Abstract base class for all Board elements. Use {@link Space} or {@link
+ * Piece} as the base for subclassing your own elements.
+ */
 export default class GameElement<P extends Player> {
+  /** element name */
   name: string;
+  /** Player with which this element is identified. This does not affect behaviour but will mark the element as `mine` in queries in the context of this player. */
   player?: P;
+  /** The {@link Board} to which this element belongs */
   board: Board<P>;
+  /** @alias first */
   top: typeof this.first;
+  /** @alias last */
   bottom: typeof this.last;
+  /** @alias firstN */
   topN: typeof this.firstN;
+  /** @alias lastN */
   bottomN: typeof this.lastN;
 
-  // ctx shared for all elements in the tree
+  /**
+   * ctx shared for all elements in the tree
+   * @internal
+   */
   _ctx: ElementContext<P>
 
-  // tree info
+  /**
+   * tree info
+   * @internal
+   */
   _t: {
     children: ElementCollection<P, GameElement<P>>,
     parent?: GameElement<P>,
@@ -41,16 +58,30 @@ export default class GameElement<P extends Player> {
     order?: 'normal' | 'stacking',
     was?: string,
     graph?: UndirectedGraph,
+    setId: (id: number) => void
   };
 
+  /** @internal */
   _visible?: {
     default: boolean,
     except?: number[]
   }
 
+  /** @internal */
   static isGameElement = true;
-  static hiddenAttributes: string[] = [];
 
+  /**
+   * List of attributes that are obscured when elements of this class are
+   * hidden. E.g. In a game with multiple card decks with different backs, the
+   * identity of the card is hiddem, but the deck it belongs to is not.
+   */
+  static hiddenAttributes: string[] = ['name'];
+
+  /**
+   * Do not use the constructor directly. Instead Call {@link
+   * GameElement#create} or {@link GameElement#createMany} on the element in
+   * which you want to create a new element.
+   */
   constructor(ctx: Partial<ElementContext<P>>) {
     this._ctx = ctx as ElementContext<P>;
     if (!ctx.top) {
@@ -61,6 +92,12 @@ export default class GameElement<P extends Player> {
     this._t = {
       children: new ElementCollection(),
       id: this._ctx.sequence++,
+      setId: (id?: number) => {
+        if (id !== undefined) {
+          this._t.id = id;
+          if (this._ctx.sequence < id) this._ctx.sequence = id;
+        }
+      }
     }
 
     Object.getPrototypeOf(this).top = this.first;
@@ -69,15 +106,20 @@ export default class GameElement<P extends Player> {
     Object.getPrototypeOf(this).bottomN = this.lastN;
   }
 
-  setId(id?: number) {
-    if (id !== undefined) {
-      this._t.id = id;
-      if (this._ctx.sequence < id) this._ctx.sequence = id;
-    }
-  }
-
-  all<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  /**
+   * Finds all elements within this element recursively that match the arguments
+   * provided. Returns an {@link ElementCollection} of matches.
+   *
+   * @param {class} className - Optionally provide a class as the first argument
+   * as a class filter. This will only match elements which are instances of the
+   * provided class, and will also cause the returned {@link ElementCollection}
+   * to be typed to this class.
+   *
+   * @param finders - All other parameters are filters. See {@link
+   * ElementFinder} for more information.
+   */
   all<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  all<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
   all<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       return this._t.children.all<GameElement<P>>(GameElement<P>, className, ...finders);
@@ -85,8 +127,12 @@ export default class GameElement<P extends Player> {
     return this._t.children.all<F>(className, ...finders);
   }
 
-  first<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
+  /**
+   * Finds the first element within this element recursively that matches the arguments
+   * provided. See {@link all} for parameter details.
+   */
   first<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  first<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
   first<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | GameElement<P> | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       return this._t.children._finder<GameElement<P>>(GameElement<P>, {limit: 1}, className, ...finders)[0];
@@ -94,8 +140,13 @@ export default class GameElement<P extends Player> {
     return this._t.children.all<F>(className, ...finders)[0];
   }
 
-  firstN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  /**
+   * Finds the first `n` elements within this element recursively that match the arguments
+   * provided. See {@link all} for parameter details.
+   * @param n - number of matches
+   */
   firstN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  firstN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
   firstN<F extends GameElement<P>>(n: number, className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
     if (typeof n !== 'number') throw Error('first argument must be number of matches');
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
@@ -104,8 +155,12 @@ export default class GameElement<P extends Player> {
     return this._t.children._finder(className, {limit: n}, ...finders);
   }
 
-  last<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
+  /**
+   * Finds the last element within this element recursively that matches the arguments
+   * provided. See {@link all} for parameter details.
+   */
   last<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  last<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
   last<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | GameElement<P> | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       return this._t.children._finder<GameElement<P>>(GameElement<P>, {limit: 1, order: 'desc'}, className, ...finders)[0];
@@ -113,6 +168,11 @@ export default class GameElement<P extends Player> {
     return this._t.children._finder(className, {limit: 1, order: 'desc'}, ...finders)[0];
   }
 
+  /**
+   * Finds the last `n` elements within this element recursively that match the arguments
+   * provided. See {@link all} for parameter details.
+   * @param n - number of matches
+   */
   lastN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
   lastN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
   lastN<F extends GameElement<P>>(n: number, className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
@@ -123,9 +183,12 @@ export default class GameElement<P extends Player> {
     return this._t.children._finder(className, {limit: n, order: 'desc'}, ...finders);
   }
 
-  // find sibling elements
-  others<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  /**
+   * Finds "sibling" elements (elements that are directly inside the parent of this element) that match the arguments
+   * provided. See {@link all} for parameter details.
+   */
   others<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  others<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
   others<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
     if (!this._t.parent) new ElementCollection<P, GameElement<P>>();
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
@@ -136,8 +199,12 @@ export default class GameElement<P extends Player> {
     return this._t.parent!._t.children._finder(className, {}, otherFinder, ...finders);
   }
 
-  has<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): boolean;
+  /**
+   * Return whether any element within this element recursively matches the arguments
+   * provided. See {@link all} for parameter details.
+   */
   has<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): boolean;
+  has<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): boolean;
   has<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | boolean {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       return !!this.first(className, ...finders);
@@ -150,10 +217,23 @@ export default class GameElement<P extends Player> {
     return (el: T) => el !== (this as GameElement<P>);
   }
 
+  /**
+   * Set this class to use a different ordering style.
+   * @param order - ordering style
+   * - "normal": Elements placed into this element are put at the end of the list (default)
+   * - "stacking": Elements placed into this element are put at the beginning of the list. This is prefered for elements that stack. E.g. when placing a card into a stack of cards, if `order` is set to `stacking` the {@link first} method will return the card just placed, i.e. it will be considered to be on the top of the stack
+   */
   setOrder(order: typeof this._t.order) {
     this._t.order = order;
   }
 
+  /**
+   * Returns this elements parent.
+   * @param className - If provided, searches up the parent tree to find the first
+   * matching element. E.g. if a Token is placed on a Card in a players
+   * Tableau. calling `token.container(Tableau)` can be used to find the
+   * grandparent.
+   */
   container<T extends GameElement<P>>(className?: ElementClass<P, T>): T | undefined {
     if (!className) return this._t.parent as T;
     if (this._t.parent) return isA(this._t.parent, className) ?
@@ -161,48 +241,92 @@ export default class GameElement<P extends Player> {
       this._t.parent.container(className);
   }
 
+  /**
+   * Returns whether this element has any elements placed within it.
+   */
   isEmpty() {
     return !this._t.children.length;
   }
 
+  /**
+   * Sorts the elements directly contained within this element by some {@link Sorter}.
+   */
   sortBy<E extends GameElement<P>>(key: Sorter<E> | (Sorter<E>)[], direction?: "asc" | "desc") {
     return this._t.children.sortBy(key, direction)
   }
 
+  /**
+   * Re-orders the elements directly contained within this element randomly.
+   */
   shuffle() {
     shuffleArray(this._t.children, this._ctx.game?.random || Math.random);
   }
 
+  /**
+   * Returns the player that owns this element, or the first element that
+   * contains this element searching up through the parent hierarchy. This is
+   * related to, but different than {@link player}. E.g. if a common card is in
+   * a player's hand, typically the `hand.player` will be assigned to that
+   * player but the card does not have a `player`. The card.owner() will return
+   * the player in whose hand the card is placed. Similarly, if an army is in
+   * another player's country, the `army.owner()` will be the player controlling
+   * that army (i.e. same as `army.player`) rather than the player who owns the
+   * country in which it's placed.
+   */
   owner() {
     return this.player !== undefined ? this.player : this._t.parent?.player;
   }
 
+  /**
+   * Returns whether this element belongs to the "current" player. A player is
+   * considered the current player if this is called in the context of an action
+   * taken by a given player, or if this is called from a given player's view of
+   * the board. It is an error to call this method when not in a player
+   * context. When querying for elements using {@link ElementFinder} such as
+   * {@link all} and {@link first}, {@link mine} is available as a search key
+   * that accepts a value of true/false
+   */
   get mine() {
     if (!this._ctx.player) return false;
     return this.owner() === this._ctx.player;
   }
 
+  /**
+   * Show this element to all players
+   */
   showToAll() {
     delete(this._visible);
   }
 
-  showOnlyTo(player: number) {
+  /**
+   * Show this element only to the given player
+   */
+  showOnlyTo(player: Player | number) {
+    if (typeof player !== 'number') player = player.position;
     this._visible = {
       default: false,
       except: [player]
     };
   }
 
-  showTo(...player: number[]) {
+  /**
+   * Show this element to the given players without changing it's visibility to
+   * any other players.
+   */
+  showTo(...player: Player[] | number[]) {
+    if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
     if (this._visible === undefined) return;
     if (this._visible.default) {
       if (!this._visible.except) return;
-      this._visible.except = this._visible.except.filter(i => !player.includes(i));
+      this._visible.except = this._visible.except.filter(i => !(player as number[]).includes(i));
     } else {
-      this._visible.except = Array.from(new Set([...(this._visible.except instanceof Array ? this._visible.except : []), ...player]))
+      this._visible.except = Array.from(new Set([...(this._visible.except instanceof Array ? this._visible.except : []), ...(player as number[])]))
     }
   }
 
+  /**
+   * Hide this element only to the given player
+   */
   hideFromAll() {
     this._visible = {default: false};
   }
@@ -362,7 +486,7 @@ export default class GameElement<P extends Player> {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
         if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
         child = this.createElement(elementClass, name, rest) as GameElement<P>;
-        child.setId(_id);
+        child._t.setId(_id);
         child._t.parent = this;
         child._t.order = order;
         child._t.was = was;
@@ -398,12 +522,16 @@ export default class GameElement<P extends Player> {
     for (const child of this._t.children) child.resetUI();
   }
 
-  // viewport relative to the board with unskewed x/y
+  /**
+   * viewport relative to the board with unskewed x/y
+   */
   absoluteTransform(): Box {
     return this.board._ui.frame ? translate(this.relativeTransformToBoard(), this.board._ui.frame) : this.relativeTransformToBoard();
   }
 
-  // viewport relative to the board with % x/y to board
+  /**
+   * viewport relative to the board with % x/y to board
+   */
   relativeTransformToBoard(): Box {
     let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
     let parent = this._t.parent;

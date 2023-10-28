@@ -8,9 +8,6 @@ import {
 } from './action/';
 
 export {
-  Board, // remove - just for docs
-  Space, // remove - just for docs
-  Piece, // remove - just for docs
   GameElement,
   union,
 } from './board/';
@@ -33,8 +30,6 @@ export {
 } from './utils';
 
 export { Player };
-
-export { Action, action }; // remove - just for docs
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
