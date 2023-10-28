@@ -62,7 +62,7 @@ export default class Board<P extends Player> extends Space<P> {
 
   _ui: GameElement<P>['_ui'] & {
     breakpoint?: string,
-    breakpoints?: Record<string, (aspectRatio: number) => boolean>;
+    breakpoints?: (aspectRatio: number) => string;
     setupLayout?: (board: Board<P>, breakpoint: string) => void;
     layoutsSet?: boolean;
     frame?: Box;
@@ -86,9 +86,7 @@ export default class Board<P extends Player> extends Space<P> {
   }
 
   getBreakpoint(aspectRatio: number) {
-    const bPair = this._ui.breakpoints && Object.entries(this._ui.breakpoints).find(([_, f]) =>  f(aspectRatio));
-    if (bPair) return bPair[0];
-    return '_default';
+    return this._ui.breakpoints && this._ui.breakpoints(aspectRatio) || '_default';
   }
 
   applyLayouts(force=false) {

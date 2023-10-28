@@ -17,7 +17,6 @@ import type { Player } from '../player';
  * - validating player Arguments and returning any Selections needed to complete
  * - accepting player Arguments and altering board state
  */
-/** @internal */
 export default class Action<P extends Player, A extends Argument<P>[]> {
   name?: string;
   prompt: string;

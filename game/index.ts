@@ -54,15 +54,28 @@ export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
 
 /**
  * Create your game
- * @param {Object} options - These are all the game options
- * @param options.playerClass - Your player class. This must extend {@link Player}.
- * @param options.boardClass - Your board class. This must extend {@link Board}
- * @param options.elementClasses - All other classes you declare that will be used in your board. These will all ultimately extend {@link Space} or {@link Piece}
- * @param options.setup - This function provides your newly created board and allows you to fill it. Add all the spaces and pieces you need before your game can start.
- * @param options.flow - Define your game's flow. See {@link game/flow} for details.
- * @param options.actions - Define all the actions in your game. See {@link action} for details.
- * @param options.breakpoints - Define all the breakpoints in your game. Return an object with breakpoint names as keys and functions that accept an aspectratio and return true if the breakpoint should be used
- * @param options.layout - Define all the layout rules for your game. See {@link GameElement#layout}, {@link GameElement#appearance} and {@link Board#layoutStep}
+ * @param {Object} options - All the options needed to define your game are listed below.
+ * @param options.playerClass - Your player class. This must extend {@link Player}. If you do not need any custom Player attributes or behaviour, simply put {@link Player} here. This becomes the `P` type generic used throughout boardzilla.
+ * @param options.boardClass - Your board class. This must extend {@link Board}. If you do not need any custom Board attributes or behaviour, simply put {@link Board} here. This becomes the `B` type generic used here.
+ * @param options.elementClasses - An array of all other board classes you declare that will be used in your board. These all must extend {@link Space} or {@link Piece}.
+ * @param options.setup - A function that sets up the game. This function accepts a single argument which is an instance of the `boardClass` above. The function should add all the spaces and pieces you need before your game can start.
+ * @param options.flow - A function that defines your game's flow. This function accepts a single argument which is an instance of the `boardClass` above. The function should return the result of one of the flow functions:
+   - {@link whileLoop}
+   - {@link forEach}
+   - {@link forLoop}
+   - {@link eachPlayer}
+   - {@link ifElse}
+   - {@link switchCase}
+   - {@link playerActions}
+ * @param options.actions - A function that provides an object defining all the actions in your game. The function accepts 3 arguments:
+   - an instance of the `boardClass` above
+   - the {@link action} function used to define each action. 
+   - the player taking the action, an instance of `playerClass` above
+ Each key is a unique action name and the value is the result of calling {@link action}.
+ * @param options.breakpoints - A function that determines which layout breakpoint to use. The function accepts the aspect ratio of the current player's viewable area and returns the name of the breakpoint.
+ * @param options.layout - A function that defines all the layout rules for your game. See {@link GameElement#layout}, {@link GameElement#appearance} and {@link Board#layoutStep}. Function accepts two arguments:
+    - an instance of the `boardClass` above
+    - the breakpoint string from your `breakpoints` function, or '_default' if none specified.
  */
 export const createGame = <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions, breakpoints, layout }: {
   playerClass: {new(a: PlayerAttributes<P>): P},
@@ -70,8 +83,8 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
   elementClasses?: ElementClass<P, GameElement<P>>[],
   setup?: (board: B) => any,
   flow: (board: B) => Flow<P>,
-  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>,
-  breakpoints?: Record<string, (aspectRatio: number) => boolean>,
+  actions: (board: B, actionFunction: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>,
+  breakpoints?: (aspectRatio: number) => string,
   layout?: (board: B, breakpoint: string) => void
 }): SetupFunction<P, B> => (
   state: SetupState<P> | GameState<P>,

@@ -1,9 +1,0 @@
-{
-  // Comments are supported, like tsconfig.json
-  "entryPoints": ["game/index.ts", "game/board/index.ts", "game/flow/index.ts"],
-  "out": "docs",
-  /* "plugin": ["typedoc-plugin-markdown"], */
-  /* "hideInPageTOC": false,
-     "entryDocument": "index.html", */
-  "name": "@boardzilla/core"
-}
