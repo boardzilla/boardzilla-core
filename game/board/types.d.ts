@@ -1,5 +1,6 @@
 import type { Board, GameElement, ElementCollection } from './'
-import type { Game, Player } from '../'
+import type { Player } from '../'
+import type Game from '../game'
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 

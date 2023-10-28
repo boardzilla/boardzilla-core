@@ -10,7 +10,7 @@ import type {
   FlowBranchJSON,
   ActionStepPosition
 } from './types';
-import type { Game } from '../';
+import type Game from '../game';
 
 export default class Flow<P extends Player> {
   name?: string;

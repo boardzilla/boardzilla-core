@@ -1,7 +1,8 @@
 import { GameElement } from './board';
 import { deserializeArg } from './action/utils';
 
-import type { Game, Player } from './';
+import type { Player } from './';
+import type Game from './game';
 import type { Board } from './board';
 import type { SerializedArg, SerializedMove } from './action/types';
 import type { SetupFunction, GameInterface } from './types';

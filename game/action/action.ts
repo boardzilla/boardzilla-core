@@ -17,6 +17,7 @@ import type { Player } from '../player';
  * - validating player Arguments and returning any Selections needed to complete
  * - accepting player Arguments and altering board state
  */
+/** @internal */
 export default class Action<P extends Player, A extends Argument<P>[]> {
   name?: string;
   prompt: string;
@@ -81,7 +82,6 @@ export default class Action<P extends Player, A extends Argument<P>[]> {
   /**
    * given a partial arg list, returns a selection object for continuation if one exists.
    */
-  /** @internal */
   nextSelection(...args: Argument<P>[]): ResolvedSelection<P> | undefined {
     let argsLeft = args.length;
     let i = 0;

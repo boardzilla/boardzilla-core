@@ -8,11 +8,14 @@ import {
 } from './action/';
 
 export {
+  Board, // remove - just for docs
+  Space, // remove - just for docs
+  Piece, // remove - just for docs
+  GameElement,
   union,
 } from './board/';
 
 export {
-  Flow,
   playerActions,
   whileLoop,
   forLoop,
@@ -29,7 +32,9 @@ export {
   times,
 } from './utils';
 
-export { Game, Player };
+export { Player };
+
+export { Action, action }; // remove - just for docs
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
@@ -47,7 +52,19 @@ export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
   Piece: Piece<P>,
 });
 
-export default <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions, breakpoints, layout }: {
+/**
+ * Create your game
+ * @param {Object} options - These are all the game options
+ * @param options.playerClass - Your player class. This must extend {@link Player}.
+ * @param options.boardClass - Your board class. This must extend {@link Board}
+ * @param options.elementClasses - All other classes you declare that will be used in your board. These will all ultimately extend {@link Space} or {@link Piece}
+ * @param options.setup - This function provides your newly created board and allows you to fill it. Add all the spaces and pieces you need before your game can start.
+ * @param options.flow - Define your game's flow. See {@link game/flow} for details.
+ * @param options.actions - Define all the actions in your game. See {@link action} for details.
+ * @param options.breakpoints - Define all the breakpoints in your game. Return an object with breakpoint names as keys and functions that accept an aspectratio and return true if the breakpoint should be used
+ * @param options.layout - Define all the layout rules for your game. See {@link GameElement#layout}, {@link GameElement#appearance} and {@link Board#layoutStep}
+ */
+export const createGame = <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions, breakpoints, layout }: {
   playerClass: {new(a: PlayerAttributes<P>): P},
   boardClass: ElementClass<P, B>,
   elementClasses?: ElementClass<P, GameElement<P>>[],

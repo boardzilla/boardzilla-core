@@ -455,7 +455,6 @@ export default class GameElement<P extends Player> {
 
     const layoutItems = this.getLayoutItems();
     const absoluteTransform = this.absoluteTransform();
-    debugger;
 
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
       const { attributes } = this._ui.layouts[l];

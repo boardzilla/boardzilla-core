@@ -8,7 +8,7 @@ import type {
   SerializedArg,
   SerializedSingleArg,
 } from './types';
-import type { Game } from '../';
+import type Game from '../game';
 import type { Board } from '../board';
 
 export const humanizeArg = <P extends Player>(arg: Argument<P>) => {

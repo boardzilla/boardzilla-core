@@ -4,14 +4,15 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
+import Game from '../game'
+
 import {
-  Game,
   Player,
-  Flow,
   boardClasses
 } from '../';
 
 import {
+  Flow,
   playerActions,
   whileLoop,
   eachPlayer,

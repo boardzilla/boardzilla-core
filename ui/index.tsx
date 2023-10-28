@@ -7,7 +7,8 @@ import { shallow } from 'zustand/shallow';
 import Main from './Main'
 
 import type { UIOptions, GameUpdateEvent, GameFinishedEvent } from './types'
-import type { Game, Player } from '../game'
+import type { Player } from '../game'
+import type Game from '../game/game'
 import type { Board, GameElement } from '../game/board'
 import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
