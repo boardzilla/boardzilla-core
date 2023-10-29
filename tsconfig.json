@@ -12,23 +12,5 @@
     "strictNullChecks": true,
     "jsx": "react"
   },
-  "include": ["*/game/**/*", "*/ui/**/*", "index.d.ts"],
-  "typedocOptions": {
-    "entryPoints": [
-      "game",
-      "game/board",
-      "game/board/types.d.ts",
-      "game/flow",
-      "game/flow/types.d.ts",
-      "game/action",
-      "game/action/types.d.ts",
-      "game/player",
-      "game/player/types.d.ts"
-    ],
-    "plugin": ["typedoc-plugin-merge-modules"],
-    "excludeInternal": true,
-    "excludeNotDocumented": true,
-    "out": "docs",
-    "name": "@boardzilla/core"
-  }
+  "include": ["*/game/**/*", "*/ui/**/*", "index.d.ts"]
 }
