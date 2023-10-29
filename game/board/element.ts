@@ -24,22 +24,28 @@ import type { UndirectedGraph } from 'graphology';
 /**
  * Abstract base class for all Board elements. Use {@link Space} or {@link
  * Piece} as the base for subclassing your own elements.
+ * @category Board
  */
 export default class GameElement<P extends Player> {
-  /** element name */
+  /**
+   * Element name, used in queries to quickly refer to a given element
+   * @category Queries
+   */
   name: string;
-  /** Player with which this element is identified. This does not affect behaviour but will mark the element as `mine` in queries in the context of this player. */
+
+  /**
+   * Player with which this element is identified. This does not affect
+   * behaviour but will mark the element as `mine` in queries in the context of
+   * this player.
+   * @category Queries
+   */
   player?: P;
-  /** The {@link Board} to which this element belongs */
+
+  /**
+   * The {@link Board} to which this element belongs
+   * @category Structure
+   */
   board: Board<P>;
-  /** @alias first */
-  top: typeof this.first;
-  /** @alias last */
-  bottom: typeof this.last;
-  /** @alias firstN */
-  topN: typeof this.firstN;
-  /** @alias lastN */
-  bottomN: typeof this.lastN;
 
   /**
    * ctx shared for all elements in the tree
@@ -70,17 +76,14 @@ export default class GameElement<P extends Player> {
   /** @internal */
   static isGameElement = true;
 
-  /**
-   * List of attributes that are obscured when elements of this class are
-   * hidden. E.g. In a game with multiple card decks with different backs, the
-   * identity of the card is hiddem, but the deck it belongs to is not.
-   */
+  /** @internal */
   static hiddenAttributes: string[] = ['name'];
 
   /**
    * Do not use the constructor directly. Instead Call {@link
    * GameElement#create} or {@link GameElement#createMany} on the element in
    * which you want to create a new element.
+   * @category Structure
    */
   constructor(ctx: Partial<ElementContext<P>>) {
     this._ctx = ctx as ElementContext<P>;
@@ -108,15 +111,19 @@ export default class GameElement<P extends Player> {
 
   /**
    * Finds all elements within this element recursively that match the arguments
-   * provided. Returns an {@link ElementCollection} of matches.
+   * provided.
+   * @category Queries
    *
    * @param {class} className - Optionally provide a class as the first argument
    * as a class filter. This will only match elements which are instances of the
-   * provided class, and will also cause the returned {@link ElementCollection}
-   * to be typed to this class.
+   * provided class
    *
    * @param finders - All other parameters are filters. See {@link
    * ElementFinder} for more information.
+   *
+   * @returns An {@link ElementCollection} of as many matching elements as can be
+   * found. The collection is typed to `ElementCollection<className>` if one was
+   * provided.
    */
   all<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
   all<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
@@ -130,6 +137,8 @@ export default class GameElement<P extends Player> {
   /**
    * Finds the first element within this element recursively that matches the arguments
    * provided. See {@link all} for parameter details.
+   * @category Queries
+   * @returns A matching element, if found
    */
   first<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
   first<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
@@ -143,7 +152,12 @@ export default class GameElement<P extends Player> {
   /**
    * Finds the first `n` elements within this element recursively that match the arguments
    * provided. See {@link all} for parameter details.
+   * @category Queries
    * @param n - number of matches
+   *
+   * @returns An {@link ElementCollection} of as many matching elements as can be
+   * found, up to `n`. The collection is typed to `ElementCollection<className>`
+   * if one was provided.
    */
   firstN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
   firstN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
@@ -158,6 +172,8 @@ export default class GameElement<P extends Player> {
   /**
    * Finds the last element within this element recursively that matches the arguments
    * provided. See {@link all} for parameter details.
+   * @category Queries
+   * @returns A matching element, if found
    */
   last<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
   last<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
@@ -171,7 +187,12 @@ export default class GameElement<P extends Player> {
   /**
    * Finds the last `n` elements within this element recursively that match the arguments
    * provided. See {@link all} for parameter details.
+   * @category Queries
    * @param n - number of matches
+   *
+   * @returns An {@link ElementCollection} of as many matching elements as can be
+   * found, up to `n`. The collection is typed to `ElementCollection<className>`
+   * if one was provided.
    */
   lastN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
   lastN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
@@ -183,9 +204,65 @@ export default class GameElement<P extends Player> {
     return this._t.children._finder(className, {limit: n, order: 'desc'}, ...finders);
   }
 
+
+  /**
+   * Alias for {@link first}
+   * @category Queries
+   */
+  top<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  top<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
+  top<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | GameElement<P> | undefined {
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      return this._t.children._finder<GameElement<P>>(GameElement<P>, {limit: 1}, className, ...finders)[0];
+    }
+    return this._t.children.all<F>(className, ...finders)[0];
+  }
+
+  /**
+   * Alias for {@link firstN}
+   * @category Queries
+   */
+  topN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  topN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  topN<F extends GameElement<P>>(n: number, className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
+    if (typeof n !== 'number') throw Error('first argument must be number of matches');
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      return this._t.children._finder<GameElement<P>>(GameElement<P>, {limit: n}, className, ...finders);
+    }
+    return this._t.children._finder(className, {limit: n}, ...finders);
+  }
+
+  /**
+   * Alias for {@link last}
+   * @category Queries
+   */
+  bottom<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  bottom<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
+  bottom<F extends GameElement<P>>(className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | GameElement<P> | undefined {
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      return this._t.children._finder<GameElement<P>>(GameElement<P>, {limit: 1, order: 'desc'}, className, ...finders)[0];
+    }
+    return this._t.children._finder(className, {limit: 1, order: 'desc'}, ...finders)[0];
+  }
+
+  /**
+   * Alias for {@link lastN}
+   * @category Queries
+   */
+  bottomN<F extends GameElement<P>>(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
+  bottomN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  bottomN<F extends GameElement<P>>(n: number, className: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, GameElement<P>> {
+    if (typeof n !== 'number') throw Error('first argument must be number of matches');
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      return this._t.children._finder<GameElement<P>>(GameElement<P>, {limit: n, order: 'desc'}, className, ...finders);
+    }
+    return this._t.children._finder(className, {limit: n, order: 'desc'}, ...finders);
+  }
+
   /**
    * Finds "sibling" elements (elements that are directly inside the parent of this element) that match the arguments
    * provided. See {@link all} for parameter details.
+   * @category Queries
    */
   others<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
   others<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
@@ -202,6 +279,7 @@ export default class GameElement<P extends Player> {
   /**
    * Return whether any element within this element recursively matches the arguments
    * provided. See {@link all} for parameter details.
+   * @category Queries
    */
   has<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): boolean;
   has<F extends GameElement<P>>(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): boolean;
@@ -213,12 +291,14 @@ export default class GameElement<P extends Player> {
     }
   }
 
+  /** @internal */
   _otherFinder<T extends GameElement<P>>(finders: ElementFinder<P, T>[]): ElementFinder<P, GameElement<P>> {
     return (el: T) => el !== (this as GameElement<P>);
   }
 
   /**
    * Set this class to use a different ordering style.
+   * @category Structure
    * @param order - ordering style
    * - "normal": Elements placed into this element are put at the end of the list (default)
    * - "stacking": Elements placed into this element are put at the beginning of the list. This is prefered for elements that stack. E.g. when placing a card into a stack of cards, if `order` is set to `stacking` the {@link first} method will return the card just placed, i.e. it will be considered to be on the top of the stack
@@ -229,6 +309,7 @@ export default class GameElement<P extends Player> {
 
   /**
    * Returns this elements parent.
+   * @category Queries
    * @param className - If provided, searches up the parent tree to find the first
    * matching element. E.g. if a Token is placed on a Card in a players
    * Tableau. calling `token.container(Tableau)` can be used to find the
@@ -243,6 +324,7 @@ export default class GameElement<P extends Player> {
 
   /**
    * Returns whether this element has any elements placed within it.
+   * @category Structure
    */
   isEmpty() {
     return !this._t.children.length;
@@ -250,6 +332,7 @@ export default class GameElement<P extends Player> {
 
   /**
    * Sorts the elements directly contained within this element by some {@link Sorter}.
+   * @category Structure
    */
   sortBy<E extends GameElement<P>>(key: Sorter<E> | (Sorter<E>)[], direction?: "asc" | "desc") {
     return this._t.children.sortBy(key, direction)
@@ -257,6 +340,7 @@ export default class GameElement<P extends Player> {
 
   /**
    * Re-orders the elements directly contained within this element randomly.
+   * @category Structure
    */
   shuffle() {
     shuffleArray(this._t.children, this._ctx.game?.random || Math.random);
@@ -272,6 +356,7 @@ export default class GameElement<P extends Player> {
    * another player's country, the `army.owner()` will be the player controlling
    * that army (i.e. same as `army.player`) rather than the player who owns the
    * country in which it's placed.
+   * @category Structure
    */
   owner() {
     return this.player !== undefined ? this.player : this._t.parent?.player;
@@ -285,6 +370,7 @@ export default class GameElement<P extends Player> {
    * context. When querying for elements using {@link ElementFinder} such as
    * {@link all} and {@link first}, {@link mine} is available as a search key
    * that accepts a value of true/false
+   * @category Queries
    */
   get mine() {
     if (!this._ctx.player) return false;
@@ -293,6 +379,7 @@ export default class GameElement<P extends Player> {
 
   /**
    * Show this element to all players
+   * @category Visibility
    */
   showToAll() {
     delete(this._visible);
@@ -300,6 +387,7 @@ export default class GameElement<P extends Player> {
 
   /**
    * Show this element only to the given player
+   * @category Visibility
    */
   showOnlyTo(player: Player | number) {
     if (typeof player !== 'number') player = player.position;
@@ -312,6 +400,7 @@ export default class GameElement<P extends Player> {
   /**
    * Show this element to the given players without changing it's visibility to
    * any other players.
+   * @category Visibility
    */
   showTo(...player: Player[] | number[]) {
     if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
@@ -326,43 +415,71 @@ export default class GameElement<P extends Player> {
 
   /**
    * Hide this element only to the given player
+   * @category Visibility
    */
   hideFromAll() {
     this._visible = {default: false};
   }
 
-  hideFrom(...player: number[]) {
+  /**
+   * Hide this element from the given players without changing it's visibility to
+   * any other players.
+   * @category Visibility
+   */
+  hideFrom(...player: Player[] | number[]) {
+    if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
     if (this._visible?.default === false && !this._visible.except) return;
     if (this._visible === undefined || this._visible.default === true) {
       this._visible = {
         default: true,
-        except: Array.from(new Set([...(this._visible?.except instanceof Array ? this._visible.except : []), ...player]))
+        except: Array.from(new Set([...(this._visible?.except instanceof Array ? this._visible.except : []), ...(player as number[])]))
       };
     } else {
       if (!this._visible.except) return;
-      this._visible.except = this._visible.except.filter(i => !player.includes(i));
+      this._visible.except = this._visible.except.filter(i => !(player as number[]).includes(i));
     }
   }
 
-  isVisibleTo(p: number) {
+  /**
+   * Returns whether this element is visible to the given player
+   * @category Visibility
+   */
+  isVisibleTo(player: Player | number) {
+    if (typeof player !== 'number') player = player.position;
     if (this._visible === undefined) return true;
     if (this._visible.default) {
-      return !this._visible.except || !(this._visible.except.includes(p));
+      return !this._visible.except || !(this._visible.except.includes(player));
     } else {
-      return this._visible.except?.includes(p) || false;
+      return this._visible.except?.includes(player) || false;
     }
   }
 
+  /**
+   * Returns whether this element is visible to the current player. Can only be
+   * called when in a player context, during an action taken by a player or
+   * while the board is viewed by a given player.
+   * @category Visibility
+   */
   isVisible() {
     if (!this._ctx.player) throw Error('Cannot use isVisible outside of a player context');
     return this.isVisibleTo(this._ctx.player.position);
   }
 
+  /**
+   * Provide list of attributes that are obscured when instances of this element
+   * class are hidden. E.g. In a game with multiple card decks with different
+   * backs, the identity of the card is hiddem, but the deck it belongs to is
+   * not. In this case, Card may have attributes: suit; pip; deck and calling:
+   * `Card.hide('suit', 'pip')` will cause suit and pip to be invisible when the
+   * card is flipped, while still revealing which deck it is.
+   * @category Visibility
+   */
   static hide<P extends Player, T extends GameElement<P>>(this: ElementClass<P, T>, ...attrs: (string & keyof T)[]): void {
     this.hiddenAttributes = attrs;
   }
 
   // unused?
+  /** @internal */
   hidden(): this {
     return Object.create(
       Object.getPrototypeOf(this),
@@ -375,9 +492,25 @@ export default class GameElement<P extends Player> {
     );
   }
 
-  create<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T {
+  /**
+   * Create an element inside this element. This can only be called during the
+   * game setup (see {@link createGame}. Any game elements that are required
+   * must be created before the game starts. Elements that only appear later in
+   * the game can be created inside the {@link Board#pile} or made invisible.
+   * @category Structure
+   *
+   * @param className - Class to create. This class must be included in the `elementClasses` in {@link createGame}.
+   * @param name - Sets {@link GameElement#name | name}
+   * @param attributes - Sets any attributes of the class that are defined in
+   * your own class that extend {@link Space}, {@link Piece}, or {@link
+   * Board}. Can also include {@link player}.
+   *
+   * @example
+   * deck.create(Card, 'ace-of-hearts', { suit: 'H', value: '1' });
+   */
+  create<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attributes?: ElementAttributes<P, T>): T {
     if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
-    const el = this.createElement(className, name, attrs);
+    const el = this.createElement(className, name, attributes);
     el._t.parent = this;
     if (this._t.order === 'stacking') {
       this._t.children.unshift(el);
@@ -387,10 +520,29 @@ export default class GameElement<P extends Player> {
     return el;
   }
 
-  createMany<T extends GameElement<P>>(n: number, className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): ElementCollection<P, T> {
-    return new ElementCollection<P, T>(...times(n, () => this.create(className, name, attrs)));
+  /**
+   * Create n identical elements inside this element. This can only be called
+   * during the game setup (see {@link createGame}. Any game elements that are
+   * required must be created before the game starts. Elements that only appear
+   * later in the game can be created inside the {@link Board#pile} or made
+   * invisible.
+   * @category Structure
+   *
+   * @param n - Number to create
+   * @param className - Class to create. This class must be included in the `elementClasses` in {@link createGame}.
+   * @param name - Sets {@link GameElement#name | name}
+   * @param attributes - Sets any attributes of the class that are defined in
+   * your own class that extend {@link Space}, {@link Piece}, or {@link
+   * Board}. Can also include {@link player}.
+   */
+  createMany<T extends GameElement<P>>(n: number, className: ElementClass<P, T>, name: string, attributes?: ElementAttributes<P, T>): ElementCollection<P, T> {
+    return new ElementCollection<P, T>(...times(n, () => this.create(className, name, attributes)));
   }
 
+  /**
+   * Base element creation method
+   * @internal
+   */
   createElement<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T {
     if (!this._ctx.classRegistry.includes(className)) {
       // importing classes from webpack are not equivalent. this ensures(?) we are using the same classes
@@ -405,6 +557,11 @@ export default class GameElement<P extends Player> {
     return el;
   }
 
+  /**
+   * Returns a string identifying the tree position of the element suitable for
+   * anonymous reference
+   * @internal
+   */
   branch() {
     const branches = [];
     let node = this as GameElement<P>;
@@ -416,6 +573,10 @@ export default class GameElement<P extends Player> {
     return branches.join("/");
   }
 
+  /**
+   * Returns the element at the given position returned by {@link branch}
+   * @internal
+   */
   atBranch(b: string) {
     let branch = b.split('/');
     let index = parseInt(branch[0]);
@@ -428,14 +589,27 @@ export default class GameElement<P extends Player> {
     return node;
   }
 
+  /**
+   * Returns the element for the given id
+   * @internal
+   */
   atID(id: number): GameElement<P> | undefined {
     return this._t.children.find(c => c._t.id === id) || this._t.children.find(c => c.atID(id))?.atID(id)
   }
 
+  /**
+   * Whether this element has the given element in its parent hierarchy
+   * @category Structure
+   */
   isDescendantOf(el: GameElement<P>): boolean {
     return this._t.parent === el || !!this._t.parent?.isDescendantOf(el)
   }
 
+  /**
+   * JSON representation
+   * @param seenBy - optional player position viewing the board
+   * @internal
+   */
   toJSON(seenBy?: number) {
     let attrs: Record<any, any>;
     ({ ...attrs } = this);
@@ -461,6 +635,7 @@ export default class GameElement<P extends Player> {
     return json;
   }
 
+  /** @internal */
   createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string) {
     // truncate non-spaces
     const spaces = this._t.children.filter(c => 'isSpace' in c);
@@ -501,11 +676,13 @@ export default class GameElement<P extends Player> {
    * UI
    */
 
+  /** @internal */
   _ui: ElementUI<P, GameElement<P>> = {
     layouts: [],
     appearance: {},
   }
 
+  /** @internal */
   resetUI() {
     this._ui.layouts = [{
       applyTo: GameElement,
@@ -523,14 +700,21 @@ export default class GameElement<P extends Player> {
   }
 
   /**
-   * viewport relative to the board with unskewed x/y
+   * Viewport relative to a square perfectly containing the board. The `left`
+   * and `top` values are from 0-100. The x and y values in this method are on
+   * the same scale, unlike {@link relativeTransformToBoard}.
+   * @category UI
    */
   absoluteTransform(): Box {
     return this.board._ui.frame ? translate(this.relativeTransformToBoard(), this.board._ui.frame) : this.relativeTransformToBoard();
   }
 
   /**
-   * viewport relative to the board with % x/y to board
+   * Viewport relative to the board. The `left` and `top` values are percentages
+   * from 0-100, where `left: 100` is the right edge of the board and `top: 100`
+   * the bottom. The x and y values in this method are therefore not necessarily
+   * on the same scale, unlike {@link absoluteTransform}.
+   * @category UI
    */
   relativeTransformToBoard(): Box {
     let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
@@ -542,9 +726,123 @@ export default class GameElement<P extends Player> {
     return transform;
   }
 
-  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: Partial<typeof this._ui.layouts[number]['attributes']>) {
+  /**
+   * Apply a layout to some of the elements directly contained within this element
+   * @category UI
+   *
+   * @param applyTo - Which elements this layout applies to. Provided value can be:
+   * - A specific {@link GameElement}
+   * - The name of an element
+   * - A specific set of elements ({@link ElementCollection})
+   * - A class of elements
+   *
+   * If multiple layout declarations would apply to the same element, only one
+   * will be used. The order of specificity is as above. If a class is used and
+   * mutiple apply, the more specific class will be used.
+   *
+   * @param {Object} attributes - A list of attributes describing the
+   * layout. All units of measurement are percentages of this elements width and
+   * height from 0-100, unless otherwise noted (`margin` and `gap`)
+   *
+   * @param {Box} attributes.area - A box defining the layout's bounds within
+   * this element. If unspecified, the entire area is used, i.e. `{ left: 0,
+   * top: 0, width: 100, height: 100 }`
+   *
+   * @param attributes.margin - Instead of providing `area`, providing a
+   * `margin` defines the bounding box in terms of a margin around the edges of
+   * this element. This value is an absolute percentage of the board's size so
+   * that margins specified on different layouts with the same value will exactly match
+   *
+   * @param attributes.rows - The number of rows to allot for placing elements
+   * in this layout. If a number is provided, this is fixed. If min/max values
+   * are provided, the layout will allot at least `min` and up to `max` as
+   * needed. If `min` is omitted, a minimum of 1 is implied. If `max` is
+   * omitted, as many are used as needed. Default is `{min: 1, max: Infinity}`.
+   *
+   * @param attributes.columns - Columns, as per `rows`
+   *
+   * @param attributes.slots - If supplied, this overrides all other attributes
+   * to define a set of strictly defined boxes for placing each element. Any
+   * elements that exceed the number of slots provided are not displayed.
+   *
+   * @param attributes.size - Size alloted for each element placed in this
+   * layout. Unless `scaling` is `"none"`, a `size` provided here will be used
+   * only to define an aspect ratio but may scale up or down to fit as
+   * needed. As such, when using any `scaling` other than `"none"`, providing an
+   * `aspectRatio` instead is sufficient.
+   *
+   * @param attributes.aspectRatio - Aspect ratio for each element placed in
+   * this layout. This value is a ratio of width over height. Elements will
+   * adhere to this ratio unless they have their own specified `aspectRatio` in
+   * their {@link appearance}. This value is ignored is `size` is provided.
+   *
+   * @param attributes.scaling - Scaling strategy for the elements placed in this layout.
+   * - *none*: Elements use the `size` value and do not scale. If no `size` is provided, this behaves like `fit` (default)
+   * - *fit*: elements scale up or down to fit within the area alloted without squshing
+   * - *fill*: elements scale up or down to completely fill the area, squishing themselves together as needed along one dimension.
+   *
+   * @param attributes.gap - If provided, this places a gap between elements. If
+   * scaling is 'fill', this is considered a maximum but may shrink or even
+   * become negative in order to fill the area. This value is an absolute
+   * percentage of the board's size so that gaps specified on different layouts
+   * with the same value will exactly match
+   *
+   * @param attributes.alignment - If more room is provided than needed, this
+   * determines how the elements will align themselves within.
+   *
+   * @param attributes.offsetColumn - Instead of `gap`, providing an
+   * `offsetColumn`/`offsetRow` specifies that the contained elements must
+   * offset one another by a specified amount as a percentage of the elements
+   * size, i.e. `offsetColumn=100` is equivalent to a `gap` of 0. This allows
+   * non-orthogonal grids like hex or diamond. If one of
+   * `offsetColumn`/`offsetRow` is provided but not the other, the unspecified
+   * one will be 90° to the one specified. Like `gap`, if `scaling` is set to
+   * `fill`, these offsets may squish to fill space.
+   *
+   * @param attributes.offsetRow - As above
+   *
+   * @param attributes.direction - Specifies the direction in which elements
+   * placed here should fill up the rows and columns of the layout. Rows or
+   * columns will increase to their specified maximum as needed. Therefore if,
+   * for example, `direction` is `"ltr"` and `columns` has no maximum, there will
+   * never be a second row added. Values are:
+   * - *square*: fill rows and columns equally to maintain as square a grid as possible (default)
+   * - *ltr*: fill columns left to right, then rows top to bottom once maximum columns reached
+   * - *rtl*: fill columns right to left, then rows top to bottom once maximum columns reached
+   * - *ltr-btt*: fill columns left to right, then rows bottom to top once maximum columns reached
+   * - *rtl-btt*: fill columns right to left, then rows bottom to top once maximum columns reached
+   * - *ttb*: fill rows top to bottom, then columns left to right once maximum rows reached
+   * - *btt*: fill rows bottom to top, then columns left to right once maximum rows reached
+   * - *ttb-rtl*: fill rows top to bottom, then columns right to left once maximum rows reached
+   * - *btt-rtl*: fill rows bottom to top, then columns right to left once maximum rows reached
+   *
+   * @param attributes.limit - If specified, no more than `limit` items will be
+   * visible. This is useful for displaying e.g. decks of cards where showing
+   * only 2 or 3 cards provides a deck-like appearance without needed to render
+   * more cards underneath that aren't visible.
+   *
+   * @param attributes.haphazardly - A number specifying an amount of randomness
+   * added to the layout to provide a more natural looking placement
+   */
+  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
+    margin?: number | { top: number, bottom: number, left: number, right: number },
+    area?: Box,
+    rows?: number | {min: number, max?: number} | {min?: number, max: number},
+    columns?: number | {min: number, max?: number} | {min?: number, max: number},
+    slots?: Box[],
+    size?: { width: number, height: number },
+    aspectRatio?: number, // w / h
+    scaling?: 'fit' | 'fill' | 'none'
+    gap?: number | { x: number, y: number },
+    alignment?: 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'bottom left' | 'top right' | 'bottom right' | 'center',
+    offsetColumn?: Vector,
+    offsetRow?: Vector,
+    direction?: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
+    limit?: number,
+    haphazardly?: number,
+  }) {
+    const {area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
-    const { area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow } = attributes;
     if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
     if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
     if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
@@ -552,7 +850,8 @@ export default class GameElement<P extends Player> {
       if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
       if (!scaling) attributes.scaling = 'fit';
     }
-    this._ui.layouts.push({ applyTo, attributes: Object.assign({ margin: 0, scaling: 'none', alignment: 'center', direction: 'square' }, attributes) });
+    if (!margin && !area) attributes.margin = 0;
+    this._ui.layouts.push({ applyTo, attributes: Object.assign({ scaling: 'none', alignment: 'center', direction: 'square' }, attributes) });
 
     this._ui.layouts.sort((a, b) => {
       let aVal = 0, bVal = 0;
@@ -572,7 +871,11 @@ export default class GameElement<P extends Player> {
     // TODO invalidate on children mutate
   }
 
-  // recalc all elements computedStyle
+  /**
+   * recalc all elements computedStyle
+   * @category UI
+   * @internal
+   */
   applyLayouts(force=false) {
     if (this._ui.appearance.render === false) return;
 
@@ -905,6 +1208,7 @@ export default class GameElement<P extends Player> {
     }
   }
 
+  /** @internal */
   getLayoutItems() {
     const layoutItems: GameElement<P>[][] = [];
     for (const child of this._t.children) {
@@ -924,7 +1228,10 @@ export default class GameElement<P extends Player> {
     return layoutItems;
   }
 
-  // calculate working area
+  /**
+   * calculate working area
+   * @internal
+   */
   getArea(attributes: { margin?: number | { top: number, bottom: number, left: number, right: number }, area?: Box }): Box {
     let { area, margin } = attributes;
     if (area) return area;
@@ -951,10 +1258,34 @@ export default class GameElement<P extends Player> {
     };
   }
 
+  /**
+   * Define the appearance of this element. Any values provided override previous ones.
+   * @category UI
+   *
+   * @param appearance - Possible values are:
+   * @param appearance.className - A class name to add to the dom element
+   *
+   * @param appearance.render - A function that takes this element as its only
+   * argument and returns JSX for the element. See {@link /styling.md} for more
+   * on usage.
+   *
+   * @param appearance.aspectRatio - The aspect ratio for this element. This value is a ratio of
+   * width over height. All layouts defined in {@link layout} will respect this
+   * aspect ratio.
+   *
+   * @param appearance.connections - If the elements immediately within this
+   * element are connected using {@link Space#connectTo}, this makes those
+   * connections visible as connecting lines. Providing a `label` will place a
+   * label over top of this line by calling the provided function with the cost
+   * of the connection specified in {@link Space#connectTo} and using the
+   * retured JSX. If `labelScale` is provided, the label is scaled by this
+   * amount.
+   */
   appearance(appearance: ElementUI<P, this>['appearance']) {
     Object.assign(this._ui.appearance, appearance);
   }
 
+  /** @internal */
   getMoveTransform() {
     if (!this._ui.computedStyle || !this._t.was || this._t.was === this.branch()) return;
     const previousPosition = this.board._ui.previousStyles[this._t.was];
@@ -968,6 +1299,7 @@ export default class GameElement<P extends Player> {
     };
   }
 
+  /** @internal */
   doneMoving() {
     const branch = this.branch();
     this._t.was = branch;

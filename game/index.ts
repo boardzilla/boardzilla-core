@@ -7,10 +7,7 @@ import {
   action,
 } from './action/';
 
-export {
-  GameElement,
-  union,
-} from './board/';
+export { union } from './board/';
 
 export {
   playerActions,
@@ -42,6 +39,7 @@ import type { Argument } from './action/types';
 import type { Flow } from './flow';
 
 export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
+  GameElement: GameElement<P>,
   Board: Board<P>,
   Space: Space<P>,
   Piece: Piece<P>,
