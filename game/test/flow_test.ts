@@ -17,38 +17,45 @@ import {
 } from '../flow';
 
 import type { FlowBranchJSON } from '../flow/types';
+import type { Player } from '../player';
 
 chai.use(spies);
 const { expect } = chai;
 
 describe('Flow', () => {
-  const stepSpy1 = chai.spy();
-  const stepSpy2 = chai.spy();
-  const actionSpy = chai.spy(() => {});
-  const playSpy = chai.spy((a:any) => {a});
-  const testFlow = new Flow({ name: 'test', do: [
-    stepSpy1,
-    stepSpy2,
-    () => {},
-    ifElse({ name: 'step4', if: () => true, do: [
-      () => {},
-      playerActions({
-        name: 'play-or-pass',
-        actions: {
-          play: a => playSpy(a.play),
-          pass: [
-            () => {}
-          ]
-        }
-      }),
-      () => {}
-    ]}),
-    () => {}
-  ]});
-  // @ts-ignore mock game
-  testFlow.game = { flow: testFlow, players: { currentPosition: 1, atPosition: () => {} }, action: a => ({ play: { process: actionSpy }, pass: { process: () => {} } }[a]) };
+  let testFlow: Flow<Player>;
+  let stepSpy1: Function;
+  let stepSpy2: Function;
+  let actionSpy: Function;
+  let playSpy: Function;
 
   beforeEach(() => {
+    stepSpy1 = chai.spy();
+    stepSpy2 = chai.spy();
+    actionSpy = chai.spy(() => {});
+    playSpy = chai.spy((a:any) => {a});
+    testFlow = new Flow({ name: 'test', do: [
+      () => stepSpy1(),
+      () => stepSpy2(),
+      () => {},
+      ifElse({ name: 'step4', if: () => true, do: [
+        () => {},
+        playerActions({
+          name: 'play-or-pass',
+          actions: {
+            play: a => playSpy(a.play),
+            pass: [
+              () => {}
+            ]
+          }
+        }),
+        () => {}
+      ]}),
+      () => {}
+    ]});
+    // @ts-ignore mock game
+    testFlow.game = { flow: testFlow, players: { currentPosition: 1, atPosition: () => {} }, action: a => ({ play: { process: actionSpy }, pass: { process: () => {} } }[a]) };
+
     testFlow.reset();
   })
   it('initial', () => {
@@ -74,7 +81,7 @@ describe('Flow', () => {
   it('play from state', () => {
     testFlow.setBranchFromJSON([{ type: 'sequence', name: 'test', sequence: 1 }]);
     testFlow.playOneStep();
-    expect(stepSpy1).to.have.been.called();
+    expect(stepSpy1).not.to.have.been.called();
     expect(stepSpy2).to.have.been.called();
     expect(testFlow.branchJSON()).to.deep.equals([{ type: 'sequence', name: 'test', sequence: 2 }]);
   });
@@ -196,8 +203,8 @@ describe('Flow', () => {
   });
   it('disallows duplicate step names',() => {
     const duplFlow = new Flow({ name: 'test', do: [
-      stepSpy1,
-      stepSpy2,
+      () => stepSpy1(),
+      () => stepSpy2(),
       () => {},
       ifElse({ name: 'step4', if: () => true, do: [
         () => {},
@@ -219,28 +226,34 @@ describe('Flow', () => {
 });
 
 describe('Loop', () => {
-  const stepSpy1 = chai.spy((x:number) => x);
-  const stepSpy2 = chai.spy((x:number) => x);
-  let counter = 10;
-  const loop = whileLoop({ while: () => counter < 13, do: (
-    () => { stepSpy1(counter); counter += 1; }
-  )});
-
-  const nonLoop = forLoop({ name: 'nonloop', initial: 0, next: loop => loop + 1, while: loop => loop < 0, do: (
-    ({ nonloop }) => stepSpy2(nonloop)
-  )});
-
-  const testFlow = new Flow({ name: 'test', do: [
-    () => {},
-    loop,
-    () => {},
-    nonLoop,
-    () => {},
-  ]});
-  // @ts-ignore
-  testFlow.game = { flow: testFlow };
-
+  let stepSpy1: Function
+  let stepSpy2: Function
+  let counter: number
+  let loop: Flow<Player>
+  let nonLoop: Flow<Player>
+  let testFlow: Flow<Player>;
   beforeEach(() => {
+    stepSpy1 = chai.spy((x:number) => x);
+    stepSpy2 = chai.spy((x:number) => x);
+    counter = 10;
+    loop = whileLoop({ while: () => counter < 13, do: (
+      () => { stepSpy1(counter); counter += 1; }
+    )});
+
+    nonLoop = forLoop({ name: 'nonloop', initial: 0, next: loop => loop + 1, while: loop => loop < 0, do: (
+      ({ nonloop }) => stepSpy2(nonloop)
+    )});
+
+    testFlow = new Flow({ name: 'test', do: [
+      () => {},
+      loop,
+      () => {},
+      nonLoop,
+      () => {},
+    ]});
+    // @ts-ignore
+    testFlow.game = { flow: testFlow };
+
     testFlow.reset();
   })
 
@@ -275,6 +288,7 @@ describe('Loop', () => {
     expect(stepSpy1).to.have.been.called.with(11);
   });
   it('exits loop', () => {
+    counter = 12;
     testFlow.setBranchFromJSON([
       { type: 'sequence', name: 'test', sequence: 1 },
       { type: 'loop', position: { index: 2 } }
@@ -301,22 +315,24 @@ describe('Loop', () => {
   });
 
   describe('nested', () => {
-    const stepSpy = chai.spy((x: number, y: number) => {x; y});
-    const nestedLoop = forLoop({
-      name: 'x',
-      initial: 0,
-      next: x => x + 1,
-      while: x => x < 3,
-      do: forLoop({
-        name: 'y',
-        initial: 0,
-        next: y => y + 1,
-        while: y => y < 2,
-        do: ({ x, y }) => stepSpy(x, y)
-      })
-    });
-
+    let stepSpy: Function;
+    let nestedLoop: Flow<Player>;
     beforeEach(() => {
+      stepSpy = chai.spy((x: number, y: number) => {x; y});
+      nestedLoop = forLoop({
+        name: 'x',
+        initial: 0,
+        next: x => x + 1,
+        while: x => x < 3,
+        do: forLoop({
+          name: 'y',
+          initial: 0,
+          next: y => y + 1,
+          while: y => y < 2,
+          do: ({ x, y }) => stepSpy(x, y)
+        })
+      });
+
       nestedLoop.reset();
     })
 
