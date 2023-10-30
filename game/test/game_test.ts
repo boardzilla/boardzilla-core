@@ -56,7 +56,7 @@ describe('Game', () => {
   beforeEach(() => {
     game = new Game();
     board = game.defineBoard(TestBoard, [ Card ]);
-    game.defineFlow(board => new Flow({name: 'main', do: [
+    game.defineFlow(board => [
       () => {
         board.tokens = 4;
         game.message('Starting game with $1 tokens', board.tokens);
@@ -75,7 +75,7 @@ describe('Game', () => {
           () => board.tokens <= 0 && game.finish(game.players.withHighest('tokens')),
         ]})
       )}),
-    ]}));
+    ]);
 
     game.defineActions((board, action, player) => ({
       addSome: action({
@@ -113,14 +113,14 @@ describe('Game', () => {
       rseed: '',
       settings: {},
       board: [ { className: 'TestBoard', tokens: 0 } ],
-      position: [ { type: 'sequence', name: 'main', sequence: 0 } ],
+      position: [ { type: 'sequence', position: null, sequence: 0 } ],
     });
   });
 
   it('plays', () => {
     const actions = game.play();
     expect(game.flow.branchJSON()).to.deep.equals([
-      { type: 'sequence', name: 'main', sequence: 1 },
+      { type: 'sequence', position: null, sequence: 1 },
       { type: "loop", position: { index: 0 } },
       { type: "action", position: {} }
     ]);
@@ -149,7 +149,7 @@ describe('Game', () => {
       rseed: '',
       settings: {},
       position: [
-        { type: 'sequence', name: 'main', sequence: 2 },
+        { type: 'sequence', position: null, sequence: 2 },
         { type: 'loop', position: { index: 0 } },
         { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
         { type: 'action', position: {} }
@@ -182,7 +182,7 @@ describe('Game', () => {
         rseed: '',
         settings: {},
         position: [
-          { type: 'sequence', name: 'main', sequence: 2 },
+          { type: 'sequence', position: null, sequence: 2 },
           { type: 'loop', position: { index: 0 } },
           { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
           { type: 'action', position: {} }
@@ -254,13 +254,13 @@ describe('Game', () => {
       game.processMove({ action: 'spend', args: ['gold', 2], player: game.players[0] });
       expect(spendSpy).to.have.been.called.with('gold', 2);
       expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'sequence', name: 'main', sequence: 1 },
+        { type: 'sequence', position: null, sequence: 1 },
         { type: 'loop', position: { index: 0 } },
         { type: 'action', position: { action: "spend", args: [ "gold", 2 ], player: 1 }}
       ]);
       game.play();
       expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'sequence', name: 'main', sequence: 1 },
+        { type: 'sequence', position: null, sequence: 1 },
         { type: 'loop', position: { index: 1 } },
         { type: "action", position: {} }
       ]);
@@ -270,7 +270,7 @@ describe('Game', () => {
       expect(board.tokens).to.equal(4);
       game.processMove({ action: 'addSome', args: [2], player: game.players[0] });
       expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'sequence', name: 'main', sequence: 1 },
+        { type: 'sequence', position: null, sequence: 1 },
         { type: 'loop', position: { index: 0 } },
         { type: 'action', position: { action: "addSome", args: [ 2 ], player: 1 }}
       ]);

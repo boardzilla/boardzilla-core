@@ -15,10 +15,11 @@ import {
 import { Action, Selection } from './action';
 import { ElementClass } from './board/types';
 import { Player, PlayerCollection } from './player/';
+import Flow from './flow/flow';
 
 import random from 'random-seed';
 
-import type Flow from './flow/flow';
+import type { FlowDefinition } from './flow/types';
 import type {
   Move,
   Argument,
@@ -29,7 +30,7 @@ import type { PlayerAttributes } from './player/types';
 
 export default class Game<P extends Player, B extends Board<P>> {
   flow: Flow<P>;
-  flowDefinition: (board: B) => Flow<P>;
+  flowDefinition: (board: B) => FlowDefinition<P>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
   settings: Record<string, any>;
@@ -101,7 +102,8 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   buildFlow() {
-    this.flow = this.flowDefinition(this.board);
+    const flow = this.flowDefinition(this.board);
+    this.flow = new Flow({ do: flow });
     this.flow.game = this;
   }
 

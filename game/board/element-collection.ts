@@ -8,6 +8,10 @@ import {
 import type { Sorter } from '../types';
 import type { Player } from '../player';
 
+/**
+ * Operations that return groups of {@link GameElement| | GameElement's} return
+ * this Array-like class. 
+ */
 export default class ElementCollection<P extends Player, T extends GameElement<P>> extends Array<T> {
 
   slice(...a: any[]):ElementCollection<P, T> {return super.slice(...a) as ElementCollection<P, T>};

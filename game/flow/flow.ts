@@ -26,7 +26,7 @@ export default class Flow<P extends Player> {
   constructor({ name, do: block }: { name?: string, do?: FlowDefinition<P> }) {
     this.name = name;
     this.block = block;
-    // each new can create its own context because they will be copied later by each parent as it loads its subflows
+    // each subflow can set itself as top because they will be copied later by each parent as it loads its subflows
     this.top = this;
   }
 
@@ -196,9 +196,9 @@ export default class Flow<P extends Player> {
     if (step !== 'complete' && step !== 'ok') return step;
   }
 
-  // must override and call super. reset runs any logic needed and call setPosition. Must not modify state.
+  // must override. reset runs any logic needed and call setPosition. Must not modify state.
   reset() {
-    this.setPosition(undefined);
+    this.setPosition(null);
   }
 
   // must override. must rely solely on this.position

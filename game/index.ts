@@ -36,7 +36,7 @@ import type { SetupFunction } from './types';
 import type { ElementClass } from './board/types';
 import type { PlayerAttributes } from './player/types';
 import type { Argument } from './action/types';
-import type { Flow } from './flow';
+import type { FlowDefinition } from './flow/types';
 
 export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
   GameElement: GameElement<P>,
@@ -75,7 +75,7 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
   boardClass: ElementClass<P, B>,
   elementClasses?: ElementClass<P, GameElement<P>>[],
   setup?: (board: B) => any,
-  flow: (board: B) => Flow<P>,
+  flow: (board: B) => FlowDefinition<P>,
   actions: (board: B, actionFunction: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>,
   breakpoints?: (aspectRatio: number) => string,
   layout?: (board: B, breakpoint: string) => void

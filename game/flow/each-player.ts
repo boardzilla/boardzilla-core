@@ -35,10 +35,9 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
 
   setPosition(position: typeof this.position, sequence?: number, reset=true) {
     super.setPosition(position, sequence, reset);
-    if (typeof this.position.value === 'string') throw Error(this.position.value);
     if (this.position.value) {
       this.game.players.setCurrent(this.position.value);
-      this.game.board._ctx.player = this.position.value;
+      this.game.contextualizeBoardToPlayer(this.position.value);
     }
   }
 

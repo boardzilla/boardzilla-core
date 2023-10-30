@@ -1269,16 +1269,16 @@ export default class GameElement<P extends Player> {
    * argument and returns JSX for the element. See {@link /styling.md} for more
    * on usage.
    *
-   * @param appearance.aspectRatio - The aspect ratio for this element. This value is a ratio of
-   * width over height. All layouts defined in {@link layout} will respect this
-   * aspect ratio.
+   * @param appearance.aspectRatio - The aspect ratio for this element. This
+   * value is a ratio of width over height. All layouts defined in {@link
+   * layout} will respect this aspect ratio.
    *
    * @param appearance.connections - If the elements immediately within this
    * element are connected using {@link Space#connectTo}, this makes those
    * connections visible as connecting lines. Providing a `label` will place a
-   * label over top of this line by calling the provided function with the cost
-   * of the connection specified in {@link Space#connectTo} and using the
-   * retured JSX. If `labelScale` is provided, the label is scaled by this
+   * label over top of this line by calling the provided function with the
+   * distance of the connection specified in {@link Space#connectTo} and using
+   * the retured JSX. If `labelScale` is provided, the label is scaled by this
    * amount.
    */
   appearance(appearance: ElementUI<P, this>['appearance']) {

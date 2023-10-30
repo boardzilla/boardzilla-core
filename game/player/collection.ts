@@ -12,8 +12,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   className: {new(...a: any[]): P};
   game: Game<P, Board<P>>
 
-  addPlayer(attrs: PlayerAttributes<P>
-    ) {
+  addPlayer(attrs: PlayerAttributes<P>) {
     const player = new this.className(attrs);
     Object.assign(player, attrs);
     this.push(player);
