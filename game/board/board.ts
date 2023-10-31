@@ -9,6 +9,7 @@ import type {
 } from './types';
 import type { GameElement } from './';
 import type { Player } from '../player';
+import type { Argument } from '../action/types';
 
 // TODO add B generic to all board elements
 // e.g. can:
@@ -18,20 +19,24 @@ import type { Player } from '../player';
 
 export default class Board<P extends Player> extends Space<P> {
   pile: GameElement<P>;
-  players: typeof this._ctx.game.players;
-  message: typeof this._ctx.game.message;
-  finish: typeof this._ctx.game.finish;
 
   constructor(ctx: Partial<ElementContext<P>>) {
     super({ ...ctx, trackMovement: false });
     this._ctx.removed = this.createElement(Space, 'removed'),
     this.board = this;
     this.pile = this._ctx.removed;
-    if (this._ctx.game) {
-      this.players = this._ctx.game.players
-      this.message = this._ctx.game.message;
-      this.finish = this._ctx.game.finish;
-    }
+  }
+
+  get players() {
+    return this._ctx.game.players;
+  }
+
+  message(message: string, ...args: [...Argument<P>[], Record<string, Argument<P>>] | Argument<P>[]) {
+    return this._ctx.game.message(message, ...args);
+  }
+
+  finish(winner?: P | P[]) {
+    return this._ctx.game.finish(winner);
   }
 
   // also gets removed elements

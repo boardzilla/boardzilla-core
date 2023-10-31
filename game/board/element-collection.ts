@@ -10,7 +10,7 @@ import type { Player } from '../player';
 
 /**
  * Operations that return groups of {@link GameElement| | GameElement's} return
- * this Array-like class. 
+ * this Array-like class.
  */
 export default class ElementCollection<P extends Player, T extends GameElement<P>> extends Array<T> {
 

@@ -3,6 +3,7 @@ import { Board } from '../board';
 
 import type ActionStep from './action-step';
 import type {
+  FlowArguments,
   Position,
   FlowStep,
   FlowDefinition,
@@ -37,11 +38,12 @@ export default class Flow<P extends Player> {
     this.name = name;
   }
 
-  flowStepArgs(): Record<string, any> {
-    const args: Record<string, any> = {};
+  flowStepArgs(): FlowArguments {
+    const args: FlowArguments = {};
     let flow: FlowStep<P> | undefined = this.top;
     while (flow instanceof Flow) {
       if ('position' in flow && flow.position) {
+        // want to remove
         if (flow.type === 'action' && 'action' in flow.position && 'args' in flow.position) {
           args[flow.position.action!] = flow.position.args;
         }
@@ -109,8 +111,8 @@ export default class Flow<P extends Player> {
     return !this.step || typeof this.step === 'function' ? this : this.step.currentFlow();
   }
 
-  currentLoop(): Flow<P> & { repeat: Function } | undefined {
-    return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function };
+  currentLoop(): Flow<P> & { repeat: Function, exit: Function } | undefined {
+    return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function, exit: Function };
   }
 
   actionNeeded(): {step?: string, prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
@@ -156,32 +158,33 @@ export default class Flow<P extends Player> {
    */
   playOneStep(): 'ok' | 'complete' | string[] {
     const step = this.step;
-    if (step instanceof Function) {
-      try {
+    try {
+      if (step instanceof Function) {
         step(this.flowStepArgs());
-      } catch (e) {
-        if (e instanceof FlowInterruptAndRepeat || e instanceof FlowInterruptAndSkip) {
-          const loop = this.currentLoop();
-          if (!loop) throw Error("Cannot skip/repeat when not in a loop");
-          if (e instanceof FlowInterruptAndSkip) return loop.advance();
-          return loop.repeat();
-        }
-        throw e;
+      } else if (step instanceof Flow) {
+        const actions = step.actionNeeded();
+        if (actions?.actions) return actions.actions;
+        const result = step.playOneStep();
+        if (result !== 'complete') return result;
       }
-    } else if (step instanceof Flow) {
-      const actions = step.actionNeeded();
-      if (actions?.actions) return actions.actions;
-      const result = step.playOneStep();
-      if (result !== 'complete') return result;
+    } catch (e) {
+      if (e instanceof FlowInterruptAndRepeat || e instanceof FlowInterruptAndSkip || e instanceof FlowInterruptAndBreak) {
+        if (e instanceof FlowInterruptAndSkip) return this.advance();
+        if ('repeat' in this && typeof this.repeat === 'function' && e instanceof FlowInterruptAndRepeat) return this.repeat();
+        if ('exit' in this && typeof this.exit === 'function' && e instanceof FlowInterruptAndBreak) return this.exit();
+      }
+      if (!this.parent) throw Error("Cannot skip/repeat/break when not in a loop");
+      throw e;
     }
 
     // completed step, advance this block if able
     const block = this.currentBlock();
     if (block instanceof Array) {
-      if (this.sequence === undefined) throw Error('sequence unset'); // remove after debugging
-      if (this.sequence + 1 !== block.length) {
-        this.setPosition(this.position, this.sequence + 1);
-        return 'ok';
+      if (this.sequence !== undefined) {
+        if (this.sequence + 1 !== block.length) {
+          this.setPosition(this.position, this.sequence + 1);
+          return 'ok';
+        }
       }
     }
 
@@ -233,3 +236,4 @@ export default class Flow<P extends Player> {
 
 export class FlowInterruptAndRepeat extends Error {}
 export class FlowInterruptAndSkip extends Error {}
+export class FlowInterruptAndBreak extends Error {}

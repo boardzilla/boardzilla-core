@@ -1,18 +1,18 @@
 import ForLoop from './for-loop';
 import { serialize, deserialize } from '../action/utils';
 
-import type { FlowDefinition, ForEachPosition, FlowBranchNode } from './types';
+import type { FlowArguments, FlowDefinition, ForEachPosition, FlowBranchNode } from './types';
 import type { Serializable } from '../action/types';
 import type { Player } from '../player';
 
 export default class ForEach<P extends Player, T extends Serializable<P>> extends ForLoop<P, T> {
-  collection: ((a?: Record<string, any>) => T[]) | T[]
+  collection: ((a: FlowArguments) => T[]) | T[]
   position: ForEachPosition<T>;
   type: FlowBranchNode<P>['type'] = 'foreach';
 
   constructor({ name, collection, do: block }: {
     name: string,
-    collection: ((a: Record<string, any>) => T[]) | T[],
+    collection: ((a: FlowArguments) => T[]) | T[],
     do: FlowDefinition<P>
   }) {
     super({

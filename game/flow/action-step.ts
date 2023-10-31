@@ -5,7 +5,6 @@ import type { ActionStepPosition, FlowBranchNode, FlowDefinition, FlowStep } fro
 import type { Player } from '../player';
 
 export default class ActionStep<P extends Player> extends Flow<P> {
-  player?: (args: Record<string, any>) => P
   position: ActionStepPosition<P>;
   actions: Record<string, FlowDefinition<P> | null>;
   type: FlowBranchNode<P>['type'] = "action";
@@ -13,8 +12,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   skipIfOnlyOne: boolean;
   expand: boolean;
 
-  constructor({ player, name, actions, prompt, expand, skipIfOnlyOne }: {
-    player?: (args: Record<string, any>) => P,
+  constructor({ name, actions, prompt, expand, skipIfOnlyOne }: {
     name?: string,
     actions: Record<string, FlowDefinition<P> | null>,
     prompt?: string,
@@ -22,7 +20,6 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     skipIfOnlyOne?: boolean,
   }) {
     super({ name });
-    this.player = player;
     this.actions = actions;
     this.prompt = prompt;
     this.expand = expand ?? true;
@@ -30,7 +27,6 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   reset() {
-    if (this.player) this.game.players.setCurrent(this.player(this.flowStepArgs()));
     this.position = {};
   }
 

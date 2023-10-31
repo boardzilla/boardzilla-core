@@ -1,27 +1,26 @@
 import Flow from './flow';
 
 import type { Player } from '../player';
-import type { FlowDefinition, WhileLoopPosition, FlowBranchNode } from './types';
+import type { FlowArguments, FlowDefinition, WhileLoopPosition, FlowBranchNode } from './types';
 
 export default class WhileLoop<P extends Player> extends Flow<P> {
   block: FlowDefinition<P>;
   position: WhileLoopPosition;
-  while: () => boolean;
+  while: (a: FlowArguments) => boolean;
   type: FlowBranchNode<P>['type'] = 'loop';
 
-  constructor({ name, do: block, while: whileCondition }: {
-    name?: string,
-    while: () => boolean,
+  constructor({ do: block, while: whileCondition }: {
+    while: (a: FlowArguments) => boolean,
     do: FlowDefinition<P>
   }) {
-    super({ name, do: block });
+    super({ do: block });
     this.while = whileCondition;
   }
 
   reset() {
     const position: typeof this.position = { index: 0 };
     this.setPosition(position);
-    if (!this.while()) this.setPosition({...position, index: -1});
+    if (!this.while(this.flowStepArgs())) this.setPosition({...position, index: -1});
   }
 
   currentBlock() {
@@ -31,20 +30,19 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   advance() {
     const position: typeof this.position = { index: this.position.index + 1 };
     this.setPosition(position);
-    if (!this.while()) {
-      this.setPosition({ index: -1});
-      return 'complete';
-    }
+    if (!this.while(this.flowStepArgs())) return this.exit();
     return 'ok';
   }
 
   repeat() {
     this.setPosition(this.position);
-    if (!this.while()) {
-      this.setPosition({...this.position, index: -1});
-      return 'complete';
-    }
+    if (!this.while(this.flowStepArgs())) return this.exit();
     return 'ok';
+  }
+
+  exit(): 'complete' {
+    this.setPosition({...this.position, index: -1});
+    return 'complete';
   }
 
   allSteps() {

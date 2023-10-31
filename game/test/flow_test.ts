@@ -13,7 +13,8 @@ import {
   switchCase,
   ifElse,
   skip,
-  repeat
+  repeat,
+  exit
 } from '../flow';
 
 import type { FlowBranchJSON } from '../flow/types';
@@ -460,6 +461,31 @@ describe('Loop short-circuiting', () => {
     expect(stepSpy2).to.have.been.called.with('start', 12);
     expect(stepSpy2).not.to.have.been.called.with('end', 12);
     expect(stepSpy2).to.have.been.called.with('start', 13);
+  });
+
+  it('can break', () => {
+    const stepSpy1 = chai.spy((x:number) => x === 12 ? exit() : undefined);
+    const stepSpy2 = chai.spy((_: string, x:number) => x);
+    const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
+      ({ loop }) => stepSpy2('start', loop),
+      ({ loop }) => stepSpy1(loop),
+      ({ loop }) => stepSpy2('end', loop)
+    ]});
+    shortLoop.reset();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    const result = shortLoop.playOneStep();
+    expect(result).to.equal('complete');
+    expect(stepSpy2).to.have.been.called.with('start', 11);
+    expect(stepSpy2).to.have.been.called.with('end', 11);
+    expect(stepSpy2).to.have.been.called.with('start', 12);
+    expect(stepSpy2).not.to.have.been.called.with('end', 12);
+    expect(stepSpy2).not.to.have.been.called.with('start', 13);
   });
 });
 

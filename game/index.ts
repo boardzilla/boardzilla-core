@@ -60,6 +60,7 @@ export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
    - {@link ifElse}
    - {@link switchCase}
    - {@link playerActions}
+   - or an array containing more than one of the above
  * @param options.actions - A function that provides an object defining all the actions in your game. The function accepts 3 arguments:
    - an instance of the `boardClass` above
    - the {@link action} function used to define each action. 

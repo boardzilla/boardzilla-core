@@ -2,20 +2,20 @@ import Flow from './flow';
 
 import { serialize, deserialize } from '../action/utils';
 
-import type { FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion, FlowStep } from './types';
+import type { FlowArguments, FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion, FlowStep } from './types';
 import type { Player } from '../player';
 import type { Serializable } from '../action/types';
 
 export default class SwitchCase<P extends Player, T extends Serializable<P>> extends Flow<P> {
   position: SwitchCasePostion<T>;
-  switch: ((a?: Record<string, any>) => T) | T;
+  switch: ((a: FlowArguments) => T) | T;
   cases: SwitchCaseCases<P, T>;
   default?: FlowDefinition<P>;
   type: FlowBranchNode<P>['type'] = "switch-case";
 
   constructor({ name, switch: switchExpr, cases, default: def }: {
     name?: string,
-    switch: ((r: Record<string, any>) => T) | T,
+    switch: ((a: FlowArguments) => T) | T,
     cases: SwitchCaseCases<P, T>;
     default?: FlowDefinition<P>
   }) {
@@ -32,6 +32,7 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
       const ca = this.cases[c];
       if ('test' in ca && ca.test(test) || ('eq' in ca && ca.eq === test)) {
         position.index = c;
+        break;
       }
     }
     if (position.index === -1 && this.default) position.default = true;

@@ -2,12 +2,12 @@ import ForLoop from './for-loop';
 import { Player } from '../player';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils';
 
-import type { FlowDefinition } from './types';
+import type { FlowArguments, FlowDefinition } from './types';
 
 export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
   constructor({ name, startingPlayer, nextPlayer, turns, continueUntil, do: block }: {
     name: string,
-    startingPlayer?: ((a: Record<any, any>) => P) | P,
+    startingPlayer?: ((a: FlowArguments) => P) | P,
     nextPlayer?: (p: P) => P,
     turns?: number,
     continueUntil?: (p: P) => boolean,
