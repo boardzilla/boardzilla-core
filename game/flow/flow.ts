@@ -1,5 +1,6 @@
 import { Player } from '../';
 import { Board } from '../board';
+import { Do, FlowControl } from './enums';
 
 import type ActionStep from './action-step';
 import type {
@@ -13,6 +14,7 @@ import type {
 } from './types';
 import type Game from '../game';
 
+/** internal */
 export default class Flow<P extends Player> {
   name?: string;
   position?: Position<P>;
@@ -108,7 +110,7 @@ export default class Flow<P extends Player> {
   }
 
   currentFlow(): Flow<P> {
-    return !this.step || typeof this.step === 'function' ? this : this.step.currentFlow();
+    return !this.step || typeof this.step === 'function' || typeof this.step === 'string' ? this : this.step.currentFlow();
   }
 
   currentLoop(): Flow<P> & { repeat: Function, exit: Function } | undefined {
@@ -151,30 +153,30 @@ export default class Flow<P extends Player> {
   }
 
   /**
-   * advance flow one step and return 'complete' if complete, 'ok' if can
-   * continue, 'skip'/'repeat' to skip/repeat the current loop. return a list of
-   * actions if now waiting for player input. override for self-contained flows
-   * that do not have subflows.
+   * Advance flow one step and return FlowControl.complete if complete,
+   * FlowControl.ok if can continue, Do to interupted the current
+   * loop. Return a list of actions if now waiting for player input. override
+   * for self-contained flows that do not have subflows.
    */
-  playOneStep(): 'ok' | 'complete' | string[] {
+  playOneStep(): Do | FlowControl | string[] {
     const step = this.step;
-    try {
-      if (step instanceof Function) {
-        step(this.flowStepArgs());
-      } else if (step instanceof Flow) {
-        const actions = step.actionNeeded();
-        if (actions?.actions) return actions.actions;
-        const result = step.playOneStep();
-        if (result !== 'complete') return result;
-      }
-    } catch (e) {
-      if (e instanceof FlowInterruptAndRepeat || e instanceof FlowInterruptAndSkip || e instanceof FlowInterruptAndBreak) {
-        if (e instanceof FlowInterruptAndSkip) return this.advance();
-        if ('repeat' in this && typeof this.repeat === 'function' && e instanceof FlowInterruptAndRepeat) return this.repeat();
-        if ('exit' in this && typeof this.exit === 'function' && e instanceof FlowInterruptAndBreak) return this.exit();
-      }
-      if (!this.parent) throw Error("Cannot skip/repeat/break when not in a loop");
-      throw e;
+    let result: Do | FlowControl | string[] = FlowControl.complete;
+    if (step instanceof Function) {
+      result = step(this.flowStepArgs()) || FlowControl.complete;
+    } else if (typeof step === 'string') {
+      result = step;
+    } else if (step instanceof Flow) {
+      const actions = step.actionNeeded();
+      if (actions?.actions) return actions.actions;
+      result = step.playOneStep();
+    }
+
+    if (result === FlowControl.ok || result instanceof Array) return result;
+    if (result !== FlowControl.complete) {
+      if ('advance' in this && typeof this.advance === 'function' && result === Do.continue) return this.advance();
+      if ('repeat' in this && typeof this.repeat === 'function' && result === Do.repeat) return this.repeat();
+      if ('exit' in this && typeof this.exit === 'function' && result === Do.break) return this.exit();
+      return result;
     }
 
     // completed step, advance this block if able
@@ -183,7 +185,7 @@ export default class Flow<P extends Player> {
       if (this.sequence !== undefined) {
         if (this.sequence + 1 !== block.length) {
           this.setPosition(this.position, this.sequence + 1);
-          return 'ok';
+          return FlowControl.ok;
         }
       }
     }
@@ -195,8 +197,9 @@ export default class Flow<P extends Player> {
   // play until action required (returns list) or game over
   play(): string[] | void {
     let step;
-    do { step = this.playOneStep() } while (step === 'ok' && this.game.phase !== 'finished')
-    if (step !== 'complete' && step !== 'ok') return step;
+    do { step = this.playOneStep() } while (step === FlowControl.ok && this.game.phase !== 'finished')
+    if (step === Do.continue || step === Do.repeat || step === Do.break) throw Error("Cannot skip/repeat/break when not in a loop");
+    if (step !== FlowControl.complete && step !== FlowControl.ok) return step;
   }
 
   // must override. reset runs any logic needed and call setPosition. Must not modify state.
@@ -220,8 +223,8 @@ export default class Flow<P extends Player> {
   }
 
   // override for steps that advance through their subflows. call setPosition if needed. return ok/complete
-  advance(): 'ok' | 'complete' {
-    return 'complete';
+  advance(): FlowControl {
+    return FlowControl.complete;
   }
 
   // override return all subflows
@@ -233,7 +236,3 @@ export default class Flow<P extends Player> {
     return "";
   }
 }
-
-export class FlowInterruptAndRepeat extends Error {}
-export class FlowInterruptAndSkip extends Error {}
-export class FlowInterruptAndBreak extends Error {}

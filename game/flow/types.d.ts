@@ -1,37 +1,11 @@
 import type Flow from './flow';
+import type { Do } from './enums';
 import type { Argument } from '../action/types.d';
 import type { Player } from '../player';
 
-/**
- * Several flow methods accept an argument of this type. This is an object
- * containing keys for every flow function that the game is in the middle of
- * which recorded a value to the current scope. Functions that can add these
- * values are {@link forLoop}, {@link forEach}, {@link switchCase}. The name
- * given to these functions will be the key in the FlowArguments and its value
- * will be the value of the current loop for loops, or the test value for
- * switchCase
- *
- * @example
- * forLoop({
- *   name: 'x', // x is declared here
- *   initial: 0,
- *   next: x => x + 1,
- *   while: x => x < 3,
- *   do: forLoop({
- *     name: 'y',
- *     initial: 0,
- *     next: y => y + 1,
- *     while: y => y < 2,
- *     do: ({ x, y }) => {
- *       // x is available here as the value of the outer loop
- *       // and y will be the value of the inner loop
- *     }
- *   })
- * })
- */
 export type FlowArguments = Record<string, any>;
 
-export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => void) | null;
+export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => Do | void) | Do | null;
 
 /**
  * A FlowDefinition is provided to the game and to all flow function to provide

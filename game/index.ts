@@ -17,8 +17,6 @@ export {
   switchCase,
   ifElse,
   eachPlayer,
-  repeat,
-  skip
 } from './flow/';
 
 export {

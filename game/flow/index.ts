@@ -1,5 +1,3 @@
-export {default as Flow} from './flow';
-
 import {default as ActionStep} from './action-step';
 import {default as WhileLoop} from './while-loop';
 import {default as ForLoop} from './for-loop';
@@ -8,14 +6,9 @@ import {default as EachPlayer} from './each-player';
 import {default as SwitchCase} from './switch-case';
 import {default as IfElse} from './if-else';
 
-import {
-  FlowInterruptAndSkip,
-  FlowInterruptAndRepeat,
-  FlowInterruptAndBreak
-} from './flow';
-
 import type { Player } from '../player';
 import type { Serializable } from '../action/types';
+export { Do, FlowControl } from './enums';
 
 /**
  * Stop the flow and wait for a player to act.
@@ -23,7 +16,8 @@ import type { Serializable } from '../action/types';
  * @param options.actions - An object of possible actions. Each key is an action
  * name defined in the `actions` of {@link createGame}. The value is a further
  * flow defintion for the game to run if this action is taken. This can contain
- * any number of nested Flow functions.
+ * any number of nested Flow functions. If no further action is needed, this can
+ * be null.
  *
  * @param options.name - A unique name for this player action. If provided, this
  * can be used for the UI to determine placement of messages for this action in
@@ -53,8 +47,9 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
  * like a standard `while` loop.
  *
  * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If any function returns {@link repeat}, {@link
- * exit} or {@link skip}, the current loop can be interupted.
+ * of nested Flow functions. If this value is instead one of {@link Do.repeat},
+ * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * the current loop can be interupted.
  *
  * @param options.while - A condition function that must return true for the
  * loop to continue. If this evaluates to false when the loop begins, it will be
@@ -78,8 +73,9 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
  * condition. This functions like a standard `for` loop.
  *
  * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If any function returns {@link repeat}, {@link
- * exit} or {@link skip}, the current loop can be interupted.
+ * of nested Flow functions. If this value is instead one of {@link Do.repeat},
+ * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * the current loop can be interupted.
  *
  * @param options.name - The current value of the loop variable will be added to
  * the {@link FlowArguments} under a key with this name.
@@ -115,8 +111,9 @@ export const forLoop = <P extends Player, T = Serializable<P>>(options: Construc
  * `Array#forEach` method.
  *
  * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If any function returns {@link repeat}, {@link
- * exit} or {@link skip}, the current loop can be interupted.
+ * of nested Flow functions. If this value is instead one of {@link Do.repeat},
+ * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * the current loop can be interupted.
  *
  * @param options.name - The current value of colleciton will be added to the
  * {@link FlowArguments} under a key with this name.
@@ -145,8 +142,9 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  * PlayerCollection#current | current player}.
  *
  * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If any function returns {@link repeat}, {@link
- * exit} or {@link skip}, the current loop can be interupted.
+ * of nested Flow functions. If this value is instead one of {@link Do.repeat},
+ * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * the current loop can be interupted.
  *
  * @param options.name - The current player will be added to the {@link
  * FlowArguments} under a key with this name.
@@ -181,7 +179,6 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  *
  * @category Flow
  */
-
 export const eachPlayer = <P extends Player>(options: ConstructorParameters<typeof EachPlayer<P>>[0]) => new EachPlayer<P>(options);
 
 /**
@@ -192,14 +189,14 @@ export const eachPlayer = <P extends Player>(options: ConstructorParameters<type
  * {@link FlowArguments}.
  *
  * @param options.do - The part that gets run if the condition is true. This can
- * contain any number of nested Flow functions. If any function returns {@link
- * repeat}, {@link exit} or {@link skip}, the current loop can be interupted.
+ * contain any number of nested Flow functions. If this value is instead one of
+ * {@link Do.repeat}, {@link Do.exit} or {@link Do.skip}, or a function that
+ * returns one of these, the current loop can be interupted.
  *
  * @param options.else - As `do`, but runs if the condition is false. Optional.
  *
  * @category Flow
  */
-
 export const ifElse = <P extends Player>(options: ConstructorParameters<typeof IfElse<P>>[0]) => new IfElse<P>(options);
 
 /**
@@ -236,67 +233,4 @@ export const ifElse = <P extends Player>(options: ConstructorParameters<typeof I
  *
  * @category Flow
  */
-
 export const switchCase = <P extends Player, T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => new SwitchCase<P, T>(options);
-
-/**
- * Call this function anywhere in a looping flow ({@link whileLoop}, {@link
- * forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow, skip the
- * rest of the current loop iteration and repeat the current loop with the same
- * value.
- *
- * @example
- * // each player can shout as many times as they like
- * eachPlayer({ name: 'player', do: (
- *   playerActions({ actions: {
- *     shout: repeat,
- *     pass: null
- *   }}),
- * ]});
- *
- * @category Flow
- */
-
-export const repeat = () => { throw new FlowInterruptAndRepeat(); }
-
-/**
- * Call this function anywhere in a looping flow ({@link whileLoop}, {@link
- * forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow, skip the
- * rest of the current loop iteration and repeat the loop with the next value.
- *
- * @example
- * // each player can decide to shout, and if so, may subsequently apologize
- * eachPlayer({ name: 'player', do: [
- *   playerActions({ actions: {
- *     shout: skip, // if shouting, skip to the next player
- *     pass: null
- *   }}),
- *   playerActions({ actions: {
- *     apologize: repeat,
- *     pass: null
- *   }}),
- * ]});
- *
- * @category Flow
- */
-
-export const skip = () => { throw new FlowInterruptAndSkip() }
-
-/**
- * Call this function anywhere in a looping flow ({@link whileLoop}, {@link
- * forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow, skip the
- * rest of the current loop iteration and exit this loop.
- *
- * @example
- * // each player can decide to shout but the first one that does ends the shouting round
- * eachPlayer({ name: 'player', do: (
- *   playerActions({ actions: {
- *     shout: exit,
- *     pass: null
- *   }}),
- * ]});
- *
- * @category Flow
- */
-
-export const exit = () => { throw new FlowInterruptAndBreak() }

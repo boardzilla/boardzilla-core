@@ -3,6 +3,7 @@ import Flow from './flow';
 import type { Player } from '../player';
 import type { Serializable } from '../action/types';
 import type { FlowArguments, FlowDefinition, ForLoopPosition, FlowBranchNode } from './types';
+import { FlowControl } from './enums';
 
 export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow<P> {
   block: FlowDefinition<P>;
@@ -39,23 +40,23 @@ export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow
   }
 
   advance() {
-    if (this.position.index === -1) return 'complete';
+    if (this.position.index === -1) return FlowControl.complete;
     const position: typeof this.position = { ...this.position, index: this.position.index + 1 };
     if (this.next && this.position.value !== undefined) position.value = this.next(this.position.value);
     this.setPosition(position);
     if (!this.while(position.value)) return this.exit();
-    return 'ok';
+    return FlowControl.ok;
   }
 
   repeat() {
     this.setPosition(this.position);
     if (!this.while(this.position.value)) return this.exit();
-    return 'ok';
+    return FlowControl.ok;
   }
 
-  exit(): 'complete' {
+  exit(): FlowControl.complete {
     this.setPosition({...this.position, index: -1});
-    return 'complete';
+    return FlowControl.complete;
   }
 
   toString(): string {

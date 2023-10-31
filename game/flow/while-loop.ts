@@ -1,4 +1,5 @@
 import Flow from './flow';
+import { FlowControl } from './';
 
 import type { Player } from '../player';
 import type { FlowArguments, FlowDefinition, WhileLoopPosition, FlowBranchNode } from './types';
@@ -31,18 +32,18 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
     const position: typeof this.position = { index: this.position.index + 1 };
     this.setPosition(position);
     if (!this.while(this.flowStepArgs())) return this.exit();
-    return 'ok';
+    return FlowControl.ok;
   }
 
   repeat() {
     this.setPosition(this.position);
     if (!this.while(this.flowStepArgs())) return this.exit();
-    return 'ok';
+    return FlowControl.ok;
   }
 
-  exit(): 'complete' {
+  exit(): FlowControl.complete {
     this.setPosition({...this.position, index: -1});
-    return 'complete';
+    return FlowControl.complete;
   }
 
   allSteps() {
