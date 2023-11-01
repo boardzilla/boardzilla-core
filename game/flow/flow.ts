@@ -113,10 +113,6 @@ export default class Flow<P extends Player> {
     return !this.step || typeof this.step === 'function' || typeof this.step === 'string' ? this : this.step.currentFlow();
   }
 
-  currentLoop(): Flow<P> & { repeat: Function, exit: Function } | undefined {
-    return ('repeat' in this ? this : this.parent?.currentLoop()) as Flow<P> & { repeat: Function, exit: Function };
-  }
-
   actionNeeded(): {step?: string, prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
     const flow = this.currentFlow() as ActionStep<P>;
     if ('awaitingAction' in flow) {

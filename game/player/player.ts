@@ -1,9 +1,9 @@
-import { PlayerAttributes } from './types';
 
 export default class Player {
-  public name: string;
-  public color: string;
-  public position: number; // table position, as opposed to turn order
+  name: string;
+  color: string;
+  position: number; // table position, as opposed to turn order
+  settings?: any
 
   toJSON() {
     let {...attrs}: Record<any, any> = this;
@@ -14,9 +14,5 @@ export default class Player {
     ));
 
     return attrs;
-  }
-
-  colorEncodedName() {
-    return `<span color="${this.color}">${this.name}</span>`;
   }
 }

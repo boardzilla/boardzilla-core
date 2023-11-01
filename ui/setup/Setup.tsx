@@ -14,7 +14,7 @@ export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlay
   onUpdateSettings: (s: GameSettings) => void,
   onStart: () => void,
 }) => {
-  const [uiOptions] = gameStore(s => [s.uiOptions]);
+  const [game] = gameStore(s => [s.game]);
 
   const updateSettingsKey = (key: string, value: any) => {
     const newSettings = Object.assign(settings || {}, { [key]: value });
@@ -22,8 +22,8 @@ export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlay
     onUpdateSettings(newSettings);
   }
 
-  const settingsComponents = uiOptions.settings ?
-    Object.entries(uiOptions.settings).map(([name, component]) => React.createElement(
+  const settingsComponents = game.setupComponents ?
+    Object.entries(game.setupComponents).map(([name, component]) => React.createElement(
       component,
       {
         name,

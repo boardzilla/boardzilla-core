@@ -2,19 +2,6 @@ import type { Player } from '../game/player';
 import type { SerializedArg } from '../game/action/types';
 import type { GameState } from '../types';
 
-export type Layout = Record<string, any>
-
-export type SetupComponentProps = {
-  name: string
-  settings: Record<string, any>
-  players: SetupPlayer[]
-  updateKey: (key: string, value: any) => void
-}
-
-export type UIOptions = {
-  settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
-};
-
 export type User = {
   id: string
   name: string

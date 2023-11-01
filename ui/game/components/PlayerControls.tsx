@@ -19,7 +19,6 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
   console.log('render PlayerControls', moves, move);
 
   const onSubmitForm = useCallback((e: React.FormEvent<HTMLFormElement>, pendingMove: PendingMove<Player>) => {
-    if (!game) return;
     e.preventDefault();
     const form = e.currentTarget;
     if (!form) throw Error("No form in submit");
@@ -44,7 +43,6 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
   const controls = useMemo(() => {
     const layouts: Record<string, {moves: PendingMove<Player>[], style: React.CSSProperties}> = {};
     const messages: (PendingMove<Player> | string)[] = moves || [];
-    if (!game) return layouts;
 
     if (game.players.currentPosition !== position) messages.push('out-of-turn');
 
@@ -93,9 +91,8 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
     }
     return layouts;
   }, [game, moves, move, position, disambiguateElement]); // TODO check this works: game.players.currentPosition so the out of turn can move?
-  console.log(controls);
 
-  if (!game || !position) return null;
+  if (!position) return null;
 
   return Object.entries(controls).map(([layoutName, {moves, style}]) => {
     const boardPrompts = moves.map(m => m.selection.type === 'board' ? m.selection.prompt : undefined).filter(p => p);

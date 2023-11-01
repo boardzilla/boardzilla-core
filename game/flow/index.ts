@@ -26,6 +26,10 @@ export { Do, FlowControl } from './enums';
  * @param options.prompt - A prompting message for the player taking the action
  * to decide between their choices.
  *
+ * @param options.player - Which player can perform this action. If not
+ * provided, this defaults to the {@link PlayerCollection#current | current
+ * player}
+ *
  * @param options.expand - If set to true, rather than select the action
  * directly, the player will be prompted to make the first choice in the action.
  * For example, if a `playCard` action was supplied here and the player had to

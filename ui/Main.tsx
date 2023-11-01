@@ -76,7 +76,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
 
   useEffect(() => {
     // move is processable
-    if (game && position && (pendingMoves?.length === 0 || pendingMoves?.length === 1 && pendingMoves[0].selection.skipIfOnlyOne)) {
+    if (position && (pendingMoves?.length === 0 || pendingMoves?.length === 1 && pendingMoves[0].selection.skipIfOnlyOne)) {
       // if last option is forced and skippable, automove
       if (pendingMoves.length === 1) {
         const arg = pendingMoves[0].selection.isForced();
@@ -145,9 +145,11 @@ export default ({ userID, minPlayers, maxPlayers }: {
     setError(error);
   }, []);
 
+  console.log('render MAIN', game.phase);
+
   return (
     <>
-      {settings && !game &&
+      {game.phase === 'new' &&
         <Setup
           users={users}
           minPlayers={minPlayers}
@@ -159,7 +161,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
           onStart={start}
         />
       }
-      {game && <Game/>}
+      {game.phase !== 'new' && <Game/>}
       {error && <div className="error">{error}</div>}
     </>
   );

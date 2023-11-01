@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SetupComponentProps } from '../../types'
+import type { SetupComponentProps } from './types'
 
 export const toggleSetting = (label: string) => ({ name, settings, updateKey }: SetupComponentProps) => (
   <div>

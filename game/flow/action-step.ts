@@ -5,6 +5,7 @@ import type { ActionStepPosition, FlowBranchNode, FlowDefinition, FlowStep } fro
 import type { Player } from '../player';
 
 export default class ActionStep<P extends Player> extends Flow<P> {
+  player?: (args: Record<string, any>) => P
   position: ActionStepPosition<P>;
   actions: Record<string, FlowDefinition<P> | null>;
   type: FlowBranchNode<P>['type'] = "action";
@@ -12,8 +13,9 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   skipIfOnlyOne: boolean;
   expand: boolean;
 
-  constructor({ name, actions, prompt, expand, skipIfOnlyOne }: {
+  constructor({ name, player, actions, prompt, expand, skipIfOnlyOne }: {
     name?: string,
+    player?: (args: Record<string, any>) => P,
     actions: Record<string, FlowDefinition<P> | null>,
     prompt?: string,
     expand?: boolean,
@@ -24,9 +26,11 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     this.prompt = prompt;
     this.expand = expand ?? true;
     this.skipIfOnlyOne = skipIfOnlyOne ?? false;
+    this.player = player;
   }
 
   reset() {
+    if (this.player) this.game.players.setCurrent(this.player(this.flowStepArgs()));
     this.position = {};
   }
 
@@ -52,15 +56,14 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
     const player = game.players.atPosition(move.player)!;
     const gameAction = game.action(move.action, player);
-    const error = gameAction.process(...move.args);
+    const error = gameAction._process(...move.args);
     if (error) {
       // failed with a selection required
       return error;
     } else {
       // succeeded
       this.setPosition(move);
-      const message = gameAction.message;
-      if (message) {
+      for (const message of gameAction._cfg.messages) {
         if (typeof message === 'function') {
           game.message(message(...move.args));
         } else {

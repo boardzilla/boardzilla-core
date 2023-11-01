@@ -14,6 +14,5 @@ export {
 
 export const action = <P extends Player>(definition: {
   prompt: string,
-  condition?: Action<P, []>['condition'],
-  message?: Action<P, []>['message']
+  condition?: Action<P, []>['_cfg']['condition'],
 }) => new Action<P, []>(definition);

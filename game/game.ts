@@ -6,20 +6,21 @@ import {
   Piece,
   GameElement
 } from './board/';
-import {
-  GameState,
-  GameUpdate,
-  PlayerPositionState,
-  Message
-} from '../types';
 import { Action, Selection } from './action';
-import { ElementClass } from './board/types';
 import { Player, PlayerCollection } from './player/';
 import Flow from './flow/flow';
 
 import random from 'random-seed';
 
+import type { ElementClass } from './board/types';
+import type { SetupComponentProps } from './types';
 import type { FlowDefinition } from './flow/types';
+import type {
+  GameState,
+  GameUpdate,
+  PlayerPositionState,
+  Message,
+} from '../types';
 import type {
   Move,
   Argument,
@@ -27,12 +28,14 @@ import type {
   PendingMove,
 } from './action/types';
 import type { PlayerAttributes } from './player/types';
+import type React from 'react';
 
 export default class Game<P extends Player, B extends Board<P>> {
   flow: Flow<P>;
   flowDefinition: (board: B) => FlowDefinition<P>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
+  setupComponents?: Record<string, (p: SetupComponentProps) => React.JSX.Element>
   settings: Record<string, any>;
   actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>;
   phase: 'define' | 'new' | 'started' | 'finished' = 'define';
@@ -245,7 +248,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[action]) {
         const godModeAction = this.godModeActions()[action];
-        error = godModeAction.process(...args);
+        error = godModeAction._process(...args);
       } else {
         error = this.flow.processMove({
           action,
@@ -293,7 +296,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       let resolvedSelections: PendingMove<P>[] = [];
       for (const action of actions) {
         const playerAction = this.action(action, player);
-        let submoves = playerAction.getResolvedSelections();
+        let submoves = playerAction._getResolvedSelections();
         if (submoves !== undefined) {
           possibleActions.push(action);
           if (expand && submoves.length === 0) {
@@ -320,7 +323,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       };
 
     } else {
-      const moves = this.action(action, player)?.getResolvedSelections(...args)
+      const moves = this.action(action, player)?._getResolvedSelections(...args)
       if (moves) return { step, prompt, moves };
     }
   }

@@ -19,7 +19,7 @@ export default () => {
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: PendingMove<Player>[] }>();
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
 
-  if (!game || !position) return null;
+  if (!position) return null;
   const player = game.players.atPosition(position);
   if (!player) {
     console.log('no player to render');

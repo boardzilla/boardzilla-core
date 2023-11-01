@@ -7,6 +7,13 @@ import {
   action,
 } from './action/';
 
+export {
+  toggleSetting,
+  numberSetting,
+  textSetting,
+  choiceSetting
+} from './settingComponents';
+
 export { union } from './board/';
 
 export {
@@ -17,6 +24,7 @@ export {
   switchCase,
   ifElse,
   eachPlayer,
+  Do
 } from './flow/';
 
 export {
@@ -30,7 +38,7 @@ export { Player };
 // this is called from UI on first update and server on each call
 
 import type { SetupState, GameState } from '../types';
-import type { SetupFunction } from './types';
+import type { SetupFunction, SetupComponentProps } from './types';
 import type { ElementClass } from './board/types';
 import type { PlayerAttributes } from './player/types';
 import type { Argument } from './action/types';
@@ -69,17 +77,18 @@ export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
     - an instance of the `boardClass` above
     - the breakpoint string from your `breakpoints` function, or '_default' if none specified.
  */
-export const createGame = <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions, breakpoints, layout }: {
+export const createGame = <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, settings, setup, flow, actions, breakpoints, layout }: {
   playerClass: {new(a: PlayerAttributes<P>): P},
   boardClass: ElementClass<P, B>,
   elementClasses?: ElementClass<P, GameElement<P>>[],
+  settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   setup?: (board: B) => any,
   flow: (board: B) => FlowDefinition<P>,
   actions: (board: B, actionFunction: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>,
   breakpoints?: (aspectRatio: number) => string,
   layout?: (board: B, breakpoint: string) => void
 }): SetupFunction<P, B> => (
-  state: SetupState<P> | GameState<P>,
+  state?: SetupState<P> | GameState<P>,
   options?: {
     currentPlayerPosition?: number
     start?: boolean,
@@ -89,7 +98,7 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
   console.time('setup');
   const game = new Game<P, B>();
   let rseed = '';
-  if ('rseed' in state) {
+  if (state && 'rseed' in state) {
     rseed = state.rseed;
   } else {
     if (globalThis.window?.sessionStorage) { // web context, use a fixed seed for dev
@@ -101,6 +110,7 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
     }
   }
   game.setRandomSeed(rseed);
+  game.setupComponents = settings;
   game.definePlayers(playerClass);
   //console.timeLog('setup', 'setup players');
   game.defineBoard(boardClass, elementClasses || []);
@@ -109,32 +119,34 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
   //console.timeLog('setup', 'setup flow');
   game.defineActions(actions);
   //console.timeLog('setup', 'define actions');
+  if (state) game.setSettings(state.settings);
 
-  game.setSettings(state.settings);
-  if (!('board' in state)) { // phase=new
-    game.players.fromJSON(state.players);
-    if (options?.start) {
-      if (setup) setup(game.board);
-      game.start();
+  if (state) {
+    if (!('board' in state)) { // phase=new
+      game.players.fromJSON(state.players);
+      if (options?.start) {
+        if (setup) setup(game.board);
+        game.start();
+      }
+    } else { // phase=started
+      game.players.fromJSON(state.players);
+      if (options?.start) {
+        // require setup to build spaces, graphs, event handlers
+        if (setup) setup(game.board);
+        //console.timeLog('setup', 'setup');
+      }
+      if (options?.trackMovement) game.trackMovement(true);
+      game.phase = 'started';
+      game.setState(state);
     }
-  } else { // phase=started
-    game.players.fromJSON(state.players);
-    if (options?.start) {
-      // require setup to build spaces, graphs, event handlers
-      if (setup) setup(game.board);
-      //console.timeLog('setup', 'setup');
-    }
-    if (options?.trackMovement) game.trackMovement(true);
-    game.phase = 'started';
-    game.setState(state);
+  } else {
+    game.phase = 'new';
   }
   //console.timeLog('setup', 'setState');
 
   if (options?.start) {
     if (game.phase !== 'finished') game.play();
     if (options?.currentPlayerPosition) game.players.setCurrent(options?.currentPlayerPosition);
-  } else {
-    game.phase ??= 'new';
   }
 
   game.board._ui.breakpoints = breakpoints;

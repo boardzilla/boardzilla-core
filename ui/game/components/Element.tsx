@@ -140,7 +140,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   }
   style.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
-  let contents: JSX.Element[] | JSX.Element = [];
+  let contents: React.JSX.Element[] | React.JSX.Element = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
     //throw Error('JSON does not match board');
@@ -172,11 +172,11 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     if (!labelScale) labelScale = 0.05;
 
     let i = 0;
-    const lines: JSX.Element[] = [];
-    const labels: JSX.Element[] = [];
+    const lines: React.JSX.Element[] = [];
+    const labels: React.JSX.Element[] = [];
     element._t.graph.forEachEdge((...args) => {
-      const source = args[4].element as GameElement<Player>;
-      const target = args[5].element as GameElement<Player>;
+      const source = args[4].space as GameElement<Player>;
+      const target = args[5].space as GameElement<Player>;
 
       if (source._ui.computedStyle && target._ui.computedStyle) {
         const origin = {
@@ -222,7 +222,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
               transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * absoluteTransform.width * .5}
   ${(origin.y + destination.y) / 2 - labelScale! * absoluteTransform.height * .5})
   scale(${labelScale})`}
-            >{label(args[1])}</g>);
+            >{label(args[1].distance)}</g>);
         }
       }
     });

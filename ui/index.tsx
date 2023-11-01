@@ -5,10 +5,10 @@ import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main'
+import Game from '../game/game'
 
-import type { UIOptions, GameUpdateEvent, GameFinishedEvent } from './types'
+import type { GameUpdateEvent, GameFinishedEvent } from './types'
 import type { Player } from '../game'
-import type Game from '../game/game'
 import type { Board, GameElement } from '../game/board'
 import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
@@ -20,7 +20,10 @@ const minPlayers: number = boostrap.minPlayers;
 const maxPlayers: number = boostrap.maxPlayers;
 
 type GameStore = {
-  game?: Game<Player, Board<Player>>;
+  setup?: SetupFunction<Player, Board<Player>>;
+  setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
+  game: Game<Player, Board<Player>>;
+  setGame: (game: Game<Player, Board<Player>>) => void;
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes
   updateState: (s: GameUpdateEvent | GameFinishedEvent) => void;
   updateBoard: (boardJSON?: ElementJSON[]) => void; // call any time state changes to update immutable references for listeners. updates move, selections
@@ -40,10 +43,6 @@ type GameStore = {
   prompt?: string; // prompt for choosing action if applicable
   selected: GameElement<Player>[]; // selected elements on board
   setSelected: (s: GameElement<Player>[]) => void;
-  uiOptions: UIOptions;
-  setUIOptions: (o: UIOptions) => void;
-  setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
-  setup?: SetupFunction<Player, Board<Player>>;
   setAspectRatio: (a: number) => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
@@ -53,15 +52,14 @@ type GameStore = {
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
+  setSetup: setup => set({ setup }),
+  game: new Game(),
+  setGame: (game: Game<Player, Board<Player>>) => set({ game }),
   boardJSON: [],
   updateState: (update) => set(s => {
     let game = s.game;
-    if (!s.setup) return {};
-    if (!game) {
-      game = s.setup(update.state.state, {
-        currentPlayerPosition: 'currentPlayers' in update && update.currentPlayers.length === 1 ? update.currentPlayers[0] : undefined,
-        start: true
-      });
+    if (game.phase === 'new' && s.setup) {
+      game = s.setup(update.state.state, { start: true });
       // @ts-ignore;
       window.game = game;
       // @ts-ignore;
@@ -73,7 +71,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     }
     if (update.type === 'gameUpdate') game.players.currentPosition = update.currentPlayers.length === 1 ? update.currentPlayers[0] : undefined;
     if (update.type === 'gameFinished') {
-      game.winner = update.winners.map(p => game!.players.atPosition(p)!);
+      game.winner = update.winners.map(p => game.players.atPosition(p)!);
       game.phase = 'finished';
     }
     game.board.applyLayouts();
@@ -96,7 +94,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   }),
   // function to ensure react detects a change. must be called immediately after any function that alters board state
   updateBoard: (boardJSON?: ElementJSON[]) => set(s => {
-    if (!s.game || !s.position) return {};
+    if (!s.position) return {};
 
     // rerun layouts. probably optimize TODO
     s.game.contextualizeBoardToPlayer(s.game.players.atPosition(s.position));
@@ -119,13 +117,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   pendingMoves: [],
   selected: [],
   setSelected: sel => set({ selected: [...new Set(sel)] }),
-  uiOptions: {},
-  setUIOptions: uiOptions => set({ uiOptions }),
-  setSetup: setup => set({ setup }),
   setAspectRatio: aspectRatio => set(s => {
-    if (!s.game) return {};
     const breakpoint = s.game.board.getBreakpoint(aspectRatio);
-    console.log('newBreakpoint', aspectRatio, breakpoint, s.game.board._ui.breakpoint);
     if (breakpoint !== s.game.board._ui.breakpoint) {
       s.game.board.setBreakpoint(breakpoint);
       s.updateBoard();
@@ -206,11 +199,11 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   })
 };
 
-export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UIOptions): void => {
+export default <P extends Player, B extends Board<P>>(setup: SetupFunction<P, B>): void => {
   const state = gameStore.getState();
-  state.setUIOptions(options as UIOptions);
-  // we can anonymize Player class internally
   state.setSetup(setup as unknown as SetupFunction<Player, Board<Player>>);
+  // we can anonymize Player class internally
+  state.setGame(setup() as unknown as Game<Player, Board<Player>>)
 
   const root = createRoot(document.getElementById('root')!)
   root.render(
@@ -221,5 +214,3 @@ export default <P extends Player>(setup: SetupFunction<P, Board<P>>, options: UI
     />
   );
 };
-
-export * from './setup/components/settingComponents';
