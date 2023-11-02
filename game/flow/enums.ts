@@ -27,7 +27,7 @@ export enum Do {
    * Return Do.continue from anywhere inside a looping flow ({@link whileLoop},
    * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow,
    * skip the rest of the current loop iteration and repeat the loop with the
-   * next value.
+   * next value. This acts like Javascript's `continue`.
    *
    * @example
    * // each player can decide to shout, and if so, may subsequently apologize
@@ -49,7 +49,8 @@ export enum Do {
   /**
    * Return Do.break from anywhere inside a looping flow ({@link whileLoop},
    * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow,
-   * skip the rest of the current loop iteration and exit this loop.
+   * skip the rest of the current loop iteration and exit this loop. This acts
+   * like Javascript's `break`.
    *
    * @example
    * // each player can decide to shout but the first one that does ends the shouting round

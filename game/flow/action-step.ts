@@ -65,7 +65,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       this.setPosition(move);
       for (const message of gameAction._cfg.messages) {
         if (typeof message === 'function') {
-          game.message(message(...move.args));
+          game.message(message(...move.args), {player});
         } else {
           game.message(message, ...move.args, {player});
         }

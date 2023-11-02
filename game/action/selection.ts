@@ -104,7 +104,7 @@ export default class Selection<P extends Player> {
     }
 
     if (s.type === 'text') {
-      return (typeof arg === 'string' && (!s.regexp || arg.match(s.regexp))) ? undefined : "Not a string";
+      return (typeof arg === 'string' && (!s.regexp || arg.match(s.regexp))) ? undefined : "Invalid text entered";
     }
 
     if (s.type === 'number') {

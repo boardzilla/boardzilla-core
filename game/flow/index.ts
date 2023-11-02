@@ -21,7 +21,7 @@ export { Do, FlowControl } from './enums';
  *
  * @param options.name - A unique name for this player action. If provided, this
  * can be used for the UI to determine placement of messages for this action in
- * {@link board.layoutStep}.
+ * {@link Board#layoutStep}.
  *
  * @param options.prompt - A prompting message for the player taking the action
  * to decide between their choices.
@@ -52,7 +52,7 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
  *
  * @param options.do - The part that gets repeated. This can contain any number
  * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
  * the current loop can be interupted.
  *
  * @param options.while - A condition function that must return true for the
@@ -78,7 +78,7 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
  *
  * @param options.do - The part that gets repeated. This can contain any number
  * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
  * the current loop can be interupted.
  *
  * @param options.name - The current value of the loop variable will be added to
@@ -116,7 +116,7 @@ export const forLoop = <P extends Player, T = Serializable<P>>(options: Construc
  *
  * @param options.do - The part that gets repeated. This can contain any number
  * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
  * the current loop can be interupted.
  *
  * @param options.name - The current value of colleciton will be added to the
@@ -147,7 +147,7 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  *
  * @param options.do - The part that gets repeated. This can contain any number
  * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.exit} or {@link Do.skip}, or a function that returns one of these,
+ * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
  * the current loop can be interupted.
  *
  * @param options.name - The current player will be added to the {@link
@@ -194,7 +194,7 @@ export const eachPlayer = <P extends Player>(options: ConstructorParameters<type
  *
  * @param options.do - The part that gets run if the condition is true. This can
  * contain any number of nested Flow functions. If this value is instead one of
- * {@link Do.repeat}, {@link Do.exit} or {@link Do.skip}, or a function that
+ * {@link Do.repeat}, {@link Do.break} or {@link Do.continue}, or a function that
  * returns one of these, the current loop can be interupted.
  *
  * @param options.else - As `do`, but runs if the condition is false. Optional.

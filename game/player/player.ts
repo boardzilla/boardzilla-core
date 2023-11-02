@@ -15,4 +15,8 @@ export default class Player {
 
     return attrs;
   }
+
+  toString() {
+    return this.name;
+  }
 }

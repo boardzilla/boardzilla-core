@@ -109,6 +109,11 @@ export default class GameElement<P extends Player> {
     Object.getPrototypeOf(this).bottomN = this.lastN;
   }
 
+  /** @internal */
+  toString() {
+    return this.name || this.constructor.name;
+  }
+
   /**
    * Finds all elements within this element recursively that match the arguments
    * provided.

@@ -344,7 +344,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     }
 
     Object.entries(replacements).forEach(([k, v]) => {
-      message = message.replace(new RegExp(`\\$${k}\\b`), v as string);
+      message = message.replace(new RegExp(`{{${k}}}`), v as string);
     })
     this.messages.push({body: message});
   }

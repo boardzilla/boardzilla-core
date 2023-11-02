@@ -22,7 +22,7 @@ const elementAttributes = (el: GameElement<Player>) => {
   )));
 }
 
-const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.name || el.constructor.name}</div>;
+const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
 
 const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,
