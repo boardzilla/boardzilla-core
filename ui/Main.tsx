@@ -149,7 +149,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
 
   return (
     <>
-      {game.phase === 'new' &&
+      {game.phase === 'new' && settings &&
         <Setup
           users={users}
           minPlayers={minPlayers}

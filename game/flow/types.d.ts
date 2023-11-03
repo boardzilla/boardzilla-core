@@ -23,16 +23,16 @@ export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => Do 
 export type FlowDefinition<P extends Player> = FlowStep<P> | FlowStep<P>[]
 
 export type ActionStepPosition<P extends Player> = {
-  player?: number,
-  action?: string,
-  args?: Argument<P>[]
-};
+  player: number,
+  action: string,
+  args: Argument<P>[]
+} | null;
 export type WhileLoopPosition = { index: number };
 export type ForLoopPosition<T> = { index: number, value: T };
 export type ForEachPosition<T> = ForLoopPosition<T> & { collection: T[] };
 export type SwitchCasePostion<T> = { index?: number, value?: T, default?: boolean }
 export type Position<P extends Player> = (
-  ActionStepPosition<P> | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any>
+  ActionStepPosition<P> | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any> | FlowBranchJSON[][]
 )
 
 export type FlowBranchNode<P extends Player> = ({
@@ -40,6 +40,9 @@ export type FlowBranchNode<P extends Player> = ({
 } | {
   type: 'action',
   position: ActionStepPosition<P>
+} | {
+  type: 'parallel',
+  position: FlowBranchJSON[][],
 } | {
   type: 'loop',
   position: WhileLoopPosition | ForLoopPosition<any>
@@ -54,7 +57,15 @@ export type FlowBranchNode<P extends Player> = ({
   sequence?: number,
 }
 
-export type FlowBranchJSON = Omit<FlowBranchNode<Player>, 'position'> & { position?: any }
+export type FlowBranchJSON = ({
+  type: 'sequence'
+  position?: any,
+} | {
+  type: 'action' | 'loop' | 'foreach' | 'switch-case' | 'parallel'
+  position: any,
+}) & {
+  name?: string,
+  sequence?: number,
+}
 
 export type SwitchCaseCases<P extends Player, T> = {eq: T, do: FlowDefinition<P>}[] | {test: (a: T) => boolean, do: FlowDefinition<P>}[];
-

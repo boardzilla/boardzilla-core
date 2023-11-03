@@ -5,7 +5,7 @@ import type { ActionStepPosition, FlowBranchNode, FlowDefinition, FlowStep } fro
 import type { Player } from '../player';
 
 export default class ActionStep<P extends Player> extends Flow<P> {
-  player?: (args: Record<string, any>) => P
+  players?: P | P[] | ((args: Record<string, any>) => P | P[]);
   position: ActionStepPosition<P>;
   actions: Record<string, FlowDefinition<P> | null>;
   type: FlowBranchNode<P>['type'] = "action";
@@ -13,9 +13,9 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   skipIfOnlyOne: boolean;
   expand: boolean;
 
-  constructor({ name, player, actions, prompt, expand, skipIfOnlyOne }: {
+  constructor({ name, players, actions, prompt, expand, skipIfOnlyOne }: {
     name?: string,
-    player?: (args: Record<string, any>) => P,
+    players?: P | P[] | ((args: Record<string, any>) => P | P[]),
     actions: Record<string, FlowDefinition<P> | null>,
     prompt?: string,
     expand?: boolean,
@@ -26,35 +26,43 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     this.prompt = prompt;
     this.expand = expand ?? true;
     this.skipIfOnlyOne = skipIfOnlyOne ?? false;
-    this.player = player;
+    this.players = players;
   }
 
   reset() {
-    if (this.player) this.game.players.setCurrent(this.player(this.flowStepArgs()));
-    this.position = {};
+    if (this.players) {
+      const currentPlayer = typeof this.players === 'function' ? this.players(this.flowStepArgs()) : this.players;
+      this.game.players.setCurrent(currentPlayer);
+    }
+    this.setPosition(null);
   }
 
   currentBlock() {
-    if (!this.position.action) return;
+    if (!this.position) return;
     const step = this.actions[this.position.action];
     if (step) return step;
   }
 
-  awaitingAction() {
-    if (!this.position.action) {
-      return Object.keys(this.actions);
+  actionNeeded(player?: P) {
+    if (!this.position) return {
+      prompt: this.prompt,
+      step: this.name,
+      actions: Object.keys(this.actions),
+      skipIfOnlyOne: this.skipIfOnlyOne,
+      expand: this.expand,
     }
   }
 
-  processMove(move: Required<ActionStepPosition<P>>): string | undefined {
+  processMove(move: Exclude<ActionStepPosition<P>, null>): string | undefined {
     if (!(move.action in this.actions)) throw Error(`No action ${move.action} available at this point. Waiting for ${Object.keys(this.actions).join(", ")}`);
     const game = this.game;
 
-    if (game.players.currentPosition && move.player !== game.players.currentPosition) {
-      throw Error(`move ${move.action} from player #${move.player} not allowed. player #${game.players.currentPosition} turn`);
+    if (!game.players.currentPosition.includes(move.player)) {
+      throw Error(`Move ${move.action} from player #${move.player} not allowed. Current players: #${game.players.currentPosition.join('; ')}`);
     }
 
-    const player = game.players.atPosition(move.player)!;
+    const player = game.players.atPosition(move.player);
+    if (!player) return `No such player position: ${move.player}`;
     const gameAction = game.action(move.action, player);
     const error = gameAction._process(...move.args);
     if (error) {
@@ -74,20 +82,19 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   toJSON(forPlayer=true) {
-    if (!this.position?.action) return {};
-    return {
+    return this.position ? {
       player: this.position.player,
       action: this.position.action,
       args: this.position.args?.map(a => serializeArg(a, forPlayer))
-    };
+    } : null;
   }
 
   fromJSON(position: any) {
-    return {
+    return position ? {
       player: position.player,
       action: position.action,
       args: position.args?.map((a: any) => deserializeArg(a, this.game))
-    };
+    } : null;
   }
 
   allSteps() {

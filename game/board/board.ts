@@ -17,6 +17,7 @@ import type { Argument } from '../action/types';
 //   board: typeof this
 // see powergrid canBuild
 
+/** @category Board */
 export default class Board<P extends Player> extends Space<P> {
   pile: GameElement<P>;
 

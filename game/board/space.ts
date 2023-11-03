@@ -1,6 +1,5 @@
 import GameElement from './element'
 import ElementCollection from './element-collection'
-import { isA } from '../utils';
 
 import { UndirectedGraph } from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
@@ -17,6 +16,7 @@ import type { Player } from '../player';
 /**
  * Spaces are areas of the board. The spaces of your board are declared during
  * setup in {@link createGame} and never change during play.
+ * @category Board
  */
 export default class Space<P extends Player> extends GameElement<P> {
   _eventHandlers: {
@@ -57,7 +57,7 @@ export default class Space<P extends Player> extends GameElement<P> {
   /** internal */
   triggerEvent(event: "enter", entering: GameElement<P>) {
     for (const handler of this._eventHandlers[event]) {
-      if (event === 'enter' && !isA(entering, handler.type)) continue;
+      if (event === 'enter' && !(entering instanceof handler.type)) continue;
       handler.callback(entering);
     }
   }

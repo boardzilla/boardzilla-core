@@ -1,4 +1,3 @@
-import { GameElement } from './board';
 import { deserializeArg } from './action/utils';
 
 import type { Player } from './';
@@ -24,7 +23,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       // @ts-ignore
       if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board.game;
       const game = cachedGame || setup(previousState, {
-        currentPlayerPosition: previousState.currentPlayers.length === 1 ? previousState.currentPlayers[0] : undefined,
+        currentPlayerPosition: previousState.currentPlayers,
         start: true,
         trackMovement
       });
@@ -67,17 +66,6 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
     }
   };
 }
-
-const chain = (o: any, c?: string[]): string[] => {
-  c = (c || []).concat(o.constructor.name);
-  o = Object.getPrototypeOf(o);
-  if (o) return chain(o,c);
-  return c;
-}
-
-// loose instanceof check that uses class names. required to deal with lack of class equality in webpack?
-// export const isA = (el: GameElement, el2: {new(...a: any[]): any, name: string}) => chain(el).includes(el2.name);
-export const isA = <P extends Player>(el: GameElement<P>, el2: {new(...a: any[]): any, name: string}) => el instanceof el2
 
 export const shuffleArray = (array: any[], random: () => number) => {
   for (let i = array.length - 1; i > 0; i--) {

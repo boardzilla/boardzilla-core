@@ -113,21 +113,23 @@ export default class Game<P extends Player, B extends Board<P>> {
   /**
    * state management functions
    */
-  setState(state: GameState<P>) {
+  setState(state: GameState<P> & { currentPlayerPosition: number[] }) {
     this.players.fromJSON(state.players);
     this.setSettings(state.settings);
     this.board.fromJSON(state.board);
     this.buildFlow();
     this.flow.setBranchFromJSON(state.position);
+    this.players.setCurrent(state.currentPlayerPosition);
     this.setRandomSeed(state.rseed);
   }
 
   // state variables for server updates. does not includes phase, current player or winners.
-  getState(forPlayer?: number): GameState<P> {
+  getState(forPlayer?: number): GameState<P> & { currentPlayerPosition: number[] } {
     return {
       players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
       settings: this.settings,
       position: this.flow.branchJSON(!!forPlayer),
+      currentPlayerPosition: this.players.currentPosition,
       board: this.board.allJSON(forPlayer),
       rseed: this.rseed,
     };
@@ -141,11 +143,12 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   getUpdate(): GameUpdate<P> {
+    const { currentPlayerPosition, ...state } = this.getState();
     if (this.phase === 'started') {
       return {
         game: {
-          ...this.getState(),
-          currentPlayers: this.players.currentPosition ? [this.players.currentPosition] : [],
+          ...state,
+          currentPlayers: this.players.currentPosition,
           phase: this.phase
         },
         players: this.getPlayerStates(),
@@ -155,7 +158,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     if (this.phase === 'finished') {
       return {
         game: {
-          ...this.getState(),
+          ...state,
           winners: this.winner.map(p => p.position),
           phase: this.phase
         },
@@ -236,7 +239,7 @@ export default class Game<P extends Player, B extends Board<P>> {
 
   play() {
     if (this.phase !== 'started') throw Error('cannot call play until started');
-    return this.flow.play();
+    this.flow.play();
   }
 
   // given a player's move (minimum a selected action), attempts to process
@@ -261,15 +264,15 @@ export default class Game<P extends Player, B extends Board<P>> {
     });
   }
 
-  allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
+  #allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
     const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
-    if (this.players.currentPosition && player !== this.players.current()) return {
+    if (!player.isCurrent()) return {
       actions: allowedActions,
       skipIfOnlyOne: true,
       expand: true,
     };
     return this.inContextOfPlayer(player, () => {
-      const actionStep = this.flow.actionNeeded();
+      const actionStep = this.flow.actionNeeded(player);
       if (actionStep) {
         return {
           step: actionStep.step,
@@ -288,7 +291,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   getResolvedSelections(player: P, action?: string, ...args: Argument<P>[]): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
-    const allowedActions = this.allowedActions(player);
+    const allowedActions = this.#allowedActions(player);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;
     if (!action) {
@@ -344,7 +347,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     }
 
     Object.entries(replacements).forEach(([k, v]) => {
-      message = message.replace(new RegExp(`{{${k}}}`), v as string);
+      message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`), v as string);
     })
     this.messages.push({body: message});
   }

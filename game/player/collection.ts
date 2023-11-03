@@ -8,13 +8,13 @@ import type { Sorter } from '../types';
 import type { PlayerAttributes } from './types';
 
 export default class PlayerCollection<P extends Player> extends Array<P> {
-  currentPosition?: number;
+  currentPosition: number[];
   className: {new(...a: any[]): P};
   game: Game<P, Board<P>>
 
   addPlayer(attrs: PlayerAttributes<P>) {
     const player = new this.className(attrs);
-    Object.assign(player, attrs);
+    Object.assign(player, attrs, {_players: this});
     this.push(player);
   }
 
@@ -22,37 +22,30 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     return this.find(p => p.position === position);
   }
 
-  setTurnMode(mode = true) {
-    this.currentPosition = mode ? this.currentPosition || 1 : undefined;
-  }
-
-  current(): P {
-    if (this.currentPosition === undefined) throw Error("Calling players.current() when not taking turns");
-    return this.atPosition(this.currentPosition)!;
+  current(): P[] {
+    return this.currentPosition.map(p => this.atPosition(p)!);
   }
 
   notCurrent() {
-    return this.filter(p => p.position !== this.currentPosition);
+    return this.filter(p => !this.currentPosition.includes(p.position));
   }
 
   inPositionOrder() {
     return this.sort((p1, p2) => (p1.position > p2.position ? 1 : -1));
   }
 
-  setCurrent(player: number | P) {
-    if (typeof player !== 'number') player = player.position;
-    if (!player || player > this.length || player < 1) {
-      throw Error(`No such player ${player}`);
-    }
-    this.currentPosition = player;
+  setCurrent(players: number | P | number[] | P[]) {
+    if (!(players instanceof Array)) players = [players] as number[] | P[];
+    players = players.map(p => typeof p === 'number' ? p : p.position) as number[];
+    this.currentPosition = players;
     return this.current();
   }
 
   next() {
-    if (this.currentPosition === undefined) {
-      this.currentPosition = this[0].position;
-    } else {
-      this.currentPosition = this.after(this.currentPosition).position;
+    if (this.currentPosition.length === 0) {
+      this.currentPosition = [this[0].position];
+    } else if (this.currentPosition.length === 1) {
+      this.currentPosition = [this.after(this.currentPosition[0]).position];
     }
     return this.current()!
   }
@@ -115,7 +108,6 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   fromJSON(players: (PlayerAttributes<P>)[]) {
     // reset all on self
     this.splice(0, this.length);
-    this.currentPosition = undefined;
 
     for (const p of players) {
       this.addPlayer(p);

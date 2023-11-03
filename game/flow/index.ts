@@ -5,6 +5,7 @@ import {default as ForEach} from './foreach';
 import {default as EachPlayer} from './each-player';
 import {default as SwitchCase} from './switch-case';
 import {default as IfElse} from './if-else';
+import {default as EveryPlayer} from './every-player';
 
 import type { Player } from '../player';
 import type { Serializable } from '../action/types';
@@ -238,3 +239,37 @@ export const ifElse = <P extends Player>(options: ConstructorParameters<typeof I
  * @category Flow
  */
 export const switchCase = <P extends Player, T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => new SwitchCase<P, T>(options);
+
+
+/**
+ * Create a flow for a set of players that can be done by all players
+ * simulataneously in any order. This is similiar to {@link eachPlayer} except
+ * that the players can act in any order.
+ *
+ * @param options.do - The part that each player can perform. This can contain
+ * any number of nested Flow functions. Each player will go through the defined
+ * flows individually and may be at difference stages. The flow will complete
+ * when all players have completed this flow. If this value is instead one of
+ * {@link Do.repeat}, {@link Do.break} or {@link Do.continue}, or a function
+ * that returns one of these, the current loop can be interupted, *regardless of
+ * what the other players have done*.
+ *
+ * @param options.name - The player acting will be added to the {@link
+ * FlowArguments} under a key with this name for flows within this `do`.
+ *
+ * @param options.players - Declare the players to perform this `do`. If not
+ * specified, this will be all players.
+ *
+ * @example
+ * everyPlayer({ name: 'pass-cards', do: ( // each player selects a card from hand or passes
+ *   playerActions({ actions: {
+ *     selectCard: ({ player }) => {
+ *       return skip();
+ *     },
+ *     pass: null
+ *   }}),
+ * ]});
+ *
+ * @category Flow
+ */
+export const everyPlayer = <P extends Player>(options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => new EveryPlayer<P>(options);

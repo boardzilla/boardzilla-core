@@ -24,13 +24,11 @@ export {
   switchCase,
   ifElse,
   eachPlayer,
+  everyPlayer,
   Do
 } from './flow/';
 
-export {
-  isA,
-  times,
-} from './utils';
+export { times } from './utils';
 
 export { Player };
 
@@ -90,7 +88,7 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
 }): SetupFunction<P, B> => (
   state?: SetupState<P> | GameState<P>,
   options?: {
-    currentPlayerPosition?: number
+    currentPlayerPosition?: number[]
     start?: boolean,
     trackMovement?: boolean,
   }
@@ -137,7 +135,7 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
       }
       if (options?.trackMovement) game.trackMovement(true);
       game.phase = 'started';
-      game.setState(state);
+      game.setState({...state, currentPlayerPosition: options?.currentPlayerPosition || [] });
     }
   } else {
     game.phase = 'new';
@@ -146,7 +144,6 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
 
   if (options?.start) {
     if (game.phase !== 'finished') game.play();
-    if (options?.currentPlayerPosition) game.players.setCurrent(options?.currentPlayerPosition);
   }
 
   game.board._ui.breakpoints = breakpoints;

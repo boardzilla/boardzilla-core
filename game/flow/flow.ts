@@ -10,7 +10,7 @@ import type {
   FlowDefinition,
   FlowBranchNode,
   FlowBranchJSON,
-  ActionStepPosition
+  ActionStepPosition,
 } from './types';
 import type Game from '../game';
 
@@ -46,8 +46,9 @@ export default class Flow<P extends Player> {
     while (flow instanceof Flow) {
       if ('position' in flow && flow.position) {
         // want to remove
-        if (flow.type === 'action' && 'action' in flow.position && 'args' in flow.position) {
-          args[flow.position.action!] = flow.position.args;
+        if (flow.type === 'action' && flow.position) {
+          const position = flow.position as ActionStepPosition<P>;
+          args[position!.action] = position!.args;
         }
         if ('value' in flow.position && flow.name) {
           args[flow.name] = flow.position.value;
@@ -73,7 +74,7 @@ export default class Flow<P extends Player> {
 
   setBranchFromJSON(branch: FlowBranchJSON[]) {
     const node = branch[0];
-    if (!node) throw Error(`Insufficient position elements sent to flow for ${this.name}`);
+    if (node === undefined) throw Error(`Insufficient position elements sent to flow for ${this.name}`);
     if (node.type !== this.type || node.name !== this.name) {
       throw Error(`Flow mismatch. Trying to set ${node.type}:${node.name} on ${this.type}:${this.name}`);
     }
@@ -109,27 +110,18 @@ export default class Flow<P extends Player> {
     this.setPosition(this.fromJSON(positionJSON), sequence, false);
   }
 
-  currentFlow(): Flow<P> {
-    return !this.step || typeof this.step === 'function' || typeof this.step === 'string' ? this : this.step.currentFlow();
+  currentProcessor(): Flow<P> | undefined {
+    if (this.step instanceof Flow) return this.step.currentProcessor();
+    if (this.type === 'action' || this.type === 'parallel') return this;
   }
 
-  actionNeeded(): {step?: string, prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
-    const flow = this.currentFlow() as ActionStep<P>;
-    if ('awaitingAction' in flow) {
-      const actions = flow.awaitingAction();
-      if (actions) return {
-        step: flow.name,
-        prompt: flow.prompt,
-        actions,
-        skipIfOnlyOne: flow.skipIfOnlyOne,
-        expand: flow.expand,
-      };
-    }
+  actionNeeded(player?: P): {step?: string, prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
+    return this.currentProcessor()?.actionNeeded(player);
   }
 
-  processMove(move: ActionStepPosition<P>): string | undefined {
-    const step = this.currentFlow();
-    if (!step || step.type !== 'action') throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);
+  processMove(move: Exclude<ActionStepPosition<P>, undefined>): string | undefined {
+    const step = this.currentProcessor();
+    if (!step) throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);
     return step.processMove(move);
   }
 
@@ -151,23 +143,22 @@ export default class Flow<P extends Player> {
   /**
    * Advance flow one step and return FlowControl.complete if complete,
    * FlowControl.ok if can continue, Do to interupted the current
-   * loop. Return a list of actions if now waiting for player input. override
+   * loop. Returns undefined if now waiting for player input. override
    * for self-contained flows that do not have subflows.
    */
-  playOneStep(): Do | FlowControl | string[] {
+  playOneStep(): Do | FlowControl | undefined {
     const step = this.step;
-    let result: Do | FlowControl | string[] = FlowControl.complete;
+    let result: Do | FlowControl | undefined = FlowControl.complete;
     if (step instanceof Function) {
       result = step(this.flowStepArgs()) || FlowControl.complete;
     } else if (typeof step === 'string') {
       result = step;
     } else if (step instanceof Flow) {
-      const actions = step.actionNeeded();
-      if (actions?.actions) return actions.actions;
+      if (step.type === 'action' && !step.position) return; // awaiting action
       result = step.playOneStep();
     }
 
-    if (result === FlowControl.ok || result instanceof Array) return result;
+    if (result === FlowControl.ok || !result) return result;
     if (result !== FlowControl.complete) {
       if ('advance' in this && typeof this.advance === 'function' && result === Do.continue) return this.advance();
       if ('repeat' in this && typeof this.repeat === 'function' && result === Do.repeat) return this.repeat();
@@ -191,15 +182,16 @@ export default class Flow<P extends Player> {
   }
 
   // play until action required (returns list) or game over
-  play(): string[] | void {
+  play() {
     let step;
     do { step = this.playOneStep() } while (step === FlowControl.ok && this.game.phase !== 'finished')
     if (step === Do.continue || step === Do.repeat || step === Do.break) throw Error("Cannot skip/repeat/break when not in a loop");
-    if (step !== FlowControl.complete && step !== FlowControl.ok) return step;
+    if (step === FlowControl.complete) this.game.finish();
   }
 
-  // must override. reset runs any logic needed and call setPosition. Must not modify state.
+  // must override. reset runs any logic needed and call setPosition. Must not modify own state.
   reset() {
+    this.game.players.setCurrent(this.game.players);
     this.setPosition(null);
   }
 

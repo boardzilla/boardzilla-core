@@ -13,7 +13,7 @@ import type React from 'react';
 export type SetupFunction<P extends Player, B extends Board<P>> = (
   state?: SetupState<P> | GameState<P>,
   options?: {
-    currentPlayerPosition?: number,
+    currentPlayerPosition?: number[],
     start?: boolean,
     trackMovement?: boolean,
   }

@@ -5,6 +5,7 @@ import type { Player } from '../player';
 
 /**
  * Pieces are game elements that move during play
+ * @category Board
  */
 export default class Piece<P extends Player> extends GameElement<P> {
 

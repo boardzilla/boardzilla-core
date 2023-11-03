@@ -1,5 +1,5 @@
 import ElementCollection from './element-collection';
-import { isA, shuffleArray, times } from '../utils';
+import { shuffleArray, times } from '../utils';
 import { translate, cellSizeForArea } from './utils';
 import { serializeObject, deserializeObject } from '../action/utils';
 import random from 'random-seed';
@@ -322,7 +322,7 @@ export default class GameElement<P extends Player> {
    */
   container<T extends GameElement<P>>(className?: ElementClass<P, T>): T | undefined {
     if (!className) return this._t.parent as T;
-    if (this._t.parent) return isA(this._t.parent, className) ?
+    if (this._t.parent) return this._t.parent instanceof className ?
       this._t.parent as T:
       this._t.parent.container(className);
   }

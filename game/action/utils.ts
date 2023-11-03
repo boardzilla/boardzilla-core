@@ -13,7 +13,7 @@ import type { Board } from '../board';
 
 export const humanizeArg = <P extends Player>(arg: Argument<P>) => {
   if (arg instanceof Player) return arg.name;
-  if (arg instanceof GameElement) return arg.name || `$el[${arg.branch()}]`; // ??
+  if (arg instanceof GameElement) return arg.name || arg.constructor.name;
   return arg.toString();
 }
 

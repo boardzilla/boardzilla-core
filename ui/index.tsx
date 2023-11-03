@@ -67,9 +67,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       // @ts-ignore;
       for (const className of game.board._ctx.classRegistry) window[className.name] = className;
     } else {
-      game.setState(update.state.state);
+      game.setState({...update.state.state, currentPlayerPosition: 'currentPlayers' in update ? update.currentPlayers : [] });
     }
-    if (update.type === 'gameUpdate') game.players.currentPosition = update.currentPlayers.length === 1 ? update.currentPlayers[0] : undefined;
     if (update.type === 'gameFinished') {
       game.winner = update.winners.map(p => game.players.atPosition(p)!);
       game.phase = 'finished';

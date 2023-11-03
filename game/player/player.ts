@@ -1,12 +1,22 @@
+import type PlayerCollection from './collection';
 
 export default class Player {
   name: string;
   color: string;
   position: number; // table position, as opposed to turn order
   settings?: any
+  _players: PlayerCollection<Player>;
+
+  isCurrent() {
+    return this._players.currentPosition.includes(this.position);
+  }
+
+  setCurrent() {
+    return this._players.setCurrent(this);
+  }
 
   toJSON() {
-    let {...attrs}: Record<any, any> = this;
+    let {_players, ...attrs}: Record<any, any> = this;
 
     // remove methods
     attrs = Object.fromEntries(Object.entries(attrs).filter(
