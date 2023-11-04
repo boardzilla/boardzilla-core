@@ -44,7 +44,7 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
     const layouts: Record<string, {moves: PendingMove<Player>[], style: React.CSSProperties}> = {};
     const messages: (PendingMove<Player> | string)[] = moves || [];
 
-    if (game.players.currentPosition !== position) messages.push('out-of-turn');
+    if (!position || !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
 
     if (disambiguateElement) {
       const elementPosition = disambiguateElement.element.relativeTransformToBoard();
@@ -102,7 +102,7 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
     return (
       <div key={layoutName} className={`player-controls ${layoutName.replace(":", "-")}`} style={style}>
         {layoutName === 'step:out-of-turn' && (
-          `${game.players.current()!.name} is taking their turn`
+          `${game.players.current().map(p => p.name).join(' ,')} is taking their turn`
         )}
         {boardPrompt && <div id={boardID} className="prompt">{boardPrompt}</div>}
         {moves.map(pendingMove => (

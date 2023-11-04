@@ -6,13 +6,14 @@ import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main'
 import Game from '../game/game'
+import { serializeArg } from '../game/action/utils';
 
 import type { GameUpdateEvent, GameFinishedEvent } from './types'
 import type { Player } from '../game'
 import type { Board, GameElement } from '../game/board'
 import type { ElementJSON } from '../game/board/types'
 import type { SetupFunction } from '../game/types'
-import type { Argument, PendingMove, BoardQuery } from '../game/action/types'
+import type { Argument, PendingMove, SerializedMove, SerializedArg, BoardQuery } from '../game/action/types'
 
 const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
 const userID: string = boostrap.userID;
@@ -26,11 +27,15 @@ type GameStore = {
   setGame: (game: Game<Player, Board<Player>>) => void;
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes
   updateState: (s: GameUpdateEvent | GameFinishedEvent) => void;
-  updateBoard: (boardJSON?: ElementJSON[]) => void; // call any time state changes to update immutable references for listeners. updates move, selections
+  updateBoard: () => void; // call any time state changes to update immutable references for listeners. updates move, selections
   position?: number; // this player
   setPosition: (p: number) => void;
   move?: {action: string, args: Argument<Player>[]}; // move in progress
   selectMove: (sel?: PendingMove<Player>, ...args: Argument<Player>[]) => void;
+  moves: {action: string, args: SerializedArg[]}[]; // move ready for processing
+  clearMoves: () => void;
+  error?: string,
+  setError: (error: string) => void,
   step?: string,
   pendingMoves?: PendingMove<Player>[]; // all pending moves
   boardSelections: Record<string, {
@@ -59,7 +64,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   updateState: (update) => set(s => {
     let game = s.game;
     if (game.phase === 'new' && s.setup) {
-      game = s.setup(update.state.state, { start: true });
+      game = s.setup(update.state.state, {
+        start: true,
+        currentPlayerPosition: 'currentPlayers' in update ? update.currentPlayers : []
+      });
       // @ts-ignore;
       window.game = game;
       // @ts-ignore;
@@ -92,16 +100,9 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     }
   }),
   // function to ensure react detects a change. must be called immediately after any function that alters board state
-  updateBoard: (boardJSON?: ElementJSON[]) => set(s => {
+  updateBoard: () => set(s => {
     if (!s.position) return {};
-
-    // rerun layouts. probably optimize TODO
-    s.game.contextualizeBoardToPlayer(s.game.players.atPosition(s.position));
-    s.game.board.applyLayouts();
-    
-    return ({
-      boardJSON: boardJSON || s.game.board.allJSON()
-    })
+    return updateBoard(s.game, s.position);
   }),
   selectMove: (pendingMove?: PendingMove<Player>, ...args: Argument<Player>[]) => set(s => {
     const move = pendingMove ? {
@@ -110,6 +111,9 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     } : undefined;
     return updateSelections(s.game!, s.position!, move);
   }),
+  moves: [],
+  clearMoves: () => set({ moves: [] }),
+  setError: error => set({ error }),
   setPosition: position => set({ position }),
   actions: [],
   boardSelections: {},
@@ -146,14 +150,62 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
 const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: {action: string, args: Argument<Player>[]}) => {
   const player = game.players.atPosition(position);
   if (!player) return {};
+  let state: Partial<GameStore> = {};
+  let resolvedSelections: ReturnType<typeof game.getResolvedSelections>;
+  let isBoardUpToDate = true;
 
-  let resolvedSelections = game.getResolvedSelections(player, move?.action, ...(move?.args || []));
-  if (move && !resolvedSelections?.moves) {
-    console.log('move may no longer be valid. retrying getResolvedSelections', move, resolvedSelections);
-    move = undefined;
-    resolvedSelections = game.getResolvedSelections(player);
+  while (true) {
+    resolvedSelections = game.getResolvedSelections(player, move?.action, ...(move?.args || []));
+    if (move && !resolvedSelections?.moves) {
+      console.log('move may no longer be valid. retrying getResolvedSelections', move, resolvedSelections);
+      move = undefined;
+      resolvedSelections = game.getResolvedSelections(player);
+    }
+
+    const pendingMoves = resolvedSelections?.moves;
+
+    // selection is skippable - skip and rerun selections
+    if (pendingMoves?.length === 1 && pendingMoves[0].selection.skipIfOnlyOne) {
+      const arg = pendingMoves[0].selection.isForced();
+      if (arg === undefined) break;
+      move = {
+	action: pendingMoves[0].action,
+	args: [...pendingMoves[0].args, arg]
+      };
+      continue;
+    }
+
+    // move is processable - add to queue and rerun
+    if (pendingMoves?.length === 0) {
+      // if last option is forced and skippable, automove
+      if (!move) break;
+
+      const player = game.players.atPosition(position);
+      if (!player) break;
+
+      // serialize now before we alter our state to ensure proper references
+      const serializedMove: SerializedMove = {
+	action: move.action,
+	args: move.args.map(a => serializeArg(a))
+      }
+
+      state.error = game.processMove({ player, ...move });
+      isBoardUpToDate = false;
+      if (state.error) {
+	console.error(state.error);
+	break;
+      } else {
+	state.moves ??= [];
+	state.moves.push(serializedMove);
+	move = undefined;
+	game.play();
+	continue;
+      };
+    }
+    break;
   }
 
+  // populate boardSelections
   const boardSelections: Record<string, {
     clickMoves: PendingMove<Player>[],
     dragMoves: {
@@ -189,7 +241,10 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     }
   }
 
+  if (!isBoardUpToDate) state = {...state, ...updateBoard(game, position)};
+
   return ({
+    ...state,
     move,
     step: resolvedSelections?.step,
     prompt: resolvedSelections?.prompt,
@@ -197,6 +252,14 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     pendingMoves: resolvedSelections?.moves,
   })
 };
+
+const updateBoard = (game: Game<Player, Board<Player>>, position: number) => {
+  // rerun layouts. probably optimize TODO
+  game.contextualizeBoardToPlayer(game.players.atPosition(position));
+  game.board.applyLayouts();
+
+  return ({ boardJSON: game.board.allJSON() })
+}
 
 export default <P extends Player, B extends Board<P>>(setup: SetupFunction<P, B>): void => {
   const state = gameStore.getState();

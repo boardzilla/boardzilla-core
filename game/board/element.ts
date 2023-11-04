@@ -1,7 +1,7 @@
 import ElementCollection from './element-collection';
 import { shuffleArray, times } from '../utils';
 import { translate, cellSizeForArea } from './utils';
-import { serializeObject, deserializeObject } from '../action/utils';
+import { serializeObject, deserializeObject, escapeArgument } from '../action/utils';
 import random from 'random-seed';
 
 import type {
@@ -111,7 +111,7 @@ export default class GameElement<P extends Player> {
 
   /** @internal */
   toString() {
-    return this.name || this.constructor.name;
+    return escapeArgument(this);
   }
 
   /**

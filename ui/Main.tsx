@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { gameStore } from './';
 import Game from './game/Game';
 import Setup from './setup/Setup';
-import { serializeArg } from '../game/action/utils';
 
 import type {
   User,
@@ -19,20 +18,19 @@ import type {
   UpdateSettingsMessage,
   UpdatePlayersMessage,
 } from './types';
-import type { SerializedMove } from '../game/action/types';
 
 export default ({ userID, minPlayers, maxPlayers }: {
   userID: string,
   minPlayers: number,
   maxPlayers: number,
 }) => {
-  const [game, move, selectMove, pendingMoves, position, updateBoard, updateState] = gameStore(s => [s.game, s.move, s.selectMove, s.pendingMoves, s.position, s.updateBoard, s.updateState]);
+  const [game, move, moves, clearMoves, error, setError, position, updateState] = gameStore(s => [s.game, s.move, s.moves, s.clearMoves, s.error, s.setError, s.position, s.updateState]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
-  const [error, setError] = useState<string>();
-  const moves = useMemo<((e: string) => void)[]>(() => [], []);
+
+  const moveCallbacks = useMemo<((e: string) => void)[]>(() => [], []);
 
   const listener = useCallback((event: MessageEvent<
     PlayersEvent |
@@ -57,9 +55,9 @@ export default ({ userID, minPlayers, maxPlayers }: {
       break;
     case 'messageProcessed':
       if (data.error) catchError(data.error);
-      const move = moves[parseInt(data.id)];
+      const move = moveCallbacks[parseInt(data.id)];
       if (move && data.error) move(data.error);
-      delete moves[parseInt(data.id)];
+      delete moveCallbacks[parseInt(data.id)];
       break;
     }
   }, []);
@@ -72,52 +70,22 @@ export default ({ userID, minPlayers, maxPlayers }: {
       setReadySent(true);
     }
     return () => window.removeEventListener('message', listener)
-  }, [listener])
+  }, [listener]);
 
   useEffect(() => {
     // move is processable
-    if (position && (pendingMoves?.length === 0 || pendingMoves?.length === 1 && pendingMoves[0].selection.skipIfOnlyOne)) {
-      // if last option is forced and skippable, automove
-      if (pendingMoves.length === 1) {
-        const arg = pendingMoves[0].selection.isForced();
-        if (arg === undefined) return;
-        if (move) {
-          return selectMove(pendingMoves[0], arg)
-        } else {
-          return selectMove(pendingMoves[0])
-        }
-      }
-      if (!move) return;
-
-      const player = game.players.atPosition(position);
-      if (!player) return;
-
-      // serialize now before we alter our state to ensure proper references
-      const serializedMove: SerializedMove = {
-        action: move.action,
-        args: move.args.map(a => serializeArg(a))
-      }
-
-      const error = game.processMove({ player, ...move });
-      game.play();
-      selectMove();
-
-      if (error) {
-        console.error(error);
-        setError(error);
-      } else {
-        console.log('success, submitting to server', move);
-        moves.push((error: string) => console.error(`move ${move} failed: ${error}`));
-        const message: MoveMessage = {
-          type: "move",
-          id: String(moves.length),
-          data: serializedMove
-        };
-        window.top!.postMessage(message, "*");
+    if (moves?.length) {
+      console.log('success, submitting to server', moves);
+      moveCallbacks.push((error: string) => console.error(`move ${move} failed: ${error}`));
+      const message: MoveMessage = {
+        type: "move",
+        id: String(moveCallbacks.length),
+        data: moves
       };
-      updateBoard();
+      window.top!.postMessage(message, "*");
+      clearMoves();
     }
-  }, [game, position, move, pendingMoves]);
+  }, [game, position, moves]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
     setSettings(settings);

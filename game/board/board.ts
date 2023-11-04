@@ -23,8 +23,8 @@ export default class Board<P extends Player> extends Space<P> {
 
   constructor(ctx: Partial<ElementContext<P>>) {
     super({ ...ctx, trackMovement: false });
-    this._ctx.removed = this.createElement(Space, 'removed'),
     this.board = this;
+    this._ctx.removed = this.createElement(Space, 'removed'),
     this.pile = this._ctx.removed;
   }
 

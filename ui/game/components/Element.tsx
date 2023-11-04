@@ -193,23 +193,26 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         if (style === 'double') {
           lines.push(
             <line key={i++}
-            x1={origin.x} y1={origin.y}
-            x2={destination.x} y2={destination.y}
-            transform={`translate(${(origin.y - destination.y) / distance * thickness!}, ${(origin.x - destination.x) / distance * -thickness!})`}
-            strokeWidth={thickness!} stroke={color}
-              />
+              className="outer"
+              x1={origin.x} y1={origin.y}
+              x2={destination.x} y2={destination.y}
+              transform={`translate(${(origin.y - destination.y) / distance * thickness!}, ${(origin.x - destination.x) / distance * -thickness!})`}
+              strokeWidth={thickness!} stroke={color}
+            />
           );
           lines.push(
             <line key={i++}
-            x1={origin.x} y1={origin.y}
-            x2={destination.x} y2={destination.y}
-            transform={`translate(${(origin.y - destination.y) / distance * -thickness!}, ${(origin.x - destination.x) / distance * thickness!})`}
-            strokeWidth={thickness!} stroke={color}
-              />
+              className="outer"
+              x1={origin.x} y1={origin.y}
+              x2={destination.x} y2={destination.y}
+              transform={`translate(${(origin.y - destination.y) / distance * -thickness!}, ${(origin.x - destination.x) / distance * thickness!})`}
+              strokeWidth={thickness!} stroke={color}
+            />
           );
         }
         lines.push(
           <line key={i++}
+            className="inner"
             x1={origin.x} y1={origin.y}
             x2={destination.x} y2={destination.y}
             strokeWidth={2 * thickness!} stroke={fill}

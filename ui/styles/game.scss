@@ -132,7 +132,10 @@
         margin: 0.1rem;
       }
       input, select {
-        max-width: 100%;
+        width: 100%;
+      }
+      input[type=number] {
+        width: initial;
       }
       button {
         border: none;

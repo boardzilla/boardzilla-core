@@ -108,7 +108,10 @@ export type MoveMessage = {
   data: {
     action: string,
     args: SerializedArg[]
-  }
+  } | {
+    action: string,
+    args: SerializedArg[]
+  }[]
 }
 
 // used to actually start the game

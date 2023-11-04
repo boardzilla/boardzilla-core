@@ -1,4 +1,5 @@
 import type PlayerCollection from './collection';
+import { escapeArgument } from '../action/utils';
 
 export default class Player {
   name: string;
@@ -27,6 +28,6 @@ export default class Player {
   }
 
   toString() {
-    return this.name;
+    return escapeArgument(this);
   }
 }

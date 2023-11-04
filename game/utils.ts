@@ -14,7 +14,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       previousState: GameStartedState<Player>,
       move: {
         position: number,
-        data: SerializedMove
+        data: SerializedMove | SerializedMove[]
       },
       trackMovement=true
     ): GameUpdate<Player> => {
@@ -28,11 +28,15 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
         trackMovement
       });
       console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
-      const error = game.processMove({
-        player: game.players.atPosition(move.position)!,
-        action: move.data.action,
-        args: move.data.args.map(a => deserializeArg(a as SerializedArg, game))
-      });
+      if (!(move.data instanceof Array)) move.data = [move.data];
+      let error = undefined;
+      for (let i = 0; i !== move.data.length; i++) {
+	error ||= game.processMove({
+          player: game.players.atPosition(move.position)!,
+          action: move.data[i].action,
+          args: move.data[i].args.map(a => deserializeArg(a as SerializedArg, game))
+	});
+      }
       console.timeLog('processMove', 'process');
       if (error) {
         throw Error(`Unable to process move: ${error}`);
