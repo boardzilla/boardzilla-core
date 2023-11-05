@@ -7,7 +7,7 @@ import {
   Piece,
   GameElement,
 } from '../../../game/board'
-import { serialize } from '../../../game/action/utils'
+import { serialize, humanizeArg } from '../../../game/action/utils'
 
 import type { ElementJSON } from '../../../game/board/types';
 import type { PendingMove } from '../../../game/action/types';
@@ -22,7 +22,7 @@ const elementAttributes = (el: GameElement<Player>) => {
   )));
 }
 
-const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
+const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{humanizeArg(el)}</div>;
 
 const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,
