@@ -1,6 +1,6 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
@@ -51,7 +51,9 @@
       "game/player",
       "game/player/types.d.ts"
     ],
-    "plugin": ["typedoc-plugin-merge-modules"],
+    "plugin": [
+      "typedoc-plugin-merge-modules"
+    ],
     "excludeInternal": true,
     "out": "docs",
     "name": "@boardzilla/core"
