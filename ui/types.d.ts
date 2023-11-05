@@ -1,4 +1,5 @@
 import type { Player } from '../game/player';
+import type { PlayerAttributes } from '../game/player/types';
 import type { SerializedArg } from '../game/action/types';
 import type { GameState } from '../types';
 
@@ -128,4 +129,11 @@ export type ReadyMessage = {
 export type SwitchPlayerMessage = {
   type: "switchPlayer"
   index: number
+}
+
+export type SetupComponentProps = {
+  name: string
+  settings: Record<string, any>
+  players: PlayerAttributes<Player>[]
+  updateKey: (key: string, value: any) => void
 }

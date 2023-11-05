@@ -18,7 +18,6 @@ export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlay
 
   const updateSettingsKey = (key: string, value: any) => {
     const newSettings = Object.assign(settings || {}, { [key]: value });
-    console.log('postMessage', newSettings);
     onUpdateSettings(newSettings);
   }
 

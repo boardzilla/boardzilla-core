@@ -35,13 +35,6 @@ export type GameInterface<P extends Player> = {
   ) => GameState<P>
 }
 
-export type SetupComponentProps = {
-  name: string
-  settings: Record<string, any>
-  players: PlayerAttributes<Player>[]
-  updateKey: (key: string, value: any) => void
-}
-
 export type UIOptions<P extends Player> = {
   settings?: Record<string, (p: SetupComponentProps) => React.JSX.Element>
 };

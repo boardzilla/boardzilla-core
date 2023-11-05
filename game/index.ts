@@ -12,7 +12,7 @@ export {
   numberSetting,
   textSetting,
   choiceSetting
-} from './settingComponents';
+} from '../ui/setup/components/settingComponents';
 
 export { union } from './board/';
 
@@ -36,7 +36,8 @@ export { Player };
 // this is called from UI on first update and server on each call
 
 import type { SetupState, GameState } from '../types';
-import type { SetupFunction, SetupComponentProps } from './types';
+import type { SetupFunction } from './types';
+import type { SetupComponentProps } from '../ui/types';
 import type { ElementClass } from './board/types';
 import type { PlayerAttributes } from './player/types';
 import type { Argument } from './action/types';

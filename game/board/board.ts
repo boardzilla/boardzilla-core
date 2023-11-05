@@ -32,6 +32,15 @@ export default class Board<P extends Player> extends Space<P> {
     return this._ctx.game.players;
   }
 
+  /**
+   * The setting value created by the host
+   *
+   * @param key - Corresponds to the key in `settings` in your {@link createGame}
+   */
+  gameSetting(key: string) {
+    return this._ctx.game.settings[key];
+  }
+
   message(message: string, ...args: [...Argument<P>[], Record<string, Argument<P>>] | Argument<P>[]) {
     return this._ctx.game.message(message, ...args);
   }
