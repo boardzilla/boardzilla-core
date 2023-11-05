@@ -84,6 +84,11 @@ export default class Board<P extends Player> extends Space<P> {
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout<P>>;
     previousStyles: Record<any, Box>;
+  } = {
+    layouts: [],
+    appearance: {},
+    stepLayouts: {},
+    previousStyles: {},
   };
 
   // restore default layout rules before running setupLayout

@@ -102,11 +102,6 @@ export default class GameElement<P extends Player> {
         }
       }
     }
-
-    Object.getPrototypeOf(this).top = this.first;
-    Object.getPrototypeOf(this).topN = this.firstN;
-    Object.getPrototypeOf(this).bottom = this.last;
-    Object.getPrototypeOf(this).bottomN = this.lastN;
   }
 
   /** @internal */
