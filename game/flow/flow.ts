@@ -2,7 +2,6 @@ import { Player } from '../';
 import { Board } from '../board';
 import { Do, FlowControl } from './enums';
 
-import type ActionStep from './action-step';
 import type {
   FlowArguments,
   Position,

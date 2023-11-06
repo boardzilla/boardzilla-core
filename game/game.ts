@@ -13,7 +13,7 @@ import Flow from './flow/flow';
 import random from 'random-seed';
 
 import type { ElementClass } from './board/types';
-import type { SetupComponentProps } from './types';
+import type { SetupComponentProps } from '../ui/types';
 import type { FlowDefinition } from './flow/types';
 import type {
   GameState,

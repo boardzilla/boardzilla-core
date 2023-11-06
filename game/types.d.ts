@@ -1,6 +1,5 @@
 import type Game from './game';
 import type { Player } from './player/';
-import type { PlayerAttributes } from './player/types';
 import type { Board } from './board/';
 import type { SerializedMove } from './action/types';
 import type {
@@ -9,6 +8,7 @@ import type {
   GameUpdate,
 } from '../types';
 import type React from 'react';
+import { SetupComponentProps } from '../ui/types';
 
 export type SetupFunction<P extends Player, B extends Board<P>> = (
   state?: SetupState<P> | GameState<P>,
