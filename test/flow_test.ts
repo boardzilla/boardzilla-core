@@ -1,7 +1,7 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import Flow from '../flow/flow';
+import Flow from '../game/flow/flow';
 import {
   playerActions,
   whileLoop,
@@ -9,15 +9,15 @@ import {
   forEach,
   switchCase,
   ifElse,
-} from '../flow';
+} from '../game/flow';
 
 import {
   Do,
   FlowControl,
-} from '../flow/enums';
+} from '../game/flow/enums';
 
-import type { FlowBranchJSON } from '../flow/types';
-import type { Player } from '../player';
+import type { FlowBranchJSON } from '../game/flow/types';
+import type { Player } from '../game/player';
 
 chai.use(spies);
 const { expect } = chai;

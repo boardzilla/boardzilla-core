@@ -4,19 +4,19 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import Game from '../game'
+import Game from '../game/game'
 
 import {
   Player,
   boardClasses
-} from '../';
+} from '../game';
 
 import {
   playerActions,
   whileLoop,
   eachPlayer,
   everyPlayer
-} from '../flow';
+} from '../game/flow';
 
 chai.use(spies);
 const { expect } = chai;

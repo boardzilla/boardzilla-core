@@ -4,7 +4,7 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import { action, Action } from '../action';
+import { action, Action } from '../game/action';
 
 chai.use(spies);
 const { expect } = chai;
@@ -27,25 +27,25 @@ describe('Actions', () => {
   });
 
   it('returns selections', () => {
-    const error = testAction.process();
+    const error = testAction._process();
     expect(error).to.not.be.undefined;
-    const selections = testAction.getResolvedSelections();
+    const selections = testAction._getResolvedSelections();
     expect(selections![0].selection.type).to.equal('number');
     expect(selections![0].selection.min).to.equal(0);
     expect(selections![0].selection.max).to.equal(3);
   });
 
   it('resolves dependant selections', () => {
-    const error = testAction.process(1);
+    const error = testAction._process(1);
     expect(error).to.not.be.undefined;
-    const selections = testAction.getResolvedSelections(1);
+    const selections = testAction._getResolvedSelections(1);
     expect(selections![0].selection.type).to.equal('number');
     expect(selections![0].selection.min).to.equal(1);
     expect(selections![0].selection.max).to.equal(2);
   });
 
   it('processes', () => {
-    testAction.process(1, 2);
+    testAction._process(1, 2);
     expect(actionSpy).to.have.been.called.with(1, 2);
   });
 
@@ -55,12 +55,12 @@ describe('Actions', () => {
         .chooseFrom({ choices: [1,2] })
         .chooseFrom({ choices: [3,4], skipIf: x => x === 1 })
         .chooseFrom({ choices: [5,6]})
-      expect(testAction.nextSelection()?.choices).to.deep.equal([1,2]);
-      expect(testAction.nextSelection(2)?.choices).to.deep.equal([3,4]);
-      expect(testAction.nextSelection(1)?.choices).to.deep.equal([5,6]);
-      expect(testAction.nextSelection(2,3)?.choices).to.deep.equal([5,6]);
-      expect(testAction.nextSelection(2,3,5)).to.be.undefined;
-      expect(testAction.nextSelection(1,5)).to.be.undefined;
+      expect(testAction._nextSelection()?.choices).to.deep.equal([1,2]);
+      expect(testAction._nextSelection(2)?.choices).to.deep.equal([3,4]);
+      expect(testAction._nextSelection(1)?.choices).to.deep.equal([5,6]);
+      expect(testAction._nextSelection(2,3)?.choices).to.deep.equal([5,6]);
+      expect(testAction._nextSelection(2,3,5)).to.be.undefined;
+      expect(testAction._nextSelection(1,5)).to.be.undefined;
     });
 
     it('skipIf last', () => {
@@ -68,8 +68,8 @@ describe('Actions', () => {
         .chooseFrom({ choices: [1,2] })
         .chooseFrom({ choices: [5,6]})
         .chooseFrom({ choices: [3,4], skipIf: x => x === 1 })
-      expect(testAction.nextSelection(2,5)?.choices).to.deep.equal([3,4]);
-      expect(testAction.nextSelection(1,5)).to.be.undefined;
+      expect(testAction._nextSelection(2,5)?.choices).to.deep.equal([3,4]);
+      expect(testAction._nextSelection(1,5)).to.be.undefined;
     });
   });
 
@@ -78,18 +78,18 @@ describe('Actions', () => {
 
     it('tests choices', () => {
       testAction = action({ prompt: 'pick an even number' }).chooseFrom({ choices: [] });
-      expect(testAction.getResolvedSelections()).to.be.undefined;
+      expect(testAction._getResolvedSelections()).to.be.undefined;
 
       testAction = action({ prompt: 'pick an even number' }).chooseFrom({ choices: [1] });
-      expect(testAction.getResolvedSelections()?.length).to.equal(1);
+      expect(testAction._getResolvedSelections()?.length).to.equal(1);
     });
 
     it('tests bounds', () => {
       testAction = action({ prompt: 'pick an even number' }).chooseNumber({ min: -1, max: 0 });
-      expect(testAction.getResolvedSelections()?.length).to.equal(1);
+      expect(testAction._getResolvedSelections()?.length).to.equal(1);
 
       testAction = action({ prompt: 'pick an even number' }).chooseNumber({ min: 0, max: -1 });
-      expect(testAction.getResolvedSelections()).to.be.undefined;
+      expect(testAction._getResolvedSelections()).to.be.undefined;
     });
 
     it('resolves selection to determine viability', () => {
@@ -97,9 +97,9 @@ describe('Actions', () => {
         .chooseFrom({ choices: () => options.filter(n => n % 2 === 0) })
 
       options = [1,2];
-      expect(testAction.getResolvedSelections()?.length).to.equal(1);
+      expect(testAction._getResolvedSelections()?.length).to.equal(1);
       options = [1,3,5];
-      expect(testAction.getResolvedSelections()).to.be.undefined;
+      expect(testAction._getResolvedSelections()).to.be.undefined;
     });
 
     it('resolves selection deeply to determine viability', () => {
@@ -111,9 +111,9 @@ describe('Actions', () => {
         });
 
       options = [1,8,9,10,11,4];
-      expect(testAction.getResolvedSelections()?.length).to.equal(1);
+      expect(testAction._getResolvedSelections()?.length).to.equal(1);
       options = [1,8,9,10,11];
-      expect(testAction.getResolvedSelections()).to.be.undefined;
+      expect(testAction._getResolvedSelections()).to.be.undefined;
     });
 
     it('does not fully resolve unbounded args', () => {
@@ -124,7 +124,7 @@ describe('Actions', () => {
           max: 4
         });
 
-      expect(testAction.getResolvedSelections()?.length).to.equal(1);
+      expect(testAction._getResolvedSelections()?.length).to.equal(1);
     });
   });
 
@@ -139,51 +139,51 @@ describe('Actions', () => {
     });
 
     it('shows first selection', () => {
-      const resolvedSelections = testAction.getResolvedSelections();
+      const resolvedSelections = testAction._getResolvedSelections();
       expect(resolvedSelections?.length).to.equal(1);
       expect(resolvedSelections![0].selection.type).to.equal('choices');
       expect(resolvedSelections![0].selection.choices).to.deep.equal(['oil', 'garbage']);
     });
 
     it('expands first selection', () => {
-      testAction.selections[0].expand = true;
-      const resolvedSelections = testAction.getResolvedSelections();
+      testAction._cfg.selections[0].expand = true;
+      const resolvedSelections = testAction._getResolvedSelections();
       expect(resolvedSelections?.length).to.equal(2);
       expect(resolvedSelections![0].selection.type).to.equal('number');
       expect(resolvedSelections![1].selection.type).to.equal('number');
     });
 
     it('provides next selection', () => {
-      const resolvedSelections = testAction.getResolvedSelections('oil');
+      const resolvedSelections = testAction._getResolvedSelections('oil');
       expect(resolvedSelections?.length).to.equal(1);
       expect(resolvedSelections![0].selection.type).to.equal('number');
       expect(resolvedSelections![0].args).to.deep.equal(['oil']);
     });
 
     it('skips next selection', () => {
-      const resolvedSelections = testAction.getResolvedSelections('garbage');
+      const resolvedSelections = testAction._getResolvedSelections('garbage');
       expect(resolvedSelections?.length).to.equal(1);
       expect(resolvedSelections![0].selection.type).to.equal('number');
       expect(resolvedSelections![0].args).to.deep.equal(['garbage']);
     });
 
     it('completes', () => {
-      const resolvedSelections = testAction.getResolvedSelections('oil', 2);
+      const resolvedSelections = testAction._getResolvedSelections('oil', 2);
       expect(resolvedSelections?.length).to.equal(0);
     });
 
     it('skips', () => {
-      testAction.selections[0].choices = ['oil'];
-      const resolvedSelections = testAction.getResolvedSelections();
+      testAction._cfg.selections[0].choices = ['oil'];
+      const resolvedSelections = testAction._getResolvedSelections();
       expect(resolvedSelections?.length).to.equal(1);
       expect(resolvedSelections![0].selection.type).to.equal('number');
       expect(resolvedSelections![0].args).to.deep.equal(['oil']);
     });
 
     it('prevents skips', () => {
-      testAction.selections[0].choices = ['oil'];
-      testAction.selections[0].skipIfOnlyOne = false;
-      const resolvedSelections = testAction.getResolvedSelections();
+      testAction._cfg.selections[0].choices = ['oil'];
+      testAction._cfg.selections[0].skipIfOnlyOne = false;
+      const resolvedSelections = testAction._getResolvedSelections();
       expect(resolvedSelections?.length).to.equal(1);
       expect(resolvedSelections![0].selection.type).to.equal('choices');
       expect(resolvedSelections![0].selection.choices).to.deep.equal(['oil']);
