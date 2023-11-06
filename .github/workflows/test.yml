@@ -1,0 +1,19 @@
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+name: Check
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18.18.2
+    - uses: actions/checkout@v3
+    - run: yarn
+    - run: yarn test
