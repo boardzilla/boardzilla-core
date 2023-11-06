@@ -4,7 +4,7 @@
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p .",
+    "build": "node esbuild.mjs && tsc",
     "test": "NODE_ENV=test mocha -r ts-node/register 'test/**/*.ts'",
     "test-debug": "NODE_ENV=test mocha --inspect-brk --timeout 3600000 -r ts-node/register",
     "compile": "tsc",
@@ -39,6 +39,8 @@
     "@typescript-eslint/parser": "^6.9.1",
     "chai": "^4.3.8",
     "chai-spies": "^1.0.0",
+    "esbuild": "^0.19.5",
+    "esbuild-sass-plugin": "^2.16.0",
     "eslint": "^8.53.0",
     "mocha": "^10.2.0",
     "ts-node": "^10.8.2",

@@ -6,7 +6,7 @@ import PlayerControls from './components/PlayerControls';
 import '../styles/game.scss';
 import click from '../assets/click_004.ogg';
 
-import type { GameElement, Board } from '../../game/board'
+import type { GameElement } from '../../game/board'
 import type { PendingMove, Argument } from '../../game/action/types';
 import type { Player } from '../../game/player';
 
