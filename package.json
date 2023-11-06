@@ -12,7 +12,8 @@
     "lint": "eslint . --ext .ts"
   },
   "exports": {
-    ".": "./dist"
+    "ui": "./dist/ui",
+    "game": "./dist/game"
   },
   "types": "types.d.ts",
   "dependencies": {
