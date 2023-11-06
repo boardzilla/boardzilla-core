@@ -73,7 +73,7 @@ export default class Space<P extends Player> extends GameElement<P> {
    */
   connectTo(space: Space<P>, distance: number = 1) {
     if (!this._t.parent || this._t.parent !== space._t.parent) throw Error("Cannot connect two spaces that are not in the same parent space");
-    
+
     if (!this._t.parent._t.graph) {
       this._t.parent._t.graph = new UndirectedGraph<{space: Space<P>}, {distance: number}>();
     }
@@ -156,7 +156,9 @@ export default class Space<P extends Player> extends GameElement<P> {
         if (d > distance) return true;
         if (el !== this) c.push(el);
       });
-    } catch(e) { }
+    } catch(e) {
+      throw e;
+    }
     return c;
   }
 
