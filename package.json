@@ -11,11 +11,8 @@
     "docs": "typedoc",
     "lint": "eslint . --ext .ts"
   },
-  "exports": {
-    "ui": "./dist/ui/index.js",
-    "game": "./dist/game/index.js"
-  },
-  "types": "types.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/types.d.ts",
   "dependencies": {
     "classnames": "^2.3.1",
     "graphology": "^0.25.4",
