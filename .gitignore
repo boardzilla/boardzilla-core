@@ -1,6 +1,11 @@
+# temp files
 .DS_Store
+\#tmp\#
+
+# npm
 node_modules
 yarn-error.log
-**/build/*
+
+# build artifacts
+/dist
 /docs
-\#tmp\#
