@@ -5,18 +5,18 @@ import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
-import Game from '../game/game.js'
-import { serializeArg } from '../game/action/utils.js';
+import { default as Game, PlayerAttributes } from '../game.js'
+import { serializeArg } from '../action/utils.js';
 
 import type { GameUpdateEvent, GameFinishedEvent } from './Main.js'
-import type Player from '../game/player/player.js'
-import type { Board, GameElement } from '../game/board/index.js'
-import type { ElementJSON } from '../game/board/element.js'
-import type { SetupFunction } from '../game/index.js'
-import type { SerializedArg } from '../game/action/utils.js'
-import type { BoardQuery } from '../game/action/selection.js'
-import type { Argument } from '../game/action/action.js'
-import type { PendingMove, SerializedMove } from '../game/game.js'
+import type Player from '../player/player.js'
+import type { Board, GameElement } from '../board/index.js'
+import type { ElementJSON } from '../board/element.js'
+import type { SerializedArg } from '../action/utils.js'
+import type { BoardQuery } from '../action/selection.js'
+import type { Argument } from '../action/action.js'
+import type { PendingMove, SerializedMove } from '../game.js'
+import type { SetupFunction } from '../index.js'
 
 type GameStore = {
   setup?: SetupFunction<Player, Board<Player>>;
@@ -259,11 +259,29 @@ const updateBoard = (game: Game<Player, Board<Player>>, position: number) => {
   return ({ boardJSON: game.board.allJSON() })
 }
 
-export const render = <P extends Player, B extends Board<P>>(setup: SetupFunction<P, B>): void => {
+export type SetupComponentProps = {
+  name: string
+  settings: Record<string, any>
+  players: PlayerAttributes<Player>[]
+  updateKey: (key: string, value: any) => void
+}
+
+export const render = <P extends Player, B extends Board<P>>(setup: SetupFunction<P, B>, { settings, breakpoints, layout }: {
+  settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
+  breakpoints?: (aspectRatio: number) => string,
+  layout?: (board: B, breakpoint: string) => void
+}): void => {
   const state = gameStore.getState();
-  state.setSetup(setup as unknown as SetupFunction<Player, Board<Player>>);
+  const setupGame: SetupFunction<P, B> = (state, options) => {
+    const game = setup(state, options);
+    game.setupComponents = settings;
+    game.board._ui.breakpoints = breakpoints;
+    game.board._ui.setupLayout = layout;
+    return game;
+  }
   // we can anonymize Player class internally
-  state.setGame(setup() as unknown as Game<Player, Board<Player>>)
+  state.setSetup(setupGame as unknown as SetupFunction<Player, Board<Player>>);
+  state.setGame(setupGame() as unknown as Game<Player, Board<Player>>);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
   const userID: string = boostrap.userID;

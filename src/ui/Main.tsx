@@ -3,9 +3,9 @@ import { gameStore } from './index.js';
 import Game from './game/Game.js';
 import Setup from './setup/Setup.js';
 
-import type { GameState } from '../game/interface.js';
-import type { SerializedArg } from '../game/action/utils.js';
-import type Player from '../game/player/player.js';
+import type { GameState } from '../interface.js';
+import type { SerializedArg } from '../action/utils.js';
+import type Player from '../player/player.js';
 
 export type User = {
   id: string

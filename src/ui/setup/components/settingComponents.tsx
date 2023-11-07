@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SetupComponentProps } from '../../../game/index.js'
+import type { SetupComponentProps } from '../../index.js'
 
 export const toggleSetting = (label: string) => ({ name, settings, updateKey }: SetupComponentProps) => (
   <div>
@@ -27,6 +27,6 @@ export const textSetting = (label: string) => ({ name, settings, updateKey }: Se
 export const numberSetting = (label: string, min: number, max: number) => ({ name, settings, updateKey }: SetupComponentProps) => (
   <div>
     <label>{label}: </label>
-    <input type="number" min={min} max={max} value={settings ? settings[name] || "" : ""} onChange={e => updateKey(name, e.target.value)}/>
+    <input type="number" min={min} max={max} value={settings ? settings[name] || String(min) : String(min)} onChange={e => updateKey(name, e.target.value)}/>
   </div>
 )

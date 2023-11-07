@@ -5,10 +5,10 @@ import Element from './components/Element.js';
 import PlayerControls from './components/PlayerControls.js';
 import { click } from '../assets/index.js';
 
-import type { GameElement } from '../../game/board/index.js'
-import type { PendingMove } from '../../game/game.js';
-import type { Argument } from '../../game/action/action.js';
-import type { Player } from '../../game/player/index.js';
+import type { GameElement } from '../../board/index.js'
+import type { PendingMove } from '../../game.js';
+import type { Argument } from '../../action/action.js';
+import type { Player } from '../../player/index.js';
 
 export default () => {
   const [game, position, selectMove, selected, setSelected, setAspectRatio, dragElement, boardJSON] =

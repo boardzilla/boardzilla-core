@@ -13,7 +13,7 @@ import Flow from './flow/flow.js';
 import random from 'random-seed';
 
 import type { ElementClass } from './board/element.js';
-import type { SetupComponentProps } from './index.js';
+import type { SetupComponentProps } from './ui/index.js';
 import type { FlowDefinition } from './flow/flow.js';
 import type { GameState, PlayerPositionState, GameUpdate } from './interface.js';
 import type { SerializedArg } from './action/utils.js';

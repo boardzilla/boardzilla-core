@@ -6,12 +6,12 @@ import { gameStore } from '../../index.js';
 import {
   Piece,
   GameElement,
-} from '../../../game/board/index.js'
-import { serialize, humanizeArg } from '../../../game/action/utils.js'
+} from '../../../board/index.js'
+import { serialize, humanizeArg } from '../../../action/utils.js'
 
-import type { ElementJSON } from '../../../game/board/element.js';
-import type { PendingMove } from '../../../game/game.js';
-import type { Player } from '../../../game/player/index.js';
+import type { ElementJSON } from '../../../board/element.js';
+import type { PendingMove } from '../../../game.js';
+import type { Player } from '../../../player/index.js';
 import type { DraggableData } from 'react-draggable';
 
 const elementAttributes = (el: GameElement<Player>) => {

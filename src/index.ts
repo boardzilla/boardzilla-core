@@ -7,13 +7,6 @@ import {
   action,
 } from './action/index.js';
 
-export {
-  toggleSetting,
-  numberSetting,
-  textSetting,
-  choiceSetting
-} from '../ui/setup/components/settingComponents.js';
-
 export { union } from './board/index.js';
 
 export {
@@ -31,6 +24,13 @@ export {
 export { createInteface } from './interface.js';
 export { times } from './utils.js';
 export { Player, action };
+export { render } from './ui/index.js';
+export {
+  toggleSetting,
+  numberSetting,
+  textSetting,
+  choiceSetting
+} from './ui/setup/components/settingComponents.js';
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
@@ -47,13 +47,6 @@ export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
   Space: Space<P>,
   Piece: Piece<P>,
 });
-
-export type SetupComponentProps = {
-  name: string
-  settings: Record<string, any>
-  players: PlayerAttributes<Player>[]
-  updateKey: (key: string, value: any) => void
-}
 
 export type SetupFunction<P extends Player, B extends Board<P>> = (
   state?: SetupState<P> | GameState<P>,
@@ -90,16 +83,13 @@ export type SetupFunction<P extends Player, B extends Board<P>> = (
     - an instance of the `boardClass` above
     - the breakpoint string from your `breakpoints` function, or '_default' if none specified.
  */
-export const createGame = <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, settings, setup, flow, actions, breakpoints, layout }: {
+export const createGame = <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions }: {
   playerClass: {new(a: PlayerAttributes<P>): P},
   boardClass: ElementClass<P, B>,
   elementClasses?: ElementClass<P, GameElement<P>>[],
-  settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   setup?: (board: B) => any,
   flow: (board: B) => FlowDefinition<P>,
   actions: (board: B, actionFunction: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>,
-  breakpoints?: (aspectRatio: number) => string,
-  layout?: (board: B, breakpoint: string) => void
 }): SetupFunction<P, B> => (
   state?: SetupState<P> | GameState<P>,
   options?: {
@@ -123,7 +113,6 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
     }
   }
   game.setRandomSeed(rseed);
-  game.setupComponents = settings;
   game.definePlayers(playerClass);
   //console.timeLog('setup', 'setup players');
   game.defineBoard(boardClass, elementClasses || []);
@@ -161,8 +150,6 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
     if (game.phase !== 'finished') game.play();
   }
 
-  game.board._ui.breakpoints = breakpoints;
-  game.board._ui.setupLayout = layout;
   console.timeEnd('setup');
   return game;
 };

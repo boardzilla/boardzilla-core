@@ -1,13 +1,13 @@
 import React, { useCallback, useMemo } from 'react';
 import { gameStore } from '../../index.js';
-import { humanizeArg } from '../../../game/action/index.js';
-import { serializeArg, deserializeArg } from '../../../game/action/utils.js';
+import { humanizeArg } from '../../../action/index.js';
+import { serializeArg, deserializeArg } from '../../../action/utils.js';
 
-import type { Player } from '../../../game/player/index.js';
-import type { GameElement } from '../../../game/board/index.js';
-import type { PendingMove } from '../../../game/game.js';
-import type { Argument } from '../../../game/action/action.js';
-import type { SerializedArg } from '../../../game/action/utils.js';
+import type { Player } from '../../../player/index.js';
+import type { GameElement } from '../../../board/index.js';
+import type { PendingMove } from '../../../game.js';
+import type { Argument } from '../../../action/action.js';
+import type { SerializedArg } from '../../../action/utils.js';
 
 const PlayerControls = ({onSubmit, disambiguateElement}: {
   onSubmit: (move?: PendingMove<Player>, value?: Argument<Player>) => void,

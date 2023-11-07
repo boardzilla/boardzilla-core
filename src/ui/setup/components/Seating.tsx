@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { times } from '../../../game/index.js';
+import { times } from '../../../index.js';
 import { GithubPicker } from 'react-color';
 
 import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
