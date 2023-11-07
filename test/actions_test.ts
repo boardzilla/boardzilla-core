@@ -1,10 +1,9 @@
 /* global describe, it, beforeEach */
 /* eslint-disable no-unused-expressions */
-
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import { action, Action } from '../game/action';
+import { action, Action } from '../src/action/index.js';
 
 chai.use(spies);
 const { expect } = chai;

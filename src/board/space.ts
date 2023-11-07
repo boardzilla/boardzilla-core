@@ -1,7 +1,7 @@
 import GameElement from './element.js'
 import ElementCollection from './element-collection.js'
 
-import { UndirectedGraph } from 'graphology';
+import graphology from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
 import { bfs } from 'graphology-traversal';
 
@@ -73,7 +73,7 @@ export default class Space<P extends Player> extends GameElement<P> {
     if (!this._t.parent || this._t.parent !== space._t.parent) throw Error("Cannot connect two spaces that are not in the same parent space");
 
     if (!this._t.parent._t.graph) {
-      this._t.parent._t.graph = new UndirectedGraph<{space: Space<P>}, {distance: number}>();
+      this._t.parent._t.graph = new graphology.UndirectedGraph<{space: Space<P>}, {distance: number}>();
     }
     const graph = this._t.parent._t.graph;
     if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {space: this});

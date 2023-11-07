@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 import { times } from '../../../index.js';
-import { GithubPicker } from 'react-color';
+import ReactColor from 'react-color';
 
 import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
 
@@ -67,7 +67,7 @@ const Seating = ({ users, players, minPlayers, maxPlayers, onUpdatePlayers }: {
                   onClick={() => setPickingColor(picking => picking === p ? undefined : p)}
                 />
                 {pickingColor === p && (
-                  <GithubPicker
+                  <ReactColor.GithubPicker
                     color={player.color}
                     colors={colors.filter(c => c === player.color || !players.map(p => p.color).includes(c))}
                     onChange={c => updateColor(p, c.hex)}

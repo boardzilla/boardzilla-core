@@ -13,5 +13,10 @@
     "jsx": "react"
   },
   "include": ["./src", "decl.d.ts"],
-  "exclude": ["./src/test"]
+  "ts-node": {
+    "files": true,
+    "ignore": [
+      ".*ui/.*",
+    ],
+  }
 }
