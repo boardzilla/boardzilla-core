@@ -12,11 +12,14 @@
     "strictNullChecks": true,
     "jsx": "react"
   },
-  "include": ["./src", "decl.d.ts"],
+  "include": ["decl.d.ts", "./src"],
   "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": true,
     "files": true,
     "ignore": [
-      ".*ui/.*",
+      ".*scss",
+      ".*ogg",
     ],
   }
 }

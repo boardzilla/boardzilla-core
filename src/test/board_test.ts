@@ -8,12 +8,12 @@ import {
   Space,
   Piece,
   GameElement,
-} from '../src/board/index.js';
+} from '../board/index.js';
 
 import {
   Player,
   PlayerCollection,
-} from '../src/player/index.js';
+} from '../player/index.js';
 
 chai.use(spies);
 const { expect } = chai;

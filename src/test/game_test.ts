@@ -1,10 +1,9 @@
 /* global describe, it, beforeEach */
 /* eslint-disable no-unused-expressions */
-
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import Game from '../src/game.js'
+import Game from '../game.js'
 
 import {
   Player,
@@ -13,7 +12,7 @@ import {
   whileLoop,
   eachPlayer,
   everyPlayer
-} from '../src/index.js';
+} from '../index.js';
 
 chai.use(spies);
 const { expect } = chai;

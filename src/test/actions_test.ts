@@ -3,7 +3,7 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import { action, Action } from '../src/action/index.js';
+import { action, Action } from '../action/index.js';
 
 chai.use(spies);
 const { expect } = chai;

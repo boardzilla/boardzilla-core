@@ -1,4 +1,4 @@
-import tsNode from 'ts-node';
+const tsNode = require('ts-node');
 
 tsNode.register({
   project: './tsconfig.json',

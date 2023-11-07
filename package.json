@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc && node esbuild.mjs",
-    "test": "NODE_ENV=test mocha -r ts-node/register 'test/**/*.ts'",
+    "test": "NODE_ENV=test yarn run build && mocha src/test/setup.js dist/test/*_test.js",
+    "test-ts": "NODE_ENV=test mocha -r ts-node/register 'test/**/*.ts'",
     "test-debug": "NODE_ENV=test mocha --inspect-brk --timeout 3600000 -r ts-node/register",
     "compile": "tsc",
     "docs": "typedoc",
