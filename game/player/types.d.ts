@@ -1,4 +1,4 @@
-import type { Player } from './';
+import type { Player } from './index.js';
 
 // find all non-method non-internal attr's
 export type PlayerAttributes<T extends Player> = {

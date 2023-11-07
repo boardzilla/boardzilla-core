@@ -4,15 +4,19 @@
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "node esbuild.mjs && tsc",
+    "build": "tsc && node esbuild.mjs",
     "test": "NODE_ENV=test mocha -r ts-node/register 'test/**/*.ts'",
     "test-debug": "NODE_ENV=test mocha --inspect-brk --timeout 3600000 -r ts-node/register",
     "compile": "tsc",
     "docs": "typedoc",
     "lint": "eslint . --ext .ts"
   },
+  "type": "module",
   "main": "dist/index.js",
-  "types": "dist/types.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "types": "dist/index.js",
   "dependencies": {
     "classnames": "^2.3.1",
     "graphology": "^0.25.4",

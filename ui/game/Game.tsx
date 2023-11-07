@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { gameStore } from '../';
+import { gameStore } from '../index.js';
 
-import Element from './components/Element';
-import PlayerControls from './components/PlayerControls';
-import '../styles/game.scss';
-import click from '../assets/click_004.ogg';
+import Element from './components/Element.js';
+import PlayerControls from './components/PlayerControls.js';
+import { click } from '../assets/index.js';
 
-import type { GameElement } from '../../game/board'
-import type { PendingMove, Argument } from '../../game/action/types';
-import type { Player } from '../../game/player';
+import type { GameElement } from '../../game/board/index.js'
+import type { PendingMove, Argument } from '../../game/action/types.d.ts';
+import type { Player } from '../../game/player/index.js';
 
 export default () => {
   const [game, position, selectMove, selected, setSelected, setAspectRatio, dragElement, boardJSON] =

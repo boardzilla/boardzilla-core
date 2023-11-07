@@ -1,9 +1,9 @@
-import ForLoop from './for-loop';
-import { serialize, deserialize } from '../action/utils';
+import ForLoop from './for-loop.js';
+import { serialize, deserialize } from '../action/utils.js';
 
-import type { FlowArguments, FlowDefinition, ForEachPosition, FlowBranchNode } from './types';
-import type { Serializable } from '../action/types';
-import type { Player } from '../player';
+import type { FlowArguments, FlowDefinition, ForEachPosition, FlowBranchNode } from './types.d.ts';
+import type { Serializable } from '../action/types.d.ts';
+import type { Player } from '../player/index.js';
 
 export default class ForEach<P extends Player, T extends Serializable<P>> extends ForLoop<P, T> {
   collection: ((a: FlowArguments) => T[]) | T[]

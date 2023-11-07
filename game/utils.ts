@@ -1,11 +1,11 @@
-import { deserializeArg } from './action/utils';
+import { deserializeArg } from './action/utils.js';
 
-import type { Player } from './';
-import type Game from './game';
-import type { Board } from './board';
-import type { SerializedArg, SerializedMove } from './action/types';
-import type { SetupFunction, GameInterface } from './types';
-import type { SetupState, GameStartedState, GameFinishedState, GameUpdate } from '../types';
+import type { Player } from './index.js';
+import type Game from './game.js';
+import type { Board } from './board/index.js';
+import type { SerializedArg, SerializedMove } from './action/types.d.ts';
+import type { SetupFunction, GameInterface } from './types.d.ts';
+import type { SetupState, GameStartedState, GameFinishedState, GameUpdate } from '../types.d.ts';
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {

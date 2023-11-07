@@ -2,10 +2,10 @@ import * as esbuild from 'esbuild'
 import {sassPlugin} from 'esbuild-sass-plugin'
 
 await esbuild.build({
-  entryPoints: ['index.ts'],
+  entryPoints: ['./ui/assets'],
   bundle: true,
-  outfile: 'dist/index.js',
-  loader: { '.ogg': 'base64' },
+  outfile: 'dist/ui/assets/index.js',
+  loader: { '.ogg': 'dataurl' },
   plugins: [sassPlugin({
     "type": "style"
   })],

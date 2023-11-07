@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { gameStore } from './';
-import Game from './game/Game';
-import Setup from './setup/Setup';
+import { gameStore } from './index.js';
+import Game from './game/Game.js';
+import Setup from './setup/Setup.js';
 
 import type {
   User,
@@ -17,7 +17,7 @@ import type {
   MoveMessage,
   UpdateSettingsMessage,
   UpdatePlayersMessage,
-} from './types';
+} from './types.d.ts';
 
 export default ({ userID, minPlayers, maxPlayers }: {
   userID: string,

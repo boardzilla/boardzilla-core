@@ -1,7 +1,7 @@
-import type { Player } from './game/player/';
-import type { ElementJSON } from './game/board/types';
-import type { PlayerAttributes } from './game/player/types';
-import type { FlowBranchJSON } from './game/flow/types';
+import type { Player } from './game/player/index.ts';
+import type { ElementJSON } from './game/board/types.d.ts';
+import type { PlayerAttributes } from './game/player/types.d.ts';
+import type { FlowBranchJSON } from './game/flow/types.d.ts';
 
 export type SetupState<P extends Player> = {
   players: (PlayerAttributes<P> & Record<string, any>)[],

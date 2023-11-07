@@ -3,15 +3,14 @@
     "target": "es2020",
     "module": "nodenext",
     "resolveJsonModule": true,
-    "outFile": "dist/index.d.ts",
+    "outDir": "dist",
     "esModuleInterop": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "emitDeclarationOnly": true,
     "jsx": "react"
   },
-  "include": ["index.ts", "index.d.ts"]
+  "include": ["./game", "./ui", "index.ts", "index.d.ts"]
 }

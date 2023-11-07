@@ -1,7 +1,7 @@
-import type Flow from './flow';
-import type { Do } from './enums';
-import type { Argument } from '../action/types.d';
-import type { Player } from '../player';
+import type Flow from './flow.js';
+import type { Do } from './enums.js';
+import type { Argument } from '../action/types.d.ts';
+import type { Player } from '../player/index.js';
 
 export type FlowArguments = Record<string, any>;
 

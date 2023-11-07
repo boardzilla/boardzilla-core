@@ -1,8 +1,8 @@
 import React from 'react';
-import Seating from './components/Seating';
-import { gameStore } from '../';
+import Seating from './components/Seating.js';
+import { gameStore } from '../index.js';
 
-import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../types';
+import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../types.d.ts';
 
 export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlayers, onUpdateSettings, onStart }: {
   users: User[],

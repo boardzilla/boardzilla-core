@@ -1,11 +1,11 @@
-import Player from './player';
+import Player from './player.js';
 
-import { shuffleArray } from '../utils';
+import { shuffleArray } from '../utils.js';
 
-import type Game from '../game';
-import type { Board } from '../board';
-import type { Sorter } from '../types';
-import type { PlayerAttributes } from './types';
+import type Game from '../game.js';
+import type { Board } from '../board/index.js';
+import type { Sorter } from '../types.d.ts';
+import type { PlayerAttributes } from './types.d.ts';
 
 export default class PlayerCollection<P extends Player> extends Array<P> {
   currentPosition: number[];

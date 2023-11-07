@@ -1,12 +1,12 @@
-import {Piece, GameElement} from './'
+import {Piece, GameElement} from './index.js'
 
-import {
+import type {
   ElementClass,
   ElementFinder,
   ElementUI,
-} from './types';
-import type { Sorter } from '../types';
-import type { Player } from '../player';
+} from './types.d.ts';
+import type { Sorter } from '../types.d.ts';
+import type { Player } from '../player/index.js';
 
 /**
  * Operations that return groups of {@link GameElement| | GameElement's} return

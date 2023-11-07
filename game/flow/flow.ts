@@ -1,6 +1,6 @@
-import { Player } from '../';
-import { Board } from '../board';
-import { Do, FlowControl } from './enums';
+import { Player } from '../index.js';
+import { Board } from '../board/index.js';
+import { Do, FlowControl } from './enums.js';
 
 import type {
   FlowArguments,
@@ -10,8 +10,8 @@ import type {
   FlowBranchNode,
   FlowBranchJSON,
   ActionStepPosition,
-} from './types';
-import type Game from '../game';
+} from './types.d.ts';
+import type Game from '../game.js';
 
 /** internal */
 export default class Flow<P extends Player> {

@@ -1,10 +1,10 @@
-import { range } from '../utils';
-import { combinations } from './utils';
+import { range } from '../utils.js';
+import { combinations } from './utils.js';
 
-import type { ResolvedSelection, BoardQueryMulti } from '../action/types';
-import type { SingleArgument, Argument, SelectionDefinition } from './types';
-import type { GameElement } from '../board/';
-import type { Player } from '../player/';
+import type { ResolvedSelection, BoardQueryMulti } from '../action/types.d.ts';
+import type { SingleArgument, Argument, SelectionDefinition } from './types.d.ts';
+import type { GameElement } from '../board/index.js';
+import type { Player } from '../player/index.js';
 
 export default class Selection<P extends Player> {
   type: 'board' | 'choices' | 'text' | 'number' | 'button'

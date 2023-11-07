@@ -4,21 +4,16 @@ import React from 'react'
 import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
-import Main from './Main'
-import Game from '../game/game'
-import { serializeArg } from '../game/action/utils';
+import Main from './Main.js'
+import Game from '../game/game.js'
+import { serializeArg } from '../game/action/utils.js';
 
-import type { GameUpdateEvent, GameFinishedEvent } from './types'
-import type { Player } from '../game'
-import type { Board, GameElement } from '../game/board'
-import type { ElementJSON } from '../game/board/types'
-import type { SetupFunction } from '../game/types'
-import type { Argument, PendingMove, SerializedMove, SerializedArg, BoardQuery } from '../game/action/types'
-
-const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
-const userID: string = boostrap.userID;
-const minPlayers: number = boostrap.minPlayers;
-const maxPlayers: number = boostrap.maxPlayers;
+import type { GameUpdateEvent, GameFinishedEvent } from './types.d.ts'
+import type { Player } from '../game/index.js'
+import type { Board, GameElement } from '../game/board/index.js'
+import type { ElementJSON } from '../game/board/types.d.ts'
+import type { SetupFunction } from '../game/types.d.ts'
+import type { Argument, PendingMove, SerializedMove, SerializedArg, BoardQuery } from '../game/action/types.d.ts'
 
 type GameStore = {
   setup?: SetupFunction<Player, Board<Player>>;
@@ -261,11 +256,16 @@ const updateBoard = (game: Game<Player, Board<Player>>, position: number) => {
   return ({ boardJSON: game.board.allJSON() })
 }
 
-export default <P extends Player, B extends Board<P>>(setup: SetupFunction<P, B>): void => {
+export const render = <P extends Player, B extends Board<P>>(setup: SetupFunction<P, B>): void => {
   const state = gameStore.getState();
   state.setSetup(setup as unknown as SetupFunction<Player, Board<Player>>);
   // we can anonymize Player class internally
   state.setGame(setup() as unknown as Game<Player, Board<Player>>)
+
+  const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
+  const userID: string = boostrap.userID;
+  const minPlayers: number = boostrap.minPlayers;
+  const maxPlayers: number = boostrap.maxPlayers;
 
   const root = createRoot(document.getElementById('root')!)
   root.render(

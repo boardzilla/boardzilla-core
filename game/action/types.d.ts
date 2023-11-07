@@ -1,6 +1,6 @@
-import { Player } from '../player/';
-import { GameElement } from '../board/';
-import type Selection from './selection';
+import { Player } from '../player/index.js';
+import { GameElement } from '../board/index.js';
+import type Selection from './selection.js';
 
 export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | P;
 export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];

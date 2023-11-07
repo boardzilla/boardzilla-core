@@ -1,33 +1,33 @@
-import { action } from './action/';
-import { escapeArgument } from './action/utils';
+import { action } from './action/index.js';
+import { escapeArgument } from './action/utils.js';
 import {
   Board,
   Space,
   Piece,
   GameElement
-} from './board/';
-import { Action, Selection } from './action';
-import { Player, PlayerCollection } from './player/';
-import Flow from './flow/flow';
+} from './board/index.js';
+import { Action, Selection } from './action/index.js';
+import { Player, PlayerCollection } from './player/index.js';
+import Flow from './flow/flow.js';
 
 import random from 'random-seed';
 
-import type { ElementClass } from './board/types';
-import type { SetupComponentProps } from '../ui/types';
-import type { FlowDefinition } from './flow/types';
+import type { ElementClass } from './board/types.d.ts';
+import type { SetupComponentProps } from '../ui/types.d.ts';
+import type { FlowDefinition } from './flow/types.d.ts';
 import type {
   GameState,
   GameUpdate,
   PlayerPositionState,
   Message,
-} from '../types';
+} from '../types.d.ts';
 import type {
   Move,
   Argument,
   SerializedArg,
   PendingMove,
-} from './action/types';
-import type { PlayerAttributes } from './player/types';
+} from './action/types.d.ts';
+import type { PlayerAttributes } from './player/types.d.ts';
 import type React from 'react';
 
 export default class Game<P extends Player, B extends Board<P>> {

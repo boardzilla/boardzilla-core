@@ -1,17 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { gameStore } from '../../';
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
+import { gameStore } from '../../index.js';
 
 import {
   Piece,
   GameElement,
-} from '../../../game/board'
-import { serialize, humanizeArg } from '../../../game/action/utils'
+} from '../../../game/board/index.js'
+import { serialize, humanizeArg } from '../../../game/action/utils.js'
 
-import type { ElementJSON } from '../../../game/board/types';
-import type { PendingMove } from '../../../game/action/types';
-import type { Player } from '../../../game/player';
+import type { ElementJSON } from '../../../game/board/types.d.ts';
+import type { PendingMove } from '../../../game/action/types.d.ts';
+import type { Player } from '../../../game/player/index.js';
 import type { DraggableData } from 'react-draggable';
 
 const elementAttributes = (el: GameElement<Player>) => {

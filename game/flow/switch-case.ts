@@ -1,10 +1,10 @@
-import Flow from './flow';
+import Flow from './flow.js';
 
-import { serialize, deserialize } from '../action/utils';
+import { serialize, deserialize } from '../action/utils.js';
 
-import type { FlowArguments, FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion, FlowStep } from './types';
-import type { Player } from '../player';
-import type { Serializable } from '../action/types';
+import type { FlowArguments, FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion, FlowStep } from './types.d.ts';
+import type { Player } from '../player/index.js';
+import type { Serializable } from '../action/types.d.ts';
 
 export default class SwitchCase<P extends Player, T extends Serializable<P>> extends Flow<P> {
   position: SwitchCasePostion<T>;

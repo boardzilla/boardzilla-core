@@ -1,5 +1,5 @@
-import type PlayerCollection from './collection';
-import { escapeArgument } from '../action/utils';
+import type PlayerCollection from './collection.js';
+import { escapeArgument } from '../action/utils.js';
 
 export default class Player {
   name: string;

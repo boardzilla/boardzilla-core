@@ -1,15 +1,15 @@
-import { Player } from '../player';
-import { GameElement } from '../board';
-import type { Serializable } from './types';
+import { Player } from '../player/index.js';
+import { GameElement } from '../board/index.js';
+import type { Serializable } from './types.d.ts';
 
 import type {
   Argument,
   SingleArgument,
   SerializedArg,
   SerializedSingleArg,
-} from './types';
-import type Game from '../game';
-import type { Board } from '../board';
+} from './types.d.ts';
+import type Game from '../game.js';
+import type { Board } from '../board/index.js';
 
 export const humanizeArg = <P extends Player>(arg: Argument<P>) => {
   if (arg instanceof Player) return arg.name;

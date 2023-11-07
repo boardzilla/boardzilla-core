@@ -1,9 +1,9 @@
-import Flow from './flow';
+import Flow from './flow.js';
 
-import type { Player } from '../player';
-import type { Serializable } from '../action/types';
-import type { FlowArguments, FlowDefinition, ForLoopPosition, FlowBranchNode } from './types';
-import { FlowControl } from './enums';
+import type { Player } from '../player/index.js';
+import type { Serializable } from '../action/types.d.ts';
+import type { FlowArguments, FlowDefinition, ForLoopPosition, FlowBranchNode } from './types.d.ts';
+import { FlowControl } from './enums.js';
 
 export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow<P> {
   block: FlowDefinition<P>;

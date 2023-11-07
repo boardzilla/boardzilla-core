@@ -1,20 +1,20 @@
-import Game from './game';
-import { Player } from './player';
-import { Board, Piece, Space, GameElement } from './board';
+import Game from './game.js';
+import { Player } from './player/index.js';
+import { Board, Piece, Space, GameElement } from './board/index.js';
 
 import {
   Action,
   action,
-} from './action/';
+} from './action/index.js';
 
 export {
   toggleSetting,
   numberSetting,
   textSetting,
   choiceSetting
-} from '../ui/setup/components/settingComponents';
+} from '../ui/setup/components/settingComponents.js';
 
-export { union } from './board/';
+export { union } from './board/index.js';
 
 export {
   playerActions,
@@ -26,22 +26,22 @@ export {
   eachPlayer,
   everyPlayer,
   Do
-} from './flow/';
+} from './flow/index.js';
 
-export { times } from './utils';
+export { times, createInteface } from './utils.js';
 
 export { Player };
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
 
-import type { SetupState, GameState } from '../types';
-import type { SetupFunction } from './types';
-import type { SetupComponentProps } from '../ui/types';
-import type { ElementClass } from './board/types';
-import type { PlayerAttributes } from './player/types';
-import type { Argument } from './action/types';
-import type { FlowDefinition } from './flow/types';
+import type { SetupState, GameState } from '../types.d.ts';
+import type { SetupFunction } from './types.d.ts';
+import type { SetupComponentProps } from '../ui/types.d.ts';
+import type { ElementClass } from './board/types.d.ts';
+import type { PlayerAttributes } from './player/types.d.ts';
+import type { Argument } from './action/types.d.ts';
+import type { FlowDefinition } from './flow/types.d.ts';
 
 export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
   GameElement: GameElement<P>,

@@ -1,8 +1,8 @@
-import Flow from './flow';
-import { FlowControl } from './';
+import Flow from './flow.js';
+import { FlowControl } from './index.js';
 
-import type { Player } from '../player';
-import type { FlowArguments, FlowDefinition, WhileLoopPosition, FlowBranchNode } from './types';
+import type { Player } from '../player/index.js';
+import type { FlowArguments, FlowDefinition, WhileLoopPosition, FlowBranchNode } from './types.d.ts';
 
 export default class WhileLoop<P extends Player> extends Flow<P> {
   block: FlowDefinition<P>;

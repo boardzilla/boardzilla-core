@@ -1,5 +1,5 @@
-import GameElement from './element'
-import ElementCollection from './element-collection'
+import GameElement from './element.js'
+import ElementCollection from './element-collection.js'
 
 import { UndirectedGraph } from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
@@ -10,8 +10,8 @@ import type {
   ElementClass,
   ElementAttributes,
   ElementEventHandler
-} from './types';
-import type { Player } from '../player';
+} from './types.d.ts';
+import type { Player } from '../player/index.js';
 
 /**
  * Spaces are areas of the board. The spaces of your board are declared during
@@ -150,14 +150,14 @@ export default class Space<P extends Player> extends GameElement<P> {
     try {
       const graph = this._t.parent!._t.graph!;
       bfs(graph, node => {
-        const el = graph.getNodeAttributes(node).element;
+        const el = graph.getNodeAttributes(node).space;
         const d = this.distanceTo(el);
         if (d === undefined) return false;
         if (d > distance) return true;
         if (el !== this) c.push(el);
       });
     } catch(e) {
-      throw e;
+      throw Error("No connections on this space");
     }
     return c;
   }

@@ -1,7 +1,7 @@
-import ElementCollection from './element-collection';
-import { shuffleArray, times } from '../utils';
-import { translate, cellSizeForArea } from './utils';
-import { serializeObject, deserializeObject, escapeArgument } from '../action/utils';
+import ElementCollection from './element-collection.js';
+import { shuffleArray, times } from '../utils.js';
+import { translate, cellSizeForArea } from './utils.js';
+import { serializeObject, deserializeObject, escapeArgument } from '../action/utils.js';
 import random from 'random-seed';
 
 import type {
@@ -13,11 +13,11 @@ import type {
   ElementUI,
   Box,
   Vector
-} from './types';
+} from './types.d.ts';
 
-import type { Player } from '../player';
-import type Board from './board';
-import type { Sorter } from '../types';
+import type { Player } from '../player/index.js';
+import type Board from './board.js';
+import type { Sorter } from '../types.d.ts';
 
 import type { UndirectedGraph } from 'graphology';
 

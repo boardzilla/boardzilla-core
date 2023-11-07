@@ -1,15 +1,15 @@
-import {default as ActionStep} from './action-step';
-import {default as WhileLoop} from './while-loop';
-import {default as ForLoop} from './for-loop';
-import {default as ForEach} from './foreach';
-import {default as EachPlayer} from './each-player';
-import {default as SwitchCase} from './switch-case';
-import {default as IfElse} from './if-else';
-import {default as EveryPlayer} from './every-player';
+import {default as ActionStep} from './action-step.js';
+import {default as WhileLoop} from './while-loop.js';
+import {default as ForLoop} from './for-loop.js';
+import {default as ForEach} from './foreach.js';
+import {default as EachPlayer} from './each-player.js';
+import {default as SwitchCase} from './switch-case.js';
+import {default as IfElse} from './if-else.js';
+import {default as EveryPlayer} from './every-player.js';
 
-import type { Player } from '../player';
-import type { Serializable } from '../action/types';
-export { Do, FlowControl } from './enums';
+import type { Player } from '../player/index.js';
+import type { Serializable } from '../action/types.js';
+export { Do, FlowControl } from './enums.js';
 
 /**
  * Stop the flow and wait for a player to act.

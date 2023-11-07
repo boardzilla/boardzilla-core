@@ -1,15 +1,15 @@
-import Space from './space'
-import { deserializeObject } from '../action/utils';
+import Space from './space.js'
+import { deserializeObject } from '../action/utils.js';
 
 import type {
   ElementJSON,
   ElementContext,
   Box,
   ActionLayout
-} from './types';
-import type { GameElement } from './';
-import type { Player } from '../player';
-import type { Argument } from '../action/types';
+} from './types.d.ts';
+import type GameElement from './element.js';
+import type { Player } from '../player/index.js';
+import type { Argument } from '../action/types.d.ts';
 
 // TODO add B generic to all board elements
 // e.g. can:

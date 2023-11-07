@@ -1,8 +1,8 @@
-import Flow from './flow';
-import { serializeArg, deserializeArg } from '../action/utils';
+import Flow from './flow.js';
+import { serializeArg, deserializeArg } from '../action/utils.js';
 
-import type { ActionStepPosition, FlowBranchNode, FlowDefinition, FlowStep } from './types';
-import type { Player } from '../player';
+import type { ActionStepPosition, FlowBranchNode, FlowDefinition, FlowStep } from './types.d.ts';
+import type { Player } from '../player/index.js';
 
 export default class ActionStep<P extends Player> extends Flow<P> {
   players?: P | P[] | ((args: Record<string, any>) => P | P[]);

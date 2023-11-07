@@ -1,7 +1,7 @@
-import {default as Action} from './action';
-export {default as Selection} from './selection';
+import {default as Action} from './action.js';
+export {default as Selection} from './selection.js';
 
-import type { Player} from '../';
+import type { Player} from '../index.js';
 
 export {
   Action,
@@ -10,7 +10,7 @@ export {
   humanizeArg,
   serializeArg,
   deserializeArg
-} from './utils';
+} from './utils.js';
 
 /**
  * Create an {@link Action}. An action is a single move that a player can

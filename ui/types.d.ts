@@ -1,7 +1,7 @@
-import type { Player } from '../game/player';
-import type { PlayerAttributes } from '../game/player/types';
-import type { SerializedArg } from '../game/action/types';
-import type { GameState } from '../types';
+import type { Player } from '../game/player/index.js';
+import type { PlayerAttributes } from '../game/player/types.d.ts';
+import type { SerializedArg } from '../game/action/types.d.ts';
+import type { GameState } from '../types.d.ts';
 
 export type User = {
   id: string

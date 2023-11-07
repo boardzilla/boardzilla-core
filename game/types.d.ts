@@ -1,14 +1,14 @@
-import type Game from './game';
-import type { Player } from './player/';
-import type { Board } from './board/';
-import type { SerializedMove } from './action/types';
+import type Game from './game.js';
+import type { Player } from './player/index.js';
+import type { Board } from './board/index.js';
+import type { SerializedMove } from './action/types.d.ts';
 import type {
   SetupState,
   GameState,
   GameUpdate,
-} from '../types';
+} from '../types.d.ts';
 import type React from 'react';
-import { SetupComponentProps } from '../ui/types';
+import type { SetupComponentProps } from '../ui/types.d.ts';
 
 export type SetupFunction<P extends Player, B extends Board<P>> = (
   state?: SetupState<P> | GameState<P>,

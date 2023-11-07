@@ -1,4 +1,4 @@
-import Selection from './selection';
+import Selection from './selection.js';
 
 import type {
   SingleArgument,
@@ -7,9 +7,9 @@ import type {
   BoardQueryMulti,
   BoardQuerySingle,
   PendingMove,
-} from './types';
-import type { GameElement, Piece } from '../board/';
-import type { Player } from '../player';
+} from './types.d.ts';
+import type { GameElement, Piece } from '../board/index.js';
+import type { Player } from '../player/index.js';
 
 /**
  * Actions represent discreet moves players can make. Create Actions using the
