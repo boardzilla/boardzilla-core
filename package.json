@@ -16,7 +16,7 @@
   "files": [
     "dist/**/*"
   ],
-  "types": "dist/index.js",
+  "types": "dist/index.d.ts",
   "dependencies": {
     "classnames": "^2.3.1",
     "graphology": "^0.25.4",

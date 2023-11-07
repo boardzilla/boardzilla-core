@@ -1,15 +1,13 @@
 import { Player } from '../player/index.js';
 import { GameElement } from '../board/index.js';
-import type { Serializable } from './types.d.ts';
 
-import type {
-  Argument,
-  SingleArgument,
-  SerializedArg,
-  SerializedSingleArg,
-} from './types.d.ts';
+import type { Argument, SingleArgument } from './action.js';
 import type Game from '../game.js';
 import type { Board } from '../board/index.js';
+
+export type SerializedSingleArg = string | number | boolean;
+export type SerializedArg = SerializedSingleArg | SerializedSingleArg[];
+export type Serializable<P extends Player> = SingleArgument<P> | null | undefined | Serializable<P>[] | { [key: string]: Serializable<P> };
 
 export const humanizeArg = <P extends Player>(arg: Argument<P>) => {
   if (arg instanceof Player) return arg.name;

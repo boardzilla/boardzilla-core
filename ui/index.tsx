@@ -8,12 +8,15 @@ import Main from './Main.js'
 import Game from '../game/game.js'
 import { serializeArg } from '../game/action/utils.js';
 
-import type { GameUpdateEvent, GameFinishedEvent } from './types.d.ts'
-import type { Player } from '../game/index.js'
+import type { GameUpdateEvent, GameFinishedEvent } from './Main.js'
+import type Player from '../game/player/player.js'
 import type { Board, GameElement } from '../game/board/index.js'
-import type { ElementJSON } from '../game/board/types.d.ts'
-import type { SetupFunction } from '../game/types.d.ts'
-import type { Argument, PendingMove, SerializedMove, SerializedArg, BoardQuery } from '../game/action/types.d.ts'
+import type { ElementJSON } from '../game/board/element.js'
+import type { SetupFunction } from '../game/index.js'
+import type { SerializedArg } from '../game/action/utils.js'
+import type { BoardQuery } from '../game/action/selection.js'
+import type { Argument } from '../game/action/action.js'
+import type { PendingMove, SerializedMove } from '../game/game.js'
 
 type GameStore = {
   setup?: SetupFunction<Player, Board<Player>>;

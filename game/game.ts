@@ -12,23 +12,45 @@ import Flow from './flow/flow.js';
 
 import random from 'random-seed';
 
-import type { ElementClass } from './board/types.d.ts';
-import type { SetupComponentProps } from '../ui/types.d.ts';
-import type { FlowDefinition } from './flow/types.d.ts';
-import type {
-  GameState,
-  GameUpdate,
-  PlayerPositionState,
-  Message,
-} from '../types.d.ts';
-import type {
-  Move,
-  Argument,
-  SerializedArg,
-  PendingMove,
-} from './action/types.d.ts';
-import type { PlayerAttributes } from './player/types.d.ts';
+import type { ElementClass } from './board/element.js';
+import type { SetupComponentProps } from './index.js';
+import type { FlowDefinition } from './flow/flow.js';
+import type { GameState, PlayerPositionState, GameUpdate } from './interface.js';
+import type { SerializedArg } from './action/utils.js';
+import type { Argument } from './action/action.js';
+import type { ResolvedSelection } from './action/selection.js';
 import type React from 'react';
+
+// find all non-method non-internal attr's
+export type PlayerAttributes<T extends Player> = {
+  [
+    K in keyof InstanceType<{new(...args: any[]): T}>
+      as InstanceType<{new(...args: any[]): T}>[K] extends (...args: unknown[]) => unknown ? never : (K extends '_players' ? never : K)
+  ]: InstanceType<{new(...args: any[]): T}>[K]
+}
+
+// a Move is a request from a particular Player to perform a certain Action with supplied args
+export type Move<P extends Player> = {
+  player: P,
+  action: string,
+  args: Argument<P>[]
+};
+
+export type PendingMove<P extends Player> = {
+  action: string,
+  args: Argument<P>[],
+  selection: ResolvedSelection<P>,
+};
+
+export type SerializedMove = {
+  action: string,
+  args: SerializedArg[]
+}
+
+export type Message = {
+  position?: number
+  body: string
+}
 
 export default class Game<P extends Player, B extends Board<P>> {
   flow: Flow<P>;

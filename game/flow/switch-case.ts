@@ -2,9 +2,13 @@ import Flow from './flow.js';
 
 import { serialize, deserialize } from '../action/utils.js';
 
-import type { FlowArguments, FlowDefinition, FlowBranchNode, SwitchCaseCases, SwitchCasePostion, FlowStep } from './types.d.ts';
+import type { FlowArguments, FlowDefinition, FlowBranchNode, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
-import type { Serializable } from '../action/types.d.ts';
+import type { Serializable } from '../action/utils.js';
+
+export type SwitchCasePostion<T> = { index?: number, value?: T, default?: boolean }
+
+export type SwitchCaseCases<P extends Player, T> = {eq: T, do: FlowDefinition<P>}[] | {test: (a: T) => boolean, do: FlowDefinition<P>}[];
 
 export default class SwitchCase<P extends Player, T extends Serializable<P>> extends Flow<P> {
   position: SwitchCasePostion<T>;

@@ -2,7 +2,7 @@ import React from 'react';
 import Seating from './components/Seating.js';
 import { gameStore } from '../index.js';
 
-import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../types.d.ts';
+import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../Main.js';
 
 export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlayers, onUpdateSettings, onStart }: {
   users: User[],

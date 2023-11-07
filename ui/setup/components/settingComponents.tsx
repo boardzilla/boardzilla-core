@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SetupComponentProps } from '../../types.d.ts'
+import type { SetupComponentProps } from '../../../game/index.js'
 
 export const toggleSetting = (label: string) => ({ name, settings, updateKey }: SetupComponentProps) => (
   <div>

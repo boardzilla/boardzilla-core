@@ -9,8 +9,8 @@ import {
 } from '../../../game/board/index.js'
 import { serialize, humanizeArg } from '../../../game/action/utils.js'
 
-import type { ElementJSON } from '../../../game/board/types.d.ts';
-import type { PendingMove } from '../../../game/action/types.d.ts';
+import type { ElementJSON } from '../../../game/board/element.js';
+import type { PendingMove } from '../../../game/game.js';
 import type { Player } from '../../../game/player/index.js';
 import type { DraggableData } from 'react-draggable';
 

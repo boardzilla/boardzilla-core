@@ -2,16 +2,67 @@ import { Player } from '../index.js';
 import { Board } from '../board/index.js';
 import { Do, FlowControl } from './enums.js';
 
-import type {
-  FlowArguments,
-  Position,
-  FlowStep,
-  FlowDefinition,
-  FlowBranchNode,
-  FlowBranchJSON,
-  ActionStepPosition,
-} from './types.d.ts';
 import type Game from '../game.js';
+import type { WhileLoopPosition } from './while-loop.js';
+import type { ForLoopPosition } from './for-loop.js';
+import type { ForEachPosition } from './for-each.js';
+import type { SwitchCasePostion } from './switch-case.js';
+import type { ActionStepPosition } from './action-step.js';
+
+export type FlowArguments = Record<string, any>;
+export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => Do | void) | Do | null;
+
+/**
+ * A FlowDefinition is provided to the game and to all flow function to provide
+ * further flow logic inside the given flow. Any of the follow qualifies:
+ - a plain function that accepts {@link FlowArguments}
+ - returning a {@link whileLoop} call
+ - returning a {@link forEach} call
+ - returning a {@link forLoop} call
+ - returning a {@link eachPlayer} call
+ - returning a {@link ifElse} call
+ - returning a {@link switchCase} call
+ - returning a {@link playerActions} call
+ - providing an array containing any number of the above
+ */
+export type FlowDefinition<P extends Player> = FlowStep<P> | FlowStep<P>[]
+
+export type FlowBranchNode<P extends Player> = ({
+  type: 'sequence',
+} | {
+  type: 'action',
+  position: ActionStepPosition<P>
+} | {
+  type: 'parallel',
+  position: FlowBranchJSON[][],
+} | {
+  type: 'loop',
+  position: WhileLoopPosition | ForLoopPosition<any>
+} | {
+  type: 'foreach',
+  position: ForEachPosition<any>
+} | {
+  type: 'switch-case',
+  position: SwitchCasePostion<any>
+}) & {
+  name?: string,
+  sequence?: number,
+}
+
+export type FlowBranchJSON = ({
+  type: 'sequence'
+  position?: any,
+} | {
+  type: 'action' | 'loop' | 'foreach' | 'switch-case' | 'parallel'
+  position: any,
+}) & {
+  name?: string,
+  sequence?: number,
+}
+
+export type Position<P extends Player> = (
+  ActionStepPosition<P> | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any> | FlowBranchJSON[][]
+)
 
 /** internal */
 export default class Flow<P extends Player> {

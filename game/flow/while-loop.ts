@@ -2,7 +2,9 @@ import Flow from './flow.js';
 import { FlowControl } from './index.js';
 
 import type { Player } from '../player/index.js';
-import type { FlowArguments, FlowDefinition, WhileLoopPosition, FlowBranchNode } from './types.d.ts';
+import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
+
+export type WhileLoopPosition = { index: number };
 
 export default class WhileLoop<P extends Player> extends Flow<P> {
   block: FlowDefinition<P>;

@@ -1,15 +1,16 @@
 import Selection from './selection.js';
 
 import type {
-  SingleArgument,
-  Argument,
   ResolvedSelection,
   BoardQueryMulti,
   BoardQuerySingle,
-  PendingMove,
-} from './types.d.ts';
+} from './selection.js';
 import type { GameElement, Piece } from '../board/index.js';
 import type { Player } from '../player/index.js';
+import type { PendingMove } from '../game.js';
+
+export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | P;
+export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
 
 /**
  * Actions represent discreet moves players can make. Create Actions using the

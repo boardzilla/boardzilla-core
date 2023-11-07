@@ -1,7 +1,8 @@
 import Flow from './flow.js';
 import { FlowControl, Do } from './enums.js';
 
-import type { FlowDefinition, FlowBranchNode, FlowBranchJSON, ActionStepPosition } from './types.d.ts';
+import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
+import type { ActionStepPosition } from './action-step.js';
 import type { Player } from '../player/index.js';
 
 export default class EveryPlayer<P extends Player> extends Flow<P> {

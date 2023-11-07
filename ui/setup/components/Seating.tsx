@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { times } from '../../../game/index.js';
 import { GithubPicker } from 'react-color';
 
-import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../types.d.ts';
+import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
 
 const colors = ['#ff0000', '#0000cc', '#006000', '#006b6b', '#aa8500', '#200080', '#4b0082', '#800080', '#600020', '#603000'];
 

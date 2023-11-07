@@ -6,7 +6,8 @@ import PlayerControls from './components/PlayerControls.js';
 import { click } from '../assets/index.js';
 
 import type { GameElement } from '../../game/board/index.js'
-import type { PendingMove, Argument } from '../../game/action/types.d.ts';
+import type { PendingMove } from '../../game/game.js';
+import type { Argument } from '../../game/action/action.js';
 import type { Player } from '../../game/player/index.js';
 
 export default () => {

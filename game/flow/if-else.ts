@@ -1,6 +1,6 @@
 import SwitchCase from './switch-case.js';
 
-import type { FlowDefinition } from './types.d.ts';
+import type { FlowDefinition } from './flow.js';
 import type { Player } from '../player/index.js';
 
 export default class If<P extends Player> extends SwitchCase<P, boolean> {

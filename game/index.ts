@@ -28,20 +28,18 @@ export {
   Do
 } from './flow/index.js';
 
-export { times, createInteface } from './utils.js';
-
-export { Player };
+export { createInteface } from './interface.js';
+export { times } from './utils.js';
+export { Player, action };
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
 
-import type { SetupState, GameState } from '../types.d.ts';
-import type { SetupFunction } from './types.d.ts';
-import type { SetupComponentProps } from '../ui/types.d.ts';
-import type { ElementClass } from './board/types.d.ts';
-import type { PlayerAttributes } from './player/types.d.ts';
-import type { Argument } from './action/types.d.ts';
-import type { FlowDefinition } from './flow/types.d.ts';
+import type { SetupState, GameState } from './interface.js';
+import type { ElementClass } from './board/element.js';
+import type { PlayerAttributes } from './game.js';
+import type { Argument } from './action/action.js';
+import type { FlowDefinition } from './flow/flow.js';
 
 export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
   GameElement: GameElement<P>,
@@ -49,6 +47,22 @@ export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
   Space: Space<P>,
   Piece: Piece<P>,
 });
+
+export type SetupComponentProps = {
+  name: string
+  settings: Record<string, any>
+  players: PlayerAttributes<Player>[]
+  updateKey: (key: string, value: any) => void
+}
+
+export type SetupFunction<P extends Player, B extends Board<P>> = (
+  state?: SetupState<P> | GameState<P>,
+  options?: {
+    currentPlayerPosition?: number[],
+    start?: boolean,
+    trackMovement?: boolean,
+  }
+) => Game<P, B>
 
 /**
  * Create your game

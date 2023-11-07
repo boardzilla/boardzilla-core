@@ -5,13 +5,11 @@ import { UndirectedGraph } from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
 import { bfs } from 'graphology-traversal';
 
-import type {
-  ElementFinder,
-  ElementClass,
-  ElementAttributes,
-  ElementEventHandler
-} from './types.d.ts';
-import type { Player } from '../player/index.js';
+import type { ElementClass, ElementAttributes } from './element.js';
+import type { ElementFinder } from './element-collection.js';
+import type Player from '../player/player.js';
+
+export type ElementEventHandler<P extends Player, T extends GameElement<P>> = {callback: (el: T) => void} & Record<any, any>;
 
 /**
  * Spaces are areas of the board. The spaces of your board are declared during

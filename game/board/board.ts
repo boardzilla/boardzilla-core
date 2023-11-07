@@ -2,14 +2,23 @@ import Space from './space.js'
 import { deserializeObject } from '../action/utils.js';
 
 import type {
+  default as GameElement,
   ElementJSON,
   ElementContext,
   Box,
-  ActionLayout
-} from './types.d.ts';
-import type GameElement from './element.js';
-import type { Player } from '../player/index.js';
-import type { Argument } from '../action/types.d.ts';
+} from './element.js';
+import type Player from '../player/player.js';
+import type { Argument } from '../action/action.js';
+
+type ActionLayout<P extends Player> = {
+  element: GameElement<P> | (() => GameElement<P>),
+  top?: number,
+  bottom?: number,
+  left?: number,
+  right?: number,
+  width?: number,
+  height?: number
+};
 
 // TODO add B generic to all board elements
 // e.g. can:

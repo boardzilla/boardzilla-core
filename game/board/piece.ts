@@ -1,7 +1,7 @@
 import GameElement from './element.js'
 import Space from './space.js'
 
-import type { Player } from '../player/index.js';
+import type Player from '../player/player.js';
 
 /**
  * Pieces are game elements that move during play

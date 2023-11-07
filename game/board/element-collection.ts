@@ -2,11 +2,39 @@ import {Piece, GameElement} from './index.js'
 
 import type {
   ElementClass,
-  ElementFinder,
   ElementUI,
-} from './types.d.ts';
-import type { Sorter } from '../types.d.ts';
+  ElementAttributes
+} from './element.js';
+
+type Sorter<T> = keyof {[K in keyof T]: T[K] extends number | string ? never: K} | ((e: T) => number | string)
+
 import type { Player } from '../player/index.js';
+
+/**
+ * A query filter can be one of 3 different forms:
+ * - *string*: will match elements with this name
+ * - *object*: will match elements whose properties match the provided
+ *     properties. For example, `deck.all(Card, {suit: 'H'})` would match all
+ *     `Card` elements in `deck` with a `suit` property equal to `"H"`. There are
+ *     some special property names allowed here:
+ *   - *mine*: true/false whether this element belongs to the player in whose context the query is made
+ *   - *empty* true/false whether this element is empty
+ *   - *adjacent* true/false whether this element is adjacent by a connection to the
+ *       element on which the query method was
+ *       called. E.g. `france.other(Country, {adjacent: true})` will match
+ *       `Country` elements that are connected to `france` by {@link
+ *       Space#connectTo}
+ *   - *withinDistance* Similar to adjacent but uses the provided number to
+ *       determine if a connection is possible between elements whose cost is
+ *       not greater than the provided value
+ * - *function*: A function that accept an element as its argument and returns a
+ *     boolean indicating whether it is a match, similar to `Array#filter`.
+ */
+export type ElementFinder<P extends Player, T extends GameElement<P>> = (
+  ((e: T) => boolean) |
+    (ElementAttributes<P, T> & {mine?: boolean, empty?: boolean, adjacent?: boolean, withinDistance?: number}) |
+    string
+);
 
 /**
  * Operations that return groups of {@link GameElement| | GameElement's} return

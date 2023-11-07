@@ -2,10 +2,10 @@ import Player from './player.js';
 
 import { shuffleArray } from '../utils.js';
 
-import type Game from '../game.js';
+import type { default as Game, PlayerAttributes } from '../game.js';
 import type { Board } from '../board/index.js';
-import type { Sorter } from '../types.d.ts';
-import type { PlayerAttributes } from './types.d.ts';
+
+type Sorter<T> = keyof {[K in keyof T]: T[K] extends number | string ? never: K} | ((e: T) => number | string)
 
 export default class PlayerCollection<P extends Player> extends Array<P> {
   currentPosition: number[];

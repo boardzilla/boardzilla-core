@@ -2,7 +2,7 @@ import ForLoop from './for-loop.js';
 import { Player } from '../player/index.js';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils.js';
 
-import type { FlowArguments, FlowDefinition } from './types.d.ts';
+import type { FlowArguments, FlowDefinition } from './flow.js';
 
 export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
   constructor({ name, startingPlayer, nextPlayer, turns, continueUntil, do: block }: {

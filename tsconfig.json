@@ -12,5 +12,5 @@
     "strictNullChecks": true,
     "jsx": "react"
   },
-  "include": ["./game", "./ui", "index.ts", "index.d.ts"]
+  "include": ["./game", "./ui", "index.ts", "decl.d.ts"]
 }

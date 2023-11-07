@@ -5,11 +5,9 @@ import { serializeArg, deserializeArg } from '../../../game/action/utils.js';
 
 import type { Player } from '../../../game/player/index.js';
 import type { GameElement } from '../../../game/board/index.js';
-import type {
-  Argument,
-  SerializedArg,
-  PendingMove
-} from '../../../game/action/types.d.ts';
+import type { PendingMove } from '../../../game/game.js';
+import type { Argument } from '../../../game/action/action.js';
+import type { SerializedArg } from '../../../game/action/utils.js';
 
 const PlayerControls = ({onSubmit, disambiguateElement}: {
   onSubmit: (move?: PendingMove<Player>, value?: Argument<Player>) => void,

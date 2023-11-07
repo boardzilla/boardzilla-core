@@ -1,9 +1,11 @@
 import Flow from './flow.js';
 
 import type { Player } from '../player/index.js';
-import type { Serializable } from '../action/types.d.ts';
-import type { FlowArguments, FlowDefinition, ForLoopPosition, FlowBranchNode } from './types.d.ts';
+import type { Serializable } from '../action/utils.js';
+import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
 import { FlowControl } from './enums.js';
+
+export type ForLoopPosition<T> = { index: number, value: T };
 
 export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow<P> {
   block: FlowDefinition<P>;
