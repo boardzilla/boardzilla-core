@@ -4,11 +4,11 @@
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build": "tsc && node esbuild.mjs",
+    "build": "tsc && node esbuild.mjs && rm -rf dist/test",
     "prepack": "yarn build",
-    "test": "NODE_ENV=test yarn run build && mocha src/test/setup.js dist/test/*_test.js",
-    "test-ts": "NODE_ENV=test mocha -r ts-node/register 'test/**/*.ts'",
-    "test-debug": "NODE_ENV=test mocha --inspect-brk --timeout 3600000 -r ts-node/register",
+    "build:test": "tsc && node esbuild.mjs",
+    "test": "NODE_ENV=test yarn run build:test && mocha src/test/setup.js dist/test/*_test.js",
+    "test:debug": "NODE_ENV=test yarn run build:test && mocha --inspect-brk --timeout 3600000 src/test/setup.js dist/test/*_test.js",
     "compile": "tsc",
     "docs": "typedoc",
     "lint": "eslint . --ext .ts"
