@@ -60,7 +60,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setGame: (game: Game<Player, Board<Player>>) => set({ game }),
   boardJSON: [],
   updateState: (update) => set(s => {
-    let game = s.game;
+    let { game } = s;
     if (game.phase === 'new' && s.setup) {
       game = s.setup(update.state.state, {
         start: true,
@@ -198,7 +198,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 	move = undefined;
 	game.play();
 	continue;
-      };
+      }
     }
     break;
   }
@@ -284,9 +284,7 @@ export const render = <P extends Player, B extends Board<P>>(setup: SetupFunctio
   state.setGame(setupGame() as unknown as Game<Player, Board<Player>>);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
-  const userID: string = boostrap.userID;
-  const minPlayers: number = boostrap.minPlayers;
-  const maxPlayers: number = boostrap.maxPlayers;
+  const { userID, minPlayers, maxPlayers }: { userID: string, minPlayers: number, maxPlayers: number } = boostrap;
 
   const root = createRoot(document.getElementById('root')!)
   root.render(

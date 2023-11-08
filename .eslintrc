@@ -11,6 +11,27 @@
     "plugin:react-hooks/recommended"
   ],
   "rules": {
-    "@typescript-eslint/no-explicit-any": 0
+    '@typescript-eslint/no-unused-vars': [
+      'error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      },
+    ],
+    'no-unused-vars': 0,
+    '@typescript-eslint/no-explicit-any': 0,
+    '@typescript-eslint/ban-ts-comment': 0,
+    '@typescript-eslint/no-non-null-assertion': 0,
+    '@typescript-eslint/no-empty-function': 0,
+    'no-underscore-dangle': 0,
+    'arrow-parens': 0,
+    'no-nested-ternary': 0,
+    'max-classes-per-file': 0,
+    'object-curly-newline': 0,
+    'max-len': 0,
+    'prefer-destructuring': ['error', { object: true, array: false }],
+    'no-console': 0,
+    "no-constant-condition": 0,
+    "prefer-const": 0,
   }
 }

@@ -6,6 +6,7 @@ import type {
   ElementJSON,
   ElementContext,
   Box,
+  Vector,
 } from './element.js';
 import type Player from '../player/player.js';
 import type { Argument } from '../action/action.js';
@@ -93,11 +94,13 @@ export default class Board<P extends Player> extends Space<P> {
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout<P>>;
     previousStyles: Record<any, Box>;
+    dragOffset: Record<any, Vector>;
   } = {
     layouts: [],
     appearance: {},
     stepLayouts: {},
     previousStyles: {},
+    dragOffset: {},
   };
 
   // restore default layout rules before running setupLayout

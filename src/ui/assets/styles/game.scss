@@ -68,9 +68,9 @@
       .transform-wrapper {
         position: absolute;
         transform-origin: top left;
-        transition: top .6s, left .6s, width .6s, height .6s;
+        transition: top 2.6s, left 2.6s, width 2.6s, height 2.6s;
         &.animating {
-          transition: transform .6s, top .6s, left .6s, width .6s, height .6s;
+          transition: transform 2.6s, top 2.6s, left 2.6s, width 2.6s, height 2.6s;
           z-index: 100;
         }
         > div {

@@ -37,25 +37,9 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const [dragging, setDragging] = useState(false); // currently dragging
   const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
   const wrapper = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (wrapper.current && transform) {
-      const cancel = (e: TransitionEvent) => {
-        if (e.propertyName === 'transform') {
-          element.doneMoving();
-          setAnimating(false);
-          wrapper.current?.removeEventListener('transitionend', cancel);
-        }
-      };
-      wrapper.current?.addEventListener('transitionend', cancel);
-      setAnimating(true);
-      setTransform(undefined); // remove transform, while setting animating to let this transition to new location
-    }
-  }, [wrapper, transform])
-
   const branch = element.branch()
   const selections = boardSelections[branch];
-  const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));;
+  const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
   const absoluteTransform = element.absoluteTransform();
@@ -69,7 +53,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
     onSelectElement(selections.clickMoves, element);
-  }, [onSelectElement, selections]);
+  }, [element, onSelectElement, selections]);
 
   const onStartDrag = useCallback((e: MouseEvent, data: DraggableData) => {
     e.stopPropagation();
@@ -87,50 +71,75 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       wrapper.current.style.top = `calc(${element._ui.computedStyle.top}% - ${parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y}px)`;
       wrapper.current.style.left = `calc(${element._ui.computedStyle.left}% - ${parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x}px)`;
     }
-  }, [branch, wrapper, style]);
+  }, [element._ui.computedStyle, setDragElement, branch, wrapper]);
 
-  const onStopDrag = useCallback((e: MouseEvent) => {
+  const onStopDrag = useCallback((e: MouseEvent, data: DraggableData) => {
     e.stopPropagation();
     if (dragging) {
-      if (currentDrop) {
-        const move = dropElements.find(({ element }) => element === currentDrop)?.move;
-        if (move) onSelectElement([move], element, game!.board.atBranch(currentDrop));
-      }
       if (wrapper.current && element._ui.computedStyle) {
         wrapper.current.style.top = element._ui.computedStyle.top + '%';
         wrapper.current.style.left = element._ui.computedStyle.left + '%';
       }
-    } else {
-      onClick(e);
+      if (currentDrop) {
+        const move = dropElements.find(({ element }) => element === currentDrop)?.move;
+        if (move) onSelectElement([move], element, game!.board.atBranch(currentDrop));
+        if (wrapper.current) {
+          element.board._ui.dragOffset[element.branch()] = {
+            x: data.x - parseInt(wrapper.current.getAttribute('data-lastx') || ''),
+            y: data.y - parseInt(wrapper.current.getAttribute('data-lasty') || ''),
+          }
+        }
+      }
     }
     setDragging(false);
     setCurrentDrop(undefined);
     setDragElement(undefined);
-  }, [dragging, currentDrop, onClick, onSelectElement, wrapper]);
+  }, [dragging, currentDrop, onSelectElement, wrapper, dropElements, element, game, setCurrentDrop, setDragElement]);
 
   const onDrop = useCallback(() => {
     setCurrentDrop(branch);
-  }, []);
+  }, [setCurrentDrop, branch]);
 
   const onLeave = useCallback(() => {
     setCurrentDrop(undefined);
-  }, []);
+  }, [setCurrentDrop]);
+
+  const moveTransform = element.getMoveTransform();
+
+  useEffect(() => {
+    if (wrapper.current && transform) {
+      const cancel = (e: TransitionEvent) => {
+        if (e.propertyName === 'transform' && e.target === wrapper.current) {
+          element.doneMoving();
+          setAnimating(false);
+          setAnimatedFrom(undefined);
+          wrapper.current?.removeEventListener('transitionend', cancel);
+        }
+      };
+      wrapper.current?.addEventListener('transitionend', cancel);
+      setAnimating(true);
+      setTransform(undefined); // remove transform, while setting animating to let this transition to new location
+    }
+  }, [element, wrapper, transform])
 
   // initially place into old position
-  const moveTransform = element.getMoveTransform();
-  const computedStyle = element._ui.computedStyle;
 
   if (!moveTransform || animatedFrom === element._t.was) {
-    element.doneMoving();
+    //console.log(moveTransform ? `not moving ${branch} - already moved from ${element._t.was}` : `no move for ${branch}`);
+    if (branch !== element._t.was) element.doneMoving();
   } else if (!transform) {
-    const transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
+    //console.log(`moving ${branch} from ${element._t.was} - cancel render`, element.board._ui.dragOffset[branch]);
+    let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
+    if (element.board._ui.dragOffset[branch]) {
+      transformToNew = `translate(${element.board._ui.dragOffset[branch].x}px, ${element.board._ui.dragOffset[branch].y}px) ` + transformToNew;
+      delete element.board._ui.dragOffset[branch];
+    }
     setTransform(transformToNew);
     setAnimatedFrom(element._t.was);
     return null; // don't render this one, to prevent untransformed render
   }
 
-  if (element._t.parent && !element._t.parent._t.children.includes(element)) console.error('old element reference', element);
-
+  const { computedStyle } = element._ui;
   if (computedStyle) {
     style = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])))
   }
