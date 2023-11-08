@@ -78,7 +78,7 @@ export default () => {
     window.addEventListener('resize', resize);
     resize();
     return () => window.removeEventListener('resize', resize);
-  }, []);
+  }, [game.board._ui.appearance.aspectRatio, setAspectRatio]);
 
   if (!dimensions) return;
 

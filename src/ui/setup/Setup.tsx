@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import Seating from './components/Seating.js';
 import { gameStore } from '../index.js';
 
@@ -16,10 +16,10 @@ export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlay
 }) => {
   const [game] = gameStore(s => [s.game]);
 
-  const updateSettingsKey = (key: string, value: any) => {
+  const updateSettingsKey = useCallback((key: string, value: any) => {
     const newSettings = Object.assign(settings || {}, { [key]: value });
     onUpdateSettings(newSettings);
-  }
+  }, [onUpdateSettings, settings])
 
   const settingsComponents = game.setupComponents ?
     Object.entries(game.setupComponents).map(([name, component]) => React.createElement(

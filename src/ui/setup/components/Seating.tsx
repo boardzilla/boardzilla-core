@@ -7,7 +7,7 @@ import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersM
 
 const colors = ['#ff0000', '#0000cc', '#006000', '#006b6b', '#aa8500', '#200080', '#4b0082', '#800080', '#600020', '#603000'];
 
-const Seating = ({ users, players, minPlayers, maxPlayers, onUpdatePlayers }: {
+const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
   users: User[],
   players: UserPlayer[],
   minPlayers: number,

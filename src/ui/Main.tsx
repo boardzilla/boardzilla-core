@@ -148,6 +148,12 @@ export default ({ userID, minPlayers, maxPlayers }: {
 
   const moveCallbacks = useMemo<((e: string) => void)[]>(() => [], []);
 
+  const catchError = useCallback((error: string) => {
+    if (!error) return
+    alert(error);
+    setError(error);
+  }, [setError]);
+
   const listener = useCallback((event: MessageEvent<
     PlayersEvent |
     SettingsUpdateEvent |
@@ -170,13 +176,15 @@ export default ({ userID, minPlayers, maxPlayers }: {
       updateState(data);
       break;
     case 'messageProcessed':
-      if (data.error) catchError(data.error);
-      const move = moveCallbacks[parseInt(data.id)];
-      if (move && data.error) move(data.error);
+      if (data.error) {
+        catchError(data.error);
+        const move = moveCallbacks[parseInt(data.id)];
+        if (move) move(data.error);
+      }
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, []);
+  }, [catchError, moveCallbacks, updateState]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
@@ -186,7 +194,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
       setReadySent(true);
     }
     return () => window.removeEventListener('message', listener)
-  }, [listener]);
+  }, [readySent, listener]);
 
   useEffect(() => {
     // move is processable
@@ -201,7 +209,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
       window.top!.postMessage(message, "*");
       clearMoves();
     }
-  }, [game, position, moves]);
+  }, [game, position, moves, clearMoves, moveCallbacks, move]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
     setSettings(settings);
@@ -223,13 +231,7 @@ export default ({ userID, minPlayers, maxPlayers }: {
     window.top!.postMessage(message, "*");
   }, []);
 
-  const catchError = useCallback((error: string) => {
-    if (!error) return
-    alert(error);
-    setError(error);
-  }, []);
-
-  console.log('render MAIN', game.phase);
+  console.log('render MAIN', game.phase, settings);
 
   return (
     <>
