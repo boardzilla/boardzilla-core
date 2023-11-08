@@ -1,6 +1,6 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.0.11",
+  "version": "0.0.13",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
