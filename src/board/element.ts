@@ -10,7 +10,7 @@ import type Board from './board.js';
 import type Space from './space.js';
 import type { ElementFinder } from './element-collection.js';
 
-import type { UndirectedGraph } from 'graphology';
+import type { Graph } from 'ngraph.graph';
 
 type Sorter<T> = keyof {[K in keyof T]: T[K] extends number | string ? never: K} | ((e: T) => number | string)
 
@@ -129,7 +129,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
     id: number,
     order?: 'normal' | 'stacking',
     was?: string,
-    graph?: UndirectedGraph,
+    graph?: Graph<{space: Space<P>}, {distance: number}>,
     setId: (id: number) => void
   };
 

@@ -181,9 +181,9 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     let i = 0;
     const lines: React.JSX.Element[] = [];
     const labels: React.JSX.Element[] = [];
-    element._t.graph.forEachEdge((...args) => {
-      const source = args[4].space as GameElement<Player>;
-      const target = args[5].space as GameElement<Player>;
+    element._t.graph.forEachLink(link => {
+      const source = element._t.graph!.getNode(link.fromId)!.data.space as GameElement<Player>;
+      const target = element._t.graph!.getNode(link.toId)!.data.space as GameElement<Player>;
 
       if (source._ui.computedStyle && target._ui.computedStyle) {
         const origin = {
@@ -232,7 +232,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
               transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * absoluteTransform.width * .5}
   ${(origin.y + destination.y) / 2 - labelScale! * absoluteTransform.height * .5})
   scale(${labelScale})`}
-            >{label({ distance: args[1].distance, to: args[4].space, from: args[5].space })}</g>);
+            >{label({ distance: link.data.distance, to: source, from: target })}</g>);
         }
       }
     });

@@ -1,9 +1,8 @@
 import GameElement from './element.js'
 import ElementCollection from './element-collection.js'
 
-import graphology from 'graphology';
-import { dijkstra } from 'graphology-shortest-path';
-import { bfs } from 'graphology-traversal';
+import NGGraph from 'ngraph.graph';
+import NGPath from 'ngraph.path';
 
 import type Board from './board.js';
 import type { ElementClass, ElementAttributes } from './element.js';
@@ -74,12 +73,13 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
     if (!this._t.parent || this._t.parent !== space._t.parent) throw Error("Cannot connect two spaces that are not in the same parent space");
 
     if (!this._t.parent._t.graph) {
-      this._t.parent._t.graph = new graphology.UndirectedGraph<{space: Space<P>}, {distance: number}>();
+      this._t.parent._t.graph = NGGraph<{space: Space<P>}, {distance: number}>();
     }
     const graph = this._t.parent._t.graph;
     if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {space: this});
     if (!graph.hasNode(space._t.id)) graph.addNode(space._t.id, {space});
-    graph.addEdge(this._t.id, space._t.id, {distance});
+    graph.addLink(this._t.id, space._t.id, {distance});
+    graph.addLink(space._t.id, this._t.id, {distance});
     return this;
   }
 
@@ -89,7 +89,7 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    */
   adjacentTo(space: Space<P>) {
     if (!this._t.parent?._t.graph) return false;
-    return this._t.parent!._t.graph.areNeighbors(this._t.id, space._t.id);
+    return !!this._t.parent!._t.graph.getLink(this._t.id, space._t.id);
   }
 
   /**
@@ -99,16 +99,23 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    *
    * @param space - {@link Space} to measure distance to
    * @returns shortest distance measured by the `distance` values added to each
-   * connection in {@link connectTo}
+   * connection in {@link connectTo}, or undefined if the space is not reachable.
    */
   distanceTo(space: Space<P>) {
     if (!this._t.parent?._t.graph) return undefined;
     try {
+      let pathFinder = NGPath.aStar(this._t.parent?._t.graph, {
+        distance: (_f, _t, link)  => link.data.distance
+      });
       const graph = this._t.parent._t.graph;
-      const path = dijkstra.bidirectional(graph, this._t.id, space._t.id, 'distance');
+      const path = pathFinder.find(this._t.id, space._t.id);
       let distance = 0;
+      debugger;
       for (let n = 1; n != path.length; n++) {
-        distance += graph.getEdgeAttributes(graph.edge(path[n - 1], path[n])).distance;
+        const edge = graph.getLink(String(path[n - 1].id), String(path[n].id));
+        if (edge === undefined) throw Error();
+        distance += edge.data.distance;
+        // distance += graph.getEdgeAttributes(graph.edge(path[n - 1], path[n])).distance;
       }
       return distance;
     } catch(e) {
@@ -148,12 +155,11 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
     const c = new ElementCollection<P, Space<P>>();
     try {
       const graph = this._t.parent!._t.graph!;
-      bfs(graph, node => {
-        const el = graph.getNodeAttributes(node).space;
+      graph.forEachNode(node => {
+        const el = node.data.space;
         const d = this.distanceTo(el);
         if (d === undefined) return false;
-        if (d > distance) return true;
-        if (el !== this) c.push(el);
+        if (d <= distance && el !== this) c.push(el);
       });
     } catch(e) {
       throw Error("No connections on this space");
