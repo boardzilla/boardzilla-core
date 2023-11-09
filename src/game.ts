@@ -293,23 +293,21 @@ export default class Game<P extends Player, B extends Board<P>> {
       skipIfOnlyOne: true,
       expand: true,
     };
-    return this.inContextOfPlayer(player, () => {
-      const actionStep = this.flow.actionNeeded(player);
-      if (actionStep) {
-        return {
-          step: actionStep.step,
-          prompt: actionStep.prompt,
-          skipIfOnlyOne: actionStep.skipIfOnlyOne,
-          expand: actionStep.expand,
-          actions: allowedActions.concat(actionStep.actions?.filter(a => this.action(a, player).isPossible()) || [])
-        }
-      }
+    const actionStep = this.flow.actionNeeded(player);
+    if (actionStep) {
       return {
-        skipIfOnlyOne: true,
-        expand: true,
-        actions: []
-      };
-    });
+        step: actionStep.step,
+        prompt: actionStep.prompt,
+        skipIfOnlyOne: actionStep.skipIfOnlyOne,
+        expand: actionStep.expand,
+        actions: allowedActions.concat(actionStep.actions?.filter(a => this.action(a, player).isPossible()) || [])
+      }
+    }
+    return {
+      skipIfOnlyOne: true,
+      expand: true,
+      actions: []
+    };
   }
 
   getResolvedSelections(player: P, action?: string, ...args: Argument<P>[]): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {

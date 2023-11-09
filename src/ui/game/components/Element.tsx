@@ -106,7 +106,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     const moveTransform = element.getMoveTransform();
     if (!moveTransform || animatedFrom === element._t.was) {
       //console.log(moveTransform ? `not moving ${branch} - already moved from ${element._t.was}` : `no move for ${branch}`);
-      if (branch !== element._t.was) element.doneMoving();
+      element.doneMoving();
     } else if (wrapper.current) {
       //console.log(`moving ${branch} from ${element._t.was}`, moveTransform);
       let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;

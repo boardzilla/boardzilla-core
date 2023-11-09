@@ -79,22 +79,21 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       game.winner = update.winners.map(p => game.players.atPosition(p)!);
       game.phase = 'finished';
     }
-    game.board.applyLayouts();
     const position = s.position || update.state.position;
 
     if (game.phase === 'finished') {
       return {
         game,
         position,
-        boardJSON: update.state.state.board,
+        ...updateBoard(game, position, update.state.state.board),
       }
     }
 
     return {
       game,
       position,
-      boardJSON: update.state.state.board,
       ...updateSelections(game, position),
+      ...updateBoard(game, position, update.state.state.board),
     }
   }),
   // function to ensure react detects a change. must be called immediately after any function that alters board state
@@ -251,12 +250,12 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   })
 };
 
-const updateBoard = (game: Game<Player, Board<Player>>, position: number) => {
+const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?: ElementJSON[]) => {
   // rerun layouts. probably optimize TODO
   game.contextualizeBoardToPlayer(game.players.atPosition(position));
   game.board.applyLayouts();
 
-  return ({ boardJSON: game.board.allJSON() })
+  return ({ boardJSON: json || game.board.allJSON() })
 }
 
 export type SetupComponentProps = {
