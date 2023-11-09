@@ -32,8 +32,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   onMouseLeave?: () => void,
 }) => {
   const [game, boardSelections, move, position, dragElement, setDragElement, dropElements, currentDrop, setCurrentDrop] = gameStore(s => [s.game, s.boardSelections, s.move, s.position, s.dragElement, s.setDragElement, s.dropElements, s.currentDrop, s.setCurrentDrop, s.boardJSON]);
-  const [transform, setTransform] = useState<string>(); // temporary transform from new to old used to animate
-  const [animating, setAnimating] = useState(false); // currently animating
   const [dragging, setDragging] = useState(false); // currently dragging
   const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
   const wrapper = useRef<HTMLDivElement>(null);
@@ -45,7 +43,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const absoluteTransform = element.absoluteTransform();
   const clickable = !dragElement && selections?.clickMoves.length;
   const selectable = !dragElement && selections?.clickMoves.filter(m => m.action.slice(0, 4) !== '_god').length;
-  const draggable = !animating && !transform && selections?.dragMoves.length; // ???
+  const draggable = !!selections?.dragMoves.length; // ???
   const droppable = dropElements.find(({ element }) => element === branch);
 
   let style: React.CSSProperties = {};
@@ -104,40 +102,40 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     setCurrentDrop(undefined);
   }, [setCurrentDrop]);
 
-  const moveTransform = element.getMoveTransform();
-
   useEffect(() => {
-    if (wrapper.current && transform) {
+    const moveTransform = element.getMoveTransform();
+    if (!moveTransform || animatedFrom === element._t.was) {
+      //console.log(moveTransform ? `not moving ${branch} - already moved from ${element._t.was}` : `no move for ${branch}`);
+      if (branch !== element._t.was) element.doneMoving();
+    } else if (wrapper.current) {
+      //console.log(`moving ${branch} from ${element._t.was}`, moveTransform);
+      let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
+      if (element.board._ui.dragOffset[branch]) {
+        transformToNew = `translate(${element.board._ui.dragOffset[branch].x}px, ${element.board._ui.dragOffset[branch].y}px) ` + transformToNew;
+        delete element.board._ui.dragOffset[branch];
+      }
+      // move to 'old' position without animating
+      wrapper.current!.style.transition = 'none';
+      wrapper.current!.style.transform = transformToNew;
+      wrapper.current!.classList.add('animating');
+      setTimeout(() => {
+        // move to 'new' by removing transform and animate
+        wrapper.current!.style.removeProperty('transition');
+        wrapper.current!.style.removeProperty('transform');
+      }, 0);
+      setAnimatedFrom(element._t.was);
+
       const cancel = (e: TransitionEvent) => {
         if (e.propertyName === 'transform' && e.target === wrapper.current) {
           element.doneMoving();
-          setAnimating(false);
+          wrapper.current!.classList.remove('animating');
           setAnimatedFrom(undefined);
-          wrapper.current?.removeEventListener('transitionend', cancel);
+          wrapper.current!.removeEventListener('transitionend', cancel);
         }
       };
       wrapper.current?.addEventListener('transitionend', cancel);
-      setAnimating(true);
-      setTransform(undefined); // remove transform, while setting animating to let this transition to new location
     }
-  }, [element, wrapper, transform])
-
-  // initially place into old position
-
-  if (!moveTransform || animatedFrom === element._t.was) {
-    //console.log(moveTransform ? `not moving ${branch} - already moved from ${element._t.was}` : `no move for ${branch}`);
-    if (branch !== element._t.was) element.doneMoving();
-  } else if (!transform) {
-    //console.log(`moving ${branch} from ${element._t.was} - cancel render`, element.board._ui.dragOffset[branch]);
-    let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
-    if (element.board._ui.dragOffset[branch]) {
-      transformToNew = `translate(${element.board._ui.dragOffset[branch].x}px, ${element.board._ui.dragOffset[branch].y}px) ` + transformToNew;
-      delete element.board._ui.dragOffset[branch];
-    }
-    setTransform(transformToNew);
-    setAnimatedFrom(element._t.was);
-    return null; // don't render this one, to prevent untransformed render
-  }
+  }, [element, branch, wrapper, animatedFrom])
 
   const { computedStyle } = element._ui;
   if (computedStyle) {
@@ -278,8 +276,8 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     <div
       ref={wrapper}
       key={branch}
-      className={classNames("transform-wrapper", { animating, dragging })}
-      style={{ ...style, transform }}
+      className={classNames("transform-wrapper", { dragging })}
+      style={{ ...style }}
     >
       {contents}
     </div>
@@ -288,12 +286,9 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   contents = (
     <DraggableCore
       disabled={!draggable}
-      // onStart={e => e.stopPropagation()}
       onStart={onStartDrag}
       onDrag={onDrag}
       onStop={onStopDrag}
-      // position={position || {x:0, y:0}}
-      // scale={(parentFlipped ? -1 : 1) * this.state.playAreaScale}
     >
       {contents}
     </DraggableCore>
