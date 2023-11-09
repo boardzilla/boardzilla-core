@@ -79,7 +79,6 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
     if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {space: this});
     if (!graph.hasNode(space._t.id)) graph.addNode(space._t.id, {space});
     graph.addLink(this._t.id, space._t.id, {distance});
-    graph.addLink(space._t.id, this._t.id, {distance});
     return this;
   }
 
@@ -89,7 +88,7 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    */
   adjacentTo(space: Space<P>) {
     if (!this._t.parent?._t.graph) return false;
-    return !!this._t.parent!._t.graph.getLink(this._t.id, space._t.id);
+    return !!this._t.parent!._t.graph.getLink(String(this._t.id), String(space._t.id)) || !!this._t.parent!._t.graph.getLink(String(space._t.id), String(this._t.id));
   }
 
   /**
@@ -110,9 +109,8 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
       const graph = this._t.parent._t.graph;
       const path = pathFinder.find(this._t.id, space._t.id);
       let distance = 0;
-      debugger;
       for (let n = 1; n != path.length; n++) {
-        const edge = graph.getLink(String(path[n - 1].id), String(path[n].id));
+        const edge = graph.getLink(String(path[n - 1].id), String(path[n].id)) || graph.getLink(String(path[n].id), String(path[n - 1].id));
         if (edge === undefined) throw Error();
         distance += edge.data.distance;
         // distance += graph.getEdgeAttributes(graph.edge(path[n - 1], path[n])).distance;
