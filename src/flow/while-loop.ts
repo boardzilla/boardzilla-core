@@ -9,11 +9,11 @@ export type WhileLoopPosition = { index: number };
 export default class WhileLoop<P extends Player> extends Flow<P> {
   block: FlowDefinition<P>;
   position: WhileLoopPosition;
-  while: (a: FlowArguments) => boolean;
+  while: boolean | ((a: FlowArguments) => boolean);
   type: FlowBranchNode<P>['type'] = 'loop';
 
   constructor({ do: block, while: whileCondition }: {
-    while: (a: FlowArguments) => boolean,
+    while: boolean | ((a: FlowArguments) => boolean),
     do: FlowDefinition<P>
   }) {
     super({ do: block });
@@ -23,7 +23,7 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   reset() {
     const position: typeof this.position = { index: 0 };
     this.setPosition(position);
-    if (!this.while(this.flowStepArgs())) this.setPosition({...position, index: -1});
+    if (typeof this.while === 'function' ? !this.while(this.flowStepArgs()) : !this.while) this.setPosition({...position, index: -1});
   }
 
   currentBlock() {
@@ -31,15 +31,16 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   }
 
   advance() {
+    if (this.position.index > 10000) throw Error(`Endless loop detected: ${this.name}`);
     const position: typeof this.position = { index: this.position.index + 1 };
     this.setPosition(position);
-    if (!this.while(this.flowStepArgs())) return this.exit();
+    if (typeof this.while === 'function' ? !this.while(this.flowStepArgs()) : !this.while) return this.exit();
     return FlowControl.ok;
   }
 
   repeat() {
     this.setPosition(this.position);
-    if (!this.while(this.flowStepArgs())) return this.exit();
+    if (typeof this.while === 'function' ? !this.while(this.flowStepArgs()) : !this.while) return this.exit();
     return FlowControl.ok;
   }
 

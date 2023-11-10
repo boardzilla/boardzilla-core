@@ -53,8 +53,8 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
         const player = playerAt(p);
         return (
           <div className="seat" key={p}>
-            <select value={player?.userID || ""} onChange={e => seatPlayer(p, e.target.value)} style={{backgroundColor: player?.color || '#444' }}>
-              <option key="" value=""></option>
+            <select value={player?.userID || ""} onChange={e => seatPlayer(p, e.target.value)} style={{backgroundColor: player?.color || '#888' }}>
+              <option key="" value="">&lt; open seat &gt;</option>
               {users.filter(u => (
                 player?.userID === u.id || !players.find(player => player.userID === u.id)
               )).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}

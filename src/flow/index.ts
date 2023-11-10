@@ -56,10 +56,10 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
  * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
  * the current loop can be interupted.
  *
- * @param options.while - A condition function that must return true for the
- * loop to continue. If this evaluates to false when the loop begins, it will be
- * skipped entirely. The condition will be evaluates at the start of each loop
- * to determine whether it should continue.
+ * @param options.while - Either a simple boolean value or a condition function
+ * that must return true for the loop to continue. If this evaluates to false
+ * when the loop begins, it will be skipped entirely. The condition will be
+ * evaluated at the start of each loop to determine whether it should continue.
  *
  * @example
  * whileLoop({ while: () => !bag.isEmpty(), do: (

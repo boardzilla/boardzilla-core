@@ -87,6 +87,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
           action: move.data[i].action,
           args: move.data[i].args.map(a => deserializeArg(a as SerializedArg, game))
         });
+        game.play();
       }
       console.timeLog('processMove', 'process');
       if (error) {

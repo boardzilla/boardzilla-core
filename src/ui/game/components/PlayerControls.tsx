@@ -36,7 +36,7 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
       }
     }
     onSubmit(pendingMove, arg);
-  }, [onSubmit, game])
+  }, [onSubmit, game, selected, disambiguateElement])
 
   const controls = useMemo(() => {
     const layouts: Record<string, {moves: PendingMove<Player>[], style: React.CSSProperties}> = {};
@@ -84,11 +84,13 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
             }
             layouts[layoutName] = {moves: typeof pendingMove === 'object' ? [pendingMove] : [], style};
           }
+        } else {
+          layouts['_default'] = {moves: typeof pendingMove === 'object' ? [pendingMove] : [], style: {left: 0, top: 0}};
         }
       }
     }
     return layouts;
-  }, [game, moves, move, position, disambiguateElement]); // TODO check this works: game.players.currentPosition so the out of turn can move?
+  }, [game, moves, move, position, disambiguateElement, step]); // TODO check this works: game.players.currentPosition so the out of turn can move?
 
   if (!position) return null;
 
