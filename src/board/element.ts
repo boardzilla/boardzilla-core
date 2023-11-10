@@ -7,6 +7,7 @@ import random from 'random-seed';
 import type Game from '../game.js';
 import type Player from '../player/player.js';
 import type Board from './board.js';
+import type Space from './space.js';
 import type { ElementFinder } from './element-collection.js';
 
 import type { UndirectedGraph } from 'graphology';
@@ -79,7 +80,7 @@ export type ElementUI<P extends Player, T extends GameElement<P>> = {
       style?: 'solid' | 'double',
       color?: string,
       fill?: string,
-      label?: (arg: any) => React.JSX.Element | null,
+      label?: ({distance, to, from}: {distance: number, to: Space<P>, from: Space<P> }) => React.JSX.Element | null,
       labelScale?: number,
     },
   },

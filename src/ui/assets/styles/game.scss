@@ -183,7 +183,7 @@
     flex-direction: row;
     #seating {
       margin: .2em;
-      width: 40%;
+      width: min(40%,25em);
       text-align: center;
 
       .seat {
@@ -238,7 +238,7 @@
 
     #settings {
       margin: .4em .2em;
-      width: 60%;
+      flex: 1;
       font-size: 1.3em;
       input, select {
         font-family: Kanit;

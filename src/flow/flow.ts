@@ -200,7 +200,8 @@ export default class Flow<P extends Player> {
     const step = this.step;
     let result: Do | FlowControl | undefined = FlowControl.complete;
     if (step instanceof Function) {
-      result = step(this.flowStepArgs()) || FlowControl.complete;
+      const stepResult = step(this.flowStepArgs());
+      result = Do.break === stepResult || Do.continue === stepResult || Do.repeat === stepResult ? stepResult : FlowControl.complete;
     } else if (typeof step === 'string') {
       result = step;
     } else if (step instanceof Flow) {

@@ -5,7 +5,11 @@ import { GithubPicker } from 'react-color';
 
 import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
 
-const colors = ['#ff0000', '#0000cc', '#006000', '#006b6b', '#aa8500', '#200080', '#4b0082', '#800080', '#600020', '#603000'];
+const colors = [
+  '#d50000', '#ff4081', '#bf360c', '#795a4f', '#ff6f00',
+  '#ffa825', '#f2d330', '#43a047', '#004d40', '#00695c',
+  '#00838f', '#408074', '#304ffe', '#448aff', '#1a237e',
+  '#4a148c', '#aa00ff', '#7c4dff', '#455a64', '#600020'];
 
 const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
   users: User[],

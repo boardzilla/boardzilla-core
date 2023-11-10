@@ -21,7 +21,7 @@ export enum Do {
    *
    * @category Flow
    */
-  repeat = "REPEAT",
+  repeat = "__REPEAT__",
 
   /**
    * Return Do.continue from anywhere inside a looping flow ({@link whileLoop},
@@ -44,7 +44,7 @@ export enum Do {
    *
    * @category Flow
    */
-  continue = "CONTINUE",
+  continue = "__CONTINUE__",
 
   /**
    * Return Do.break from anywhere inside a looping flow ({@link whileLoop},
@@ -63,13 +63,13 @@ export enum Do {
    *
    * @category Flow
    */
-  break = "BREAK",
+  break = "__BREAK__",
 }
 
 /** internal */
 export enum FlowControl {
-  ok = "OK",
-  complete = "COMPLETE"
+  ok = "__OK__",
+  complete = "__COMPLETE__"
 }
 
 /**

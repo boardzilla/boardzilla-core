@@ -232,7 +232,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
               transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * absoluteTransform.width * .5}
   ${(origin.y + destination.y) / 2 - labelScale! * absoluteTransform.height * .5})
   scale(${labelScale})`}
-            >{label(args[1].distance)}</g>);
+            >{label({ distance: args[1].distance, to: args[4].space, from: args[5].space })}</g>);
         }
       }
     });

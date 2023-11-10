@@ -14,14 +14,20 @@ export const toggleSetting = (label: string) => ({ name, settings, updateKey }: 
   );
 };
 
-export const choiceSetting = (label: string, choices: Record<string, string>) => ({ name, settings, updateKey }: SetupComponentProps) => (
-  <div>
-    <label>{label}: </label>
-    <select value={settings ? settings[name] || "" : ""} onChange={e => updateKey(name, e.target.value)}>
-      {Object.entries(choices).map(([value, name]) => <option key={value} value={value}>{name}</option>)}
-    </select>
-  </div>
-)
+export const choiceSetting = (label: string, choices: Record<string, string>) => ({ name, settings, updateKey }: SetupComponentProps) => {
+  useEffect(() => {
+    if (settings[name] === undefined) updateKey(name, Object.keys(choices)[0]);
+  }, [name, settings, updateKey]);
+
+  return (
+    <div>
+      <label>{label}: </label>
+      <select value={settings ? settings[name] || "" : ""} onChange={e => updateKey(name, e.target.value)}>
+        {Object.entries(choices).map(([value, name]) => <option key={value} value={value}>{name}</option>)}
+      </select>
+    </div>
+  );
+};
 
 export const textSetting = (label: string) => ({ name, settings, updateKey }: SetupComponentProps) => (
   <div>
