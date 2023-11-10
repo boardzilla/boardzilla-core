@@ -110,6 +110,8 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
         rseed = String(Math.random()) as string;
         sessionStorage.setItem('rseed', rseed);
       }
+    } else {
+      rseed = String(Math.random());
     }
   }
   game.setRandomSeed(rseed);
