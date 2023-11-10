@@ -35,15 +35,21 @@ export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlay
 
   return (
     <>
-      <Seating
-        users={users}
-        players={players}
-        minPlayers={minPlayers}
-        maxPlayers={maxPlayers}
-        onUpdatePlayers={onUpdatePlayers}
-      />
-      {settingsComponents}
-      <input type="button" disabled={(players?.length || 0) < minPlayers} value="Start" onClick={onStart}/>
+      <div id="setup">
+        <div id="seating">
+          <Seating
+            users={users}
+            players={players}
+            minPlayers={minPlayers}
+            maxPlayers={maxPlayers}
+            onUpdatePlayers={onUpdatePlayers}
+          />
+          <input type="button" className="start" disabled={(players?.length || 0) < minPlayers} value="Start Game" onClick={onStart}/>
+        </div>
+        <div id="settings">
+          {settingsComponents}
+        </div>
+      </div>
     </>
   );
 }

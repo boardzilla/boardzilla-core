@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Agbalumo&family=Kanit&display=swap');
 @layer game {
 
   /* z layers */
@@ -8,6 +9,7 @@
   body {
     margin: 0;
     padding: 0;
+    font-family: Kanit;
   }
 
   #game {
@@ -173,6 +175,101 @@
       background: red;
       color: white;
       z-index: 200;
+    }
+  }
+
+  #setup {
+    display: flex;
+    flex-direction: row;
+    #seating {
+      margin: .2em;
+      width: 40%;
+      text-align: center;
+
+      .seat {
+        position: relative;
+        select {
+          appearance: none;
+          font-family: Kanit;
+          text-align-last: center;
+          text-align: center;
+          font-size: 1.5em;
+          border-radius: 1em;
+          border-width: 0;
+          padding: 0.2em 1em;
+          width: 100%;
+          color: white;
+          color: white;
+          margin: 0.2em 0;
+          box-shadow: .1em .1em .2em #0008, inset .1em .1em 0 #fff4, inset -.1em -.1em 0 #0008;
+          &:focus {
+            outline: none;
+          }
+        }
+
+        .pencil {
+          color: white;
+          position: absolute;
+          font-size: 1.4em;
+          top: 28%;
+          right: 4%;
+          transition: transform .2s;
+          &:hover {
+            cursor: pointer;
+            transform: scale(1.4);
+          }
+        }
+
+        .github-picker {
+          padding: 1em;
+          position: absolute !important;
+          z-index: 1;
+          text-align: left;
+          left: 88%;
+          width: 142px !important;
+          display: block !important;
+          > span {
+            margin: .1em;
+            display: inline-block;
+          }
+        }
+      }
+    }
+
+    #settings {
+      margin: .4em .2em;
+      width: 60%;
+      font-size: 1.3em;
+      input, select {
+        font-family: Kanit;
+        font-size: 1em;
+        padding: 0em 0.5em;
+        margin: 0.1em 0;
+        background: #eef;
+        &:focus {
+          outline: none;
+        }
+      }
+      input[type=checkbox] {
+        transform: scale(1.5);
+        transform-origin: left center;
+        &:focus {
+          outline: none;
+        }
+      }
+    }
+
+    input.start {
+      font-family: Kanit;
+      border-radius: .2em;
+      border-width: 0;
+      text-shadow: .1em .1em 0 #fff5;
+      box-shadow: .1em .1em .2em #0008, inset .1em .1em 0 #fff9;
+      background: linear-gradient(to bottom, #ddd,  #aaa 85%, #ccc);
+      padding: 0.3em 1.6em;
+      font-size: 1.4em;
+      font-weight: bold;
+      margin-top: .5em;
     }
   }
 }

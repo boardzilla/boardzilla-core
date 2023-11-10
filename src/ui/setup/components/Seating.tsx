@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 import { times } from '../../../index.js';
-import ReactColor from 'react-color';
+import { GithubPicker } from 'react-color';
 
 import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
 
@@ -48,14 +48,13 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
   const playerAt = (position: number) => players.find(p => p.position === position);
 
   return (
-    <div>
+    <>
       {times(maxPlayers, p => {
         const player = playerAt(p);
         return (
-          <div key={p}>
-            Seat {p}:
-            <select value={player?.userID || ""} onChange={e => seatPlayer(p, e.target.value)}>
-              <option key="" value="">[empty]</option>
+          <div className="seat" key={p}>
+            <select value={player?.userID || ""} onChange={e => seatPlayer(p, e.target.value)} style={{backgroundColor: player?.color || '#444' }}>
+              <option key="" value=""></option>
               {users.filter(u => (
                 player?.userID === u.id || !players.find(player => player.userID === u.id)
               )).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -63,11 +62,23 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
             {player && (
               <>
                 <div
-                  style={{ display: 'inline-block', width: '12px', height: '12px', border: '1px solid #666', backgroundColor: player.color}}
+                  className="pencil"
                   onClick={() => setPickingColor(picking => picking === p ? undefined : p)}
-                />
+                >
+                  <svg
+                    className="svg-icon"
+                    style={{ width: "1em", height: "1em", verticalAlign: "middle" }}
+                    viewBox="0 0 1024 1024"
+                  >
+                    <path
+                      fill="#fff"
+                      fillOpacity="1"
+                      d="M922.857 0q40 0 70 26.571t30 66.572q0 36-25.714 86.286-189.714 359.428-265.714 429.714-55.429 52-124.572 52-72 0-123.714-52.857t-51.714-125.429q0-73.143 52.571-121.143L848.571 30.857Q882.286 0 922.857 0zM403.43 590.857q22.285 43.429 60.857 74.286t86 43.428l.571 40.572q2.286 121.714-74 198.286T277.714 1024q-70.285 0-124.571-26.571T66 924.57 16.571 820 0 694.286q4 2.857 23.429 17.143t35.428 25.428 33.714 20.857 26.286 9.715q23.429 0 31.429-21.143Q164.57 708.57 183.143 682t39.714-43.429 50.286-27.142T332 596.857t71.429-6z"
+                    ></path>
+                  </svg>
+                </div>
                 {pickingColor === p && (
-                  <ReactColor.GithubPicker
+                  <GithubPicker
                     color={player.color}
                     colors={colors.filter(c => c === player.color || !players.map(p => p.color).includes(c))}
                     onChange={c => updateColor(p, c.hex)}
@@ -78,7 +89,7 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
           </div>
         );
       })}
-    </div>
+    </>
   );
 };
 
