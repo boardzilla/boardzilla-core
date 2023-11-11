@@ -19,6 +19,10 @@ import type { PendingMove, SerializedMove } from '../game.js'
 import type { SetupFunction } from '../index.js'
 
 type GameStore = {
+  host: boolean,
+  setHost: (host: boolean) => void,
+  userID: string,
+  setUserID: (userID: string) => void,
   setup?: SetupFunction<Player, Board<Player>>;
   setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
   game: Game<Player, Board<Player>>;
@@ -55,6 +59,10 @@ type GameStore = {
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
+  host: false,
+  setHost: host => set({ host }),
+  userID: '',
+  setUserID: userID => set({ userID }),
   setSetup: setup => set({ setup }),
   game: new Game(),
   setGame: (game: Game<Player, Board<Player>>) => set({ game }),
@@ -283,12 +291,13 @@ export const render = <P extends Player, B extends Board<P>>(setup: SetupFunctio
   state.setGame(setupGame() as unknown as Game<Player, Board<Player>>);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
-  const { userID, minPlayers, maxPlayers }: { userID: string, minPlayers: number, maxPlayers: number } = boostrap;
+  const { host, userID, minPlayers, maxPlayers }: { host: boolean, userID: string, minPlayers: number, maxPlayers: number } = boostrap;
+  state.setHost(host);
+  state.setUserID(userID);
 
   const root = createRoot(document.getElementById('root')!)
   root.render(
     <Main
-      userID={userID}
       minPlayers={minPlayers}
       maxPlayers={maxPlayers}
     />

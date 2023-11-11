@@ -271,5 +271,8 @@
       font-weight: bold;
       margin-top: .5em;
     }
+    &.disabled input, &.disabled select, &.disabled button {
+      pointer-events: none;
+    }
   }
 }

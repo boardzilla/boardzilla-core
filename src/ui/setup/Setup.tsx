@@ -14,7 +14,7 @@ export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlay
   onUpdateSettings: (s: GameSettings) => void,
   onStart: () => void,
 }) => {
-  const [game] = gameStore(s => [s.game]);
+  const [game, host] = gameStore(s => [s.game, s.host]);
 
   const updateSettingsKey = useCallback((key: string, value: any) => {
     const newSettings = Object.assign(settings || {}, { [key]: value });
@@ -35,7 +35,7 @@ export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlay
 
   return (
     <>
-      <div id="setup">
+      <div id="setup" className={host ? '' : 'disabled'}>
         <div id="seating">
           <Seating
             users={users}

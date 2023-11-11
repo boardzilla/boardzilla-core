@@ -136,7 +136,6 @@ export type SwitchPlayerMessage = {
 }
 
 export default ({ minPlayers, maxPlayers }: {
-  userID: string,
   minPlayers: number,
   maxPlayers: number,
 }) => {

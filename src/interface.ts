@@ -79,6 +79,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
         trackMovement
       });
       console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
+      game.messages = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
       let error = undefined;
       for (let i = 0; i !== move.data.length; i++) {

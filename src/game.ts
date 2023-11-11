@@ -269,7 +269,6 @@ export default class Game<P extends Player, B extends Board<P>> {
   // moves
   processMove({ player, action, args }: Move<P>): string | undefined {
     let error: string | undefined;
-    this.messages = [];
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[action]) {
         const godModeAction = this.godModeActions()[action];

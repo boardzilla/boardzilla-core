@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { gameStore } from '../../index.js';
 
 import { times } from '../../../index.js';
 import { GithubPicker } from 'react-color';
@@ -6,10 +7,10 @@ import { GithubPicker } from 'react-color';
 import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
 
 const colors = [
-  '#d50000', '#ff4081', '#bf360c', '#795a4f', '#ff6f00',
-  '#ffa825', '#f2d330', '#43a047', '#004d40', '#00695c',
-  '#00838f', '#408074', '#304ffe', '#448aff', '#1a237e',
-  '#4a148c', '#aa00ff', '#7c4dff', '#455a64', '#600020'];
+  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
+  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
+  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
+  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'];
 
 const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
   users: User[],
@@ -18,6 +19,8 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
   maxPlayers: number,
   onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
 }) => {
+  const [userID, host] = gameStore(s => [s.userID, s.host]);
+
   const [pickingColor, setPickingColor] = useState<number>();
 
   const seatPlayer = (position: number, userID: string) => {
@@ -63,7 +66,7 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
                 player?.userID === u.id || !players.find(player => player.userID === u.id)
               )).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
-            {player && (
+            {player && (host || player.userID === userID) && (
               <>
                 <div
                   className="pencil"
