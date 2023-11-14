@@ -1,0 +1,4 @@
+function choose(name: string, type: 'text', options?: {regex?: string});
+function choose(name: string, type: 'number', options?: {min?: number, max?: number});
+function choose(name: string, type: 'text'|'number', options?: Record<string, any>) {
+}

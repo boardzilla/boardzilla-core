@@ -1,14 +1,15 @@
 import Flow from './flow.js';
-import { serializeArg, deserializeArg } from '../action/utils.js';
+import { serialize, deserializeArg } from '../action/utils.js';
 
 import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
 import type { Argument } from '../action/action.js';
+import type { SerializedArg } from '../action/utils.js';
 
 export type ActionStepPosition<P extends Player> = {
   player: number,
   action: string,
-  args: Argument<P>[]
+  args: Record<string, Argument<P>>
 } | null;
 
 export default class ActionStep<P extends Player> extends Flow<P> {
@@ -71,7 +72,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     const player = game.players.atPosition(move.player);
     if (!player) return `No such player position: ${move.player}`;
     const gameAction = game.action(move.action, player);
-    const error = gameAction._process(...move.args);
+    const error = gameAction._process(move.args);
     if (error) {
       // failed with a selection required
       return error;
@@ -80,9 +81,9 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       this.setPosition(move);
       for (const message of gameAction._cfg.messages) {
         if (typeof message === 'function') {
-          game.message(message(...move.args), {player});
+          game.message(message(move.args), {player});
         } else {
-          game.message(message, ...move.args, {player});
+          game.message(message, {...move.args, player});
         }
       }
     }
@@ -92,7 +93,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     return this.position ? {
       player: this.position.player,
       action: this.position.action,
-      args: this.position.args?.map(a => serializeArg(a, forPlayer))
+      args: serialize(this.position.args, forPlayer)
     } : null;
   }
 
@@ -100,7 +101,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     return position ? {
       player: position.player,
       action: position.action,
-      args: position.args?.map((a: any) => deserializeArg(a, this.game))
+      args: Object.fromEntries(Object.entries(position.args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, this.game)]))
     } : null;
   }
 

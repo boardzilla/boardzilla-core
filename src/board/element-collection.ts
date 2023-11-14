@@ -42,7 +42,8 @@ export type ElementFinder<P extends Player, T extends GameElement<P>> = (
  */
 export default class ElementCollection<P extends Player, T extends GameElement<P>> extends Array<T> {
 
-  slice(...a: any[]):ElementCollection<P, T> {return super.slice(...a) as ElementCollection<P, T>};
+  slice(...a: Parameters<Array<T>['slice']>):ElementCollection<P, T> {return super.slice(...a) as ElementCollection<P, T>};
+  filter(...a: Parameters<Array<T>['filter']>):ElementCollection<P, T> {return super.filter(...a) as ElementCollection<P, T>};
 
   /**
    * As {@link GameElement#all}, but finds all elements within this collection

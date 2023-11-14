@@ -55,5 +55,5 @@ export {
  */
 export const action = <P extends Player>(definition: {
   prompt: string,
-  condition?: Action<P, []>['_cfg']['condition'],
-}) => new Action<P, []>(definition);
+  condition?: Action<P>['_cfg']['condition'],
+}) => new Action<P>(definition);
