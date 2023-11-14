@@ -33,18 +33,18 @@ export type PlayerAttributes<T extends Player> = {
 export type Move<P extends Player> = {
   player: P,
   action: string,
-  args: Argument<P>[]
+  args: Record<string, Argument<P>>
 };
 
 export type PendingMove<P extends Player> = {
   action: string,
-  args: Argument<P>[],
+  args: Record<string, Argument<P>>,
   selection: ResolvedSelection<P>,
 };
 
 export type SerializedMove = {
   action: string,
-  args: SerializedArg[]
+  args: Record<string, SerializedArg>
 }
 
 export type Message = {
@@ -59,7 +59,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   board: B;
   setupComponents?: Record<string, (p: SetupComponentProps) => React.JSX.Element>
   settings: Record<string, any>;
-  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>;
+  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P>>;
   phase: 'define' | 'new' | 'started' | 'finished' = 'define';
   rseed: string;
   random: () => number;
@@ -75,7 +75,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.flowDefinition = flowDefinition;
   }
 
-  defineActions(actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>) {
+  defineActions(actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P>>) {
     if (this.phase !== 'define') throw Error('cannot call defineActions once started');
     this.actions = actions;
   }
@@ -232,29 +232,30 @@ export default class Game<P extends Player, B extends Board<P>> {
     return {
       _godMove: action<P>({
         prompt: "Move",
-      }).move({
-        choosePiece: this.board.all(Piece<P>),
-        chooseInto: this.board.all(GameElement<P>)
-      }),
+      }).move(
+        'piece', this.board.all(Piece<P>),
+        'into', this.board.all(GameElement<P>)
+      ),
       _godEdit: action<P>({
         prompt: "Change",
-      }).chooseOnBoard({
-        choices: this.board.all(GameElement)
-      }).chooseFrom({
-        prompt: "Change property",
-        choices: el => Object.keys(el).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'board', 'game', 'pile', 'mine'].includes(a))
-      }).enterText({
-        prompt: (_, prop) => `Change ${prop}`,
-        initial: (el: GameElement<P>, attr: keyof GameElement<P>) => String(el[attr])
-      }).do((el, attr: keyof GameElement<P>, value: any) => {
-        if (value === 'true') {
-          value = true;
-        } else if (value === 'false') {
-          value = false;
-        } else if (parseInt(value).toString() === value) {
-          value = parseInt(value);
-        }
-        if (attr !== 'mine') el[attr] = value
+      })
+        .chooseOnBoard('element', this.board.all(GameElement))
+        .chooseFrom<'property', string>(
+          'property',
+          el => Object.keys(el).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'board', 'game', 'pile', 'mine'].includes(a)),
+          { prompt: "Change property" }
+        ).enterText('value', {
+          prompt: ({ property }) => `Change ${property}`,
+          initial: ({ element, property }) => String(element[property as keyof GameElement<P>])
+        }).do(({ element, property, value }: { element: GameElement<P>, property: keyof GameElement<P>, value: any }) => {
+          if (value === 'true') {
+            value = true;
+          } else if (value === 'false') {
+            value = false;
+          } else if (parseInt(value).toString() === value) {
+            value = parseInt(value);
+          }
+          if (property !== 'mine') element[property] = value
       })
     };
   }
@@ -272,7 +273,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[action]) {
         const godModeAction = this.godModeActions()[action];
-        error = godModeAction._process(...args);
+        error = godModeAction._process(args);
       } else {
         error = this.flow.processMove({
           action,
@@ -309,7 +310,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     };
   }
 
-  getResolvedSelections(player: P, action?: string, ...args: Argument<P>[]): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
+  getResolvedSelections(player: P, action?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
     const allowedActions = this.#allowedActions(player);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;
@@ -318,14 +319,14 @@ export default class Game<P extends Player, B extends Board<P>> {
       let resolvedSelections: PendingMove<P>[] = [];
       for (const action of actions) {
         const playerAction = this.action(action, player);
-        let submoves = playerAction._getResolvedSelections();
+        let submoves = playerAction._getResolvedSelections({});
         if (submoves !== undefined) {
           possibleActions.push(action);
           if (expand && submoves.length === 0) {
             submoves = [{
               action,
-              args:  [],
-              selection: new Selection<P>({ prompt: playerAction.prompt, value: action }).resolve()
+              args: {},
+              selection: new Selection<P>('__action__', { prompt: playerAction.prompt, value: action }).resolve({})
             }];
           }
           resolvedSelections = resolvedSelections.concat(submoves);
@@ -339,34 +340,20 @@ export default class Game<P extends Player, B extends Board<P>> {
         prompt,
         moves: [{
           action: '/',
-          args: [],
-          selection: new Selection<P>({ prompt, selectFromChoices: { choices: actions }}).resolve()
+          args: {},
+          selection: new Selection<P>('__action__', { prompt, selectFromChoices: { choices: actions }}).resolve({})
         }]
       };
 
     } else {
-      const moves = this.action(action, player)?._getResolvedSelections(...args)
+      const moves = this.action(action, player)?._getResolvedSelections(args || {})
       if (moves) return { step, prompt, moves };
     }
   }
 
-  message(message: string, ...args: [...Argument<P>[], Record<string, Argument<P>>] | Argument<P>[]) {
-    let replacements: Record<string, SerializedArg> = {};
-    if (args.length) {
-      const lastArg = args[args.length - 1]
-      if (typeof lastArg === 'object' && !(lastArg instanceof Array) && !(lastArg instanceof Player) && !(lastArg instanceof GameElement)) {
-        replacements = Object.fromEntries(Object.entries(lastArg).map(([k, v]) => (
-          [k, escapeArgument(v)]
-        )));;
-        args = args.slice(0, -1) as Argument<P>[];
-      }
-    }
-    for (let i = 0; i !== args.length; i++) {
-      replacements[i + 1] = escapeArgument(args[i] as Argument<P>);
-    }
-
-    Object.entries(replacements).forEach(([k, v]) => {
-      message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`), v as string);
+  message(message: string, args?: Record<string, Argument<P>>) {
+    Object.entries(args || {}).forEach(([k, v]) => {
+      message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`), escapeArgument(v));
     })
     this.messages.push({body: message});
   }

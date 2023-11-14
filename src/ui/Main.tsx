@@ -112,10 +112,10 @@ export type MoveMessage = {
   type: 'move'
   data: {
     action: string,
-    args: SerializedArg[]
+    args: Record<string, SerializedArg>
   } | {
     action: string,
-    args: SerializedArg[]
+    args: Record<string, SerializedArg>
   }[]
 }
 

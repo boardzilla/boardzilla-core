@@ -37,7 +37,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const wrapper = useRef<HTMLDivElement>(null);
   const branch = element.branch()
   const selections = boardSelections[branch];
-  const isSelected = selected.includes(element) || move?.args.some(a => a === element || a instanceof Array && a.includes(element));
+  const isSelected = selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
   const absoluteTransform = element.absoluteTransform();

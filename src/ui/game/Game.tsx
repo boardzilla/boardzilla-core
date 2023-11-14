@@ -26,30 +26,30 @@ export default () => {
     return null;
   }
 
-  const submitMove = (pendingMove?: PendingMove<Player>, ...args: Argument<Player>[]) => {
+  const submitMove = (pendingMove?: PendingMove<Player>, arg?: Argument<Player>) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
-    selectMove(pendingMove, ...args);
+    selectMove(pendingMove, arg);
   };
 
-  const onSelectElement = (moves: PendingMove<Player>[], ...elements: GameElement<Player>[]) => {
+  const onSelectElement = (moves: PendingMove<Player>[], element: GameElement<Player>) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
 
     if (moves.length === 0) return;
     if (moves.length > 1) {
-      setSelected([elements[0]]);
-      return setDisambiguateElement({ element: elements[0], moves });
+      setSelected([element]);
+      return setDisambiguateElement({ element: element, moves });
     }
     const move = moves[0];
     if (move.selection?.type === 'board') {
       if (!move.selection.isMulti()) {
-        return submitMove(move, ...elements);
+        return submitMove(move, element);
       }
 
-      const newSelected = selected.includes(elements[0]) ?
-        selected.filter(s => s !== elements[0]) :
-        selected.concat([elements[0]]);
+      const newSelected = selected.includes(element) ?
+        selected.filter(s => s !== element) :
+        selected.concat([element]);
       setSelected(newSelected);
     }
   }

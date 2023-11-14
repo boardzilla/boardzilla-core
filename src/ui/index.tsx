@@ -32,9 +32,9 @@ type GameStore = {
   updateBoard: () => void; // call any time state changes to update immutable references for listeners. updates move, selections
   position?: number; // this player
   setPosition: (p: number) => void;
-  move?: {action: string, args: Argument<Player>[]}; // move in progress
-  selectMove: (sel?: PendingMove<Player>, ...args: Argument<Player>[]) => void;
-  moves: {action: string, args: SerializedArg[]}[]; // move ready for processing
+  move?: {action: string, args: Record<string, Argument<Player>>}; // move in progress
+  selectMove: (sel?: PendingMove<Player>, arg?: Argument<Player>) => void;
+  moves: {action: string, args: Record<string, SerializedArg>}[]; // move ready for processing
   clearMoves: () => void;
   error?: string,
   setError: (error: string) => void,
@@ -109,10 +109,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     if (!s.position) return {};
     return updateBoard(s.game, s.position);
   }),
-  selectMove: (pendingMove?: PendingMove<Player>, ...args: Argument<Player>[]) => set(s => {
+  selectMove: (pendingMove?: PendingMove<Player>, arg?: Argument<Player>) => set(s => {
     const move = pendingMove ? {
       action: pendingMove.action,
-      args: args ? [...pendingMove.args, ...args] : pendingMove.args
+      args: arg ? {...pendingMove.args, [pendingMove.selection.name]: arg} : pendingMove.args
     } : undefined;
     return updateSelections(s.game!, s.position!, move);
   }),
@@ -138,7 +138,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     const moves = s.boardSelections[dragElement].dragMoves;
     let dropElements: {element: string, move: PendingMove<Player>}[] = [];
     if (moves) for (let {move, drag} of moves) {
-      if (typeof drag === 'function') drag = drag(...(s.move?.args || []), s.game!.board.atBranch(dragElement));
+      if (typeof drag === 'function') drag = drag({...(s.move?.args || {}), [move.selection.name]: s.game!.board.atBranch(dragElement)});
       if (drag) {
         if (typeof drag === 'string') throw Error('unsupported');
         if (!(drag instanceof Array)) drag = [drag];
@@ -152,7 +152,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
 }), shallow);
 
 // refresh move and selections
-const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: {action: string, args: Argument<Player>[]}) => {
+const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: {action: string, args: Record<string, Argument<Player>>}) => {
   const player = game.players.atPosition(position);
   if (!player) return {};
   let state: Partial<GameStore> = {};
@@ -160,7 +160,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   let isBoardUpToDate = true;
 
   while (true) {
-    resolvedSelections = game.getResolvedSelections(player, move?.action, ...(move?.args || []));
+    resolvedSelections = game.getResolvedSelections(player, move?.action, move?.args);
     if (move && !resolvedSelections?.moves) {
       console.log('move may no longer be valid. retrying getResolvedSelections', move, resolvedSelections);
       move = undefined;
@@ -175,7 +175,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       if (arg === undefined) break;
       move = {
 	action: pendingMoves[0].action,
-	args: [...pendingMoves[0].args, arg]
+	args: {...pendingMoves[0].args, [pendingMoves[0].selection.name]: arg}
       };
       continue;
     }
@@ -191,7 +191,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       // serialize now before we alter our state to ensure proper references
       const serializedMove: SerializedMove = {
 	action: move.action,
-	args: move.args.map(a => serializeArg(a))
+	args: Object.fromEntries(Object.entries(move.args).map(([k, v]) => [k, serializeArg(v)]))
       }
 
       state.error = game.processMove({ player, ...move });
@@ -234,7 +234,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
         }
         if (p.selection.clientContext?.dragFrom) {
           const dragFrom = typeof p.selection.clientContext?.dragFrom === 'function' ?
-            p.selection.clientContext?.dragFrom(...(move?.args || [])) :
+            p.selection.clientContext?.dragFrom(move?.args) :
             p.selection.clientContext?.dragFrom;
 
           for (const el of dragFrom instanceof Array ? dragFrom : [dragFrom]) {

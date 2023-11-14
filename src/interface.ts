@@ -86,7 +86,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
         error ||= game.processMove({
           player: game.players.atPosition(move.position)!,
           action: move.data[i].action,
-          args: move.data[i].args.map(a => deserializeArg(a as SerializedArg, game))
+          args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, game)]))
         });
         game.play();
       }

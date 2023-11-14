@@ -89,7 +89,7 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
   elementClasses?: ElementClass<P, GameElement<P>>[],
   setup?: (board: B) => any,
   flow: (board: B) => FlowDefinition<P>,
-  actions: (board: B, actionFunction: typeof action<P>, player: P) => Record<string, Action<P, Argument<P>[]>>,
+  actions: (board: B, actionFunction: typeof action<P>, player: P) => Record<string, Action<P, Record<string, Argument<P>>>>,
 }): SetupFunction<P, B> => (
   state?: SetupState<P> | GameState<P>,
   options?: {

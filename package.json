@@ -14,11 +14,11 @@
     "lint": "eslint . --ext .ts"
   },
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "files": [
-    "src/**/*"
+    "dist/**/*"
   ],
-  "types": "src/index.ts",
+  "types": "dist/index.m.ts",
   "sideEffects": [
     "./src/ui/assets/styles/game.scss"
   ],
@@ -57,7 +57,7 @@
     "typedoc": "^0.25.2",
     "typedoc-plugin-merge-modules": "^5.1.0",
     "typedoc-plugin-rename-defaults": "^0.6.7",
-    "typescript": "^5.1.0"
+    "typescript": "^5.2.0"
   },
   "typedocOptions": {
     "entryPoints": [

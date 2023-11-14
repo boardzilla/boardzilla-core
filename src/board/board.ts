@@ -51,8 +51,8 @@ export default class Board<P extends Player> extends Space<P> {
     return this._ctx.game.settings[key];
   }
 
-  message(message: string, ...args: [...Argument<P>[], Record<string, Argument<P>>] | Argument<P>[]) {
-    return this._ctx.game.message(message, ...args);
+  message(message: string, args?: Record<string, Argument<P>>) {
+    return this._ctx.game.message(message, args);
   }
 
   finish(winner?: P | P[]) {

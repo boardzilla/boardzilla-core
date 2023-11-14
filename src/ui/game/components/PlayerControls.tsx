@@ -1,13 +1,14 @@
 import React, { useCallback, useMemo } from 'react';
 import { gameStore } from '../../index.js';
-import { humanizeArg } from '../../../action/index.js';
-import { serializeArg, deserializeArg } from '../../../action/utils.js';
+import { deserializeArg } from '../../../action/utils.js';
+import Selection from './Selection.js';
 
 import type { Player } from '../../../player/index.js';
 import type { GameElement } from '../../../board/index.js';
 import type { PendingMove } from '../../../game.js';
 import type { Argument } from '../../../action/action.js';
 import type { SerializedArg } from '../../../action/utils.js';
+import type { ResolvedSelection } from '../../../action/selection.js';
 
 const PlayerControls = ({onSubmit, disambiguateElement}: {
   onSubmit: (move?: PendingMove<Player>, value?: Argument<Player>) => void,
@@ -28,7 +29,7 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
     } else if (pendingMove.selection?.type === 'button') {
       arg = pendingMove.selection.value;
     } else {
-      const value = new FormData(form, (e.nativeEvent as SubmitEvent).submitter).get('selection')?.toString();
+      const value = new FormData(form, (e.nativeEvent as SubmitEvent).submitter).get(pendingMove.selection.name)?.toString();
       if (value) {
         arg = value;
         if (pendingMove.selection?.type === 'number') arg = parseInt(arg.toString());
@@ -108,42 +109,12 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
         {moves.map(pendingMove => (
           <form key={pendingMove.action + pendingMove.selection.prompt} id={pendingMove.action} onSubmit={e => onSubmitForm(e, pendingMove)}>
             <div>
-              {pendingMove.selection.type === 'choices' && pendingMove.selection.choices && (
-                <>
-                  <div className="prompt">{pendingMove.selection.prompt}</div>
-                  {(pendingMove.selection.choices instanceof Array ?
-                    pendingMove.selection.choices.map(c => ([c, c])) :
-                    Object.entries(pendingMove.selection.choices)).map(([k, v]) => (
-                      <button key={String(serializeArg(k))} type="submit" name="selection" value={String(serializeArg(k))}>
-                        {humanizeArg(v)}
-                      </button>
-                    ))
-                  }
-                </>
-              )}
+              <Selection selection={pendingMove.selection}/>
+              {pendingMove.selection.clientContext?.followups?.map((s: ResolvedSelection<Player>) => <Selection selection={s}/>)}
 
-              {pendingMove.selection.type === 'number' && (
-                <>
-                  <input
-                    name="selection"
-                    type="number"
-                    min={pendingMove.selection.min}
-                    max={pendingMove.selection.max}
-                    defaultValue={String(pendingMove.selection.initial || '')}
-                    autoComplete='off'
-                  />
-                  <button type="submit">{pendingMove.selection.prompt}</button>
-                </>
+              {pendingMove.selection.type === 'board' && layoutName === 'disambiguate-board-selection' && (
+                <button type="submit">{pendingMove.selection.prompt}</button>
               )}
-
-              {pendingMove.selection.type === 'text' && (
-                <>
-                  <input name="selection" defaultValue={String(pendingMove.selection.initial || '')} autoComplete='off'/>
-                  <button type="submit">{pendingMove.selection.prompt}</button>
-                </>
-              )}
-
-              {pendingMove.selection.type === 'button' && <button name="selection" value='confirm' type="submit">{pendingMove.selection.prompt}</button>}
 
               {pendingMove.selection.type === 'board' &&
                 (pendingMove.selection.isMulti()) &&
@@ -151,10 +122,6 @@ const PlayerControls = ({onSubmit, disambiguateElement}: {
                   <button type="submit">Done</button>
                 )
               }
-
-              {pendingMove.selection.type === 'board' && layoutName === 'disambiguate-board-selection' && (
-                <button type="submit">{pendingMove.selection.prompt}</button>
-              )}
             </div>
           </form>
         ))}
