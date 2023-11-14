@@ -141,6 +141,9 @@ describe('Game', () => {
     game.play();
     expect(game.messages).to.deep.equals([
       {
+        "body": "Starting game with 4 tokens"
+      },
+      {
         "body": "[[$p[1]|Joe]] added 3"
       }
     ]);
