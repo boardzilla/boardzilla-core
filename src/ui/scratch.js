@@ -1,3 +1,21 @@
+
+      {selection.type === 'choices' && selection.choices && (
+        <>
+          {(selection.choices instanceof Array ? selection.choices.map(c => ([c, c])) : Object.entries(selection.choices)).map(([k, v]) => (
+            <span key={String(serializeArg(k))}>
+              <input
+                type="radio"
+                id={`${selection.name}--${String(serializeArg(k))}`}
+                name={selection.name}
+                value={String(serializeArg(k))}
+              />
+              <label htmlFor={`${selection.name}--${String(serializeArg(k))}`}>{humanizeArg(v)}</label>
+            </span>
+          ))}
+        </>
+      )}
+
+
 board layout setup
 - initially needs a breakpoint and then setupLayout, then applyLayouts
 - on setState, rerun setupLayout (to cover recreated pieces. could be optimized but this is a cheap call) then applyLayouts 

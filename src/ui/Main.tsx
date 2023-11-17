@@ -139,7 +139,7 @@ export default ({ minPlayers, maxPlayers }: {
   minPlayers: number,
   maxPlayers: number,
 }) => {
-  const [game, move, moves, clearMoves, error, setError, position, updateState] = gameStore(s => [s.game, s.move, s.moves, s.clearMoves, s.error, s.setError, s.position, s.updateState]);
+  const [game, moves, clearMoves, setSelected, error, setError, position, updateState] = gameStore(s => [s.game, s.moves, s.clearMoves, s.setSelected, s.error, s.setError, s.position, s.updateState]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
@@ -199,16 +199,17 @@ export default ({ minPlayers, maxPlayers }: {
     // move is processable
     if (moves?.length) {
       console.log('success, submitting to server', moves);
-      moveCallbacks.push((error: string) => console.error(`move ${move} failed: ${error}`));
+      moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
       const message: MoveMessage = {
         type: "move",
         id: String(moveCallbacks.length),
         data: moves
       };
       window.top!.postMessage(message, "*");
+      setSelected([]);
       clearMoves();
     }
-  }, [game, position, moves, clearMoves, moveCallbacks, move]);
+  }, [game, position, moves, clearMoves, moveCallbacks, setSelected]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
     setSettings(settings);

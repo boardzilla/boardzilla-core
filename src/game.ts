@@ -38,8 +38,9 @@ export type Move<P extends Player> = {
 
 export type PendingMove<P extends Player> = {
   action: string,
+  prompt?: string,
   args: Record<string, Argument<P>>,
-  selection: ResolvedSelection<P>,
+  selections: ResolvedSelection<P>[],
 };
 
 export type SerializedMove = {
@@ -59,7 +60,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   board: B;
   setupComponents?: Record<string, (p: SetupComponentProps) => React.JSX.Element>
   settings: Record<string, any>;
-  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P>>;
+  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Record<string, Argument<P>>>>;
   phase: 'define' | 'new' | 'started' | 'finished' = 'define';
   rseed: string;
   random: () => number;
@@ -75,7 +76,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     this.flowDefinition = flowDefinition;
   }
 
-  defineActions(actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P>>) {
+  defineActions(actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Record<string, Argument<P>>>>) {
     if (this.phase !== 'define') throw Error('cannot call defineActions once started');
     this.actions = actions;
   }
@@ -165,7 +166,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   getUpdate(): GameUpdate<P> {
-    const { currentPlayerPosition, ...state } = this.getState();
+    const { currentPlayerPosition: _, ...state } = this.getState();
     if (this.phase === 'started') {
       return {
         game: {
@@ -247,15 +248,17 @@ export default class Game<P extends Player, B extends Board<P>> {
         ).enterText('value', {
           prompt: ({ property }) => `Change ${property}`,
           initial: ({ element, property }) => String(element[property as keyof GameElement<P>])
-        }).do(({ element, property, value }: { element: GameElement<P>, property: keyof GameElement<P>, value: any }) => {
+        }).do(({ element, property, value }) => {
+          let v: any = value
           if (value === 'true') {
-            value = true;
+            v = true;
           } else if (value === 'false') {
-            value = false;
+            v = false;
           } else if (parseInt(value).toString() === value) {
-            value = parseInt(value);
+            v = parseInt(value);
           }
-          if (property !== 'mine') element[property] = value
+          const prop = property as keyof GameElement<P>;
+          if (prop !== 'mine') element[prop] = v
       })
     };
   }
@@ -286,7 +289,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     });
   }
 
-  #allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
+  allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
     const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
     if (!player.isCurrent()) return {
       actions: allowedActions,
@@ -311,7 +314,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   getResolvedSelections(player: P, action?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
-    const allowedActions = this.#allowedActions(player);
+    const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;
     if (!action) {
@@ -325,8 +328,11 @@ export default class Game<P extends Player, B extends Board<P>> {
           if (expand && submoves.length === 0) {
             submoves = [{
               action,
+              prompt,
               args: {},
-              selection: new Selection<P>('__action__', { prompt: playerAction.prompt, value: action }).resolve({})
+              selections: [
+                new Selection<P>('__action__', { prompt: playerAction.prompt, value: action }).resolve({})
+              ]
             }];
           }
           resolvedSelections = resolvedSelections.concat(submoves);
@@ -340,13 +346,16 @@ export default class Game<P extends Player, B extends Board<P>> {
         prompt,
         moves: [{
           action: '/',
+          prompt,
           args: {},
-          selection: new Selection<P>('__action__', { prompt, selectFromChoices: { choices: actions }}).resolve({})
+          selections: [
+            new Selection<P>('__action__', { prompt, selectFromChoices: { choices: actions }}).resolve({})
+          ]
         }]
       };
 
     } else {
-      const moves = this.action(action, player)?._getResolvedSelections(args || {})
+      const moves = this.action(action, player)?._getResolvedSelections(args || {});
       if (moves) return { step, prompt, moves };
     }
   }

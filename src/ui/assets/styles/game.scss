@@ -122,7 +122,6 @@
       background: #fffc;
       form {
         margin: 0;
-        display: inline-block;
       }
       input {
         border-width: .05rem;
@@ -147,6 +146,9 @@
         &:hover {
           transform: scale(1.1);
           box-shadow: 0.2rem 0.2rem .5rem #0008;
+        }
+        &.selected {
+          filter: brightness(1.3);
         }
       }
       input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {

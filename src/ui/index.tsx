@@ -33,7 +33,7 @@ type GameStore = {
   position?: number; // this player
   setPosition: (p: number) => void;
   move?: {action: string, args: Record<string, Argument<Player>>}; // move in progress
-  selectMove: (sel?: PendingMove<Player>, arg?: Argument<Player>) => void;
+  selectMove: (sel?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => void; // commit the choice and find new choices or process the choice
   moves: {action: string, args: Record<string, SerializedArg>}[]; // move ready for processing
   clearMoves: () => void;
   error?: string,
@@ -109,10 +109,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     if (!s.position) return {};
     return updateBoard(s.game, s.position);
   }),
-  selectMove: (pendingMove?: PendingMove<Player>, arg?: Argument<Player>) => set(s => {
+  selectMove: (pendingMove?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => set(s => {
     const move = pendingMove ? {
       action: pendingMove.action,
-      args: arg ? {...pendingMove.args, [pendingMove.selection.name]: arg} : pendingMove.args
+      args: {...pendingMove.args, ...args}
     } : undefined;
     return updateSelections(s.game!, s.position!, move);
   }),
@@ -138,7 +138,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     const moves = s.boardSelections[dragElement].dragMoves;
     let dropElements: {element: string, move: PendingMove<Player>}[] = [];
     if (moves) for (let {move, drag} of moves) {
-      if (typeof drag === 'function') drag = drag({...(s.move?.args || {}), [move.selection.name]: s.game!.board.atBranch(dragElement)});
+      if (typeof drag === 'function') drag = drag({...(s.move?.args || {}), [move.selections[0].name]: s.game!.board.atBranch(dragElement)});
       if (drag) {
         if (typeof drag === 'string') throw Error('unsupported');
         if (!(drag instanceof Array)) drag = [drag];
@@ -170,12 +170,12 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     const pendingMoves = resolvedSelections?.moves;
 
     // selection is skippable - skip and rerun selections
-    if (pendingMoves?.length === 1 && pendingMoves[0].selection.skipIfOnlyOne) {
-      const arg = pendingMoves[0].selection.isForced();
+    if (pendingMoves?.length === 1 && pendingMoves[0].selections.length === 1 && pendingMoves[0].selections[0].skipIfOnlyOne) {
+      const arg = pendingMoves[0].selections[0].isForced();
       if (arg === undefined) break;
       move = {
 	action: pendingMoves[0].action,
-	args: {...pendingMoves[0].args, [pendingMoves[0].selection.name]: arg}
+	args: {...pendingMoves[0].args, [pendingMoves[0].selections[0].name]: arg}
       };
       continue;
     }
@@ -221,25 +221,28 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   if (resolvedSelections) {
     resolvedSelections.moves = resolvedSelections.moves.filter(m => !move || m.action === move.action);
     for (const p of resolvedSelections.moves) {
-      if (p.selection.boardChoices) {
-        for (const el of p.selection.boardChoices) {
-          boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-          boardSelections[el.branch()].clickMoves.push(p);
-        }
-        if (p.selection.clientContext?.dragInto) {
-          for (const el of p.selection.boardChoices) {
+      for (const sel of p.selections) {
+        if (sel.boardChoices) {
+          const boardMove = {...p, selections: [sel]}; // simple board move of single selection to attach to element
+          for (const el of sel.boardChoices) {
             boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-            boardSelections[el.branch()].dragMoves.push({ move: p, drag: p.selection.clientContext?.dragInto });
+            boardSelections[el.branch()].clickMoves.push(boardMove);
           }
-        }
-        if (p.selection.clientContext?.dragFrom) {
-          const dragFrom = typeof p.selection.clientContext?.dragFrom === 'function' ?
-            p.selection.clientContext?.dragFrom(move?.args) :
-            p.selection.clientContext?.dragFrom;
+          if (sel.clientContext?.dragInto) {
+            for (const el of sel.boardChoices) {
+              boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
+              boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel.clientContext?.dragInto });
+            }
+          }
+          if (sel.clientContext?.dragFrom) {
+            const dragFrom = typeof sel.clientContext?.dragFrom === 'function' ?
+              sel.clientContext?.dragFrom(move?.args) :
+              sel.clientContext?.dragFrom;
 
-          for (const el of dragFrom instanceof Array ? dragFrom : [dragFrom]) {
-            boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-            boardSelections[el.branch()].dragMoves.push({ move: p, drag: p.selection.boardChoices });
+            for (const el of dragFrom instanceof Array ? dragFrom : [dragFrom]) {
+              boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
+              boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel.boardChoices });
+            }
           }
         }
       }

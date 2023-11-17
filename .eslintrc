@@ -29,7 +29,7 @@
     'max-classes-per-file': 0,
     'object-curly-newline': 0,
     'max-len': 0,
-    'prefer-destructuring': ['error', { object: true, array: false }],
+    'prefer-destructuring': 0,
     'no-console': 0,
     "no-constant-condition": 0,
     "prefer-const": 0,

@@ -54,6 +54,6 @@ export {
  * @category Actions
  */
 export const action = <P extends Player>(definition: {
-  prompt: string,
+  prompt?: string,
   condition?: Action<P>['_cfg']['condition'],
 }) => new Action<P>(definition);

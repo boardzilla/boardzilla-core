@@ -107,7 +107,7 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
     if (globalThis.window?.sessionStorage) { // web context, use a fixed seed for dev
       rseed = sessionStorage.getItem('rseed') as string;
       if (!rseed) {
-        rseed = String(Math.random()) as string;
+        rseed = String(Math.random());
         sessionStorage.setItem('rseed', rseed);
       }
     } else {
