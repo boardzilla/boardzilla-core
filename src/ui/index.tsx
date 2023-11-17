@@ -169,7 +169,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
     const pendingMoves = resolvedSelections?.moves;
 
-    // selection is skippable - skip and rerun selections
+    // the only selection is skippable - skip and rerun selections
     if (pendingMoves?.length === 1 && pendingMoves[0].selections.length === 1 && pendingMoves[0].selections[0].skipIfOnlyOne) {
       const arg = pendingMoves[0].selections[0].isForced();
       if (arg === undefined) break;

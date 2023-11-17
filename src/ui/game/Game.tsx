@@ -29,8 +29,9 @@ export default () => {
   const submitMove = useCallback((pendingMove?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
+    if (!pendingMove) setSelected([]);
     selectMove(pendingMove, args);
-  }, [selectMove]);
+  }, [selectMove, setSelected]);
 
   const onSelectElement = useCallback((moves: PendingMove<Player>[], element: GameElement<Player>) => {
     clickAudio.current?.play();

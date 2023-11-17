@@ -198,7 +198,7 @@ export default ({ minPlayers, maxPlayers }: {
   useEffect(() => {
     // move is processable
     if (moves?.length) {
-      console.log('success, submitting to server', moves);
+      console.log('success, submitting to server', JSON.stringify(moves));
       moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
       const message: MoveMessage = {
         type: "move",

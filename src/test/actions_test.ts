@@ -9,7 +9,7 @@ chai.use(spies);
 const { expect } = chai;
 
 describe('Actions', () => {
-  let testAction: Action<any, {n: number, m: number}>;
+  let testAction: Action<any>;
   const actionSpy = chai.spy(({ n, m }: { n: number, m: number }) => ([n, m]));
   beforeEach(() => {
     testAction = action({
@@ -25,22 +25,22 @@ describe('Actions', () => {
     }).do(actionSpy)
   });
 
-  it('returns selections', () => {
+  it('returns moves', () => {
     const error = testAction._process({});
     expect(error).to.not.be.undefined;
-    const selections = testAction._getResolvedSelections({});
-    expect(selections![0].selection.type).to.equal('number');
-    expect(selections![0].selection.min).to.equal(0);
-    expect(selections![0].selection.max).to.equal(3);
+    const moves = testAction._getResolvedSelections({});
+    expect(moves![0].selections[0].type).to.equal('number');
+    expect(moves![0].selections[0].min).to.equal(0);
+    expect(moves![0].selections[0].max).to.equal(3);
   });
 
   it('resolves dependant selections', () => {
     const error = testAction._process({n: 1});
     expect(error).to.not.be.undefined;
-    const selections = testAction._getResolvedSelections({n: 1});
-    expect(selections![0].selection.type).to.equal('number');
-    expect(selections![0].selection.min).to.equal(1);
-    expect(selections![0].selection.max).to.equal(2);
+    const moves = testAction._getResolvedSelections({n: 1});
+    expect(moves![0].selections[0].type).to.equal('number');
+    expect(moves![0].selections[0].min).to.equal(1);
+    expect(moves![0].selections[0].max).to.equal(2);
   });
 
   it('processes', () => {
@@ -126,28 +126,62 @@ describe('Actions', () => {
       expect(testAction1._getResolvedSelections({})?.length).to.equal(1);
     });
 
-    // it('combines', () => {
-    //   testAction = action({ prompt: 'purchase' })
-    //     .enterText({ prompt: 'taunt' })
-    //     .chooseNumber({ prompt: 'lumber' })
-    //     .chooseNumber({ prompt: 'steel' })
-    //     .combine({
-    //       last: 2,
-    //       validate: (lumber, steel) => lumber + steel < 10
-    //     });
-    //   const move = testAction._getResolvedSelections('fu');
-    //   if (!move) {
-    //     expect(move).to.not.be.undefined;
-    //   } else {
-    //     const selection = move[0].selection;
-    //     expect(selection.prompt).to.equal('lumber');
-    //     expect(selection.prompt).to.equal('lumber');
-    //     expect(selection.clientContext?.followups.length).to.equal(1);
-    //     expect(selection.clientContext?.followups[0].prompt).to.equal('steel');
-    //     expect(selection.clientContext?.validate(5, 5)).to.equal(false);
-    //     expect(selection.clientContext?.validate(5, 4)).to.equal(true);
-    //   }
-    // });
+    it('combines', () => {
+      testAction = action({ prompt: 'purchase' })
+        .enterText('taunt', { prompt: 'taunt' })
+        .chooseGroup({
+          lumber: ['number'],
+          steel: ['number']
+        }, {
+          validate: ({ lumber, steel }) => lumber + steel < 10
+        });
+      const move1 = testAction._getResolvedSelections({});
+      if (!move1) {
+        expect(move1).to.not.be.undefined;
+      } else {
+        expect(move1[0].selections.length).to.equal(1);
+        expect(move1[0].selections[0].name).to.equal('taunt');
+      }
+      const move2 = testAction._getResolvedSelections({taunt: 'fu'});
+      if (!move2) {
+        expect(move2).to.not.be.undefined;
+      } else {
+        expect(move2[0].selections.length).to.equal(2);
+        expect(move2[0].selections[0].name).to.equal('lumber');
+        expect(move2[0].selections[1].name).to.equal('steel');
+        expect(move2[0].selections[1].validate({ lumber: 5, steel: 5 })).to.not.be.undefined;
+        expect(move2[0].selections[1].validate({ lumber: 5, steel: 4 })).to.be.undefined;
+      }
+    });
+
+    it('combines and skips', () => {
+      testAction = action({ prompt: 'purchase' })
+        .chooseGroup({
+          lumber: ['number', {min: 0, max: 3}],
+          steel: ['number', {min: 0, max: 0}],
+          meat: ['number', {min: 0, max: 3}],
+          plastic: ['number', {min: 0, max: 0}]
+        }, {
+          validate: ({ lumber, steel, meat, plastic }) => {console.log('validate', lumber, steel, meat, plastic); return lumber + steel + meat + plastic > 0}
+        });
+      const move = testAction._getResolvedSelections({});
+      if (!move) {
+        expect(move).to.not.be.undefined;
+      } else {
+        expect(move[0].selections.length).to.equal(2);
+        expect(move[0].selections[0].name).to.equal('lumber');
+        expect(move[0].selections[1].name).to.equal('meat');
+      }
+      const move2 = testAction._getResolvedSelections({lumber: 1, meat: 0});
+      if (!move2) {
+        expect(move2).to.not.be.undefined;
+      } else {
+        expect(move2[0].selections.length).to.equal(1);
+        expect(move2[0].selections[0].name).to.equal('plastic'); // bit odd, but this is skippable
+      }
+      const move3 = testAction._getResolvedSelections({lumber: 0, meat: 0});
+      expect(move3).to.be.undefined;
+    });
   });
 
   describe('getResolvedSelections with skip/expand', () => {
@@ -161,54 +195,60 @@ describe('Actions', () => {
     });
 
     it('shows first selection', () => {
-      const resolvedSelections = testAction._getResolvedSelections({});
-      expect(resolvedSelections?.length).to.equal(1);
-      expect(resolvedSelections![0].selection.type).to.equal('choices');
-      expect(resolvedSelections![0].selection.choices).to.deep.equal(['oil', 'garbage']);
+      const moves = testAction._getResolvedSelections({});
+      expect(moves?.length).to.equal(1);
+      expect(moves![0].selections.length).to.equal(1);
+      expect(moves![0].selections[0].type).to.equal('choices');
+      expect(moves![0].selections[0].choices).to.deep.equal(['oil', 'garbage']);
     });
 
     it('expands first selection', () => {
       testAction._cfg.selections[0].expand = true;
-      const resolvedSelections = testAction._getResolvedSelections({});
-      expect(resolvedSelections?.length).to.equal(2);
-      expect(resolvedSelections![0].selection.type).to.equal('number');
-      expect(resolvedSelections![1].selection.type).to.equal('number');
+      const moves = testAction._getResolvedSelections({});
+      expect(moves?.length).to.equal(2);
+      expect(moves![0].selections.length).to.equal(1);
+      expect(moves![0].selections[0].type).to.equal('number');
+      expect(moves![1].selections[0].type).to.equal('number');
     });
 
     it('provides next selection', () => {
-      const resolvedSelections = testAction._getResolvedSelections({r: 'oil'});
-      expect(resolvedSelections?.length).to.equal(1);
-      expect(resolvedSelections![0].selection.type).to.equal('number');
-      expect(resolvedSelections![0].args).to.deep.equal({r: 'oil'});
+      const moves = testAction._getResolvedSelections({r: 'oil'});
+      expect(moves?.length).to.equal(1);
+      expect(moves![0].selections.length).to.equal(1);
+      expect(moves![0].selections[0].type).to.equal('number');
+      expect(moves![0].args).to.deep.equal({r: 'oil'});
     });
 
     it('skips next selection', () => {
-      const resolvedSelections = testAction._getResolvedSelections({r: 'garbage'});
-      expect(resolvedSelections?.length).to.equal(1);
-      expect(resolvedSelections![0].selection.type).to.equal('number');
-      expect(resolvedSelections![0].args).to.deep.equal({r: 'garbage'});
+      const moves = testAction._getResolvedSelections({r: 'garbage'});
+      expect(moves?.length).to.equal(1);
+      expect(moves![0].selections.length).to.equal(1);
+      expect(moves![0].selections[0].type).to.equal('number');
+      expect(moves![0].args).to.deep.equal({r: 'garbage'});
     });
 
     it('completes', () => {
-      const resolvedSelections = testAction._getResolvedSelections({r: 'oil', n: 2});
-      expect(resolvedSelections?.length).to.equal(0);
+      const moves = testAction._getResolvedSelections({r: 'oil', n: 2});
+      expect(moves?.length).to.equal(0);
     });
 
     it('skips', () => {
       testAction._cfg.selections[0].choices = ['oil'];
-      const resolvedSelections = testAction._getResolvedSelections({});
-      expect(resolvedSelections?.length).to.equal(1);
-      expect(resolvedSelections![0].selection.type).to.equal('number');
-      expect(resolvedSelections![0].args).to.deep.equal({r: 'oil'});
+      const moves = testAction._getResolvedSelections({});
+      expect(moves?.length).to.equal(1);
+      expect(moves![0].selections.length).to.equal(1);
+      expect(moves![0].selections[0].type).to.equal('number');
+      expect(moves![0].args).to.deep.equal({r: 'oil'});
     });
 
     it('prevents skips', () => {
       testAction._cfg.selections[0].choices = ['oil'];
       testAction._cfg.selections[0].skipIfOnlyOne = false;
-      const resolvedSelections = testAction._getResolvedSelections({});
-      expect(resolvedSelections?.length).to.equal(1);
-      expect(resolvedSelections![0].selection.type).to.equal('choices');
-      expect(resolvedSelections![0].selection.choices).to.deep.equal(['oil']);
+      const moves = testAction._getResolvedSelections({});
+      expect(moves?.length).to.equal(1);
+      expect(moves![0].selections.length).to.equal(1);
+      expect(moves![0].selections[0].type).to.equal('choices');
+      expect(moves![0].selections[0].choices).to.deep.equal(['oil']);
     });
   });
 });

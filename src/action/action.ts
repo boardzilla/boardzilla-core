@@ -15,10 +15,10 @@ export type SingleArgument<P extends Player> = string | number | boolean | GameE
 export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
 
 type Group<P extends Player> = Record<string,
-  ['number', Parameters<Action<P, any>['chooseNumber']>[1]] |
+  ['number', Parameters<Action<P, any>['chooseNumber']>[1]?] |
   ['select', Parameters<Action<P, any>['chooseFrom']>[1], Parameters<Action<P, any>['chooseFrom']>[2]?] |
   ['board', Parameters<Action<P, any>['chooseOnBoard']>[1], Parameters<Action<P, any>['chooseOnBoard']>[2]?] |
-  ['text', Parameters<Action<P, any>['enterText']>[1]]
+  ['text', Parameters<Action<P, any>['enterText']>[1]?]
 >
 
 type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R extends Group<P>> = A & {[K in keyof R]:
@@ -85,10 +85,12 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     let moves = this._getResolvedSelectionsInner(args);
     if (moves?.length) {
       moves = moves.filter(move => (
-        // do not send back options that can never validate
-        move.selections.every(s => (
-          s.clientContext.combineWith || !s.validation ||
-            s.options().some(o => !s.validate({...args, [s.name]: o}))
+        // do not send back options that can never validate. TODO this can be smarter
+        move.selections.some(s => (
+          s.clientContext.combineWith ||
+            !s.validation ||
+            s.isUnbounded() ||
+            s.options().some(o => !s.validate({...move.args, [s.name]: o}))
         ))
       ));
       if (!moves.length) return;
@@ -108,27 +110,27 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     };
 
     if (!selection.isPossible()) return;
-    if (selection.isUnbounded()) return [move];
-
-    let possibleOptions: Argument<P>[] = [];
-    let pruned = false;
-    let resolvedSelections: PendingMove<P>[] = [];
-    let mayExpand = selection.expand;
-    for (const option of selection.options()) {
-      const submoves = this._getResolvedSelectionsInner({...args, [selection.name]: option});
-      if (submoves === undefined) {
-        pruned = true;
-      } else {
-        possibleOptions.push(option);
-        if (selection.expand && submoves.length === 0) mayExpand = false; // TODO smarter expansion needed when triggered/optional selections are added
-        resolvedSelections = resolvedSelections.concat(submoves);
+    if (!selection.isUnbounded()) {
+      let possibleOptions: Argument<P>[] = [];
+      let pruned = false;
+      let resolvedSelections: PendingMove<P>[] = [];
+      let mayExpand = selection.expand;
+      for (const option of selection.options()) {
+        const submoves = this._getResolvedSelectionsInner({...args, [selection.name]: option});
+        if (submoves === undefined) {
+          pruned = true;
+        } else {
+          possibleOptions.push(option);
+          if (selection.expand && submoves.length === 0) mayExpand = false; // TODO smarter expansion needed when triggered/optional selections are added
+          resolvedSelections = resolvedSelections.concat(submoves);
+        }
       }
-    }
-    if (!possibleOptions.length) return undefined;
-    if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
+      if (!possibleOptions.length) return undefined;
+      if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
 
-    // return the expanded selection if mayExpand, or if there's a single, skippable choice
-    if (resolvedSelections.length && (mayExpand || selection.skipIfOnlyOne && possibleOptions.length === 1)) return resolvedSelections;
+      // return the expanded selection if mayExpand, or if there's a single, skippable choice
+      if (resolvedSelections.length && (mayExpand || selection.skipIfOnlyOne && possibleOptions.length === 1)) return resolvedSelections;
+    }
 
     // resolve any combined selections now
     if (move.selections[0].clientContext?.combineWith) {
@@ -138,7 +140,15 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         const resolved = combine.resolve(args);
         confirm = resolved.confirm ?? confirm; // find latest confirm for the overall combination
         validation = resolved.validation ?? validation;
-        if (!resolved.skipIf && (!resolved.skipIfOnlyOne || resolved.options().length > 1)) move.selections.push(resolved);
+        // TODO these moves do not get tree-shaken, this is kind of duplicate logic with above...
+        if (!resolved.skipIf) {
+          const arg = resolved.isForced();
+          if (arg !== undefined) {
+            move.args[resolved.name] = arg;
+          } else {
+            move.selections.push(resolved);
+          }
+        }
       }
       if (confirm) move.selections[0].confirm = confirm; // and put it on top
       if (validation) move.selections[0].validation = validation;
@@ -153,16 +163,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   _nextSelection(args: Record<string, Argument<P>>): ResolvedSelection<P> | undefined {
     let nextSelection: ResolvedSelection<P> | undefined = undefined;
-    // find last selection with arg supplied
-    let lastSelection: number = 0;
-    for (let i = this._cfg.selections.length - 1; i >= 0; i--) {
-      if (this._cfg.selections[i].name in args) {
-        lastSelection = i;
-        break;
-      }
-    }
-    // find first non-skippable selection working forward
-    for (const s of this._cfg.selections.slice(lastSelection)) {
+    for (const s of this._cfg.selections) {
       const selection = s.resolve(args);
       if (selection.skipIf === true) continue;
       if (!(s.name in args)) {
@@ -705,8 +706,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
 
   chooseGroup<R extends Group<P>>(
     choices: R,
-    validate?: (args: ExpandGroup<P, A, R>) => string | boolean | undefined,
-    confirm?: string | ((args: ExpandGroup<P, A, R>) => string)
+    options?: {
+      validate?: (args: ExpandGroup<P, A, R>) => string | boolean | undefined,
+      confirm?: string | ((args: ExpandGroup<P, A, R>) => string)
+    }
   ): Action<P, ExpandGroup<P, A, R>> {
     let hasBoardSelection = false;
     for (const [name, choice] of Object.entries(choices)) {
@@ -720,8 +723,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       if (choice[0] === 'board') this.chooseOnBoard(name, choice[1], choice[2]);
       if (choice[0] === 'text') this.enterText(name, choice[1]);
     }
-    if (confirm) this._cfg.selections[this._cfg.selections.length - 1].confirm = confirm
-    if (validate) this._cfg.selections[this._cfg.selections.length - 1].validation = validate
+    if (options?.confirm) this._cfg.selections[this._cfg.selections.length - 1].confirm = options.confirm
+    if (options?.validate) this._cfg.selections[this._cfg.selections.length - 1].validation = options.validate
     for (let i = 1; i < Object.values(choices).length; i++) {
       this._cfg.selections[this._cfg.selections.length - 1 - i].clientContext = {combineWith: this._cfg.selections.slice(-i)};
     }
