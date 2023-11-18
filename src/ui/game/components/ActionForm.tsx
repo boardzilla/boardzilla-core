@@ -7,8 +7,9 @@ import type { PendingMove } from '../../../game.js';
 import type { Argument } from '../../../action/action.js';
 import type { ResolvedSelection } from '../../../action/selection.js';
 
-const ActionForm = ({ move, onSubmit }: {
-  move: PendingMove<Player>
+const ActionForm = ({ move, stepName, onSubmit }: {
+  move: PendingMove<Player>,
+  stepName: string,
   onSubmit: (move?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => void,
 }) => {
   const [pendingMove, selected] = gameStore(s => [s.move, s.selected]);
@@ -41,6 +42,7 @@ const ActionForm = ({ move, onSubmit }: {
     setErrors({});
   }, [onSubmit, initial, move])
 
+  // return set of errors per selection from validation rules
   const validationErrors = useCallback((args: Record<string, Argument<Player> | undefined>) => {
     return Object.fromEntries(
       move.selections.filter(
@@ -54,6 +56,7 @@ const ActionForm = ({ move, onSubmit }: {
     );
   }, [move.selections]);
 
+  // display errors
   const validate = useCallback((args: Record<string, Argument<Player> | undefined>) => {
     const errors = validationErrors(args);
     setErrors(errors);
@@ -116,8 +119,12 @@ const ActionForm = ({ move, onSubmit }: {
         />
       ))}
 
+      {stepName === 'disambiguate-board-selection' && (
+        <button type="submit">{move.prompt}</button>
+      )}
+
       {confirm && <button name="submit" type="submit">{confirm}</button>}
-      {(pendingMove || selected.length > 0) && <button onClick={() => onSubmit()}>Cancel</button>}
+      {(pendingMove || selected.length > 0) && stepName !== 'disambiguate-board-selection' && <button onClick={() => onSubmit()}>Cancel</button>}
     </form>
   );
 };

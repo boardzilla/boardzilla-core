@@ -4,6 +4,8 @@ import { escapeArgument } from '../action/utils.js';
 export default class Player {
   name: string;
   color: string;
+  avatar: string;
+  host: boolean;
   position: number; // table position, as opposed to turn order
   settings?: any
   _players: PlayerCollection<Player>;

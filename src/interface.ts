@@ -88,13 +88,12 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
           action: move.data[i].action,
           args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, game)]))
         });
-        game.play();
+        if (game.phase !== 'finished') game.play();
       }
       console.timeLog('processMove', 'process');
       if (error) {
         throw Error(`Unable to process move: ${error}`);
       }
-      game.play();
       // @ts-ignore
       if (globalThis.window) window.board = game.board;
       const update = game.getUpdate();

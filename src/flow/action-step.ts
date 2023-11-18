@@ -21,9 +21,10 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   skipIfOnlyOne: boolean;
   expand: boolean;
 
-  constructor({ name, players, actions, prompt, expand, skipIfOnlyOne }: {
+  constructor({ name, player, players, actions, prompt, expand, skipIfOnlyOne }: {
     name?: string,
-    players?: P | P[] | ((args: Record<string, any>) => P | P[]),
+    players?: P[] | ((args: Record<string, any>) => P[]),
+    player?: P | ((args: Record<string, any>) => P),
     actions: Record<string, FlowDefinition<P> | null>,
     prompt?: string,
     expand?: boolean,
@@ -35,6 +36,9 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     this.expand = expand ?? true;
     this.skipIfOnlyOne = skipIfOnlyOne ?? false;
     this.players = players;
+    if (player) {
+      this.players = typeof player === 'function' ? (...args) => [player(...args)] : [player];
+    }
   }
 
   reset() {
@@ -51,7 +55,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (step) return step;
   }
 
-  actionNeeded(player?: P) {
+  actionNeeded() {
     if (!this.position) return {
       prompt: this.prompt,
       step: this.name,

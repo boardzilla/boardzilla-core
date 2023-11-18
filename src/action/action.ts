@@ -84,20 +84,20 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   _getResolvedSelections(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
     let moves = this._getResolvedSelectionsInner(args);
     if (moves?.length) {
-      moves = moves.filter(move => (
-        // do not send back options that can never validate. TODO this can be smarter
-        move.selections.some(s => (
-          s.clientContext.combineWith ||
-            !s.validation ||
-            s.isUnbounded() ||
-            s.options().some(o => !s.validate({...move.args, [s.name]: o}))
-        ))
-      ));
+      moves = moves.filter(move => {
+        // do not send back options that can never validate.
+        const sel = move.selections[move.selections.length - 1]; // only the last one might have additional validation rules
+        return sel.clientContext.combineWith ||
+          !sel.validation ||
+          sel.isUnbounded() ||
+          sel.options().some(o => !sel.validate({...move.args, [sel.name]: o}))
+      });
       if (!moves.length) return;
     }
     return moves;
   }
 
+  /** @internal */
   _getResolvedSelectionsInner(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
     const selection = this._nextSelection(args);
     if (!selection) return [];
@@ -140,7 +140,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         const resolved = combine.resolve(args);
         confirm = resolved.confirm ?? confirm; // find latest confirm for the overall combination
         validation = resolved.validation ?? validation;
-        // TODO these moves do not get tree-shaken, this is kind of duplicate logic with above...
+        // TODO these moves do not get tree-shaken, this is kind of duplicate
+        // logic with above. Is there a way to capture these during the
+        // tree-shake loop. These are resolved with no additional args, whereas
+        // the tree-shake resolves with each possible parent arg
         if (!resolved.skipIf) {
           const arg = resolved.isForced();
           if (arg !== undefined) {
@@ -151,7 +154,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         }
       }
       if (confirm) move.selections[0].confirm = confirm; // and put it on top
-      if (validation) move.selections[0].validation = validation;
+      if (validation) move.selections[move.selections.length - 1].validation = validation; // on bottom
     }
     // return board or final choice for a selection prompt, UI may choose to skip anyways
     return [move];

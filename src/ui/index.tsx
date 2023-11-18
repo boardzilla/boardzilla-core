@@ -93,6 +93,11 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       return {
         game,
         position,
+        move: undefined,
+        step: undefined,
+        prompt: undefined,
+        boardSelections: {},
+        pendingMoves: undefined,
         ...updateBoard(game, position, update.state.state.board),
       }
     }

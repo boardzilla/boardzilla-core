@@ -36,7 +36,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
 
       {boardPrompt && <div className="prompt">{boardPrompt}</div>}
 
-      {moves.map(pendingMove => <ActionForm key={pendingMove.action + pendingMove.selections[0].prompt} move={pendingMove} onSubmit={onSubmit}/>)}
+      {moves.map(pendingMove => <ActionForm key={pendingMove.action + pendingMove.selections[0].prompt} move={pendingMove} stepName={name} onSubmit={onSubmit}/>)}
 
       {/** weird at this level but disambiguate can be cancelled even though it spans multiple moves */}
       {name === 'disambiguate-board-selection' && <button onClick={() => onSubmit()}>Cancel</button>}

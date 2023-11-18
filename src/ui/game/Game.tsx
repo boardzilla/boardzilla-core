@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import classNames from 'classnames';
 import { gameStore } from '../index.js';
 
 import Element from './components/Element.js';
@@ -65,7 +66,7 @@ export default () => {
     const layouts: Record<string, {moves: PendingMove<Player>[], style: React.CSSProperties}> = {};
     const messages: (PendingMove<Player> | string)[] = pendingMoves || [];
 
-    if (!position || !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
+    if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
 
     if (disambiguateElement) {
       const elementPosition = disambiguateElement.element.relativeTransformToBoard();
@@ -145,10 +146,19 @@ export default () => {
 
   if (!dimensions) return;
 
-  console.log('GAME render', pendingMoves);
+  console.log('GAME render', pendingMoves, step);
 
   return (
-    <div id="game" className={game.board._ui.appearance.className} style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }} onClick={() => game.phase === 'finished' && setVictoryMessageDismissed(true)}>
+    <div
+      id="game"
+      className={classNames(
+        game.board._ui.appearance.className,
+        game.board._ui.breakpoint,
+        step
+      )}
+      style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}
+      onClick={() => game.phase === 'finished' && setVictoryMessageDismissed(true)}
+    >
       <audio ref={clickAudio} src={click} id="click"/>
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         <Element

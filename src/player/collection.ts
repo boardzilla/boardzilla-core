@@ -43,6 +43,13 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   }
 
   /**
+   * Returns the host player
+   */
+  host(): P {
+    return this.find(p => p.host)!;
+  }
+
+  /**
    * Returns the array of players that may not currently act.
    */
   notCurrent() {
