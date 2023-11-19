@@ -5,6 +5,7 @@ import graphology from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
 import { bfs } from 'graphology-traversal';
 
+import type Board from './board.js';
 import type { ElementClass, ElementAttributes } from './element.js';
 import type { ElementFinder } from './element-collection.js';
 import type Player from '../player/player.js';
@@ -16,7 +17,7 @@ export type ElementEventHandler<P extends Player, T extends GameElement<P>> = {c
  * setup in {@link createGame} and never change during play.
  * @category Board
  */
-export default class Space<P extends Player> extends GameElement<P> {
+export default class Space<P extends Player, B extends Board<P> = Board<P>> extends GameElement<P, B> {
   _eventHandlers: {
     enter: ElementEventHandler<P, GameElement<P>>[],
   } = { enter: [] };
@@ -120,8 +121,8 @@ export default class Space<P extends Player> extends GameElement<P> {
    * the same parameters as {@link GameElement#first}
    * @category Queries
    */
-  closest<F extends Space<P>>(className?: ElementFinder<P, Space<P>>, ...finders: ElementFinder<P, Space<P>>[]): Space<P> | undefined;
   closest<F extends Space<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
+  closest(className?: ElementFinder<P, Space<P>>, ...finders: ElementFinder<P, Space<P>>[]): Space<P> | undefined;
   closest<F extends Space<P>>(className?: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | Space<P> | undefined {
     let classToSearch: ElementClass<P, Space<P>> = Space<P>;
     if ((typeof className !== 'function') || !('isGameElement' in className)) {

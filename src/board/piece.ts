@@ -1,13 +1,14 @@
 import GameElement from './element.js'
 import Space from './space.js'
 
+import type Board from './board.js'
 import type Player from '../player/player.js';
 
 /**
  * Pieces are game elements that move during play
  * @category Board
  */
-export default class Piece<P extends Player> extends GameElement<P> {
+export default class Piece<P extends Player, B extends Board<P> = Board<P>> extends GameElement<P, B> {
 
   /**
    * Move this piece into another element. This triggers any {@link

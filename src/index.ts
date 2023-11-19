@@ -39,9 +39,9 @@ export const createBoardClass = <P extends Player>(_: {new(...a: any[]): P}) => 
 
 export const createBoardClasses = <P extends Player, B extends Board<P>>(boardClass: ElementClass<P, B>) => {
   return {
-    GameElement: GameElement<P>,
-    Space: Space<P>,
-    Piece: Piece<P>,
+    GameElement: GameElement<P, B>,
+    Space: Space<P, B>,
+    Piece: Piece<P, B>,
   };
 };
 
@@ -83,7 +83,6 @@ export type SetupFunction<P extends Player, B extends Board<P>> = (
 export const createGame = <P extends Player, B extends Board<P>>(
   playerClass: {new(...a: any[]): P},
   boardClass: ElementClass<P, B>,
-  elementClasses: ElementClass<P, GameElement<P>>[],
   gameCreator: (board: B) => void
 ): SetupFunction<P, B> => (
   state: SetupState<P> | GameState<P>,
@@ -93,7 +92,7 @@ export const createGame = <P extends Player, B extends Board<P>>(
   }
 ): Game<P, B> => {
   console.time('setup');
-  const game = new Game<P, B>(playerClass, boardClass, elementClasses);
+  const game = new Game<P, B>(playerClass, boardClass);
   let rseed = '';
   if (state && 'rseed' in state) {
     rseed = state.rseed;

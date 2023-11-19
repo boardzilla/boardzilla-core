@@ -5,8 +5,8 @@ import Action from '../action/action.js';
 import type {
   default as GameElement,
   ElementJSON,
-  ElementContext,
   ElementClass,
+  ElementContext,
   Box,
   Vector,
 } from './element.js';
@@ -24,12 +24,6 @@ type ActionLayout<P extends Player> = {
   height?: number
 };
 
-// TODO add B generic to all board elements
-// e.g. can:
-//   game: Game<P, typeof this>
-//   board: typeof this
-// see powergrid canBuild
-
 /** @category Board */
 export default class Board<P extends Player> extends Space<P> {
   pile: GameElement<P>;
@@ -38,6 +32,10 @@ export default class Board<P extends Player> extends Space<P> {
     this.board = this;
     this._ctx.removed = this.createElement(Space, 'removed'),
     this.pile = this._ctx.removed;
+  }
+
+  registerClasses(...classList: ElementClass<P, GameElement<P>>[]) {
+    this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
   }
 
   defineFlow(flow: Game<P, this>['flowDefinition']) {
