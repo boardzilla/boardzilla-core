@@ -3,7 +3,7 @@ import ElementCollection from './element-collection.js'
 
 import graphology from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
-import { bfs } from 'graphology-traversal';
+import { bfs, bfsFromNode } from 'graphology-traversal';
 
 import type Board from './board.js';
 import type { ElementClass, ElementAttributes } from './element.js';
@@ -117,6 +117,27 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
   }
 
   /**
+   * Find all spaces adjacent to this space. Uses the same parameters as {@link
+   * GameElement#all}
+   * @category Queries
+   */
+  adjacencies<F extends Space<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
+  adjacencies(className?: ElementFinder<P, Space<P>>, ...finders: ElementFinder<P, Space<P>>[]): ElementCollection<P, Space<P>>;
+  adjacencies<F extends Space<P>>(className?: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, Space<P>> {
+    let classToSearch: ElementClass<P, Space<P>> = Space<P>;
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      if (className) finders = [className, ...finders];
+    } else {
+      classToSearch = className;
+    }
+    if (!this._t.parent?._t.graph) return new ElementCollection<P, Space<P>>();
+    return new ElementCollection<P, Space<P>>(...this._t.parent?._t.graph.mapNeighbors(
+      this._t.id,
+      node => this._t.parent!._t.graph!.getNodeAttribute(node, 'space')
+    ) as Space<P>[]).all(classToSearch, ...finders)
+  }
+
+  /**
    * Finds the nearest space connected to this space, measured by distance. Uses
    * the same parameters as {@link GameElement#first}
    * @category Queries
@@ -148,7 +169,7 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
     const c = new ElementCollection<P, Space<P>>();
     try {
       const graph = this._t.parent!._t.graph!;
-      bfs(graph, node => {
+      bfsFromNode(graph, this._t.id, node => {
         const el = graph.getNodeAttributes(node).space;
         const d = this.distanceTo(el);
         if (d === undefined) return false;

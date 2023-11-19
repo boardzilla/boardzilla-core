@@ -543,6 +543,21 @@ describe('Board', () => {
       expect(a.closest()).to.equal(b);
     })
 
+    it("finds adjacencies", () => {
+      const a = board.create(Space, 'a');
+      const b = board.create(Space, 'b');
+      const c = board.create(Space, 'c');
+      const d = board.create(Space, 'd');
+      a.connectTo(b, 2);
+      b.connectTo(c, 3);
+      a.connectTo(c, 6);
+      c.connectTo(d, 1);
+      expect(a.adjacencies()).to.deep.equal([b, c]);
+      expect(a.others({ adjacent: true })).to.deep.equal([b, c]);
+      expect(c.adjacencies()).to.deep.equal([a, b, d]);
+      expect(c.others({ adjacent: true })).to.deep.equal([a, b, d]);
+    })
+
     it("searches by distance", () => {
       const a = board.create(Space, 'a');
       const b = board.create(Space, 'b');
@@ -553,8 +568,51 @@ describe('Board', () => {
       a.connectTo(c, 6);
       c.connectTo(d, 1);
       expect(a.withinDistance(5).all(Space)).to.deep.equal([b,c]);
-      //expect(a.others({ withinDistance: 5}).length).to.equal(2);
+      expect(a.others({ withinDistance: 5}).length).to.equal(2);
     })
+  });
+
+  describe('grids', () => {
+    class Cell extends Space<Player> {
+      x: number;
+      y: number;
+    }
+
+    it('creates squares', () => {
+      board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
+      board.createGrid({ rows: 3, columns: 3 }, Cell, 'cell', (x, y) => ({x, y}));
+      expect(board.all(Cell).length).to.equal(9);
+      expect(board.first(Cell)!.x).to.equal(1);
+      expect(board.first(Cell)!.y).to.equal(1);
+      expect(board.last(Cell)!.x).to.equal(3);
+      expect(board.last(Cell)!.y).to.equal(3);
+
+      const corner = board.first(Cell, {x:1, y:1})!;
+      expect(corner.adjacencies(Cell).length).to.equal(2);
+      expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1]]);
+
+      const middle = board.first(Cell, {x:2, y:2})!;
+      expect(middle.adjacencies(Cell).length).to.equal(4);
+      expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
+    });
+
+    it('creates hexes', () => {
+      board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
+      board.createGrid({ rows: 3, columns: 3, style: 'hex' }, Cell, 'cell', (x, y) => ({x, y}));
+      expect(board.all(Cell).length).to.equal(9);
+      expect(board.first(Cell)!.x).to.equal(1);
+      expect(board.first(Cell)!.y).to.equal(1);
+      expect(board.last(Cell)!.x).to.equal(3);
+      expect(board.last(Cell)!.y).to.equal(3);
+
+      const corner = board.first(Cell, {x:1, y:1})!;
+      expect(corner.adjacencies(Cell).length).to.equal(3);
+      expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1], [2,2]]);
+
+      const middle = board.first(Cell, {x:2, y:2})!;
+      expect(middle.adjacencies(Cell).length).to.equal(6);
+      expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,1], [1,2], [2,1], [2,3], [3,2], [3,3]]);
+    });
   });
 
   describe('layouts', () => {
@@ -853,7 +911,7 @@ describe('Board', () => {
       const spaces = board.createMany(4, Space, 'space');
       const space = board.create(Space, 'special');
 
-      board = new Board({ classRegistry: [Space, Piece, GameElement] });
+      board = new Board({ classRegistry: [Space, Piece, GameElement, Country] });
       board.layout(spaces[2], { direction: 'btt-rtl' });
       board.layout('special', { direction: 'ttb-rtl' });
       board.layout(spaces.slice(0, 2), { direction: 'ttb' });

@@ -587,11 +587,11 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
   }
 
   /**
-   * Create n identical elements inside this element. This can only be called
-   * during the game setup (see {@link createGame}. Any game elements that are
-   * required must be created before the game starts. Elements that only appear
-   * later in the game can be created inside the {@link Board#pile} or made
-   * invisible.
+   * Create n elements inside this element of the same class. This can only be
+   * called during the game setup (see {@link createGame}. Any game elements
+   * that are required must be created before the game starts. Elements that
+   * only appear later in the game can be created inside the {@link Board#pile}
+   * or made invisible.
    * @category Structure
    *
    * @param n - Number to create
@@ -599,10 +599,35 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
    * @param name - Sets {@link GameElement#name | name}
    * @param attributes - Sets any attributes of the class that are defined in
    * your own class that extend {@link Space}, {@link Piece}, or {@link
-   * Board}. Can also include {@link player}.
+   * Board}. Can also include {@link player}. If a function is supplied here, a
+   * single number argument will be passed with the number of the added element,
+   * starting with 1.
    */
-  createMany<T extends GameElement<P>>(n: number, className: ElementClass<P, T>, name: string, attributes?: ElementAttributes<P, T>): ElementCollection<P, T> {
-    return new ElementCollection<P, T>(...times(n, () => this.create(className, name, attributes)));
+  createMany<T extends GameElement<P>>(n: number, className: ElementClass<P, T>, name: string, attributes?: ElementAttributes<P, T> | ((n: number) => ElementAttributes<P, T>)): ElementCollection<P, T> {
+    return new ElementCollection<P, T>(...times(n, i => this.create(className, name, typeof attributes === 'function' ? attributes(i) : attributes)));
+  }
+
+  createGrid<T extends Space<P>>(
+    {rows, columns, style}: {
+      rows: number,
+      columns: number,
+      style?: 'square' | 'hex'
+    }, className: ElementClass<P, T>,
+    name: string,
+    attributes?: ElementAttributes<P, T> | ((row: number, column: number) => ElementAttributes<P, T>)
+  ): ElementCollection<P, T> {
+    const grid = new ElementCollection<P, T>();
+    times(rows, row =>
+      times(columns, column => {
+        const el = this.create(className, name, typeof attributes === 'function' ? attributes(row, column) : attributes);
+        grid[(row - 1) * columns + column - 1] = el;
+        if (row > 1) el.connectTo(grid[(row - 2) * columns + column - 1]);
+        if (column > 1) el.connectTo(grid[(row - 1) * columns + column - 2]);
+        if (style === 'hex' && row > 1 && column > 1) el.connectTo(grid[(row - 2) * columns + column - 2]);
+        return el;
+      })
+    );
+    return grid;
   }
 
   /**
