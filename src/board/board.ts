@@ -1,13 +1,16 @@
 import Space from './space.js'
 import { deserializeObject } from '../action/utils.js';
+import Action from '../action/action.js';
 
 import type {
   default as GameElement,
   ElementJSON,
   ElementContext,
+  ElementClass,
   Box,
   Vector,
 } from './element.js';
+import type Game from '../game.js';
 import type Player from '../player/player.js';
 import type { Argument } from '../action/action.js';
 
@@ -30,13 +33,28 @@ type ActionLayout<P extends Player> = {
 /** @category Board */
 export default class Board<P extends Player> extends Space<P> {
   pile: GameElement<P>;
-
   constructor(ctx: Partial<ElementContext<P>>) {
     super({ ...ctx, trackMovement: false });
     this.board = this;
     this._ctx.removed = this.createElement(Space, 'removed'),
     this.pile = this._ctx.removed;
   }
+
+  defineFlow(flow: Game<P, this>['flowDefinition']) {
+    this._ctx.game.defineFlow(flow);
+  }
+
+  defineActions(actions: Game<P, this>['actions']) {
+    this._ctx.game.defineActions(actions);
+  }
+
+  action(definition: {
+    prompt?: string,
+    condition?: Action<P>['_cfg']['condition'],
+  }) {
+    return new Action<P>(definition);
+  }
+
 
   get players() {
     return this._ctx.game.players;

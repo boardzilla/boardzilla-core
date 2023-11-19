@@ -162,7 +162,7 @@ describe('Actions', () => {
           meat: ['number', {min: 0, max: 3}],
           plastic: ['number', {min: 0, max: 0}]
         }, {
-          validate: ({ lumber, steel, meat, plastic }) => {console.log('validate', lumber, steel, meat, plastic); return lumber + steel + meat + plastic > 0}
+          validate: ({ lumber, steel, meat, plastic }) => lumber + steel + meat + plastic > 0
         });
       const move = testAction._getResolvedSelections({});
       if (!move) {

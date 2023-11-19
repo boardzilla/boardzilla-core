@@ -2,27 +2,29 @@ import React, { useCallback } from 'react';
 import Seating from './components/Seating.js';
 import { gameStore } from '../index.js';
 
+import { SetupComponentProps } from '../index.js';
 import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../Main.js';
 
-export default ({ users, players, minPlayers, maxPlayers, settings, onUpdatePlayers, onUpdateSettings, onStart }: {
+export default ({ users, players, minPlayers, maxPlayers, setupComponents, settings, onUpdatePlayers, onUpdateSettings, onStart }: {
   users: User[],
   players: UserPlayer[],
   minPlayers: number,
   maxPlayers: number,
+  setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
   settings?: GameSettings,
   onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
   onUpdateSettings: (s: GameSettings) => void,
   onStart: () => void,
 }) => {
-  const [game, host] = gameStore(s => [s.game, s.host]);
+  const [host] = gameStore(s => [s.host]);
 
   const updateSettingsKey = useCallback((key: string, value: any) => {
     const newSettings = Object.assign(settings || {}, { [key]: value });
     onUpdateSettings(newSettings);
   }, [onUpdateSettings, settings])
 
-  const settingsComponents = game.setupComponents ?
-    Object.entries(game.setupComponents).map(([name, component]) => React.createElement(
+  const settingsComponents = setupComponents ?
+    Object.entries(setupComponents).map(([name, component]) => React.createElement(
       component,
       {
         name,

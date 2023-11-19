@@ -13,9 +13,8 @@ import Flow from './flow/flow.js';
 import random from 'random-seed';
 
 import type { ElementClass } from './board/element.js';
-import type { SetupComponentProps } from './ui/index.js';
 import type { FlowDefinition } from './flow/flow.js';
-import type { GameState, PlayerPositionState, GameUpdate } from './interface.js';
+import type { PlayerPositionState, GameUpdate } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
 import type { Argument } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
@@ -55,49 +54,36 @@ export type Message = {
 
 export default class Game<P extends Player, B extends Board<P>> {
   flow: Flow<P>;
-  flowDefinition: (board: B) => FlowDefinition<P>;
+  flowDefinition: () => FlowDefinition<P>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
-  setupComponents?: Record<string, (p: SetupComponentProps) => React.JSX.Element>
   settings: Record<string, any>;
-  actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Record<string, Argument<P>>>>;
-  phase: 'define' | 'new' | 'started' | 'finished' = 'define';
+  actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>;
+  phase: 'new' | 'started' | 'finished' = 'new';
   rseed: string;
   random: () => number;
   messages: Message[] = [];
   godMode = false;
   winner: P[] = [];
 
+  constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<P, B>, elementClasses: ElementClass<P, GameElement<P>>[] = []) {
+    this.board = new boardClass({ game: this, classRegistry: [GameElement, Space, Piece, ...elementClasses]})
+    this.players = new PlayerCollection<P>();
+    this.players.className = playerClass;
+    this.players.game = this;
+  }
+
   /**
    * configuration functions
    */
   defineFlow(flowDefinition: typeof this.flowDefinition) {
-    if (this.phase !== 'define') throw Error('cannot call defineFlow once started');
+    if (this.phase !== 'new') throw Error('cannot call defineFlow once started');
     this.flowDefinition = flowDefinition;
   }
 
-  defineActions(actions: (board: B, a: typeof action<P>, player: P) => Record<string, Action<P, Record<string, Argument<P>>>>) {
-    if (this.phase !== 'define') throw Error('cannot call defineActions once started');
+  defineActions(actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>) {
+    if (this.phase !== 'new') throw Error('cannot call defineActions once started');
     this.actions = actions;
-  }
-
-  defineBoard(
-    className: ElementClass<P, B>,
-    classRegistry: ElementClass<P, GameElement<P>>[]
-  ): B {
-    if (this.phase !== 'define') throw Error('cannot call defineBoard once started');
-    this.board = new className({ game: this, classRegistry: [GameElement, Space, Piece, ...classRegistry]})
-    return this.board;
-  }
-
-  definePlayers(
-    className: {new(...a: any[]): P},
-  ): PlayerCollection<P> {
-    if (this.phase !== 'define') throw Error('cannot call definePlayer once started');
-    this.players = new PlayerCollection<P>();
-    this.players.game = this;
-    this.players.className = className;
-    return this.players as PlayerCollection<P>;
   }
 
   setSettings(settings: Record<string, any>) {
@@ -128,49 +114,33 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   buildFlow() {
-    const flow = this.flowDefinition(this.board);
+    const flow = this.flowDefinition();
     this.flow = new Flow({ do: flow });
     this.flow.game = this;
-  }
-
-  /**
-   * state management functions
-   */
-  setState(state: GameState<P> & { currentPlayerPosition: number[] }) {
-    this.players.fromJSON(state.players);
-    this.setSettings(state.settings);
-    this.board.fromJSON(state.board);
-    this.buildFlow();
-    this.flow.setBranchFromJSON(state.position);
-    this.players.setCurrent(state.currentPlayerPosition);
-    this.setRandomSeed(state.rseed);
-  }
-
-  // state variables for server updates. does not includes phase, current player or winners.
-  getState(forPlayer?: number): GameState<P> & { currentPlayerPosition: number[] } {
-    return {
-      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-      settings: this.settings,
-      position: this.flow.branchJSON(!!forPlayer),
-      currentPlayerPosition: this.players.currentPosition,
-      board: this.board.allJSON(forPlayer),
-      rseed: this.rseed,
-    };
   }
 
   getPlayerStates(): PlayerPositionState<P>[] {
     return this.players.map(p => ({
       position: p.position,
-      state: this.getState(p.position)
+      state: {
+        players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
+        settings: this.settings,
+        position: this.flow.branchJSON(true),
+        board: this.board.allJSON(p.position),
+        rseed: this.rseed,
+      }
     }));
   }
 
   getUpdate(): GameUpdate<P> {
-    const { currentPlayerPosition: _, ...state } = this.getState();
     if (this.phase === 'started') {
       return {
         game: {
-          ...state,
+          players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
+          settings: this.settings,
+          position: this.flow.branchJSON(),
+          board: this.board.allJSON(),
+          rseed: this.rseed,
           currentPlayers: this.players.currentPosition,
           phase: this.phase
         },
@@ -181,7 +151,11 @@ export default class Game<P extends Player, B extends Board<P>> {
     if (this.phase === 'finished') {
       return {
         game: {
-          ...state,
+          players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
+          settings: this.settings,
+          position: this.flow.branchJSON(),
+          board: this.board.allJSON(),
+          rseed: this.rseed,
           winners: this.winner.map(p => p.position),
           phase: this.phase
         },
@@ -221,7 +195,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       }
     }
     return this.inContextOfPlayer(player, () => {
-      const playerAction = this.actions(this.board, action, player)[name];
+      const playerAction = this.actions[name](player);
       if (!playerAction) throw Error(`No such action ${name}`);
       playerAction.name = name;
       return playerAction as Action<P, any> & {name: string};

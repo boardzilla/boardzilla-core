@@ -6,18 +6,15 @@ import Setup from './setup/Setup.js';
 import type { GameState } from '../interface.js';
 import type { SerializedArg } from '../action/utils.js';
 import type Player from '../player/player.js';
+import { PlayerAttributes } from '../game.js';
+import { SetupComponentProps } from './index.js';
 
 export type User = {
   id: string
   name: string
 }
 
-export type SetupPlayer = {
-  color: string
-  name: string
-  position: number
-  settings?: any
-}
+export type SetupPlayer = PlayerAttributes<Player>;
 
 export type UserPlayer = SetupPlayer & {
   userID?: string
@@ -135,9 +132,10 @@ export type SwitchPlayerMessage = {
   index: number
 }
 
-export default ({ minPlayers, maxPlayers }: {
+export default ({ minPlayers, maxPlayers, setupComponents }: {
   minPlayers: number,
   maxPlayers: number,
+  setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
   const [game, moves, clearMoves, setSelected, error, setError, position, updateState] = gameStore(s => [s.game, s.moves, s.clearMoves, s.setSelected, s.error, s.setError, s.position, s.updateState]);
   const [players, setPlayers] = useState<UserPlayer[]>([]);
@@ -240,6 +238,7 @@ export default ({ minPlayers, maxPlayers }: {
           users={users}
           minPlayers={minPlayers}
           maxPlayers={maxPlayers}
+          setupComponents={setupComponents}
           players={players}
           settings={settings}
           onUpdatePlayers={updatePlayers}
@@ -247,7 +246,7 @@ export default ({ minPlayers, maxPlayers }: {
           onStart={start}
         />
       }
-      {game.phase !== 'new' && <Game/>}
+      {(game.phase === 'started' || game.phase === 'finished') && <Game/>}
       {error && <div className="error">{error}</div>}
     </>
   );

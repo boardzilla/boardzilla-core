@@ -1,5 +1,3 @@
-/* global describe, it, beforeEach */
-/* eslint-disable no-unused-expressions */
 import chai from 'chai';
 import spies from 'chai-spies';
 
@@ -27,11 +25,15 @@ describe('Board', () => {
     name: 'Joe',
     position: 1,
     color: 'red',
+    avatar: '',
+    host: true
   });
   players.addPlayer({
     name: 'Jane',
     position: 2,
     color: 'green',
+    avatar: '',
+    host: false
   });
 
   beforeEach(() => {

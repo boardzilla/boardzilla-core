@@ -279,6 +279,10 @@
       font-size: 1.4em;
       font-weight: bold;
       margin-top: .5em;
+      transition: transform .2s;
+      &:hover {
+        transform: scale(1.2);
+      }
     }
     &.disabled input, &.disabled select, &.disabled button {
       pointer-events: none;

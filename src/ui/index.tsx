@@ -9,8 +9,8 @@ import { default as Game, PlayerAttributes } from '../game.js'
 import { serializeArg } from '../action/utils.js';
 
 import type { GameUpdateEvent, GameFinishedEvent } from './Main.js'
-import type Player from '../player/player.js'
-import type { Board, GameElement } from '../board/index.js'
+import Player from '../player/player.js'
+import { Board, GameElement } from '../board/index.js'
 import type { ElementJSON } from '../board/element.js'
 import type { SerializedArg } from '../action/utils.js'
 import type { BoardQuery } from '../action/selection.js'
@@ -64,7 +64,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   userID: '',
   setUserID: userID => set({ userID }),
   setSetup: setup => set({ setup }),
-  game: new Game(),
+  game: new Game(Player, Board),
   setGame: (game: Game<Player, Board<Player>>) => set({ game }),
   boardJSON: [],
   updateState: (update) => set(s => {
@@ -81,7 +81,9 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       // @ts-ignore;
       for (const className of game.board._ctx.classRegistry) window[className.name] = className;
     } else {
-      game.setState({...update.state.state, currentPlayerPosition: 'currentPlayers' in update ? update.currentPlayers : [] });
+      game.board.fromJSON(update.state.state.board);
+      game.flow.setBranchFromJSON(update.state.state.position);
+      game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
     }
     if (update.type === 'gameFinished') {
       game.winner = update.winners.map(p => game.players.atPosition(p)!);
@@ -289,14 +291,13 @@ export const render = <P extends Player, B extends Board<P>>(setup: SetupFunctio
   const state = gameStore.getState();
   const setupGame: SetupFunction<P, B> = (state, options) => {
     const game = setup(state, options);
-    game.setupComponents = settings;
     game.board._ui.breakpoints = breakpoints;
     game.board._ui.setupLayout = layout;
     return game;
   }
   // we can anonymize Player class internally
   state.setSetup(setupGame as unknown as SetupFunction<Player, Board<Player>>);
-  state.setGame(setupGame() as unknown as Game<Player, Board<Player>>);
+  // state.setGame(setupGame({ players: [], settings: {} }) as unknown as Game<Player, Board<Player>>);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
   const { host, userID, minPlayers, maxPlayers }: { host: boolean, userID: string, minPlayers: number, maxPlayers: number } = boostrap;
@@ -308,6 +309,7 @@ export const render = <P extends Player, B extends Board<P>>(setup: SetupFunctio
     <Main
       minPlayers={minPlayers}
       maxPlayers={maxPlayers}
+      setupComponents={settings || {}}
     />
   );
 };

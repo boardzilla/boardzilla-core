@@ -60,7 +60,7 @@ export type GameInterface<P extends Player> = {
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState<Player>): GameUpdate<Player> => setup(state, {start: true}).getUpdate(),
+    initialState: (state: SetupState<Player>): GameUpdate<Player> => setup(state).getUpdate(),
     processMove: (
       previousState: GameStartedState<Player>,
       move: {
@@ -75,7 +75,6 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board._ctx.game;
       const game = cachedGame || setup(previousState, {
         currentPlayerPosition: previousState.currentPlayers,
-        start: true,
         trackMovement
       });
       console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
@@ -88,9 +87,10 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
           action: move.data[i].action,
           args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, game)]))
         });
+        console.timeLog('processMove', 'process');
         if (game.phase !== 'finished') game.play();
+        console.timeLog('processMove', 'play');
       }
-      console.timeLog('processMove', 'process');
       if (error) {
         throw Error(`Unable to process move: ${error}`);
       }
@@ -109,13 +109,21 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       const game = setup(state);
       if (state.phase === 'started') {
         return {
-          ...game.getState(position),
+          players: game.players.map(p => p.toJSON() as PlayerAttributes<Player>), // TODO scrub
+          settings: game.settings,
+          position: game.flow.branchJSON(true),
+          board: game.board.allJSON(position),
+          rseed: game.rseed,
           phase: state.phase,
           currentPlayers: state.currentPlayers
         }
       }
       return {
-        ...game.getState(position),
+        players: game.players.map(p => p.toJSON() as PlayerAttributes<Player>), // TODO scrub
+        settings: game.settings,
+        position: game.flow.branchJSON(true),
+        board: game.board.allJSON(position),
+        rseed: game.rseed,
         phase: 'finished',
         winners: game.winner.map(p => p.position)
       }

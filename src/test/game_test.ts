@@ -1,5 +1,3 @@
-/* global describe, it, beforeEach */
-/* eslint-disable no-unused-expressions */
 import chai from 'chai';
 import spies from 'chai-spies';
 
@@ -7,11 +5,12 @@ import Game from '../game.js'
 
 import {
   Player,
-  boardClasses,
   playerActions,
   whileLoop,
   eachPlayer,
-  everyPlayer
+  everyPlayer,
+  createBoardClass,
+  createBoardClasses
 } from '../index.js';
 
 chai.use(spies);
@@ -19,25 +18,23 @@ const { expect } = chai;
 
 describe('Game', () => {
   const players = [
-    { name: 'Joe', color: 'red', position: 1, tokens: 0 },
-    { name: 'Jane', color: 'green', position: 2, tokens: 0 },
-    { name: 'Jag', color: 'yellow', position: 3, tokens: 0 },
-    { name: 'Jin', color: 'purple', position: 4, tokens: 0 },
+    { name: 'Joe', color: 'red', position: 1, tokens: 0, avatar: '', host: true, },
+    { name: 'Jane', color: 'green', position: 2, tokens: 0, avatar: '', host: false, },
+    { name: 'Jag', color: 'yellow', position: 3, tokens: 0, avatar: '', host: false, },
+    { name: 'Jin', color: 'purple', position: 4, tokens: 0, avatar: '', host: false, },
   ];
 
   class TestPlayer extends Player {
     tokens: number = 0;
   }
 
-  const {
-    Board,
-    Space,
-    Piece,
-  } = boardClasses(TestPlayer);
+  const Board = createBoardClass(TestPlayer);
 
   class TestBoard extends Board {
     tokens: number = 0;
   }
+
+  const { Space, Piece } = createBoardClasses(TestBoard);
 
   class Card extends Piece {
     suit: string;
@@ -50,9 +47,9 @@ describe('Game', () => {
   const spendSpy = chai.spy();
 
   beforeEach(() => {
-    game = new Game();
-    board = game.defineBoard(TestBoard, [ Card ]);
-    game.defineFlow(board => [
+    game = new Game(TestPlayer, TestBoard, [ Card ]);
+    board = game.board;
+    game.defineFlow(() => [
       () => {
         board.tokens = 4;
         game.message('Starting game with {{tokens}} tokens', {tokens: board.tokens});
@@ -75,8 +72,8 @@ describe('Game', () => {
       )}),
     ]);
 
-    game.defineActions((board, action, player) => ({
-      addSome: action({
+    game.defineActions({
+      addSome: () => board.action({
         prompt: 'add some counters',
       }).chooseNumber('n', {
         prompt: 'how many?',
@@ -86,14 +83,14 @@ describe('Game', () => {
         ({ n }) => board.tokens += n
       ).message('{{player}} added {{n}}'),
 
-      takeOne: action({
+      takeOne: player => board.action({
         prompt: 'take one counter',
       }).do(() => {
         board.tokens --;
         player.tokens ++;
       }),
 
-      spend: action({
+      spend: () => board.action({
         prompt: 'Spend resource',
       }).chooseFrom('r', ['gold', 'silver'], {
         prompt: 'which resource',
@@ -102,20 +99,13 @@ describe('Game', () => {
         min: 1,
         max: 3,
       }).do(spendSpy),
-    }));
-
-    game.definePlayers(TestPlayer);
-    game.players.fromJSON(players);
-
-    game.start();
-    game.setState({
-      players,
-      rseed: '',
-      settings: {},
-      board: [ { className: 'TestBoard', tokens: 0 } ],
-      position: [ { type: 'sequence', position: null, sequence: 0 } ],
-      currentPlayerPosition: [1,2,3,4],
     });
+
+    game.players.fromJSON(players);
+    game.board.fromJSON([ { className: 'TestBoard', tokens: 0 } ]);
+    game.players.setCurrent([1,2,3,4]),
+    game.start();
+    game.flow.setBranchFromJSON([ { type: 'sequence', position: null, sequence: 0 } ]);
   });
 
   it('plays', () => {
@@ -149,19 +139,14 @@ describe('Game', () => {
   });
 
   it('finishes', () => {
-    game.setState({
-      players,
-      rseed: '',
-      settings: {},
-      position: [
-        { type: 'sequence', position: null, sequence: 2 },
-        { type: 'loop', position: { index: 0 } },
-        { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
-        { type: 'action', position: null }
-      ],
-      board: [ { className: 'TestBoard', tokens: 9 } ],
-      currentPlayerPosition: [2]
-    });
+    game.flow.setBranchFromJSON([
+      { type: 'sequence', position: null, sequence: 2 },
+      { type: 'loop', position: { index: 0 } },
+      { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
+      { type: 'action', position: null }
+    ]);
+    game.board.fromJSON([ { className: 'TestBoard', tokens: 9 } ]);
+    game.players.setCurrent([2]);
     do {
       game.processMove({ action: 'takeOne', args: {}, player: game.players.current()[0] });
       game.play();
@@ -175,26 +160,24 @@ describe('Game', () => {
       game.play();
       game.processMove({ action: 'addSome', args: {n: 3}, player: game.players[0] });
       game.play();
-      const state = game.getState();
-      game.setState(state);
-      expect(game.getState()).to.deep.equals(state);
+      const boardState = game.board.allJSON();
+      const flowState = game.flow.branchJSON();
+      game.board.fromJSON(boardState);
+      game.flow.setBranchFromJSON(flowState);
+      expect(game.board.allJSON()).to.deep.equals(boardState);
+      expect(game.flow.branchJSON()).to.deep.equals(flowState);
       expect(board.tokens).to.equal(7);
     });
 
     it("does player turns", () => {
-      game.setState({
-        players,
-        rseed: '',
-        settings: {},
-        position: [
-          { type: 'sequence', position: null, sequence: 2 },
-          { type: 'loop', position: { index: 0 } },
-          { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
-          { type: 'action', position: null }
-        ],
-        board: [ { className: 'TestBoard', tokens: 9 } ],
-        currentPlayerPosition: [2]
-      });
+      game.board.fromJSON([ { className: 'TestBoard', tokens: 9 } ]);
+      game.flow.setBranchFromJSON([
+        { type: 'sequence', position: null, sequence: 2 },
+        { type: 'loop', position: { index: 0 } },
+        { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
+        { type: 'action', position: null }
+      ]);
+      game.players.setCurrent([2]);
       expect(game.players.currentPosition).to.deep.equal([2]);
       game.play();
       game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
@@ -212,9 +195,9 @@ describe('Game', () => {
   });
 
   describe('godMode', () => {
-    beforeEach(() => { game.phase = 'define'; });
     it("does god mode moves", () => {
       game.godMode = true;
+      game.phase = 'new';
       const space1 = game.board.create(Space, 'area1');
       const space2 = game.board.create(Space, 'area2');
       const piece = space1.create(Piece, 'piece');
@@ -230,6 +213,7 @@ describe('Game', () => {
 
     it("does god mode edits", () => {
       game.godMode = true;
+      game.phase = 'new';
       const card = game.board.create(Card, 'area1', {suit: "H", value: 1, flipped: false});
       game.start();
       game.processMove({
@@ -241,6 +225,7 @@ describe('Game', () => {
     });
 
     it("restricts god mode moves", () => {
+      game.phase = 'new';
       const space1 = game.board.create(Space, 'area1');
       const space2 = game.board.create(Space, 'area2');
       const piece = space1.create(Piece, 'piece');
@@ -313,32 +298,31 @@ describe('Game', () => {
 
   describe('action for multiple players', () => {
     beforeEach(() => {
-      game = new Game();
-      board = game.defineBoard(TestBoard, [ Card ]);
+      game = new Game(TestPlayer, TestBoard, [ Card ]);
+      board = game.board;
 
-      game.defineActions((board, action, player) => ({
-        takeOne: action({
+      game.defineActions({
+        takeOne: player => board.action({
           prompt: 'take one counter',
         }).do(() => {
           board.tokens --;
           player.tokens ++;
         }),
-        declare: action({
+        declare: () => board.action({
           prompt: 'declare',
         }).enterText('d', {
           prompt: 'declaration'
         }),
-        pass: action({
+        pass: () => board.action({
           prompt: 'pass'
         }),
-      }));
+      });
 
-      game.definePlayers(TestPlayer);
       game.players.fromJSON(players);
     });
 
     it('accepts move from any', () => {
-      game.defineFlow(board => [
+      game.defineFlow(() => [
         () => { board.tokens = 4 },
         playerActions({
           players: board.players,
@@ -354,7 +338,7 @@ describe('Game', () => {
     });
 
     it('action for every player', () => {
-      game.defineFlow(board => [
+      game.defineFlow(() => [
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -384,7 +368,7 @@ describe('Game', () => {
     });
 
     it('action for every player with followups', () => {
-      game.defineFlow(board => [
+      game.defineFlow(() => [
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -436,7 +420,7 @@ describe('Game', () => {
     });
 
     it('survives ser/deser', () => {
-      game.defineFlow(board => [
+      game.defineFlow(() => [
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -455,15 +439,20 @@ describe('Game', () => {
       ]);
 
       game.start();
-
-      game.setState(game.getState());
+      let boardState = game.board.allJSON();
+      let flowState = game.flow.branchJSON();
+      game.board.fromJSON(boardState);
+      game.flow.setBranchFromJSON(flowState);
       game.play();
 
       expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
       game.processMove({ action: 'takeOne', args: {}, player: game.players[2] });
 
-      game.setState(game.getState());
+      boardState = game.board.allJSON();
+      flowState = game.flow.branchJSON();
+      game.board.fromJSON(boardState);
+      game.flow.setBranchFromJSON(flowState);
       game.play();
 
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])

@@ -2,10 +2,7 @@ import Game from './game.js';
 import { Player } from './player/index.js';
 import { Board, Piece, Space, GameElement } from './board/index.js';
 
-import {
-  Action,
-  action,
-} from './action/index.js';
+import { action } from './action/index.js';
 
 export { union } from './board/index.js';
 
@@ -37,19 +34,19 @@ export {
 
 import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
-import type { PlayerAttributes } from './game.js';
-import type { Argument } from './action/action.js';
-import type { FlowDefinition } from './flow/flow.js';
 
-export const boardClasses = <P extends Player>(_: {new(...a: any[]): P}) => ({
-  GameElement: GameElement<P>,
-  Board: Board<P>,
-  Space: Space<P>,
-  Piece: Piece<P>,
-});
+export const createBoardClass = <P extends Player>(_: {new(...a: any[]): P}) => Board<P>;
+
+export const createBoardClasses = <P extends Player, B extends Board<P>>(boardClass: ElementClass<P, B>) => {
+  return {
+    GameElement: GameElement<P>,
+    Space: Space<P>,
+    Piece: Piece<P>,
+  };
+};
 
 export type SetupFunction<P extends Player, B extends Board<P>> = (
-  state?: SetupState<P> | GameState<P>,
+  state: SetupState<P> | GameState<P>,
   options?: {
     currentPlayerPosition?: number[],
     start?: boolean,
@@ -83,23 +80,20 @@ export type SetupFunction<P extends Player, B extends Board<P>> = (
     - an instance of the `boardClass` above
     - the breakpoint string from your `breakpoints` function, or '_default' if none specified.
  */
-export const createGame = <P extends Player, B extends Board<P>>({ playerClass, boardClass, elementClasses, setup, flow, actions }: {
-  playerClass: {new(a: PlayerAttributes<P>): P},
+export const createGame = <P extends Player, B extends Board<P>>(
+  playerClass: {new(...a: any[]): P},
   boardClass: ElementClass<P, B>,
-  elementClasses?: ElementClass<P, GameElement<P>>[],
-  setup?: (board: B) => any,
-  flow: (board: B) => FlowDefinition<P>,
-  actions: (board: B, actionFunction: typeof action<P>, player: P) => Record<string, Action<P, Record<string, Argument<P>>>>,
-}): SetupFunction<P, B> => (
-  state?: SetupState<P> | GameState<P>,
+  elementClasses: ElementClass<P, GameElement<P>>[],
+  gameCreator: (board: B) => void
+): SetupFunction<P, B> => (
+  state: SetupState<P> | GameState<P>,
   options?: {
     currentPlayerPosition?: number[]
-    start?: boolean,
     trackMovement?: boolean,
   }
 ): Game<P, B> => {
   console.time('setup');
-  const game = new Game<P, B>();
+  const game = new Game<P, B>(playerClass, boardClass, elementClasses);
   let rseed = '';
   if (state && 'rseed' in state) {
     rseed = state.rseed;
@@ -115,42 +109,24 @@ export const createGame = <P extends Player, B extends Board<P>>({ playerClass, 
     }
   }
   game.setRandomSeed(rseed);
-  game.definePlayers(playerClass);
-  //console.timeLog('setup', 'setup players');
-  game.defineBoard(boardClass, elementClasses || []);
-  //console.timeLog('setup', 'define board');
-  game.defineFlow(flow);
-  //console.timeLog('setup', 'setup flow');
-  game.defineActions(actions);
-  //console.timeLog('setup', 'define actions');
-  if (state) game.setSettings(state.settings);
+  game.setSettings(state.settings);
+  game.players.fromJSON(state.players);
 
-  if (state) {
-    if (!('board' in state)) { // phase=new
-      game.players.fromJSON(state.players);
-      if (options?.start) {
-        if (setup) setup(game.board);
-        game.start();
-      }
-    } else { // phase=started
-      game.players.fromJSON(state.players);
-      if (options?.start) {
-        // require setup to build spaces, graphs, event handlers
-        if (setup) setup(game.board);
-        //console.timeLog('setup', 'setup');
-      }
-      if (options?.trackMovement) game.trackMovement(true);
-      game.phase = 'started';
-      game.setState({...state, currentPlayerPosition: options?.currentPlayerPosition || [] });
-    }
-  } else {
-    game.phase = 'new';
-  }
-  //console.timeLog('setup', 'setState');
+  // setup board to get all non-serialized setup (spaces, event handlers, graphs)
+  gameCreator(game.board);
+  console.timeLog('setup', 'game creator setup');
 
-  if (options?.start) {
-    if (game.phase !== 'finished') game.play();
+  // lock game from receiving any more setup
+  game.start();
+
+  if ('board' in state) {
+    game.board.fromJSON(state.board);
+    game.players.setCurrent(options?.currentPlayerPosition || []);
+    game.flow.setBranchFromJSON(state.position);
+    if (options?.trackMovement) game.trackMovement(true);
+    game.play();
   }
+  console.timeLog('setup', 'setState');
 
   console.timeEnd('setup');
   return game;
