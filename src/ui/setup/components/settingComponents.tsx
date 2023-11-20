@@ -44,7 +44,7 @@ export const numberSetting = (label: string, min: number, max: number) => ({ nam
   return (
     <div>
       <label>{label}: </label>
-      <input type="number" min={min} max={max} value={settings ? settings[name] || String(min) : String(min)} onChange={e => updateKey(name, e.target.value)}/>
+      <input type="number" min={min} max={max} value={settings ? settings[name] || String(min) : String(min)} onChange={e => updateKey(name, parseInt(e.target.value))}/>
     </div>
   );
 };

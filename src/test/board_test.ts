@@ -595,11 +595,9 @@ describe('Board', () => {
       expect(board.last(Cell)!.y).to.equal(3);
 
       const corner = board.first(Cell, {x:1, y:1})!;
-      expect(corner.adjacencies(Cell).length).to.equal(2);
       expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1]]);
 
       const middle = board.first(Cell, {x:2, y:2})!;
-      expect(middle.adjacencies(Cell).length).to.equal(4);
       expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
     });
 
@@ -613,12 +611,26 @@ describe('Board', () => {
       expect(board.last(Cell)!.y).to.equal(3);
 
       const corner = board.first(Cell, {x:1, y:1})!;
-      expect(corner.adjacencies(Cell).length).to.equal(3);
       expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1], [2,2]]);
 
       const middle = board.first(Cell, {x:2, y:2})!;
-      expect(middle.adjacencies(Cell).length).to.equal(6);
       expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,1], [1,2], [2,1], [2,3], [3,2], [3,3]]);
+    });
+
+    it('creates inverse hexes', () => {
+      board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
+      board.createGrid({ rows: 3, columns: 3, style: 'hex-inverse' }, Cell, 'cell', (x, y) => ({x, y}));
+      expect(board.all(Cell).length).to.equal(9);
+      expect(board.first(Cell)!.x).to.equal(1);
+      expect(board.first(Cell)!.y).to.equal(1);
+      expect(board.last(Cell)!.x).to.equal(3);
+      expect(board.last(Cell)!.y).to.equal(3);
+
+      const corner = board.first(Cell, {x:1, y:1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1]]);
+
+      const middle = board.first(Cell, {x:2, y:2})!;
+      expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
     });
   });
 

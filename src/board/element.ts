@@ -611,7 +611,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
     {rows, columns, style}: {
       rows: number,
       columns: number,
-      style?: 'square' | 'hex'
+      style?: 'square' | 'hex' | 'hex-inverse'
     }, className: ElementClass<P, T>,
     name: string,
     attributes?: ElementAttributes<P, T> | ((row: number, column: number) => ElementAttributes<P, T>)
@@ -624,6 +624,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
         if (row > 1) el.connectTo(grid[(row - 2) * columns + column - 1]);
         if (column > 1) el.connectTo(grid[(row - 1) * columns + column - 2]);
         if (style === 'hex' && row > 1 && column > 1) el.connectTo(grid[(row - 2) * columns + column - 2]);
+        if (style === 'hex-inverse' && row > 1 && column < columns) el.connectTo(grid[(row - 2) * columns + column]);
         return el;
       })
     );
@@ -1210,8 +1211,8 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
             totalAreaNeeded = getTotalArea();
           }
           // align in reduced area
-          startingOffset.x += area.left - totalAreaNeeded.left + alignOffset.left * (area.width - totalAreaNeeded.width);
-          startingOffset.y += area.top - totalAreaNeeded.top + alignOffset.top * (area.height - totalAreaNeeded.height);
+          startingOffset.x += area.left - totalAreaNeeded.left * scale.x + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
+          startingOffset.y += area.top - totalAreaNeeded.top * scale.y + alignOffset.top * (area.height - totalAreaNeeded.height * scale.y);
 
         } else { // orthogonal
 
