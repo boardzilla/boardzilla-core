@@ -85,8 +85,11 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       game.board.fromJSON(update.state.state.board);
       game.flow.setBranchFromJSON(update.state.state.position);
       game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
+      game.phase = 'started';
+      game.winner = [];
     }
     if (update.type === 'gameFinished') {
+      game.players.setCurrent([]);
       game.winner = update.winners.map(p => game.players.atPosition(p)!);
       game.phase = 'finished';
     }

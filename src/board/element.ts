@@ -1211,8 +1211,8 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
             totalAreaNeeded = getTotalArea();
           }
           // align in reduced area
-          startingOffset.x += area.left - totalAreaNeeded.left * scale.x + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
-          startingOffset.y += area.top - totalAreaNeeded.top * scale.y + alignOffset.top * (area.height - totalAreaNeeded.height * scale.y);
+          startingOffset.x += area.left - totalAreaNeeded.left + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
+          startingOffset.y += area.top - totalAreaNeeded.top + alignOffset.top * (area.height - totalAreaNeeded.height * scale.y);
 
         } else { // orthogonal
 

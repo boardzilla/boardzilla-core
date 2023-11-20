@@ -181,8 +181,9 @@
       transform: translateY(-50%) translateX(-50%);
       font-size: 1.5rem;
       padding: 0.5rem;
-      background: red;
-      color: white;
+      border: .2rem solid #433;
+      background: #dcc;
+      color: #433;
       z-index: 200;
     }
   }

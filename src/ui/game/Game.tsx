@@ -67,6 +67,7 @@ export default () => {
     const messages: (PendingMove<Player> | string)[] = pendingMoves || [];
 
     if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
+    if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) console.log('outofturn', game.players.currentPosition)
 
     if (disambiguateElement) {
       const elementPosition = disambiguateElement.element.relativeTransformToBoard();
@@ -116,7 +117,8 @@ export default () => {
       }
     }
     return layouts;
-  }, [game, selected, pendingMoves, move, position, disambiguateElement, step]); // TODO check this works: game.players.currentPosition so the out of turn can move?
+  }, [selected, pendingMoves, move, position, disambiguateElement, step, game.players.currentPosition, game.board._ui.stepLayouts]);
+  // TODO check this works: game.players.currentPosition so the out of turn can move?
 
   useEffect(() => {
     const resize = () => {
@@ -179,7 +181,16 @@ export default () => {
         />
       ))}
       {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
-      {game.phase === 'finished' && !victoryMessageDismissed && <div className="game-finished">Game finished</div>}
+      {game.phase === 'finished' && !victoryMessageDismissed && (
+        <div className="game-finished">
+          Game finished
+          {game.winner.length && (
+            <div style={{color: game.winner.length === 1 ? game.winner[0].color : ''}}>
+              {game.winner.map(p => p.name).join(', ')} win{game.winner.length === 1 && 's'}!
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
