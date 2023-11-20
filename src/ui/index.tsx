@@ -81,6 +81,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       // @ts-ignore;
       for (const className of game.board._ctx.classRegistry) window[className.name] = className;
     } else {
+      game.players.fromJSON(update.state.state.players);
       game.board.fromJSON(update.state.state.board);
       game.flow.setBranchFromJSON(update.state.state.position);
       game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
