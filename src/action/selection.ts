@@ -175,7 +175,7 @@ export default class Selection<P extends Player> {
    * forms are here evaluated with the previous args. returns new selection and
    * error if any
    */
-  validate(args: Record<string, Argument<P>>): string | undefined {
+  error(args: Record<string, Argument<P>>): string | undefined {
     const arg = args[this.name];
     const s = this.resolve(args);
     if (s.skipIf === true) return;

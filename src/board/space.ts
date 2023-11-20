@@ -3,7 +3,7 @@ import ElementCollection from './element-collection.js'
 
 import graphology from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
-import { bfs, bfsFromNode } from 'graphology-traversal';
+import { bfsFromNode } from 'graphology-traversal';
 
 import type Board from './board.js';
 import type { ElementClass, ElementAttributes } from './element.js';

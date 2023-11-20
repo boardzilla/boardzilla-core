@@ -50,7 +50,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       ).map(
         s => [
           s.name,
-          args[s.name] === undefined ? 'Missing' : s.validate(args as Record<string, Argument<Player>>)
+          args[s.name] === undefined ? 'Missing' : s.error(args as Record<string, Argument<Player>>)
         ]
       )
     );

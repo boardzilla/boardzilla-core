@@ -18,7 +18,6 @@ import type { PlayerPositionState, GameUpdate } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
 import type { Argument } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
-import type React from 'react';
 
 // find all non-method non-internal attr's
 export type PlayerAttributes<T extends Player> = {

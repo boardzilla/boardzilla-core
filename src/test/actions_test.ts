@@ -149,8 +149,8 @@ describe('Actions', () => {
         expect(move2[0].selections.length).to.equal(2);
         expect(move2[0].selections[0].name).to.equal('lumber');
         expect(move2[0].selections[1].name).to.equal('steel');
-        expect(move2[0].selections[1].validate({ lumber: 5, steel: 5 })).to.not.be.undefined;
-        expect(move2[0].selections[1].validate({ lumber: 5, steel: 4 })).to.be.undefined;
+        expect(move2[0].selections[1].error({ lumber: 5, steel: 5 })).to.not.be.undefined;
+        expect(move2[0].selections[1].error({ lumber: 5, steel: 4 })).to.be.undefined;
       }
     });
 
