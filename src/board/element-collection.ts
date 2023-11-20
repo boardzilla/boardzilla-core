@@ -79,17 +79,9 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
     const fns: ((e: F) => boolean)[] = finders.map(finder => {
       if (typeof finder === 'object') {
         const attrs = finder;
-        return el => Object.entries(attrs).every(([k1, v1]) => {
-          let kvpairs = Object.entries(el);
-          if ('mine' in attrs) {
-            if (!el._ctx.player) throw Error('Using "mine" in a non-player context');
-            kvpairs = kvpairs.concat([["mine", el.mine]]);
-          }
-          if ('empty' in attrs) {
-            kvpairs = kvpairs.concat([["empty", el.isEmpty()]]);
-          }
-          return kvpairs.find(([k2, v2]) => k1 === k2 && v1 === v2)
-        })
+        return el => Object.entries(attrs).every(([k1, v1]) => (
+          (k1 === 'empty' ? el.isEmpty() : el[k1 as keyof typeof el]) === v1
+        ))
       }
       if (typeof finder === 'string') {
         const name = finder;

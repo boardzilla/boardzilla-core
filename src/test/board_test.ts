@@ -224,6 +224,13 @@ describe('Board', () => {
       expect(card4!.name).equals('2H');
     });
 
+    it('searches undefined', () => {
+      board.create(Card, 'AH', { suit: 'H', pip: 1, player: players[0] });
+      board.create(Card, '2H', { suit: 'H', pip: 2, player: players[1] });
+      const h3 = board.create(Card, '3H', { suit: 'H', pip: 3 });
+      expect(board.first(Card, {player: undefined})).to.equal(h3);
+    }),
+
     it('modifies', () => {
       board.create(Card, 'AH', { suit: 'H', pip: 1 });
       board.create(Card, '2H', { suit: 'H', pip: 2 });
