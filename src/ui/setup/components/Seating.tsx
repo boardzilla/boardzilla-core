@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { gameStore } from '../../index.js';
 
 import { times } from '../../../index.js';
-import ReactColor from 'react-color';
-const { GithubPicker } = ReactColor;
+import { GithubPicker } from 'react-color';
 
 import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
 
