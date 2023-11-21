@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import classNames from 'classnames';
 import { gameStore } from '../index.js';
 
@@ -11,10 +11,11 @@ import type { PendingMove } from '../../game.js';
 import type { Argument } from '../../action/action.js';
 import type { Player } from '../../player/index.js';
 
+let allControls: Record<string, {moves: PendingMove<Player>[], style: CSSProperties}> = {};
+
 export default () => {
   const [game, position, pendingMoves, move, step, selectMove, selected, setSelected, setAspectRatio, dragElement, boardJSON] =
     gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.boardJSON]);
-
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: PendingMove<Player>[] }>();
@@ -63,15 +64,14 @@ export default () => {
   }, [selected, setSelected, submitMove]);
 
   const controls = useMemo(() => {
-    const layouts: Record<string, {moves: PendingMove<Player>[], style: React.CSSProperties}> = {};
+    const layouts: Record<string, {moves: PendingMove<Player>[], style: CSSProperties}> = {};
     const messages: (PendingMove<Player> | string)[] = pendingMoves || [];
 
     if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
-    if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) console.log('outofturn', game.players.currentPosition)
 
     if (disambiguateElement) {
       const elementPosition = disambiguateElement.element.relativeTransformToBoard();
-      const style: React.CSSProperties = {};
+      const style: CSSProperties = {};
       if (elementPosition.left > 100 - elementPosition.left - elementPosition.width) {
         style.right = `calc(${100 - elementPosition.left}% + 1rem)`;
       } else {
@@ -98,7 +98,7 @@ export default () => {
           if (existing) {
             if (typeof pendingMove === 'object') existing.moves.push(pendingMove);
           } else {
-            let style: React.CSSProperties = { left: 0, top: 0 };
+            let style: CSSProperties = { left: 0, top: 0 };
             const layout = game.board._ui.stepLayouts[layoutName];
             const position = (typeof layout.element === 'function' ? layout.element() : layout.element)._ui.computedStyle;
             if (position) style = {
@@ -118,7 +118,6 @@ export default () => {
     }
     return layouts;
   }, [selected, pendingMoves, move, position, disambiguateElement, step, game.players.currentPosition, game.board._ui.stepLayouts]);
-  // TODO check this works: game.players.currentPosition so the out of turn can move?
 
   useEffect(() => {
     const resize = () => {

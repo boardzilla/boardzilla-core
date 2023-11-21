@@ -132,7 +132,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         const allArgs = {...args, [selection.name]: option};
         if (selection.validation && selection.error(allArgs)) continue;
         const submoves = this._getResolvedSelectionsInner(allArgs);
-        if (submoves === undefined) console.log(selection.name, 'dead end');
         if (submoves === undefined) {
           pruned = true;
         } else {

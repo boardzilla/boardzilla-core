@@ -18,7 +18,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
   const initial = useCallback(() => {
     const args: Record<string, Argument<Player> | undefined> = {...move.args};
     for (const s of move.selections) {
-      if (s.name !== '__action__' && s.name !== '__confirm__') args[s.name] = s.initial;
+      if (s.name !== '__action__' && s.name !== '__confirm__' && s.type !== 'board') args[s.name] = s.initial;
     }
     return args;
   }, [move]);
@@ -27,14 +27,16 @@ const ActionForm = ({ move, stepName, onSubmit }: {
 
   useEffect(() => setArgs(initial()), [initial, move]);
 
-  useEffect(() => {
+  const allArgs = useMemo(() => {
+    const args2 = {...args};
     for (const s of move.selections) {
       if (s.type === 'board') {
-        setArgs(a => ({...a, [s.name]: s.isMulti() ? selected : selected[0]}));
+        args2[s.name] = s.isMulti() ? selected : selected[0];
+        break
       }
     }
-  }, [move, selected]);
-
+    return args2;
+  }, [args, move, selected]);
 
   const submitForm = useCallback((args: Record<string, Argument<Player> | undefined>) => {
     onSubmit(move, args as Record<string, Argument<Player>>);
@@ -66,40 +68,40 @@ const ActionForm = ({ move, stepName, onSubmit }: {
 
   const onSubmitForm = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (validate(args)) submitForm(args);
+    if (validate(allArgs)) submitForm(allArgs);
     setArgs(initial());
-  }, [args, validate, submitForm, initial])
+  }, [allArgs, validate, submitForm, initial])
 
   const singleSubmit = useMemo(() => (
     move.selections.length === 1 && (['board', 'choices', 'button'].includes(move.selections[0].type)) && !move.selections[0].confirm && !move.selections[0].isMulti()
   ), [move]);
 
   const handleChange = useCallback((name: string, arg: Argument<Player>) => {
-    let newArgs = args;
+    let newArgs = allArgs;
     if (name !== '__action__' && name !== '__confirm__') newArgs[name] = arg;
 
-    if (Object.values(args).every(a => a !== undefined)) {
-      if (validate(newArgs) && singleSubmit) return submitForm(args);
+    if (Object.values(allArgs).every(a => a !== undefined)) {
+      if (validate(newArgs) && singleSubmit) return submitForm(allArgs);
     } else {
       setErrors({});
     }
     setArgs(a => ({...a, [name]: arg}));
-  }, [args, validate, submitForm, singleSubmit]);
+  }, [allArgs, validate, submitForm, singleSubmit]);
 
   const confirm = useMemo(() => {
-    if (Object.values(validationErrors(args)).some(e => e)) return undefined;
+    if (Object.values(validationErrors(allArgs)).some(e => e)) return undefined;
     if (singleSubmit) return undefined;
-    if (Object.values(args).some(a => a === undefined)) return undefined;
+    if (Object.values(allArgs).some(a => a === undefined)) return undefined;
     for (const s of move.selections) {
       if (s.type === 'board' && s.isMulti() && (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity))) return undefined;
     }
 
     return move.selections[0].confirm ? (
       typeof move.selections[0].confirm === 'function' ?
-        move.selections[0].confirm(args as Record<string, Argument<Player>>) :
+        move.selections[0].confirm(allArgs as Record<string, Argument<Player>>) :
         move.selections[0].confirm
     ) : 'Confirm';
-  }, [move, args, singleSubmit, selected, validationErrors]);
+  }, [move, allArgs, singleSubmit, selected, validationErrors]);
 
   return (
     <form
@@ -112,7 +114,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       {move.selections.map((s: ResolvedSelection<Player>) => (
         <Selection
           key={s.name}
-          value={args[s.name]}
+          value={allArgs[s.name]}
           error={errors[s.name]}
           onChange={(value: Argument<Player>) => handleChange(s.name, value)}
           selection={s}
@@ -124,7 +126,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       )}
 
       {confirm && <button name="submit" type="submit">{confirm}</button>}
-      {(pendingMove || selected.length > 0) && stepName !== 'disambiguate-board-selection' && <button onClick={() => onSubmit()}>Cancel</button>}
+      {(pendingMove || selected.length > 0 && move.selections.some(s => s.type === 'board')) && stepName !== 'disambiguate-board-selection' && <button onClick={() => onSubmit()}>Cancel</button>}
     </form>
   );
 };

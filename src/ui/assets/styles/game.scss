@@ -1,8 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Agbalumo&family=Kanit&display=swap');
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translate(-100%, 0) }
-  100% { opacity: 1; transform: none }
+  0% { opacity: 0; filter: blur(2em); transform: translate(-40vw, 0) }
+  50% { opacity: 0; filter: blur(2em); transform: translate(-20vw, 0) }
+  100% { opacity: 1; filter: none; transform: none }
 }
 
 @layer game {
@@ -121,7 +122,7 @@
     }
 
     .player-controls {
-      animation: fadeIn .2s;
+      animation: fadeIn .4s;
       z-index: 150;
       position: absolute;
       padding: .25rem;
@@ -176,6 +177,7 @@
 
     .game-finished {
       position: absolute;
+      text-align: center;
       top: 50%;
       left: 50%;
       transform: translateY(-50%) translateX(-50%);
