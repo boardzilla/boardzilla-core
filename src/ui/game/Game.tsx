@@ -11,8 +11,6 @@ import type { PendingMove } from '../../game.js';
 import type { Argument } from '../../action/action.js';
 import type { Player } from '../../player/index.js';
 
-let allControls: Record<string, {moves: PendingMove<Player>[], style: CSSProperties}> = {};
-
 export default () => {
   const [game, position, pendingMoves, move, step, selectMove, selected, setSelected, setAspectRatio, dragElement, boardJSON] =
     gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.boardJSON]);
