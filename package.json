@@ -1,6 +1,6 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.0.20",
+  "version": "0.0.24",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
@@ -8,17 +8,17 @@
     "prepack": "yarn build",
     "build:test": "tsc && node esbuild.mjs",
     "test": "NODE_ENV=test yarn run build:test && mocha src/test/setup.js dist/test/*_test.js",
-    "test:debug": "NODE_ENV=test yarn run build:test && mocha --inspect-brk --timeout 3600000 src/test/setup.js dist/test/*_test.js",
+    "test:debug": "NODE_ENV=test yarn run build:test && mocha --inspect-brk --timeout 3600000 src/test/setup-debug.js dist/test/*_test.js",
     "compile": "tsc",
     "docs": "typedoc",
     "lint": "eslint . --ext .ts"
   },
   "type": "module",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "files": [
-    "dist/**/*"
+    "src/**/*"
   ],
-  "types": "dist/index.d.ts",
+  "types": "src/index.ts",
   "sideEffects": [
     "./src/ui/assets/styles/game.scss"
   ],
