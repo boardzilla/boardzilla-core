@@ -22,7 +22,7 @@ export default class ForEach<P extends Player, T extends Serializable<P>> extend
       name,
       initial: () => ((typeof collection === 'function') ? collection(this.flowStepArgs()) : collection)[0],
       next: () => this.position.collection[this.position.index + 1],
-      while: () => this.position.index >= 0 && this.position.index < this.position.collection.length,
+      while: () => true,
       do: block
     });
     this.collection = collection;
@@ -31,6 +31,10 @@ export default class ForEach<P extends Player, T extends Serializable<P>> extend
   reset() {
     const collection = (typeof this.collection === 'function') ? this.collection(this.flowStepArgs()) : this.collection;
     this.setPosition({ index: collection.length ? 0 : -1, value: collection[0], collection });
+  }
+
+  validPosition(position: typeof this.position) {
+    return position.index >= 0 && position.index < position.collection.length;
   }
 
   toJSON(forPlayer=true) {
@@ -50,6 +54,6 @@ export default class ForEach<P extends Player, T extends Serializable<P>> extend
   }
 
   toString(): string {
-    return `foreach${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value})$`;
+    return `foreach${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

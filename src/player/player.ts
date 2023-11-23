@@ -18,6 +18,13 @@ export default class Player {
     return this._players.setCurrent(this);
   }
 
+  /**
+   * Returns an array of all other players.
+   */
+  others<P extends Player>(this: P) {
+    return Array.from(this._players).filter(p => p !== this) as P[];
+  }
+
   toJSON() {
     let {_players, ...attrs}: Record<any, any> = this;
 

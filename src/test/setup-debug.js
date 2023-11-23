@@ -1,5 +1,3 @@
-globalThis.console.debug = () => {}
-
 globalThis.document={
   createElement:() => {},
   createTextNode: ()=>{},

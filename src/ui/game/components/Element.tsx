@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../index.js';
@@ -16,7 +16,7 @@ import type { DraggableData } from 'react-draggable';
 
 const elementAttributes = (el: GameElement<Player>) => {
   return Object.fromEntries(Object.entries(el).filter(([key, val]) => (
-    !['_t', '_ctx', '_ui', 'name', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function'
+    !['_t', '_ctx', '_ui', 'name', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
   )).map(([key, val]) => (
     [`data-${key.toLowerCase()}`, serialize(val)]
   )));
@@ -31,7 +31,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   onSelectElement: (moves: PendingMove<Player>[], ...elements: GameElement<Player>[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [game, boardSelections, move, position, dragElement, setDragElement, dropElements, currentDrop, setCurrentDrop] = gameStore(s => [s.game, s.boardSelections, s.move, s.position, s.dragElement, s.setDragElement, s.dropElements, s.currentDrop, s.setCurrentDrop, s.boardJSON]);
+  const [game, boardSelections, move, position, dragElement, setDragElement, dropElements, currentDrop, setCurrentDrop, setZoomable, zoomElement] = gameStore(s => [s.game, s.boardSelections, s.move, s.position, s.dragElement, s.setDragElement, s.dropElements, s.currentDrop, s.setCurrentDrop, s.setZoomable, s.zoomElement, s.boardJSON]);
   const [dragging, setDragging] = useState(false); // currently dragging
   const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
   const wrapper = useRef<HTMLDivElement>(null);
@@ -45,8 +45,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const selectable = !dragElement && selections?.clickMoves.filter(m => m.action.slice(0, 4) !== '_god').length;
   const draggable = !!selections?.dragMoves.length; // ???
   const droppable = dropElements.find(({ element }) => element === branch);
-
-  let style: React.CSSProperties = {};
 
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
@@ -137,15 +135,50 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     }
   }, [element, branch, wrapper, animatedFrom])
 
-  const { computedStyle } = element._ui;
-  if (computedStyle) {
-    style = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])))
-  }
-  if (dragging) {
-    delete style.left;
-    delete style.top;
-  }
-  style.fontSize = absoluteTransform.height * 0.04 + 'rem'
+  let style = useMemo(() => {
+    let styleBuilder: React.CSSProperties = {};
+    const { computedStyle } = element._ui;
+
+    if (computedStyle) {
+      styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])));
+    }
+    if (dragging) {
+      delete styleBuilder.left;
+      delete styleBuilder.top;
+    }
+    styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
+
+    return styleBuilder;
+  }, [element, dragging, absoluteTransform]);
+
+  useEffect(() => {
+    if (zoomElement !== element && wrapper.current?.getAttribute('data-zoomed')) {
+      // no longer zoomed - go back to normal size
+      wrapper.current.removeAttribute('data-zoomed');
+      wrapper.current.style.transform = '';
+    }
+    if (zoomElement !== element && zoomElement && wrapper.current?.style.zIndex) {
+      // something else is zoomed - go back to normal z-index so we don't overlap it
+      wrapper.current.style.zIndex = '';
+    }
+    if (zoomElement === element && wrapper.current && !wrapper.current?.style.transform) {
+      // this is zoomed, calculate zoom transform
+      const transform = element.relativeTransformToBoard();
+      const scale = Math.max(1, Math.min(80 / transform.height, 80 / transform.width));
+      const left = (50 - scale * transform.width / 2 - transform.left) * 100 / transform.width;
+      const top = (50 - scale * transform.height / 2 - transform.top) * 100 / transform.height;
+      wrapper.current.style.transform = `translate(${left}%, ${top}%) scale(${scale}) `;
+      wrapper.current.style.zIndex = '300';
+      wrapper.current.setAttribute('data-zoomed', '1');
+      const cancel = (e: TransitionEvent) => {
+        if (e.propertyName === 'transform' && e.target === wrapper.current && !wrapper.current?.style.transform && wrapper.current?.style.zIndex) {
+          wrapper.current.style.zIndex = '';
+          wrapper.current!.removeEventListener('transitionend', cancel);
+        }
+      };
+      wrapper.current?.addEventListener('transitionend', cancel);
+    }
+  }, [element, zoomElement]);
 
   let contents: React.JSX.Element[] | React.JSX.Element = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
@@ -257,12 +290,11 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
           selected: isSelected,
-          clickable, selectable, droppable
-          // zoomable: !dragElement && (typeof element._ui.appearance.zoomable === 'function' ? element._ui.appearance.zoomable(element) : element._ui.appearance.zoomable),
+          clickable, selectable, droppable,
         }
       )}
       onClick={clickable ? onClick : undefined}
-      onMouseEnter={droppable ? onDrop : undefined}
+      onMouseEnter={() => { if (droppable) onDrop(); if (element._ui.appearance.zoomable) setZoomable(element) }}
       onMouseLeave={() => { if (droppable) onLeave(); if (onMouseLeave) onMouseLeave(); }}
       {...attrs}
     >
@@ -294,7 +326,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     </DraggableCore>
   );
 
-  if (!element._t.parent) console.log('GAMEELEMENTS render');
+  //if (!element._t.parent) console.log('GAMEELEMENTS render');
 
   return contents;
 };

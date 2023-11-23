@@ -56,6 +56,10 @@ type GameStore = {
   dropElements: {element: string, move: PendingMove<Player>}[];
   currentDrop?: string;
   setCurrentDrop: (el?: string) => void;
+  zoomable?: GameElement<Player>;
+  setZoomable: (el: GameElement<Player>) => void;
+  zoomElement?: GameElement<Player>;
+  setZoom: (zoom: boolean) => void;
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
@@ -160,6 +164,13 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   }),
   dropElements: [],
   setCurrentDrop: currentDrop => set({ currentDrop }),
+  setZoomable: zoomable => set({ zoomable }),
+  setZoom: zoom => set(s => {
+    console.log('zoom', zoom, s.zoomable);
+    return {
+      zoomElement: zoom ? s.zoomable : undefined
+    }
+  }),
 }), shallow);
 
 // refresh move and selections

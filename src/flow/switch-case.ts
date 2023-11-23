@@ -73,6 +73,6 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
   }
 
   toString(): string {
-    return `switch-case${this.name ? ":" + this.name : ""} (${this.position.index})`;
+    return `switch-case${this.name ? ":" + this.name : ""} (${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

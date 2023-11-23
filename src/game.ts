@@ -1,5 +1,5 @@
 import { action } from './action/index.js';
-import { escapeArgument } from './action/utils.js';
+import { escapeArgument, humanizeArg } from './action/utils.js';
 import {
   Board,
   Space,
@@ -216,7 +216,7 @@ export default class Game<P extends Player, B extends Board<P>> {
         .chooseOnBoard('element', this.board.all(GameElement))
         .chooseFrom<'property', string>(
           'property',
-          el => Object.keys(el).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'board', 'game', 'pile', 'mine'].includes(a)),
+          ({ element }) => Object.keys(element).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'board', 'game', 'pile', 'mine'].includes(a)),
           { prompt: "Change property" }
         ).enterText('value', {
           prompt: ({ property }) => `Change ${property}`,
@@ -257,6 +257,7 @@ export default class Game<P extends Player, B extends Board<P>> {
           args
         });
       }
+      console.debug(`Move by player #${player.position} ${action}({${Object.entries(args).map(([k, v]) => k +': ' + humanizeArg(v)).join(', ')}}) ${error ? '❌ ' + error : '✅'}`);
       if (error) return error;
       // successful move
     });

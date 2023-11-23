@@ -14,6 +14,6 @@ export default class If<P extends Player> extends SwitchCase<P, boolean> {
   }
 
   toString(): string {
-    return `if-else${this.name ? ":" + this.name : ""} (${this.position.index})`;
+    return `if-else${this.name ? ":" + this.name : ""} (${!!this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

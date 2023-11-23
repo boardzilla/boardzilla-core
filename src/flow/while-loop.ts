@@ -22,8 +22,15 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
 
   reset() {
     const position: typeof this.position = { index: 0 };
-    this.setPosition(position);
-    if (typeof this.while === 'function' ? !this.while(this.flowStepArgs()) : !this.while) this.setPosition({...position, index: -1});
+    if (!this.validPosition()) {
+      this.setPosition({...position, index: -1});
+    } else {
+      this.setPosition(position);
+    }
+  }
+
+  validPosition() {
+    return typeof this.while === 'function' ? this.while(this.flowStepArgs()) : this.while;
   }
 
   currentBlock() {
@@ -33,8 +40,8 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   advance() {
     if (this.position.index > 10000) throw Error(`Endless loop detected: ${this.name}`);
     const position: typeof this.position = { index: this.position.index + 1 };
+    if (!this.validPosition()) return this.exit();
     this.setPosition(position);
-    if (typeof this.while === 'function' ? !this.while(this.flowStepArgs()) : !this.while) return this.exit();
     return FlowControl.ok;
   }
 
@@ -54,6 +61,6 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   }
 
   toString(): string {
-    return `loop${this.name ? ":" + this.name : ""} (index: ${this.position.index})$`;
+    return `loop${this.name ? ":" + this.name : ""} (loop #${this.position.index}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

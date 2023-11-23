@@ -235,7 +235,10 @@ export default class Flow<P extends Player> {
   // play until action required (returns list) or game over
   play() {
     let step;
-    do { step = this.playOneStep() } while (step === FlowControl.ok && this.game.phase !== 'finished')
+    do {
+      step = this.playOneStep();
+    } while (step === FlowControl.ok && this.game.phase !== 'finished')
+    console.debug("Game Flow:\n" + this.stacktrace());
     if (step === Do.continue || step === Do.repeat || step === Do.break) throw Error("Cannot skip/repeat/break when not in a loop");
     if (step === FlowControl.complete) this.game.finish();
   }
@@ -271,7 +274,13 @@ export default class Flow<P extends Player> {
     return this.block ?? null;
   }
 
-  toString(): string {
-    return "";
+  toString() {
+    return `flow${this.name ? ":" + this.name : ""}${this.block instanceof Array ? ' (item #' + this.sequence + ')' : ''}`;
+  }
+
+  stacktrace(indent=0) {
+    let string = this.toString();
+    if (this.step instanceof Flow) string += '\n' + ' '.repeat(indent) + '↳ ' + this.step.stacktrace(indent + 2);
+    return string;
   }
 }

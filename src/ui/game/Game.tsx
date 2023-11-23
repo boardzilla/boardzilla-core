@@ -10,10 +10,11 @@ import type { GameElement } from '../../board/index.js'
 import type { PendingMove } from '../../game.js';
 import type { Argument } from '../../action/action.js';
 import type { Player } from '../../player/index.js';
+import { humanizeArg } from '../../action/utils.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, selectMove, selected, setSelected, setAspectRatio, dragElement, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.boardJSON]);
+  const [game, position, pendingMoves, move, step, selectMove, selected, setSelected, setAspectRatio, dragElement, setZoom, boardJSON] =
+    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: PendingMove<Player>[] }>();
@@ -21,15 +22,12 @@ export default () => {
 
   if (!position) return null;
   const player = game.players.atPosition(position);
-  if (!player) {
-    console.log('no player to render');
-    return null;
-  }
+  if (!player) return null;
 
   const submitMove = useCallback((pendingMove?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
-    if (!pendingMove) setSelected([]);
+    setSelected([]);
     selectMove(pendingMove, args);
   }, [selectMove, setSelected]);
 
@@ -118,6 +116,23 @@ export default () => {
   }, [selected, pendingMoves, move, position, disambiguateElement, step, game.players.currentPosition, game.board._ui.stepLayouts]);
 
   useEffect(() => {
+    const keydownHandler = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.key === 'z') setZoom(true);
+      if (e.code === 'Escape') submitMove();
+    };
+    const keyupHandler = (e: KeyboardEvent) => {
+      if (e.key === 'z') setZoom(false);
+    };
+    window.addEventListener('keydown', keydownHandler);
+    window.addEventListener('keyup', keyupHandler);
+    return () => {
+      window.removeEventListener('keyup', keyupHandler);
+      window.removeEventListener('keyup', keydownHandler);
+    }
+  }, [setZoom, submitMove]);
+
+  useEffect(() => {
     const resize = () => {
       const aspectRatio = window.innerWidth / window.innerHeight;
       setAspectRatio(aspectRatio);
@@ -145,7 +160,7 @@ export default () => {
 
   if (!dimensions) return;
 
-  console.log('GAME render', pendingMoves, step);
+  console.debug('Showing game with pending moves:' + pendingMoves?.map(m => `\n⮕ ${m.action}({${Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`).join('') || 'none');
 
   return (
     <div
@@ -181,7 +196,7 @@ export default () => {
       {game.phase === 'finished' && !victoryMessageDismissed && (
         <div className="game-finished">
           Game finished
-          {game.winner.length && (
+          {game.winner.length > 0 && (
             <div style={{color: game.winner.length === 1 ? game.winner[0].color : ''}}>
               {game.winner.map(p => p.name).join(', ')} win{game.winner.length === 1 && 's'}!
             </div>

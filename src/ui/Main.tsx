@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { gameStore } from './index.js';
 import Game from './game/Game.js';
 import Setup from './setup/Setup.js';
+import { humanizeArg } from '../action/utils.js';
 
 import type { GameState } from '../interface.js';
 import type { SerializedArg } from '../action/utils.js';
@@ -159,7 +160,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     MessageProcessedEvent
   >) => {
     const data = event.data;
-    console.log('message', data);
+    //console.log('message', data);
     switch(data.type) {
     case 'settingsUpdate':
       setSettings(data.settings);
@@ -196,7 +197,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   useEffect(() => {
     // move is processable
     if (moves?.length) {
-      console.log('success, submitting to server', JSON.stringify(moves));
+      console.debug(`Submitting valid moves from player #${position}:\n${moves.map(m => `⮕ ${m.action}({${Object.entries(m.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`)}`);
       moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
       const message: MoveMessage = {
         type: "move",
@@ -228,8 +229,6 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     const message: StartMessage = {type: "start", id: 'start'};
     window.top!.postMessage(message, "*");
   }, []);
-
-  console.log('render MAIN', game.phase, settings);
 
   return (
     <>

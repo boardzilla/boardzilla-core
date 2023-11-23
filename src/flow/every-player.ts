@@ -133,4 +133,8 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
     // no more players to step through. return the all-complete
     return this.completed.every(r => r) ? FlowControl.complete : undefined;
   }
+
+  toString(): string {
+    return `every-player${this.name ? ":" + this.name : ""}`;
+  }
 }

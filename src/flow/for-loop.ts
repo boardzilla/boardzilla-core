@@ -33,8 +33,15 @@ export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow
       index: 0,
       value: (this.initial instanceof Function ? this.initial(this.flowStepArgs()) : this.initial) as T
     }
-    this.setPosition(position);
-    if (!this.while(position.value)) this.setPosition({...position, index: -1});
+    if (!this.validPosition(position)) {
+      this.setPosition({...position, index: -1});
+    } else {
+      this.setPosition(position);
+    }
+  }
+
+  validPosition(position: typeof this.position) {
+    return this.while(position.value);
   }
   
   currentBlock() {
@@ -42,17 +49,18 @@ export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow
   }
 
   advance() {
+    if (this.position.index > 10000) throw Error(`Endless loop detected: ${this.name}`);
     if (this.position.index === -1) return FlowControl.complete;
     const position: typeof this.position = { ...this.position, index: this.position.index + 1 };
     if (this.next && this.position.value !== undefined) position.value = this.next(this.position.value);
+    if (!this.validPosition(position)) return this.exit();
     this.setPosition(position);
-    if (!this.while(position.value)) return this.exit();
     return FlowControl.ok;
   }
 
   repeat() {
+    if (!this.validPosition(this.position)) return this.exit();
     this.setPosition(this.position);
-    if (!this.while(this.position.value)) return this.exit();
     return FlowControl.ok;
   }
 
@@ -62,6 +70,6 @@ export default class ForLoop<P extends Player, T = Serializable<P>> extends Flow
   }
 
   toString(): string {
-    return `loop${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value})$`;
+    return `loop${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})$`;
   }
 }

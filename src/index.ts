@@ -19,7 +19,7 @@ export {
 } from './flow/index.js';
 
 export { createInteface } from './interface.js';
-export { times } from './utils.js';
+export { times, range, shuffleArray } from './utils.js';
 export { Player, action };
 export { render } from './ui/index.js';
 export {
@@ -91,7 +91,7 @@ export const createGame = <P extends Player, B extends Board<P>>(
     trackMovement?: boolean,
   }
 ): Game<P, B> => {
-  console.time('setup');
+  //console.time('setup');
   const game = new Game<P, B>(playerClass, boardClass);
   let rseed = '';
   if (state && 'rseed' in state) {
@@ -113,7 +113,7 @@ export const createGame = <P extends Player, B extends Board<P>>(
 
   // setup board to get all non-serialized setup (spaces, event handlers, graphs)
   gameCreator(game.board);
-  console.timeLog('setup', 'game creator setup');
+  //console.timeLog('setup', 'game creator setup');
 
   // lock game from receiving any more setup
   game.start();
@@ -125,8 +125,8 @@ export const createGame = <P extends Player, B extends Board<P>>(
     if (options?.trackMovement) game.trackMovement(true);
     game.play();
   }
-  console.timeLog('setup', 'setState');
+  //console.timeLog('setup', 'setState');
 
-  console.timeEnd('setup');
+  //console.timeEnd('setup');
   return game;
 };

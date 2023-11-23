@@ -43,7 +43,6 @@ export const deserializeSingleArg = <P extends Player>(arg: SerializedSingleArg,
   } else {
     return arg;
   }
-  if (!deser) debugger;
   if (!deser) throw Error(`Unable to find arg: ${arg}`);
   return deser;
 }

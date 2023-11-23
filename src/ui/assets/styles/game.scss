@@ -77,9 +77,8 @@
       .transform-wrapper {
         position: absolute;
         transform-origin: top left;
-        transition: top .6s, left .6s, width .6s, height .6s;
+        transition: transform .5s, top .6s, left .6s, width .6s, height .6s;
         &.animating {
-          transition: transform .6s, top .6s, left .6s, width .6s, height .6s;
           z-index: 100;
         }
         > div {
@@ -95,13 +94,13 @@
         }
       }
 
-      /* .zoomable { */
-      /*   transition: transform 0.2s; */
-      /*   &:hover:not(.animating) { */
-      /*     transform: scale(1.5); */
-      /*     z-index: 50; */
-      /*   } */
-      /* } */
+      .zoomable {
+        transition: transform 0.2s;
+        &:hover:not(.animating) {
+          transform: scale(1.5);
+          z-index: 50;
+        }
+      }
 
       .clickable {
         cursor: pointer;

@@ -5,6 +5,9 @@ import { serializeSingleArg, deserializeSingleArg } from '../action/utils.js';
 import type { FlowArguments, FlowDefinition } from './flow.js';
 
 export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
+  continueUntil?: (p: P) => boolean;
+  turns?: number;
+
   constructor({ name, startingPlayer, nextPlayer, turns, continueUntil, do: block }: {
     name: string,
     startingPlayer?: ((a: FlowArguments) => P) | P,
@@ -27,9 +30,16 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
       name,
       initial,
       next,
-      while: player => continueUntil !== undefined ? !continueUntil(player) : this.position.index < this.game.players.length * (turns || 1),
+      while: () => true,
       do: block
     });
+
+    this.continueUntil = continueUntil;
+    this.turns = turns;
+  }
+
+  validPosition(position: typeof this.position) {
+    return this.continueUntil !== undefined ? !this.continueUntil(position.value) : position.index < this.game.players.length * (this.turns || 1)
   }
 
   setPosition(position: typeof this.position, sequence?: number, reset=true) {
@@ -59,6 +69,6 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
   }
 
   toString(): string {
-    return `each-player${this.name ? ":" + this.name : ""} (player: ${this.position?.value?.position}`;
+    return `each-player${this.name ? ":" + this.name : ""} (player: ${this.position?.value?.position}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

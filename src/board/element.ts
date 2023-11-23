@@ -544,6 +544,10 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
     this.hiddenAttributes = attrs;
   }
 
+  static hideAllExcept<P extends Player, T extends GameElement<P>>(this: ElementClass<P, T>, ...attrs: (string & keyof T)[]): void {
+    this.hiddenAttributes = Object.getOwnPropertyNames(new this({})).filter(attr => !attrs.includes(attr as (string & keyof T)));
+  }
+
   // unused?
   /** @internal */
   hidden(): this {
@@ -779,7 +783,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
       applyTo: GameElement,
       attributes: {
         margin: 0,
-        scaling: 'none',
+        scaling: 'fit',
         alignment: 'center',
         gap: 0,
         direction: 'square'
@@ -942,7 +946,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
       if (!scaling) attributes.scaling = 'fit';
     }
     if (!margin && !area) attributes.margin = 0;
-    this._ui.layouts.push({ applyTo, attributes: Object.assign({ scaling: 'none', alignment: 'center', direction: 'square' }, attributes) });
+    this._ui.layouts.push({ applyTo, attributes: Object.assign({ scaling: 'fit', alignment: 'center', direction: 'square' }, attributes) });
 
     this._ui.layouts.sort((a, b) => {
       let aVal = 0, bVal = 0;
