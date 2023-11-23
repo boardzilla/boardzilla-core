@@ -20,9 +20,7 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
     if (startingPlayer) {
       initial = () => startingPlayer instanceof Function ? startingPlayer(this.flowStepArgs()) : startingPlayer
     } else {
-      initial = () => {
-        return this.game.players.current()[0] || this.game.players[0];
-      }
+      initial = () => this.game.players[0];
     }
     let next = (player: P) => (nextPlayer ? nextPlayer(player) : this.game.players.after(player));
 

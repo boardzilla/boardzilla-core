@@ -155,9 +155,7 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  * FlowArguments} under a key with this name.
  *
  * @param options.startingPlayer - Declare the player to start the loop. If not
- * specified, this will be the {@link PlayerCollection#current | current
- * player}, or the player at position 1 if no current player has been set via
- * {@link PlayerCollection#setCurrent}.
+ * specified, this will be the first player in turn order.
  *
  * @param options.nextPlayer - Declare a method to select the next player. If
  * not specified this will follow turn order. See {@link

@@ -460,4 +460,55 @@ describe('Game', () => {
       expect(game.getResolvedSelections(game.players[2])?.step).to.equal('declare');
     });
   });
+
+  describe('each player', () => {
+    beforeEach(() => {
+      game = new Game(TestPlayer, TestBoard, [ Card ]);
+      board = game.board;
+
+      game.defineActions({
+        takeOne: player => board.action({
+          prompt: 'take one counter',
+        }).do(() => {
+          board.tokens --;
+          player.tokens ++;
+        }),
+      });
+
+      game.players.fromJSON(players.slice(0, 2));
+    });
+
+    it('continuous loop for each player', () => {
+      game.defineFlow(() => whileLoop({
+        while: () => true,
+        do: eachPlayer({
+          name: 'player',
+          do: playerActions({
+            actions: {
+              takeOne: null
+            }
+          }),
+        })
+      }));
+      game.board.tokens = 20;
+      game.start();
+      game.play();
+
+      expect(game.players.currentPosition).to.deep.equal([1])
+      game.processMove({ action: 'takeOne', args: {}, player: game.players[0] });
+      game.play();
+
+      expect(game.players.currentPosition).to.deep.equal([2])
+      game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
+      game.play();
+
+      expect(game.players.currentPosition).to.deep.equal([1])
+      game.processMove({ action: 'takeOne', args: {}, player: game.players[0] });
+      game.play();
+
+      expect(game.players.currentPosition).to.deep.equal([2])
+      game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
+      game.play();
+    });
+  });
 });
