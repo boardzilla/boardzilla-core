@@ -8,6 +8,7 @@ export { union } from './board/index.js';
 
 export {
   playerActions,
+  loop,
   whileLoop,
   forLoop,
   forEach,
@@ -83,12 +84,11 @@ export type SetupFunction<P extends Player, B extends Board<P>> = (
 export const createGame = <P extends Player, B extends Board<P>>(
   playerClass: {new(...a: any[]): P},
   boardClass: ElementClass<P, B>,
-  gameCreator: (board: B) => void
+  gameCreator: (game: Game<P, B>) => void
 ): SetupFunction<P, B> => (
   state: SetupState<P> | GameState<P>,
   options?: {
     currentPlayerPosition?: number[]
-    trackMovement?: boolean,
   }
 ): Game<P, B> => {
   //console.time('setup');
@@ -112,7 +112,7 @@ export const createGame = <P extends Player, B extends Board<P>>(
   game.players.fromJSON(state.players);
 
   // setup board to get all non-serialized setup (spaces, event handlers, graphs)
-  gameCreator(game.board);
+  gameCreator(game);
   //console.timeLog('setup', 'game creator setup');
 
   // lock game from receiving any more setup
@@ -122,8 +122,6 @@ export const createGame = <P extends Player, B extends Board<P>>(
     game.board.fromJSON(state.board);
     game.players.setCurrent(options?.currentPlayerPosition || []);
     game.flow.setBranchFromJSON(state.position);
-    if (options?.trackMovement) game.trackMovement(true);
-    game.play();
   }
   //console.timeLog('setup', 'setState');
 

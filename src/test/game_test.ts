@@ -49,7 +49,7 @@ describe('Game', () => {
   beforeEach(() => {
     game = new Game(TestPlayer, TestBoard, [ Card ]);
     board = game.board;
-    game.defineFlow(() => [
+    game.defineFlow([
       () => {
         board.tokens = 4;
         game.message('Starting game with {{tokens}} tokens', {tokens: board.tokens});
@@ -73,7 +73,7 @@ describe('Game', () => {
     ]);
 
     game.defineActions({
-      addSome: () => board.action({
+      addSome: () => game.action({
         prompt: 'add some counters',
       }).chooseNumber('n', {
         prompt: 'how many?',
@@ -83,14 +83,14 @@ describe('Game', () => {
         ({ n }) => board.tokens += n
       ).message('{{player}} added {{n}}'),
 
-      takeOne: player => board.action({
+      takeOne: player => game.action({
         prompt: 'take one counter',
       }).do(() => {
         board.tokens --;
         player.tokens ++;
       }),
 
-      spend: () => board.action({
+      spend: () => game.action({
         prompt: 'Spend resource',
       }).chooseFrom('r', ['gold', 'silver'], {
         prompt: 'which resource',
@@ -116,7 +116,7 @@ describe('Game', () => {
       { type: "action", position: null }
     ]);
     const step = game.flow.actionNeeded();
-    expect(step?.actions).to.deep.equal(['addSome', 'spend']);;
+    expect(step?.actions).to.deep.equal(['addSome', 'spend']);
   });
 
   it('messages', () => {
@@ -302,18 +302,18 @@ describe('Game', () => {
       board = game.board;
 
       game.defineActions({
-        takeOne: player => board.action({
+        takeOne: player => game.action({
           prompt: 'take one counter',
         }).do(() => {
           board.tokens --;
           player.tokens ++;
         }),
-        declare: () => board.action({
+        declare: () => game.action({
           prompt: 'declare',
         }).enterText('d', {
           prompt: 'declaration'
         }),
-        pass: () => board.action({
+        pass: () => game.action({
           prompt: 'pass'
         }),
       });
@@ -322,7 +322,7 @@ describe('Game', () => {
     });
 
     it('accepts move from any', () => {
-      game.defineFlow(() => [
+      game.defineFlow([
         () => { board.tokens = 4 },
         playerActions({
           players: board.players,
@@ -338,7 +338,7 @@ describe('Game', () => {
     });
 
     it('action for every player', () => {
-      game.defineFlow(() => [
+      game.defineFlow([
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -368,7 +368,7 @@ describe('Game', () => {
     });
 
     it('action for every player with followups', () => {
-      game.defineFlow(() => [
+      game.defineFlow([
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -420,7 +420,7 @@ describe('Game', () => {
     });
 
     it('survives ser/deser', () => {
-      game.defineFlow(() => [
+      game.defineFlow([
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -467,7 +467,7 @@ describe('Game', () => {
       board = game.board;
 
       game.defineActions({
-        takeOne: player => board.action({
+        takeOne: player => game.action({
           prompt: 'take one counter',
         }).do(() => {
           board.tokens --;
@@ -479,7 +479,7 @@ describe('Game', () => {
     });
 
     it('continuous loop for each player', () => {
-      game.defineFlow(() => whileLoop({
+      game.defineFlow(whileLoop({
         while: () => true,
         do: eachPlayer({
           name: 'player',

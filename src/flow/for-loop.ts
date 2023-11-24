@@ -9,8 +9,8 @@ export default class ForLoop<P extends Player, T = Serializable<P>> extends Whil
   block: FlowDefinition<P>;
   position: ForLoopPosition<T>;
   initial: ((a: FlowArguments) => T) | T;
+  whileCondition: (position: ForLoopPosition<T>) => boolean;
   next: (a: T) => T;
-  whileCondition: (a: T) => boolean;
   type: FlowBranchNode<P>['type'] = 'loop';
 
   constructor({ name, initial, next, do: block, while: whileCondition }: {
@@ -20,15 +20,11 @@ export default class ForLoop<P extends Player, T = Serializable<P>> extends Whil
     while: (a: T) => boolean,
     do: FlowDefinition<P>
   }) {
-    super({ do: block, while: true });
+    super({ do: block, while: () => true });
     this.name = name;
     this.initial = initial;
     this.next = next;
-    this.whileCondition = whileCondition;
-  }
-
-  validPosition(position: typeof this.position) {
-    return this.whileCondition(position.value);
+    this.whileCondition = position => whileCondition(position.value)
   }
   
   currentBlock() {

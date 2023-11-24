@@ -6,7 +6,7 @@ import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
 import { default as Game, PlayerAttributes } from '../game.js'
-import { serializeArg } from '../action/utils.js';
+import { humanizeArg, serializeArg } from '../action/utils.js';
 
 import type { GameUpdateEvent, GameFinishedEvent } from './Main.js'
 import Player from '../player/player.js'
@@ -57,7 +57,7 @@ type GameStore = {
   currentDrop?: string;
   setCurrentDrop: (el?: string) => void;
   zoomable?: GameElement<Player>;
-  setZoomable: (el: GameElement<Player>) => void;
+  setZoomable: (el?: GameElement<Player>) => void;
   zoomElement?: GameElement<Player>;
   setZoom: (zoom: boolean) => void;
 }
@@ -166,7 +166,6 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setCurrentDrop: currentDrop => set({ currentDrop }),
   setZoomable: zoomable => set({ zoomable }),
   setZoom: zoom => set(s => {
-    console.log('zoom', zoom, s.zoomable);
     return {
       zoomElement: zoom ? s.zoomable : undefined
     }
@@ -184,7 +183,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   while (true) {
     resolvedSelections = game.getResolvedSelections(player, move?.action, move?.args);
     if (move && !resolvedSelections?.moves) {
-      console.log('move may no longer be valid. retrying getResolvedSelections', move, resolvedSelections);
+      console.error('move may no longer be valid. retrying getResolvedSelections', move, resolvedSelections);
       move = undefined;
       resolvedSelections = game.getResolvedSelections(player);
     }
@@ -195,38 +194,58 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     if (pendingMoves?.length === 1 && pendingMoves[0].selections.length === 1 && pendingMoves[0].selections[0].skipIfOnlyOne) {
       const arg = pendingMoves[0].selections[0].isForced();
       if (arg === undefined) break;
+
+      if (typeof pendingMoves[0].selections[0].confirm === 'function') {
+        // a confirm function was added tho, so don't skip that. convert to confirm prompt
+        resolvedSelections!.moves[0].selections[0].name = '__confirm__';
+        resolvedSelections!.moves[0].selections[0].type = 'button';
+        resolvedSelections!.moves[0].args[resolvedSelections!.moves[0].selections[0].name] = arg;
+        break;
+      }
+
       move = {
-	action: pendingMoves[0].action,
-	args: {...pendingMoves[0].args, [pendingMoves[0].selections[0].name]: arg}
+        action: pendingMoves[0].action,
+        args: {...pendingMoves[0].args, [pendingMoves[0].selections[0].name]: arg}
       };
       continue;
     }
 
     // move is processable - add to queue and rerun
     if (pendingMoves?.length === 0) {
-      // if last option is forced and skippable, automove
-      if (!move) break;
+      try {
+        // if last option is forced and skippable, automove
+        if (!move) break;
 
-      const player = game.players.atPosition(position);
-      if (!player) break;
+        const player = game.players.atPosition(position);
+        if (!player) break;
 
-      // serialize now before we alter our state to ensure proper references
-      const serializedMove: SerializedMove = {
-	action: move.action,
-	args: Object.fromEntries(Object.entries(move.args).map(([k, v]) => [k, serializeArg(v)]))
-      }
+        // serialize now before we alter our state to ensure proper references
+        const serializedMove: SerializedMove = {
+          action: move.action,
+          args: Object.fromEntries(Object.entries(move.args).map(([k, v]) => [k, serializeArg(v)]))
+        }
 
-      state.error = game.processMove({ player, ...move });
-      isBoardUpToDate = false;
-      if (state.error) {
-	console.error(state.error);
-	break;
-      } else {
-	state.moves ??= [];
-	state.moves.push(serializedMove);
-	move = undefined;
-	game.play();
-	continue;
+        state.error = game.processMove({ player, ...move });
+
+        isBoardUpToDate = false;
+        if (state.error) {
+          console.error(state.error);
+          break;
+        } else {
+          state.moves ??= [];
+          state.moves.push(serializedMove);
+          game.play();
+          move = undefined;
+          continue;
+        }
+      } catch (e) {
+        // first line of defense for bad game logic. cancel all moves and
+        // surface the error but update board anyways to prevent more errors
+        console.error(`Game attempted to complete move but was unable to process:\n⮕ ${move!.action}({${Object.entries(move!.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`);
+        console.error(e.stack);
+        state.moves = [];
+        move = undefined;
+        break
       }
     }
     break;
@@ -244,7 +263,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     resolvedSelections.moves = resolvedSelections.moves.filter(m => !move || m.action === move.action);
     for (const p of resolvedSelections.moves) {
       for (const sel of p.selections) {
-        if (sel.boardChoices) {
+        if (sel.type === 'board' && sel.boardChoices) {
           const boardMove = {...p, selections: [sel]}; // simple board move of single selection to attach to element
           for (const el of sel.boardChoices) {
             boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };

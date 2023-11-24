@@ -198,6 +198,7 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
 
   /**
    * Alias for {@link first}
+   * @category Queries
    */
   top<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
   top(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
@@ -210,6 +211,7 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
 
   /**
    * Alias for {@link firstN}
+   * @category Queries
    */
   topN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
   topN(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
@@ -223,6 +225,7 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
 
   /**
    * Alias for {@link last}
+   * @category Queries
    */
   bottom<F extends GameElement<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
   bottom(className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): GameElement<P> | undefined;
@@ -235,6 +238,7 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
 
   /**
    * Alias for {@link lastN}
+   * @category Queries
    */
   bottomN<F extends GameElement<P>>(n: number, className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
   bottomN(n: number, className: ElementFinder<P, GameElement<P>>, ...finders: ElementFinder<P, GameElement<P>>[]): ElementCollection<P, GameElement<P>>;
@@ -244,6 +248,79 @@ export default class ElementCollection<P extends Player, T extends GameElement<P
       return this._finder<GameElement<P>>(GameElement<P>, {limit: n, order: 'desc'}, className, ...finders);
     }
     return this._finder(className, {limit: n, order: 'desc'}, ...finders);
+  }
+
+  /**
+   * Show these elements to all players
+   * @category Visibility
+   */
+  showToAll() {
+    for (const el of this) {
+      delete(el._visible);
+    }
+  }
+
+  /**
+   * Show these elements only to the given player
+   * @category Visibility
+   */
+  showOnlyTo(player: Player | number) {
+    if (typeof player !== 'number') player = player.position;
+    for (const el of this) {
+      el._visible = {
+        default: false,
+        except: [player]
+      };
+    }
+  }
+
+  /**
+   * Show these elements to the given players without changing it's visibility to
+   * any other players.
+   * @category Visibility
+   */
+  showTo(...player: Player[] | number[]) {
+    if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
+    for (const el of this) {
+      if (el._visible === undefined) continue;
+      if (el._visible.default) {
+        if (!el._visible.except) continue;
+        el._visible.except = el._visible.except.filter(i => !(player as number[]).includes(i));
+      } else {
+        el._visible.except = Array.from(new Set([...(el._visible.except instanceof Array ? el._visible.except : []), ...(player as number[])]))
+      }
+    }
+  }
+
+  /**
+   * Hide these elements only to the given player
+   * @category Visibility
+   */
+  hideFromAll() {
+    for (const el of this) {
+      el._visible = {default: false};
+    }
+  }
+
+  /**
+   * Hide these elements from the given players without changing it's visibility to
+   * any other players.
+   * @category Visibility
+   */
+  hideFrom(...player: Player[] | number[]) {
+    if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
+    for (const el of this) {
+      if (el._visible?.default === false && !el._visible.except) continue;
+      if (el._visible === undefined || el._visible.default === true) {
+        el._visible = {
+          default: true,
+          except: Array.from(new Set([...(el._visible?.except instanceof Array ? el._visible.except : []), ...(player as number[])]))
+        };
+      } else {
+        if (!el._visible.except) continue;
+        el._visible.except = el._visible.except.filter(i => !(player as number[]).includes(i));
+      }
+    }
   }
 
   /**

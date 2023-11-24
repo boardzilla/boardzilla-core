@@ -12,17 +12,17 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
   moves: PendingMove<Player>[],
   onSubmit: (move?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => void,
 }) => {
-  const [game, position] = gameStore(s => [s.game, s.position]);
+  const [game, position, prompt] = gameStore(s => [s.game, s.position, s.prompt]);
 
   const boardPrompts = useMemo(() => {
-    const prompts = [];
+    const prompts = prompt ? [prompt] : [];
     for (const m of moves) {
-      for (const s of m.selections) if (s.type === 'board' && (s.prompt ?? m.prompt)) prompts.push(s.prompt ?? m.prompt);
+      for (const s of m.selections) if (s.type === 'board' && (s.prompt ?? m.prompt)) prompts.push(s.prompt ?? m.prompt!);
     }
     return prompts;
-  }, [moves]);
+  }, [prompt, moves]);
 
-  const boardPrompt = useMemo(() => new Set(boardPrompts).size === 1 ? boardPrompts[0] : undefined, [boardPrompts]);
+  const boardPrompt = useMemo(() => new Set(boardPrompts).size === 1 ? boardPrompts[0] : prompt, [prompt, boardPrompts]);
   //const boardID = useMemo(() => boardPrompt ? moves.find(m => m.selections.find(s => s.prompt === boardPrompt))?.action : '', [moves, boardPrompt]);
 
   if (!position) return null;

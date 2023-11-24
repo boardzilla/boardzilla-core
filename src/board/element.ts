@@ -20,6 +20,7 @@ export type ElementClass<P extends Player, T extends GameElement<P>> = {
   new(ctx: Partial<ElementContext<P>>): T;
   isGameElement: boolean; // here to help enforce types
   hiddenAttributes: string[];
+  visibleAttributes?: string[];
 }
 
 export type GameElementSerialization = 'player' | 'name'; // | 'uuid' | 'x' | 'y' | 'left' | 'right' | 'top' | 'bottom' | 'columns' | 'rows' | 'layout' | 'zoom' | 'minWidth' | 'minHeight';
@@ -144,6 +145,9 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
 
   /** @internal */
   static hiddenAttributes: string[] = ['name'];
+
+  /** @internal */
+  static visibleAttributes: string[] | undefined;
 
   /**
    * Do not use the constructor directly. Instead Call {@link
@@ -544,22 +548,17 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
     this.hiddenAttributes = attrs;
   }
 
+  /**
+   * Provide list of attributes that are visible when instances of this element
+   * class are visible. E.g. In a game with multiple card decks with different
+   * backs, identified by Card#deck, the identity of the card is hiddem, but the
+   * deck it belongs to is not. In this case calling
+   * `Card.hideAllExcept('deck')` will cause all attributes other than 'deck' to
+   * be hidden when card is flipped, while still revealing which deck it is.
+   * @category Visibility
+   */
   static hideAllExcept<P extends Player, T extends GameElement<P>>(this: ElementClass<P, T>, ...attrs: (string & keyof T)[]): void {
-    this.hiddenAttributes = Object.getOwnPropertyNames(new this({})).filter(attr => !attrs.includes(attr as (string & keyof T)));
-  }
-
-  // unused?
-  /** @internal */
-  hidden(): this {
-    return Object.create(
-      Object.getPrototypeOf(this),
-      Object.fromEntries(
-        Object.entries(
-          Object.getOwnPropertyDescriptors(this)).filter(
-            ([attr]) => !(this.constructor as typeof GameElement<P>).hiddenAttributes.includes(attr)
-          )
-      )
-    );
+    this.visibleAttributes = attrs;
   }
 
   /**
@@ -718,7 +717,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
       attrs = Object.fromEntries(Object.entries(attrs).filter(
-        ([attr]) => !(this.constructor as typeof GameElement<P>).hiddenAttributes.includes(attr)
+        ([attr]) => !(this.constructor as typeof GameElement<P>).hiddenAttributes.includes(attr) && ((this.constructor as typeof GameElement<P>).visibleAttributes === undefined || (this.constructor as typeof GameElement<P>).visibleAttributes?.includes(attr))
       )) as typeof attrs;
     }
 

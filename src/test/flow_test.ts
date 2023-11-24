@@ -24,11 +24,11 @@ const { expect } = chai;
 
 describe('Flow', () => {
   let testFlow: Flow<Player>;
-  let stepSpy1: Function;
-  let stepSpy2: Function;
-  let actionSpy: Function;
-  let playSpy: Function;
-  let finishSpy: Function;
+  let stepSpy1: (...a: any[]) => any;
+  let stepSpy2: (...a: any[]) => any;
+  let actionSpy: (...a: any[]) => any;
+  let playSpy: (...a: any[]) => any;
+  let finishSpy: (...a: any[]) => any;
 
   beforeEach(() => {
     stepSpy1 = chai.spy();
@@ -62,7 +62,7 @@ describe('Flow', () => {
         atPosition: () => ({position: 1}),
         setCurrent: () => {}
       },
-      action: (a: string) => ({
+      getAction: (a: string) => ({
         play: { _process: actionSpy, _cfg: {messages: []} },
         pass: { _process: () => {}, _cfg: {messages: []} }
       }[a]),
@@ -240,8 +240,8 @@ describe('Flow', () => {
 });
 
 describe('Loop', () => {
-  let stepSpy1: Function
-  let stepSpy2: Function
+  let stepSpy1: (...a: any[]) => any
+  let stepSpy2: (...a: any[]) => any
   let counter: number
   let loop: Flow<Player>
   let nonLoop: Flow<Player>
@@ -329,7 +329,7 @@ describe('Loop', () => {
   });
 
   describe('nested', () => {
-    let stepSpy: Function;
+    let stepSpy: (...a: any[]) => any;
     let nestedLoop: Flow<Player>;
     beforeEach(() => {
       stepSpy = chai.spy((x: number, y: number) => {x; y});

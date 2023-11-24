@@ -108,7 +108,12 @@ export default () => {
             layouts[layoutName] = {moves: typeof pendingMove === 'object' ? [pendingMove] : [], style};
           }
         } else {
-          layouts['_default'] = {moves: typeof pendingMove === 'object' ? [pendingMove] : [], style: {left: 0, top: 0}};
+          layouts._default = {
+            moves: [...layouts._default?.moves || []].concat(
+              typeof pendingMove === 'object' ? [pendingMove] : []
+            ),
+            style: {left: 0, top: 0}
+          };
         }
       }
     }
@@ -160,7 +165,7 @@ export default () => {
 
   if (!dimensions) return;
 
-  console.debug('Showing game with pending moves:' + pendingMoves?.map(m => `\n⮕ ${m.action}({${Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`).join('') || 'none');
+  console.debug('Showing game with pending moves:' + (pendingMoves?.map(m => `\n⮕ ${m.action}({${Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`).join('') || ' none'));
 
   return (
     <div

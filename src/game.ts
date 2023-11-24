@@ -53,7 +53,6 @@ export type Message = {
 
 export default class Game<P extends Player, B extends Board<P>> {
   flow: Flow<P>;
-  flowDefinition: () => FlowDefinition<P>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
   settings: Record<string, any>;
@@ -75,9 +74,10 @@ export default class Game<P extends Player, B extends Board<P>> {
   /**
    * configuration functions
    */
-  defineFlow(flowDefinition: typeof this.flowDefinition) {
+  defineFlow(flow: FlowDefinition<P>) {
     if (this.phase !== 'new') throw Error('cannot call defineFlow once started');
-    this.flowDefinition = flowDefinition;
+    this.flow = new Flow({ do: flow });
+    this.flow.game = this;
   }
 
   defineActions(actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>) {
@@ -103,19 +103,12 @@ export default class Game<P extends Player, B extends Board<P>> {
       throw Error("No players");
     }
     this.phase = 'started';
-    this.buildFlow();
     this.flow.reset();
   }
 
   finish(winner?: P | P[]) {
     this.phase = 'finished';
     if (winner) this.winner = winner instanceof Array ? winner : [winner];
-  }
-
-  buildFlow() {
-    const flow = this.flowDefinition();
-    this.flow = new Flow({ do: flow });
-    this.flow.game = this;
   }
 
   getPlayerStates(): PlayerPositionState<P>[] {
@@ -185,7 +178,14 @@ export default class Game<P extends Player, B extends Board<P>> {
   /**
    * action functions
    */
-  action(name: string, player: P): Action<P, any> & {name: string} {
+  action(definition: {
+    prompt?: string,
+    condition?: Action<P>['_cfg']['condition'],
+  }) {
+    return new Action<P>(definition);
+  }
+
+  getAction(name: string, player: P): Action<P, any> & {name: string} {
     if (this.godMode) {
       const godModeAction = this.godModeActions()[name];
       if (godModeAction) {
@@ -277,7 +277,7 @@ export default class Game<P extends Player, B extends Board<P>> {
         prompt: actionStep.prompt,
         skipIfOnlyOne: actionStep.skipIfOnlyOne,
         expand: actionStep.expand,
-        actions: allowedActions.concat(actionStep.actions?.filter(a => this.action(a, player).isPossible()) || [])
+        actions: allowedActions.concat(actionStep.actions?.filter(a => this.getAction(a, player).isPossible()) || [])
       }
     }
     return {
@@ -295,7 +295,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       let possibleActions: string[] = [];
       let resolvedSelections: PendingMove<P>[] = [];
       for (const action of actions) {
-        const playerAction = this.action(action, player);
+        const playerAction = this.getAction(action, player);
         let submoves = playerAction._getResolvedSelections({});
         if (submoves !== undefined) {
           possibleActions.push(action);
@@ -310,6 +310,8 @@ export default class Game<P extends Player, B extends Board<P>> {
             }];
           }
           resolvedSelections = resolvedSelections.concat(submoves);
+        } else {
+          console.debug(`Action ${action} not allowed because no valid selections exist`);
         }
       }
       if (!possibleActions.length) return undefined;
@@ -329,7 +331,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       };
 
     } else {
-      const moves = this.action(action, player)?._getResolvedSelections(args || {});
+      const moves = this.getAction(action, player)?._getResolvedSelections(args || {});
       if (moves) return { step, prompt, moves };
     }
   }

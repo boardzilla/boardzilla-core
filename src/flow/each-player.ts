@@ -32,12 +32,8 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
       do: block
     });
 
-    this.continueUntil = continueUntil;
+    this.whileCondition = position => continueUntil !== undefined ? !continueUntil(position.value) : position.index < this.game.players.length * (this.turns || 1)
     this.turns = turns;
-  }
-
-  validPosition(position: typeof this.position) {
-    return this.continueUntil !== undefined ? !this.continueUntil(position.value) : position.index < this.game.players.length * (this.turns || 1)
   }
 
   setPosition(position: typeof this.position, sequence?: number, reset=true) {

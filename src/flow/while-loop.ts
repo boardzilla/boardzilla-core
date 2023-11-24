@@ -9,32 +9,28 @@ export type WhileLoopPosition = { index: number, value?: any };
 export default class WhileLoop<P extends Player> extends Flow<P> {
   block: FlowDefinition<P>;
   position: WhileLoopPosition;
-  while: boolean | ((a: FlowArguments) => boolean);
+  whileCondition: (position: WhileLoopPosition) => boolean;
   type: FlowBranchNode<P>['type'] = 'loop';
   next?: (...a: any) => void;
   initial?: any;
 
   constructor({ do: block, while: whileCondition }: {
-    while: boolean | ((a: FlowArguments) => boolean),
-    do: FlowDefinition<P>
+    while: (a: FlowArguments) => boolean,
+    do: FlowDefinition<P>,
   }) {
     super({ do: block });
-    this.while = whileCondition;
+    this.whileCondition = () => whileCondition(this.flowStepArgs());
   }
 
   reset() {
     const position: typeof this.position = { index: 0 };
     if (this.initial !== undefined) position.value = this.initial instanceof Function ? this.initial(this.flowStepArgs()) : this.initial
 
-    if (!this.validPosition(position)) {
+    if (!this.whileCondition(position)) {
       this.setPosition({...position, index: -1});
     } else {
       this.setPosition(position);
     }
-  }
-
-  validPosition(_position: typeof this.position) {
-    return typeof this.while === 'function' ? this.while(this.flowStepArgs()) : this.while;
   }
 
   currentBlock() {
@@ -45,13 +41,13 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
     if (this.position.index > 10000) throw Error(`Endless loop detected: ${this.name}`);
     const position: typeof this.position = { ...this.position, index: this.position.index + 1 };
     if (this.next && this.position.value !== undefined) position.value = this.next(this.position.value);
-    if (!this.validPosition(position)) return this.exit();
+    if (!this.whileCondition(position)) return this.exit();
     this.setPosition(position);
     return FlowControl.ok;
   }
 
   repeat() {
-    if (!this.validPosition(this.position)) return this.exit();
+    if (!this.whileCondition(this.position)) return this.exit();
     this.setPosition(this.position);
     return FlowControl.ok;
   }
@@ -66,6 +62,6 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   }
 
   toString(): string {
-    return `loop${this.name ? ":" + this.name : ""} (loop #${this.position.index}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
+    return `loop${this.name ? ":" + this.name : ""} (loop ${this.position.index === -1 ? 'complete' : '#' + this.position.index}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

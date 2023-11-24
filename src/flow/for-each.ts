@@ -11,6 +11,7 @@ export type ForEachPosition<T> = ForLoopPosition<T> & { collection: T[] };
 export default class ForEach<P extends Player, T extends Serializable<P>> extends ForLoop<P, T> {
   collection: ((a: FlowArguments) => T[]) | T[]
   position: ForEachPosition<T>;
+  whileCondition: (position: ForEachPosition<T>) => boolean;
   type: FlowBranchNode<P>['type'] = 'foreach';
 
   constructor({ name, collection, do: block }: {
@@ -26,15 +27,12 @@ export default class ForEach<P extends Player, T extends Serializable<P>> extend
       do: block
     });
     this.collection = collection;
+    this.whileCondition = position => position.index >= 0 && position.index < position.collection.length;
   }
 
   reset() {
     const collection = (typeof this.collection === 'function') ? this.collection(this.flowStepArgs()) : this.collection;
     this.setPosition({ index: collection.length ? 0 : -1, value: collection[0], collection });
-  }
-
-  validPosition(position: typeof this.position) {
-    return position.index >= 0 && position.index < position.collection.length;
   }
 
   toJSON(forPlayer=true) {

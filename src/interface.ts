@@ -62,23 +62,26 @@ if (globalThis.window) globalThis.console.debug = () => {};
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {
-    initialState: (state: SetupState<Player>): GameUpdate<Player> => setup(state).getUpdate(),
+    initialState: (state: SetupState<Player>): GameUpdate<Player> => {
+      const game = setup(state);
+      if (game.phase !== 'finished') game.play();
+      return game.getUpdate();
+    },
     processMove: (
       previousState: GameStartedState<Player>,
       move: {
         position: number,
         data: SerializedMove | SerializedMove[]
       },
-      trackMovement=true
     ): GameUpdate<Player> => {
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board._ctx.game;
       const game = cachedGame || setup(previousState, {
         currentPlayerPosition: previousState.currentPlayers,
-        trackMovement
       });
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
+      game.trackMovement();
       game.messages = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
       let error = undefined;

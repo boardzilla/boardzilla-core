@@ -475,10 +475,6 @@ describe('Board', () => {
     it("hides", () => {
       Card.hide('suit');
       const card = board.create(Card, 'AH', { suit: 'H', pip: 1 });
-      const card2 = card.hidden();
-      expect(card2 instanceof Card).to.equal(true);
-      expect(card2.pip).to.equal(1);
-      expect(card2.suit).to.equal(undefined);
       card.showOnlyTo(1);
       expect(card.toJSON(1)).to.deep.equal(
         { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _visible: { default: false, except: [1] } },

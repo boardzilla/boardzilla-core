@@ -75,7 +75,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
     const player = game.players.atPosition(move.player);
     if (!player) return `No such player position: ${move.player}`;
-    const gameAction = game.action(move.action, player);
+    const gameAction = game.getAction(move.action, player);
     const error = gameAction._process(move.args);
     if (error) {
       // failed with a selection required
@@ -83,12 +83,9 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     } else {
       // succeeded
       this.setPosition(move);
-      for (const message of gameAction._cfg.messages) {
-        if (typeof message === 'function') {
-          game.message(message(move.args), {player});
-        } else {
-          game.message(message, {...move.args, player});
-        }
+      for (let message of gameAction._cfg.messages) {
+        if (typeof message === 'function') message = message(move.args);
+        game.message(message, {...move.args, player});
       }
     }
   }

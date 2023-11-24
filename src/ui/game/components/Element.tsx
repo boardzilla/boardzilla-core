@@ -295,7 +295,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       )}
       onClick={clickable ? onClick : undefined}
       onMouseEnter={() => { if (droppable) onDrop(); if (element._ui.appearance.zoomable) setZoomable(element) }}
-      onMouseLeave={() => { if (droppable) onLeave(); if (onMouseLeave) onMouseLeave(); }}
+      onMouseLeave={() => { if (droppable) onLeave(); if (element._ui.appearance.zoomable) setZoomable(undefined); if (onMouseLeave) onMouseLeave(); }}
       {...attrs}
     >
       {appearance(element)}

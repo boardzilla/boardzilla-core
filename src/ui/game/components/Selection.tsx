@@ -48,7 +48,7 @@ const Selection = ({selection, value, error, onChange} : {
         autoComplete='off'/>
     )}
 
-    {selection.type === 'button' &&
+    {selection.type === 'button' && selection.prompt &&
       <button name={selection.name} value='confirm' type="submit">{selection.prompt}</button>
     }
 

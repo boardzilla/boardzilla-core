@@ -1,6 +1,5 @@
 import Space from './space.js'
 import { deserializeObject } from '../action/utils.js';
-import Action from '../action/action.js';
 
 import type {
   default as GameElement,
@@ -10,9 +9,7 @@ import type {
   Box,
   Vector,
 } from './element.js';
-import type Game from '../game.js';
 import type Player from '../player/player.js';
-import type { Argument } from '../action/action.js';
 
 type ActionLayout<P extends Player> = {
   element: GameElement<P> | (() => GameElement<P>),
@@ -38,22 +35,6 @@ export default class Board<P extends Player> extends Space<P> {
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
   }
 
-  defineFlow(flow: Game<P, this>['flowDefinition']) {
-    this._ctx.game.defineFlow(flow);
-  }
-
-  defineActions(actions: Game<P, this>['actions']) {
-    this._ctx.game.defineActions(actions);
-  }
-
-  action(definition: {
-    prompt?: string,
-    condition?: Action<P>['_cfg']['condition'],
-  }) {
-    return new Action<P>(definition);
-  }
-
-
   get players() {
     return this._ctx.game.players;
   }
@@ -65,14 +46,6 @@ export default class Board<P extends Player> extends Space<P> {
    */
   gameSetting(key: string) {
     return this._ctx.game.settings[key];
-  }
-
-  message(message: string, args?: Record<string, Argument<P>>) {
-    return this._ctx.game.message(message, args);
-  }
-
-  finish(winner?: P | P[]) {
-    return this._ctx.game.finish(winner);
   }
 
   // also gets removed elements

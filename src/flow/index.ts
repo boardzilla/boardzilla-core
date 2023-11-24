@@ -44,7 +44,6 @@ export { Do, FlowControl } from './enums.js';
  *
  * @category Flow
  */
-
 export const playerActions = <P extends Player>(options: ConstructorParameters<typeof ActionStep<P>>[0]) => new ActionStep<P>(options);
 
 /**
@@ -70,8 +69,24 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
  *
  * @category Flow
  */
-
 export const whileLoop = <P extends Player>(options: ConstructorParameters<typeof WhileLoop<P>>[0]) => new WhileLoop<P>(options);
+
+/**
+ * Create a loop that continues until {@link Do.break} is returned
+ *
+ * @param options.do - The part that gets repeated. This can contain any number
+ * of nested Flow functions. If this value is instead one of {@link Do.repeat},
+ * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
+ * the current loop can be interupted.
+ *
+ * @example
+ * loop(playerActions({ actions: {
+ *   takeOneFromBag: Do.break,
+ * )});
+ *
+ * @category Flow
+ */
+export const loop = <P extends Player>(block: ConstructorParameters<typeof WhileLoop<P>>[0]['do']) => new WhileLoop<P>({do: block, while: () => true});
 
 /**
  * Create a loop that sets a value and continues until that value meets some
@@ -108,7 +123,6 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
  *
  * @category Flow
  */
-
 export const forLoop = <P extends Player, T = Serializable<P>>(options: ConstructorParameters<typeof ForLoop<P, T>>[0]) => new ForLoop<P, T>(options);
 
 /**
@@ -138,7 +152,6 @@ export const forLoop = <P extends Player, T = Serializable<P>>(options: Construc
  *
  * @category Flow
  */
-
 export const forEach = <P extends Player, T extends Serializable<P>>(options: ConstructorParameters<typeof ForEach<P, T>>[0]) => new ForEach<P, T>(options);
 
 /**

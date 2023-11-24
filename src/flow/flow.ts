@@ -237,8 +237,9 @@ export default class Flow<P extends Player> {
     let step;
     do {
       step = this.playOneStep();
+      if (step) console.debug(`${step === Do.continue ? 'Continue' : step === Do.repeat ? 'Repeat' : step === Do.break ? 'Break' : 'Advance'} flow:\n ${this.stacktrace()}`);
     } while (step === FlowControl.ok && this.game.phase !== 'finished')
-    console.debug("Game Flow:\n" + this.stacktrace());
+    //console.debug("Game Flow:\n" + this.stacktrace());
     if (step === Do.continue || step === Do.repeat || step === Do.break) throw Error("Cannot skip/repeat/break when not in a loop");
     if (step === FlowControl.complete) this.game.finish();
   }
