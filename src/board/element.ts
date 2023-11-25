@@ -115,6 +115,12 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
   board: B;
 
   /**
+   * A reference to the {@link Game}
+   * @category Structure
+   */
+  game: Game<P, B>;
+
+  /**
    * ctx shared for all elements in the tree
    * @internal
    */
@@ -161,6 +167,8 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
       this._ctx.top = this;
       this._ctx.sequence = 0;
     }
+
+    this.game = this._ctx.game as Game<P, B>;
 
     this._t = {
       children: new ElementCollection(),
@@ -707,7 +715,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
   toJSON(seenBy?: number) {
     let attrs: Record<any, any>;
     ({ ...attrs } = this);
-    for (const attr of ['_t', '_ctx', '_ui', 'board', 'pile', '_eventHandlers', 'players', 'finish', 'message']) delete attrs[attr];
+    for (const attr of ['_t', '_ctx', '_ui', 'board', 'game', 'pile', '_eventHandlers', 'players', 'finish', 'message']) delete attrs[attr];
 
     // remove methods
     attrs = Object.fromEntries(Object.entries(attrs).filter(
@@ -745,7 +753,7 @@ export default class GameElement<P extends Player, B extends Board<P> = Board<P>
         if (child) {
           // reset all on child
           for (const key of Object.keys(child)) {
-            if (!['_ctx', '_t', '_ui', '_eventHandlers', 'board', 'name'].includes(key) && !(key in rest))
+            if (!['_ctx', '_t', '_ui', '_eventHandlers', 'board', 'game', 'name'].includes(key) && !(key in rest))
               rest[key] = undefined;
           }
           Object.assign(child, rest);

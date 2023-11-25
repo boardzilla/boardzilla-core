@@ -652,7 +652,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     if (into instanceof GameElement) into = [into];
     const fromSelection = this._addSelection(new Selection<P>(pieceName, {
       prompt: options?.prompt,
-      skipIfOnlyOne: false,
       selectOnBoard: { chooseFrom: piece } as BoardSelection<P, E>,
     }));
     const intoSelection = this._addSelection(new Selection<P>(intoName, {
