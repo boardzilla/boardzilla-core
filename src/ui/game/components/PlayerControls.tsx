@@ -3,25 +3,27 @@ import { gameStore } from '../../index.js';
 import ActionForm from './ActionForm.js';
 
 import type { Player } from '../../../player/index.js';
-import type { PendingMove } from '../../../game.js';
+import type { UIMove } from '../../index.js';
 import type { Argument } from '../../../action/action.js';
 
 const PlayerControls = ({name, style, moves, onSubmit}: {
   name: string,
   style: React.CSSProperties,
-  moves: PendingMove<Player>[],
-  onSubmit: (move?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => void,
+  moves: UIMove[],
+  onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
 }) => {
-  const [game, position, prompt] = gameStore(s => [s.game, s.position, s.prompt]);
+  const [game, position, prompt, selected, move] = gameStore(s => [s.game, s.position, s.prompt, s.selected, s.move]);
 
+  // all prompts from all board moves, using the most specific selection that applies
   const boardPrompts = useMemo(() => {
-    const prompts = prompt ? [prompt] : [];
+    const prompts = [];
     for (const m of moves) {
       for (const s of m.selections) if (s.type === 'board' && (s.prompt ?? m.prompt)) prompts.push(s.prompt ?? m.prompt!);
     }
     return prompts;
-  }, [prompt, moves]);
+  }, [moves]);
 
+  // if only one, use that, otherwise use the step prompt
   const boardPrompt = useMemo(() => new Set(boardPrompts).size === 1 ? boardPrompts[0] : prompt, [prompt, boardPrompts]);
   //const boardID = useMemo(() => boardPrompt ? moves.find(m => m.selections.find(s => s.prompt === boardPrompt))?.action : '', [moves, boardPrompt]);
 
@@ -38,8 +40,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
 
       {moves.map(pendingMove => <ActionForm key={pendingMove.action + pendingMove.selections[0].prompt} move={pendingMove} stepName={name} onSubmit={onSubmit}/>)}
 
-      {/** weird at this level but disambiguate can be cancelled even though it spans multiple moves */}
-      {name === 'disambiguate-board-selection' && <button onClick={() => onSubmit()}>Cancel</button>}
+      {(move || selected.length > 0 || name === 'disambiguate-board-selection') && <button onClick={() => onSubmit()}>Cancel</button>}
     </div>
   )
 };

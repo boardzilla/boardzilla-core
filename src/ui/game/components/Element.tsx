@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
-import { DraggableCore } from 'react-draggable';
+//import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../index.js';
 
 import {
@@ -10,9 +10,9 @@ import {
 import { serialize, humanizeArg } from '../../../action/utils.js'
 
 import type { ElementJSON } from '../../../board/element.js';
-import type { PendingMove } from '../../../game.js';
+import type { UIMove } from '../../index.js';
 import type { Player } from '../../../player/index.js';
-import type { DraggableData } from 'react-draggable';
+//import type { DraggableData } from 'react-draggable';
 
 const elementAttributes = (el: GameElement<Player>) => {
   return Object.fromEntries(Object.entries(el).filter(([key, val]) => (
@@ -28,11 +28,11 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
   selected: GameElement<Player>[],
-  onSelectElement: (moves: PendingMove<Player>[], ...elements: GameElement<Player>[]) => void,
+  onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [game, boardSelections, move, position, dragElement, setDragElement, dropElements, currentDrop, setCurrentDrop, setZoomable, zoomElement] = gameStore(s => [s.game, s.boardSelections, s.move, s.position, s.dragElement, s.setDragElement, s.dropElements, s.currentDrop, s.setCurrentDrop, s.setZoomable, s.zoomElement, s.boardJSON]);
-  const [dragging, setDragging] = useState(false); // currently dragging
+  const [boardSelections, move, position, setZoomable, zoomElement] = gameStore(s => [s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.boardJSON]);
+  // const [dragging, setDragging] = useState(false); // currently dragging
   const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
   const wrapper = useRef<HTMLDivElement>(null);
   const branch = element.branch()
@@ -41,64 +41,59 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
   const absoluteTransform = element.absoluteTransform();
-  const clickable = !dragElement && selections?.clickMoves.length;
-  const selectable = !dragElement && selections?.clickMoves.filter(m => m.action.slice(0, 4) !== '_god').length;
-  const draggable = !!selections?.dragMoves.length; // ???
-  const droppable = dropElements.find(({ element }) => element === branch);
+  const clickable = // !dragElement &&
+    selections?.clickMoves.length;
+  const selectable = // !dragElement &&
+    selections?.clickMoves.filter(m => m.action.slice(0, 4) !== '_god').length;
+  // const draggable = !!selections?.dragMoves.length; // ???
+  // const droppable = dropSelections.find(move => move.selections[0].boardChoices?.includes(element));
 
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
     onSelectElement(selections.clickMoves, element);
   }, [element, onSelectElement, selections]);
 
-  const onStartDrag = useCallback((e: MouseEvent, data: DraggableData) => {
-    e.stopPropagation();
-    if (wrapper.current) {
-      wrapper.current?.setAttribute('data-lastx', String(data.lastX));
-      wrapper.current?.setAttribute('data-lasty', String(data.lastY))
-    }
-  }, [wrapper]);
+  // const onStartDrag = useCallback((e: MouseEvent, data: DraggableData) => {
+  //   e.stopPropagation();
+  //   if (wrapper.current) {
+  //     wrapper.current?.setAttribute('data-lastx', String(data.lastX));
+  //     wrapper.current?.setAttribute('data-lasty', String(data.lastY))
+  //   }
+  // }, [wrapper]);
 
-  const onDrag = useCallback((e: MouseEvent, data: DraggableData) => {
-    e.stopPropagation();
-    setDragging(true);
-    setDragElement(branch);
-    if (wrapper.current && element._ui.computedStyle) {
-      wrapper.current.style.top = `calc(${element._ui.computedStyle.top}% - ${parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y}px)`;
-      wrapper.current.style.left = `calc(${element._ui.computedStyle.left}% - ${parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x}px)`;
-    }
-  }, [element._ui.computedStyle, setDragElement, branch, wrapper]);
+  // const onDrag = useCallback((e: MouseEvent, data: DraggableData) => {
+  //   e.stopPropagation();
+  //   setDragging(true);
+  //   setDragElement(branch);
+  //   if (wrapper.current && element._ui.computedStyle) {
+  //     wrapper.current.style.top = `calc(${element._ui.computedStyle.top}% - ${parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y}px)`;
+  //     wrapper.current.style.left = `calc(${element._ui.computedStyle.left}% - ${parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x}px)`;
+  //   }
+  // }, [element._ui.computedStyle, setDragElement, branch, wrapper]);
 
-  const onStopDrag = useCallback((e: MouseEvent, data: DraggableData) => {
-    e.stopPropagation();
-    if (dragging) {
-      if (wrapper.current && element._ui.computedStyle) {
-        wrapper.current.style.top = element._ui.computedStyle.top + '%';
-        wrapper.current.style.left = element._ui.computedStyle.left + '%';
-      }
-      if (currentDrop) {
-        const move = dropElements.find(({ element }) => element === currentDrop)?.move;
-        if (move) onSelectElement([move], element, game!.board.atBranch(currentDrop));
-        if (wrapper.current) {
-          element.board._ui.dragOffset[element.branch()] = {
-            x: data.x - parseInt(wrapper.current.getAttribute('data-lastx') || ''),
-            y: data.y - parseInt(wrapper.current.getAttribute('data-lasty') || ''),
-          }
-        }
-      }
-    }
-    setDragging(false);
-    setCurrentDrop(undefined);
-    setDragElement(undefined);
-  }, [dragging, currentDrop, onSelectElement, wrapper, dropElements, element, game, setCurrentDrop, setDragElement]);
-
-  const onDrop = useCallback(() => {
-    setCurrentDrop(branch);
-  }, [setCurrentDrop, branch]);
-
-  const onLeave = useCallback(() => {
-    setCurrentDrop(undefined);
-  }, [setCurrentDrop]);
+  // const onStopDrag = useCallback((e: MouseEvent, data: DraggableData) => {
+  //   console.log(data);
+  //   e.stopPropagation();
+  //   if (dragging) {
+  //     if (wrapper.current && element._ui.computedStyle) {
+  //       wrapper.current.style.top = element._ui.computedStyle.top + '%';
+  //       wrapper.current.style.left = element._ui.computedStyle.left + '%';
+  //     }
+  //     if (currentDrop) {
+  //       const move = dropSelections.find(move => move.selections[0].boardChoices?.includes(currentDrop));
+  //       if (move) onSelectElement([move], element, currentDrop);
+  //       if (wrapper.current) {
+  //         element.board._ui.dragOffset[element.branch()] = {
+  //           x: data.x - parseInt(wrapper.current.getAttribute('data-lastx') || ''),
+  //           y: data.y - parseInt(wrapper.current.getAttribute('data-lasty') || ''),
+  //         }
+  //       }
+  //     }
+  //   }
+  //   setDragging(false);
+  //   // setCurrentDrop(undefined);
+  //   setDragElement(undefined);
+  // }, [dragging, wrapper, element, setDragElement]);
 
   useEffect(() => {
     const moveTransform = element.getMoveTransform();
@@ -142,14 +137,14 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     if (computedStyle) {
       styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])));
     }
-    if (dragging) {
-      delete styleBuilder.left;
-      delete styleBuilder.top;
-    }
+    // if (dragging) {
+    //   delete styleBuilder.left;
+    //   delete styleBuilder.top;
+    // }
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
     return styleBuilder;
-  }, [element, dragging, absoluteTransform]);
+  }, [element, absoluteTransform]);
 
   useEffect(() => {
     if (zoomElement !== element && wrapper.current?.getAttribute('data-zoomed')) {
@@ -197,7 +192,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         json={childJSON}
         selected={selected}
         onSelectElement={onSelectElement}
-        onMouseLeave={droppable ? onDrop : undefined}
       />
     );
   }
@@ -290,12 +284,12 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
           selected: isSelected,
-          clickable, selectable, droppable,
+          clickable, selectable, // droppable,
         }
       )}
       onClick={clickable ? onClick : undefined}
-      onMouseEnter={() => { if (droppable) onDrop(); if (element._ui.appearance.zoomable) setZoomable(element) }}
-      onMouseLeave={() => { if (droppable) onLeave(); if (element._ui.appearance.zoomable) setZoomable(undefined); if (onMouseLeave) onMouseLeave(); }}
+      onMouseEnter={() => { if (element._ui.appearance.zoomable) setZoomable(element) }}
+      onMouseLeave={() => { if (element._ui.appearance.zoomable) setZoomable(undefined); if (onMouseLeave) onMouseLeave(); }}
       {...attrs}
     >
       {appearance(element)}
@@ -308,23 +302,23 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     <div
       ref={wrapper}
       key={branch}
-      className={classNames("transform-wrapper", { dragging })}
+      className={classNames("transform-wrapper" /* , { dragging } */ )}
       style={{ ...style }}
     >
       {contents}
     </div>
   );
 
-  contents = (
-    <DraggableCore
-      disabled={!draggable}
-      onStart={onStartDrag}
-      onDrag={onDrag}
-      onStop={onStopDrag}
-    >
-      {contents}
-    </DraggableCore>
-  );
+  // contents = (
+  //   <DraggableCore
+  //     disabled={!draggable}
+  //     onStart={onStartDrag}
+  //     onDrag={onDrag}
+  //     onStop={onStopDrag}
+  //   >
+  //     {contents}
+  //   </DraggableCore>
+  // );
 
   //if (!element._t.parent) console.log('GAMEELEMENTS render');
 

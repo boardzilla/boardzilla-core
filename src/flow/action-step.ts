@@ -111,6 +111,6 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   toString(): string {
-    return `player-action${this.name ? ":" + this.name : ""} (${Object.keys(this.actions).join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
+    return `player-action${this.name ? ":" + this.name : ""} (player #${this.game.players.currentPosition}, ${Object.keys(this.actions).join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

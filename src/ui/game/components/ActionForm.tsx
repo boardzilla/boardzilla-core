@@ -3,16 +3,16 @@ import { gameStore } from '../../index.js';
 import Selection from './Selection.js';
 
 import type { Player } from '../../../player/index.js';
-import type { PendingMove } from '../../../game.js';
+import type { UIMove } from '../../index.js';
 import type { Argument } from '../../../action/action.js';
 import type { ResolvedSelection } from '../../../action/selection.js';
 
 const ActionForm = ({ move, stepName, onSubmit }: {
-  move: PendingMove<Player>,
+  move: UIMove,
   stepName: string,
-  onSubmit: (move?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => void,
+  onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
 }) => {
-  const [pendingMove, selected] = gameStore(s => [s.move, s.selected]);
+  const [selected] = gameStore(s => [s.selected]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const initial = useCallback(() => {
@@ -72,25 +72,21 @@ const ActionForm = ({ move, stepName, onSubmit }: {
     setArgs(initial());
   }, [allArgs, validate, submitForm, initial])
 
-  const singleSubmit = useMemo(() => (
-    move.selections.length === 1 && (['board', 'choices', 'button'].includes(move.selections[0].type)) && !move.selections[0].confirm && !move.selections[0].isMulti()
-  ), [move]);
-
   const handleChange = useCallback((name: string, arg: Argument<Player>) => {
     let newArgs = allArgs;
     if (name !== '__action__' && name !== '__confirm__') newArgs[name] = arg;
 
     if (Object.values(allArgs).every(a => a !== undefined)) {
-      if (validate(newArgs) && singleSubmit) return submitForm(allArgs);
+      if (validate(newArgs) && !move.requireExplicitSubmit) return submitForm(allArgs);
     } else {
       setErrors({});
     }
     setArgs(a => ({...a, [name]: arg}));
-  }, [allArgs, validate, submitForm, singleSubmit]);
+  }, [allArgs, validate, submitForm, move]);
 
   const confirm = useMemo(() => {
     if (Object.values(validationErrors(allArgs)).some(e => e)) return undefined;
-    if (singleSubmit) return undefined;
+    if (!move.requireExplicitSubmit) return undefined;
     if (Object.values(allArgs).some(a => a === undefined)) return undefined;
     for (const s of move.selections) {
       if (s.type === 'board' && s.isMulti() && (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity))) return undefined;
@@ -101,7 +97,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
         move.selections[0].confirm(allArgs as Record<string, Argument<Player>>) :
         move.selections[0].confirm
     ) : 'Confirm';
-  }, [move, allArgs, singleSubmit, selected, validationErrors]);
+  }, [move, allArgs, selected, validationErrors]);
 
   return (
     <form
@@ -109,7 +105,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       onSubmit={e => onSubmitForm(e)}
       className={`action ${move.action}`}
     >
-      {move.prompt && move.selections.some(s => s.type !== 'board') && <span className="prompt">{move.prompt}</span>}
+      {/** move.prompt && move.selections.some(s => s.type !== 'board') && <span className="prompt">{move.prompt}</span> */}
 
       {move.selections.map((s: ResolvedSelection<Player>) => (
         <Selection
@@ -121,12 +117,9 @@ const ActionForm = ({ move, stepName, onSubmit }: {
         />
       ))}
 
-      {stepName === 'disambiguate-board-selection' && (
-        <button type="submit">{move.prompt}</button>
+      {(confirm || stepName === 'disambiguate-board-selection') && (
+        <button name="submit" type="submit">{confirm ?? move.prompt}</button>
       )}
-
-      {confirm && <button name="submit" type="submit">{confirm}</button>}
-      {(pendingMove || selected.length > 0 && move.selections.some(s => s.type === 'board')) && stepName !== 'disambiguate-board-selection' && <button onClick={() => onSubmit()}>Cancel</button>}
     </form>
   );
 };

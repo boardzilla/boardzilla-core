@@ -92,7 +92,6 @@ export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 
   max?: number;
   initial?: Argument<P>;
   regexp?: RegExp;
-  skipIfOnlyOne: boolean;
 }
 
 /**
@@ -108,7 +107,7 @@ export default class Selection<P extends Player> {
   confirm?: string | ((args: Record<string, Argument<P>>) => string);
   validation?: ((args: Record<string, Argument<P>>) => string | boolean | undefined);
   clientContext: Record<any, any> = {}; // additional meta info that describes the context for this selection
-  skipIfOnlyOne?: boolean; // default true but left undefined to distinguish explicit from default
+  skipIfOnlyOne: boolean;
   skipIf?: boolean | ((args: Record<string, Argument<P>>) => boolean);
   expand: boolean = false;
   choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>> | ((args: Record<string, Argument<P>>) => SingleArgument<P>[] | Record<string, SingleArgument<P>>);
@@ -157,9 +156,9 @@ export default class Selection<P extends Player> {
     this.prompt = s.prompt;
     this.confirm = s.confirm;
     this.validation = s.validation;
-    if ('skipIfOnlyOne' in s) this.skipIfOnlyOne = s.skipIfOnlyOne;
+    this.skipIfOnlyOne = 'skipIfOnlyOne' in s ? s.skipIfOnlyOne ?? true : true;
+    this.expand = 'expand' in s ? s.expand ?? false : false;
     if ('skipIf' in s) this.skipIf = s.skipIf;
-    if ('expand' in s) this.expand = s.expand ?? false;
     this.clientContext = s.clientContext ?? {};
   }
 
@@ -236,8 +235,7 @@ export default class Selection<P extends Player> {
       typeof this.initial !== 'function' &&
       typeof this.skipIf !== 'function' &&
       typeof this.choices !== 'function' &&
-      typeof this.boardChoices !== 'function' &&
-      !(this.boardChoices instanceof GameElement);
+      typeof this.boardChoices !== 'function';
   }
 
   isMulti() {
@@ -245,7 +243,6 @@ export default class Selection<P extends Player> {
   }
 
   resolve(args: Record<string, Argument<P>>): ResolvedSelection<P> {
-    if (this.isResolved()) return this;
     const resolved = new Selection(this.name, this);
     if (typeof this.prompt === 'function') resolved.prompt = this.prompt(args);
     if (typeof this.min === 'function') resolved.min = this.min(args)
@@ -255,7 +252,7 @@ export default class Selection<P extends Player> {
     if (typeof this.choices === 'function') resolved.choices = this.choices(args)
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.boardChoices === 'function') resolved.boardChoices = this.boardChoices(args);
-    if (resolved.boardChoices instanceof GameElement) resolved.boardChoices = [resolved.boardChoices];
+    //if (resolved.boardChoices instanceof GameElement) resolved.boardChoices = [resolved.boardChoices];
 
     resolved.skipIfOnlyOne ??= true;
     return resolved as ResolvedSelection<P>;

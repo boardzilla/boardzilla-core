@@ -28,7 +28,7 @@ describe('Actions', () => {
   it('returns moves', () => {
     const error = testAction._process({});
     expect(error).to.not.be.undefined;
-    const moves = testAction._getResolvedSelections({});
+    const moves = testAction._getPendingMoves({});
     expect(moves![0].selections[0].type).to.equal('number');
     expect(moves![0].selections[0].min).to.equal(0);
     expect(moves![0].selections[0].max).to.equal(3);
@@ -37,7 +37,7 @@ describe('Actions', () => {
   it('resolves dependant selections', () => {
     const error = testAction._process({n: 1});
     expect(error).to.not.be.undefined;
-    const moves = testAction._getResolvedSelections({n: 1});
+    const moves = testAction._getPendingMoves({n: 1});
     expect(moves![0].selections[0].type).to.equal('number');
     expect(moves![0].selections[0].min).to.equal(1);
     expect(moves![0].selections[0].max).to.equal(2);
@@ -72,23 +72,23 @@ describe('Actions', () => {
     });
   });
 
-  describe('getResolvedSelections', () => {
+  describe('getPendingMoves', () => {
     let options: number[];
 
     it('tests choices', () => {
       const testAction1 = action({ prompt: 'pick an even number' }).chooseFrom('n', []);
-      expect(testAction1._getResolvedSelections({})).to.be.undefined;
+      expect(testAction1._getPendingMoves({})).to.be.undefined;
 
       const testAction2 = action({ prompt: 'pick an even number' }).chooseFrom('n', [1]);
-      expect(testAction2._getResolvedSelections({})?.length).to.equal(1);
+      expect(testAction2._getPendingMoves({})?.length).to.equal(1);
     });
 
     it('tests bounds', () => {
       const testAction1 = action({ prompt: 'pick an even number' }).chooseNumber('n', { min: -1, max: 0 });
-      expect(testAction1._getResolvedSelections({})?.length).to.equal(1);
+      expect(testAction1._getPendingMoves({})?.length).to.equal(1);
 
       const testAction2 = action({ prompt: 'pick an even number' }).chooseNumber('n', { min: 0, max: -1 });
-      expect(testAction2._getResolvedSelections({})).to.be.undefined;
+      expect(testAction2._getPendingMoves({})).to.be.undefined;
     });
 
     it('resolves selection to determine viability', () => {
@@ -96,9 +96,9 @@ describe('Actions', () => {
         .chooseFrom('n', () => options.filter(n => n % 2 === 0))
 
       options = [1,2];
-      expect(testAction1._getResolvedSelections({})?.length).to.equal(1);
+      expect(testAction1._getPendingMoves({})?.length).to.equal(1);
       options = [1,3,5];
-      expect(testAction1._getResolvedSelections({})).to.be.undefined;
+      expect(testAction1._getPendingMoves({})).to.be.undefined;
     });
 
     it('resolves selection deeply to determine viability', () => {
@@ -110,9 +110,9 @@ describe('Actions', () => {
         });
 
       options = [1,8,9,10,11,4];
-      expect(testAction1._getResolvedSelections({})?.length).to.equal(1);
+      expect(testAction1._getPendingMoves({})?.length).to.equal(1);
       options = [1,8,9,10,11];
-      expect(testAction1._getResolvedSelections({})).to.be.undefined;
+      expect(testAction1._getPendingMoves({})).to.be.undefined;
     });
 
     it('does not fully resolve unbounded args', () => {
@@ -123,7 +123,7 @@ describe('Actions', () => {
           max: 4
         });
 
-      expect(testAction1._getResolvedSelections({})?.length).to.equal(1);
+      expect(testAction1._getPendingMoves({})?.length).to.equal(1);
     });
 
     it('combines', () => {
@@ -135,14 +135,14 @@ describe('Actions', () => {
         }, {
           validate: ({ lumber, steel }) => lumber + steel < 10
         });
-      const move1 = testAction._getResolvedSelections({});
+      const move1 = testAction._getPendingMoves({});
       if (!move1) {
         expect(move1).to.not.be.undefined;
       } else {
         expect(move1[0].selections.length).to.equal(1);
         expect(move1[0].selections[0].name).to.equal('taunt');
       }
-      const move2 = testAction._getResolvedSelections({taunt: 'fu'});
+      const move2 = testAction._getPendingMoves({taunt: 'fu'});
       if (!move2) {
         expect(move2).to.not.be.undefined;
       } else {
@@ -164,7 +164,7 @@ describe('Actions', () => {
         }, {
           validate: ({ lumber, steel, meat, plastic }) => lumber + steel + meat + plastic > 0
         });
-      const move = testAction._getResolvedSelections({});
+      const move = testAction._getPendingMoves({});
       if (!move) {
         expect(move).to.not.be.undefined;
       } else {
@@ -172,19 +172,45 @@ describe('Actions', () => {
         expect(move[0].selections[0].name).to.equal('lumber');
         expect(move[0].selections[1].name).to.equal('meat');
       }
-      const move2 = testAction._getResolvedSelections({lumber: 1, meat: 0});
+      const move2 = testAction._getPendingMoves({lumber: 1, meat: 0});
       if (!move2) {
         expect(move2).to.not.be.undefined;
       } else {
         expect(move2[0].selections.length).to.equal(1);
         expect(move2[0].selections[0].name).to.equal('plastic'); // bit odd, but this is skippable
       }
-      const move3 = testAction._getResolvedSelections({lumber: 0, meat: 0});
+      const move3 = testAction._getPendingMoves({lumber: 0, meat: 0});
       expect(move3).to.be.undefined;
+    });
+
+    it('combines forced', () => {
+      testAction = action({ prompt: 'purchase' })
+        .chooseNumber('lumber', {min: 0, max: 3})
+        .chooseNumber('steel', {min: 0, max: 0})
+        .chooseNumber('meat', {min: 0, max: 3})
+        .chooseNumber('plastic', {min: 0, max: 0,
+          validate: ({ lumber, steel, meat, plastic }) => lumber + steel + meat + plastic > 0
+        });
+      const move = testAction._getPendingMoves({});
+      if (!move) {
+        expect(move).to.not.be.undefined;
+      } else {
+        expect(move[0].selections.length).to.equal(1);
+        expect(move[0].selections[0].name).to.equal('lumber');
+        expect(move[0].args).to.deep.equal({steel: 0});
+      }
+      const move2 = testAction._getPendingMoves({lumber: 0, steel: 0});
+      if (!move2) {
+        expect(move2).to.not.be.undefined;
+      } else {
+        expect(move2[0].selections.length).to.equal(1);
+        expect(move2[0].selections[0].name).to.equal('meat');
+        expect(move2[0].args).to.deep.equal({lumber: 0, steel: 0, plastic: 0});
+      }
     });
   });
 
-  describe('getResolvedSelections with skip/expand', () => {
+  describe('getPendingMoves with skip/expand', () => {
     let testAction: Action<any, {r: string, n: number}>;
     beforeEach(() => {
       testAction = action({ prompt: 'p' })
@@ -195,7 +221,7 @@ describe('Actions', () => {
     });
 
     it('shows first selection', () => {
-      const moves = testAction._getResolvedSelections({});
+      const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');
@@ -204,7 +230,7 @@ describe('Actions', () => {
 
     it('expands first selection', () => {
       testAction._cfg.selections[0].expand = true;
-      const moves = testAction._getResolvedSelections({});
+      const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(2);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('number');
@@ -212,7 +238,7 @@ describe('Actions', () => {
     });
 
     it('provides next selection', () => {
-      const moves = testAction._getResolvedSelections({r: 'oil'});
+      const moves = testAction._getPendingMoves({r: 'oil'});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('number');
@@ -220,7 +246,7 @@ describe('Actions', () => {
     });
 
     it('skips next selection', () => {
-      const moves = testAction._getResolvedSelections({r: 'garbage'});
+      const moves = testAction._getPendingMoves({r: 'garbage'});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('number');
@@ -228,13 +254,13 @@ describe('Actions', () => {
     });
 
     it('completes', () => {
-      const moves = testAction._getResolvedSelections({r: 'oil', n: 2});
+      const moves = testAction._getPendingMoves({r: 'oil', n: 2});
       expect(moves?.length).to.equal(0);
     });
 
     it('skips', () => {
       testAction._cfg.selections[0].choices = ['oil'];
-      const moves = testAction._getResolvedSelections({});
+      const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('number');
@@ -244,7 +270,7 @@ describe('Actions', () => {
     it('prevents skips', () => {
       testAction._cfg.selections[0].choices = ['oil'];
       testAction._cfg.selections[0].skipIfOnlyOne = false;
-      const moves = testAction._getResolvedSelections({});
+      const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');

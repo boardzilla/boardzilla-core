@@ -48,11 +48,6 @@ export const createBoardClasses = <P extends Player, B extends Board<P>>(boardCl
 
 export type SetupFunction<P extends Player, B extends Board<P>> = (
   state: SetupState<P> | GameState<P>,
-  options?: {
-    currentPlayerPosition?: number[],
-    start?: boolean,
-    trackMovement?: boolean,
-  }
 ) => Game<P, B>
 
 /**
@@ -86,10 +81,7 @@ export const createGame = <P extends Player, B extends Board<P>>(
   boardClass: ElementClass<P, B>,
   gameCreator: (game: Game<P, B>) => void
 ): SetupFunction<P, B> => (
-  state: SetupState<P> | GameState<P>,
-  options?: {
-    currentPlayerPosition?: number[]
-  }
+  state: SetupState<P> | GameState<P>
 ): Game<P, B> => {
   //console.time('setup');
   const game = new Game<P, B>(playerClass, boardClass);
@@ -120,7 +112,6 @@ export const createGame = <P extends Player, B extends Board<P>>(
 
   if ('board' in state) {
     game.board.fromJSON(state.board);
-    game.players.setCurrent(options?.currentPlayerPosition || []);
     game.flow.setBranchFromJSON(state.position);
   }
   //console.timeLog('setup', 'setState');

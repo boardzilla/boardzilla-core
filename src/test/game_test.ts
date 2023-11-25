@@ -388,35 +388,35 @@ describe('Game', () => {
 
       game.start();
       game.play();
-      expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
 
       game.processMove({ action: 'takeOne', args: {}, player: game.players[2] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
-      expect(game.getResolvedSelections(game.players[2])?.step).to.equal('declare');
+      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[2])?.step).to.equal('declare');
 
       game.processMove({ action: 'declare', args: {d: 'well i never'}, player: game.players[2] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
-      expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
-      expect(game.getResolvedSelections(game.players[2])).to.equal(undefined);
+      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
 
       game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
-      expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
-      expect(game.getResolvedSelections(game.players[1])?.step).to.equal('declare');
-      expect(game.getResolvedSelections(game.players[2])).to.equal(undefined);
+      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[1])?.step).to.equal('declare');
+      expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
 
       game.processMove({ action: 'declare', args: {d: 'i do'}, player: game.players[1] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 4])
-      expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
-      expect(game.getResolvedSelections(game.players[1])).to.equal(undefined);
-      expect(game.getResolvedSelections(game.players[2])).to.equal(undefined);
-      expect(game.getResolvedSelections(game.players[3])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[1])).to.equal(undefined);
+      expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
+      expect(game.getPendingMoves(game.players[3])?.step).to.equal('take-1');
     });
 
     it('survives ser/deser', () => {
@@ -445,7 +445,7 @@ describe('Game', () => {
       game.flow.setBranchFromJSON(flowState);
       game.play();
 
-      expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
       game.processMove({ action: 'takeOne', args: {}, player: game.players[2] });
 
@@ -456,8 +456,8 @@ describe('Game', () => {
       game.play();
 
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      expect(game.getResolvedSelections(game.players[0])?.step).to.equal('take-1');
-      expect(game.getResolvedSelections(game.players[2])?.step).to.equal('declare');
+      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
+      expect(game.getPendingMoves(game.players[2])?.step).to.equal('declare');
     });
   });
 

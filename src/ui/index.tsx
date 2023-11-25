@@ -1,5 +1,3 @@
-// import * as Sentry from "@sentry/browser";
-// import { BrowserTracing } from "@sentry/tracing";
 import React from 'react'
 import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
@@ -13,10 +11,16 @@ import Player from '../player/player.js'
 import { Board, GameElement } from '../board/index.js'
 import type { ElementJSON } from '../board/element.js'
 import type { SerializedArg } from '../action/utils.js'
-import type { BoardQuery } from '../action/selection.js'
+import type Selection from '../action/selection.js'
 import type { Argument } from '../action/action.js'
 import type { PendingMove, SerializedMove } from '../game.js'
 import type { SetupFunction } from '../index.js'
+
+export type UIMove = PendingMove<Player> & {
+  requireExplicitSubmit: boolean;
+}
+
+type GamePendingMoves = ReturnType<Game<Player, Board<Player>>['getPendingMoves']>;
 
 type GameStore = {
   host: boolean,
@@ -33,29 +37,29 @@ type GameStore = {
   position?: number; // this player
   setPosition: (p: number) => void;
   move?: {action: string, args: Record<string, Argument<Player>>}; // move in progress
-  selectMove: (sel?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => void; // commit the choice and find new choices or process the choice
+  selectMove: (sel?: UIMove, args?: Record<string, Argument<Player>>) => void; // commit the choice and find new choices or process the choice
   moves: {action: string, args: Record<string, SerializedArg>}[]; // move ready for processing
   clearMoves: () => void;
   error?: string,
   setError: (error: string) => void,
   step?: string,
-  pendingMoves?: PendingMove<Player>[]; // all pending moves
+  pendingMoves?: UIMove[]; // all pending moves
   boardSelections: Record<string, {
-    clickMoves: PendingMove<Player>[],
+    clickMoves: UIMove[],
     dragMoves: {
-      move: PendingMove<Player>,
-      drag: BoardQuery<Player, GameElement<Player>>
+      move: UIMove,
+      drag: Selection<Player>
     }[]
   }>; // pending moves on board
   prompt?: string; // prompt for choosing action if applicable
-  selected: GameElement<Player>[]; // selected elements on board
+  selected: GameElement<Player>[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   setSelected: (s: GameElement<Player>[]) => void;
   setAspectRatio: (a: number) => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
-  dropElements: {element: string, move: PendingMove<Player>}[];
-  currentDrop?: string;
-  setCurrentDrop: (el?: string) => void;
+  dropSelections: UIMove[];
+  currentDrop?: GameElement<Player>;
+  setCurrentDrop: (el?: GameElement<Player>) => void;
   zoomable?: GameElement<Player>;
   setZoomable: (el?: GameElement<Player>) => void;
   zoomElement?: GameElement<Player>;
@@ -71,13 +75,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   game: new Game(Player, Board),
   setGame: (game: Game<Player, Board<Player>>) => set({ game }),
   boardJSON: [],
-  updateState: (update) => set(s => {
+  updateState: update => set(s => {
     let { game } = s;
     if (game.phase === 'new' && s.setup) {
-      game = s.setup(update.state.state, {
-        start: true,
-        currentPlayerPosition: 'currentPlayers' in update ? update.currentPlayers : []
-      });
+      game = s.setup(update.state.state);
       // @ts-ignore;
       window.game = game;
       // @ts-ignore;
@@ -88,16 +89,19 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       game.players.fromJSON(update.state.state.players);
       game.board.fromJSON(update.state.state.board);
       game.flow.setBranchFromJSON(update.state.state.position);
-      game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
-      game.phase = 'started';
-      game.winner = [];
     }
+    game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
+    game.phase = 'started';
+    game.winner = [];
+
     if (update.type === 'gameFinished') {
       game.players.setCurrent([]);
       game.winner = update.winners.map(p => game.players.atPosition(p)!);
       game.phase = 'finished';
     }
     const position = s.position || update.state.position;
+
+    console.debug(`Current flow:\n ${game.flow.stacktrace()}`);
 
     if (game.phase === 'finished') {
       return {
@@ -124,7 +128,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     if (!s.position) return {};
     return updateBoard(s.game, s.position);
   }),
-  selectMove: (pendingMove?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => set(s => {
+  selectMove: (pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => set(s => {
     const move = pendingMove ? {
       action: pendingMove.action,
       args: {...pendingMove.args, ...args}
@@ -149,20 +153,17 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     return {};
   }),
   setDragElement: dragElement => set(s => {
-    if (!dragElement) return { dragElement: undefined, dropElements: [] };
+    if (!dragElement) return { dragElement: undefined, dropSelections: [] };
     const moves = s.boardSelections[dragElement].dragMoves;
-    let dropElements: {element: string, move: PendingMove<Player>}[] = [];
+    let dropSelections: UIMove[] = [];
     if (moves) for (let {move, drag} of moves) {
-      if (typeof drag === 'function') drag = drag({...(s.move?.args || {}), [move.selections[0].name]: s.game!.board.atBranch(dragElement)});
-      if (drag) {
-        if (typeof drag === 'string') throw Error('unsupported');
-        if (!(drag instanceof Array)) drag = [drag];
-        dropElements = dropElements.concat(drag.map(e => ({element: e.branch(), move})));
-      }
+      dropSelections.push({...move, selections: [
+        drag.resolve({...(s.move?.args || {}), [move.selections[0].name]: s.game!.board.atBranch(dragElement)})
+      ]});
     }
-    return { dragElement, dropElements }
+    return { dragElement, dropSelections }
   }),
-  dropElements: [],
+  dropSelections: [],
   setCurrentDrop: currentDrop => set({ currentDrop }),
   setZoomable: zoomable => set({ zoomable }),
   setZoom: zoom => set(s => {
@@ -177,41 +178,42 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   const player = game.players.atPosition(position);
   if (!player) return {};
   let state: Partial<GameStore> = {};
-  let resolvedSelections: ReturnType<typeof game.getResolvedSelections>;
+  let pendingMoves: GamePendingMoves
   let isBoardUpToDate = true;
 
   while (true) {
-    resolvedSelections = game.getResolvedSelections(player, move?.action, move?.args);
-    if (move && !resolvedSelections?.moves) {
-      console.error('move may no longer be valid. retrying getResolvedSelections', move, resolvedSelections);
+    pendingMoves = game.getPendingMoves(player, move?.action, move?.args);
+    if (move && !pendingMoves?.moves) {
+      // perhaps an update came while we were in the middle of a move
+      console.error('move may no longer be valid. retrying getPendingMoves', move, pendingMoves);
       move = undefined;
-      resolvedSelections = game.getResolvedSelections(player);
+      pendingMoves = game.getPendingMoves(player);
     }
 
-    const pendingMoves = resolvedSelections?.moves;
+    const moves = pendingMoves?.moves;
 
     // the only selection is skippable - skip and rerun selections
-    if (pendingMoves?.length === 1 && pendingMoves[0].selections.length === 1 && pendingMoves[0].selections[0].skipIfOnlyOne) {
-      const arg = pendingMoves[0].selections[0].isForced();
+    if (moves?.length === 1 && moves[0].selections.length === 1 && moves[0].selections[0].skipIfOnlyOne) {
+      const arg = moves[0].selections[0].isForced();
       if (arg === undefined) break;
 
-      if (typeof pendingMoves[0].selections[0].confirm === 'function') {
+      if (typeof moves[0].selections[0].confirm === 'function') {
         // a confirm function was added tho, so don't skip that. convert to confirm prompt
-        resolvedSelections!.moves[0].selections[0].name = '__confirm__';
-        resolvedSelections!.moves[0].selections[0].type = 'button';
-        resolvedSelections!.moves[0].args[resolvedSelections!.moves[0].selections[0].name] = arg;
+        pendingMoves!.moves[0].selections[0].name = '__confirm__';
+        pendingMoves!.moves[0].selections[0].type = 'button';
+        pendingMoves!.moves[0].args[pendingMoves!.moves[0].selections[0].name] = arg;
         break;
       }
 
       move = {
-        action: pendingMoves[0].action,
-        args: {...pendingMoves[0].args, [pendingMoves[0].selections[0].name]: arg}
+        action: moves[0].action,
+        args: {...moves[0].args, [moves[0].selections[0].name]: arg}
       };
       continue;
     }
 
     // move is processable - add to queue and rerun
-    if (pendingMoves?.length === 0) {
+    if (moves?.length === 0) {
       try {
         // if last option is forced and skippable, automove
         if (!move) break;
@@ -251,56 +253,64 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     break;
   }
 
-  // populate boardSelections
-  const boardSelections: Record<string, {
-    clickMoves: PendingMove<Player>[],
-    dragMoves: {
-      move: PendingMove<Player>,
-      drag: BoardQuery<Player, any>[]
-    }[]
-  }> = {};
-  if (resolvedSelections) {
-    resolvedSelections.moves = resolvedSelections.moves.filter(m => !move || m.action === move.action);
-    for (const p of resolvedSelections.moves) {
-      for (const sel of p.selections) {
-        if (sel.type === 'board' && sel.boardChoices) {
-          const boardMove = {...p, selections: [sel]}; // simple board move of single selection to attach to element
-          for (const el of sel.boardChoices) {
-            boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-            boardSelections[el.branch()].clickMoves.push(boardMove);
-          }
-          if (sel.clientContext?.dragInto) {
-            for (const el of sel.boardChoices) {
-              boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-              boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel.clientContext?.dragInto });
-            }
-          }
-          if (sel.clientContext?.dragFrom) {
-            const dragFrom = typeof sel.clientContext?.dragFrom === 'function' ?
-              sel.clientContext?.dragFrom(move?.args) :
-              sel.clientContext?.dragFrom;
-
-            for (const el of dragFrom instanceof Array ? dragFrom : [dragFrom]) {
-              boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-              boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel.boardChoices });
-            }
-          }
-        }
-      }
-    }
+  if (pendingMoves) for (const move of pendingMoves.moves as UIMove[]) {
+    move.requireExplicitSubmit = (
+      move.selections.length !== 1 ||
+        !(['board', 'choices', 'button'].includes(move.selections[0].type)) ||
+        typeof move.selections[0].confirm === 'function' ||
+        move.selections[0].isMulti()
+    );
   }
+
+  const boardSelections = pendingMoves ? getBoardSelections(pendingMoves.moves as UIMove[], move) : {};
 
   if (!isBoardUpToDate) state = {...state, ...updateBoard(game, position)};
 
   return ({
     ...state,
     move,
-    step: resolvedSelections?.step,
-    prompt: resolvedSelections?.prompt,
+    step: pendingMoves?.step,
+    prompt: pendingMoves?.prompt,
     boardSelections,
-    pendingMoves: resolvedSelections?.moves,
+    pendingMoves: pendingMoves?.moves,
   })
 };
+
+const getBoardSelections = (moves: UIMove[], move?: {action: string, args: Record<string, Argument<Player>>}) => {
+  // populate boardSelections
+  const boardSelections: Record<string, {
+    clickMoves: UIMove[],
+    dragMoves: {
+      move: UIMove,
+      drag: Selection<Player>
+    }[]
+  }> = {};
+  for (const p of moves) {
+    for (const sel of p.selections) {
+      if (sel.type === 'board' && sel.boardChoices) {
+        const boardMove = {...p, selections: [sel]}; // simple board move of single selection to attach to element
+        for (const el of sel.boardChoices) {
+          boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
+          boardSelections[el.branch()].clickMoves.push(boardMove);
+        }
+        let { dragInto, dragFrom } = sel.clientContext as { dragInto: Selection<Player>, dragFrom: Selection<Player> };
+        if (dragInto) {
+          for (const el of sel.boardChoices) {
+            boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
+            boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel.clientContext?.dragInto });
+          }
+        }
+        if (dragFrom) {
+          for (const el of dragFrom.resolve(move?.args || {}).boardChoices || []) {
+            boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
+            boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel });
+          }
+        }
+      }
+    }
+  }
+  return boardSelections;
+}
 
 const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?: ElementJSON[]) => {
   // rerun layouts. probably optimize TODO
@@ -323,8 +333,8 @@ export const render = <P extends Player, B extends Board<P>>(setup: SetupFunctio
   layout?: (board: B, breakpoint: string) => void
 }): void => {
   const state = gameStore.getState();
-  const setupGame: SetupFunction<P, B> = (state, options) => {
-    const game = setup(state, options);
+  const setupGame: SetupFunction<P, B> = (state) => {
+    const game = setup(state);
     game.board._ui.breakpoints = breakpoints;
     game.board._ui.setupLayout = layout;
     return game;

@@ -7,7 +7,7 @@ import PlayerControls from './components/PlayerControls.js';
 import { click } from '../assets/index.js';
 
 import type { GameElement } from '../../board/index.js'
-import type { PendingMove } from '../../game.js';
+import type { UIMove } from '../index.js';
 import type { Argument } from '../../action/action.js';
 import type { Player } from '../../player/index.js';
 import { humanizeArg } from '../../action/utils.js';
@@ -17,33 +17,33 @@ export default () => {
     gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
-  const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: PendingMove<Player>[] }>();
+  const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
 
   if (!position) return null;
   const player = game.players.atPosition(position);
   if (!player) return null;
 
-  const submitMove = useCallback((pendingMove?: PendingMove<Player>, args?: Record<string, Argument<Player>>) => {
+  const submitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
     setSelected([]);
     selectMove(pendingMove, args);
   }, [selectMove, setSelected]);
 
-  const onSelectElement = useCallback((moves: PendingMove<Player>[], element: GameElement<Player>) => {
+  const onSelectElement = useCallback((moves: UIMove[], element: GameElement<Player>) => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
 
     if (moves.length === 0) return;
-    if (moves.length > 1) {
+    if (moves.length > 1) { // multiple moves are associated with this element (attached by getBoardSelections)
       setSelected([element]);
       return setDisambiguateElement({ element, moves });
     }
     const move = moves[0];
     const selection = move.selections.find(s => s.type === 'board');
     if (selection) {
-      if (!selection.isMulti() && typeof selection.confirm !== 'function') {
+      if (!move.requireExplicitSubmit) {
         submitMove(move, {[selection.name]: element});
         return;
       }
@@ -60,8 +60,8 @@ export default () => {
   }, [selected, setSelected, submitMove]);
 
   const controls = useMemo(() => {
-    const layouts: Record<string, {moves: PendingMove<Player>[], style: CSSProperties}> = {};
-    const messages: (PendingMove<Player> | string)[] = pendingMoves || [];
+    const layouts: Record<string, {moves: UIMove[], style: CSSProperties}> = {};
+    const messages: (UIMove | string)[] = pendingMoves || [];
 
     if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
 

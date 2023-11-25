@@ -13,7 +13,7 @@ const Selection = ({selection, value, error, onChange} : {
   onChange: (value: Argument<Player>) => void
 }) => (
   <div className={`selection ${selection.name}`}>
-    {selection.type === 'button' || selection.type === 'board' || <span className="prompt">{selection.prompt}</span>}
+    {selection.prompt && <span className="prompt">{selection.prompt}</span>}
 
     {selection.type === 'choices' && selection.choices && (
       selection.choices instanceof Array ? selection.choices.map(c => ([c, c])) : Object.entries(selection.choices)).map(([k, v]) => (
@@ -48,9 +48,9 @@ const Selection = ({selection, value, error, onChange} : {
         autoComplete='off'/>
     )}
 
-    {selection.type === 'button' && selection.prompt &&
+    {/** selection.type === 'button' &&
       <button name={selection.name} value='confirm' type="submit">{selection.prompt}</button>
-    }
+     */}
 
     {error && <div className="error">{error}</div>}
   </div>

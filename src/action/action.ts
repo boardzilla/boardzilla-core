@@ -1,4 +1,5 @@
 import Selection from './selection.js';
+import { GameElement } from '../board/index.js';
 
 import type {
   ResolvedSelection,
@@ -7,7 +8,7 @@ import type {
   BoardQuerySingle,
   BoardSelection,
 } from './selection.js';
-import type { GameElement, Piece } from '../board/index.js';
+import type { Piece } from '../board/index.js';
 import type { Player } from '../player/index.js';
 import type { PendingMove } from '../game.js';
 
@@ -78,40 +79,45 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   // return undefined if these args are impossible
   // return 0-length if these args are submittable
   // return array of follow-up selections if incomplete
-  // skipping/expanding is very complex
-  // skippable options will still appear in order to present the choices to the user to select that tree. This will be the final selection
+  // skipping/expanding is very complex and this method runs all the rules for what should/must be combined, either as additional selections or as forced args
+  // skippable options will still appear in order to present the choices to the user to select that tree. This will be the final selection if no other selection turned skipping off
   /** @internal */
-  _getResolvedSelections(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
-    let moves = this._getResolvedSelectionsInner(args);
+  _getPendingMoves(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
+    const moves = this._getPendingMovesInner(args);
     // resolve any combined selections now with only args up until first choice
     if (moves?.length) {
       for (const move of moves) {
-        if (move.selections[0].clientContext?.combineWith) {
-          let confirm: Selection<P>['confirm'] | undefined = undefined;
-          let validation: Selection<P>['validation'] | undefined = undefined;
-          for (const combine of move.selections[0].clientContext.combineWith) {
-            const resolved = combine.resolve(args);
-            confirm = resolved.confirm ?? confirm; // find latest confirm for the overall combination
-            validation = resolved.validation ?? validation;
-            if (!resolved.skipIf) {
-              const arg = resolved.isForced();
-              if (arg !== undefined) {
-                move.args[resolved.name] = arg;
-              } else {
-                move.selections.push(resolved);
-              }
+        const combineWith = move.selections[0].clientContext?.combineWith; // guaranteed single selection
+        let confirm: Selection<P>['confirm'] | undefined = move.selections[0].confirm;
+        let validation: Selection<P>['validation'] | undefined = move.selections[0].validation;
+        // look ahead for any selections that can/should be combined
+        for (let i = this._cfg.selections.findIndex(s => s.name === move.selections[0].name) + 1; i !== this._cfg.selections.length; i++) {
+          if (typeof confirm === 'function') break; // do not skip an explicit confirm
+          let selection = this._cfg.selections[i];
+          if (combineWith?.includes(selection.name)) selection = selection.resolve(move.args);
+          if (!selection.isResolved()) break;
+          if (!selection.skipIf) {
+            const arg = selection.isForced();
+            if (arg !== undefined) { // forced future args are added here to shorten the form and pre-prompt any confirmation
+              move.args[selection.name] = arg;
+            } else if (combineWith?.includes(selection.name)) { // future combined selections are added as well
+              move.selections.push(selection);
+            } else {
+              break;
             }
+            confirm = selection.confirm ?? confirm; // find latest confirm for the overall combination
+            validation = selection.validation ?? validation;
           }
-          if (confirm) move.selections[0].confirm = confirm; // and put it on top
-          if (validation) move.selections[move.selections.length - 1].validation = validation; // on bottom
         }
+        if (confirm) move.selections[0].confirm = confirm; // and put it on top
+        if (validation) move.selections[move.selections.length - 1].validation = validation; // on bottom
       }
     }
     return moves;
   }
 
   /** @internal */
-  _getResolvedSelectionsInner(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
+  _getPendingMovesInner(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
     const selection = this._nextSelection(args);
     if (!selection) return [];
 
@@ -126,25 +132,25 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     if (!selection.isUnbounded()) {
       let possibleOptions: Argument<P>[] = [];
       let pruned = false;
-      let resolvedSelections: PendingMove<P>[] = [];
+      let pendingMoves: PendingMove<P>[] = [];
       let mayExpand = selection.expand;
       for (const option of selection.options()) {
         const allArgs = {...args, [selection.name]: option};
         if (selection.validation && selection.error(allArgs)) continue;
-        const submoves = this._getResolvedSelectionsInner(allArgs);
+        const submoves = this._getPendingMovesInner(allArgs);
         if (submoves === undefined) {
           pruned = true;
         } else {
           possibleOptions.push(option);
           if (selection.expand && submoves.length === 0) mayExpand = false; // TODO smarter expansion needed when triggered/optional selections are added
-          resolvedSelections = resolvedSelections.concat(submoves);
+          pendingMoves = pendingMoves.concat(submoves);
         }
       }
       if (!possibleOptions.length) return undefined;
       if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
 
       // return the expanded selection if mayExpand, or if there's a single, skippable choice
-      if (resolvedSelections.length && (mayExpand || selection.skipIfOnlyOne && possibleOptions.length === 1)) return resolvedSelections;
+      if (pendingMoves.length && (mayExpand || selection.skipIfOnlyOne && possibleOptions.length === 1)) return pendingMoves;
     }
 
     // return board or final choice for a selection prompt, UI may choose to skip anyways
@@ -183,12 +189,12 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       }
     }
 
-    const resolvedSelections = this._getResolvedSelections(args);
-    if (!resolvedSelections) {
+    const pendingMoves = this._getPendingMoves(args);
+    if (!pendingMoves) {
       console.error('attempted to process invalid args', this.name, args);
       return error || 'unknown error during action._process';
     }
-    if (resolvedSelections.length) {
+    if (pendingMoves.length) {
       return error || 'incomplete action';
     }
 
@@ -203,6 +209,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   _addSelection(selection: Selection<P>) {
     if (this._cfg.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
     this._cfg.selections.push(selection);
+    return selection;
   }
 
   /**
@@ -385,10 +392,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * });
    */
   // may get rid of:
-  confirm(prompt: string | ((args: A) => string)): Action<P, A> {
-    this._addSelection(new Selection<P>('__confirm__', { prompt, skipIfOnlyOne: false, value: true }));
-    return this;
-  }
+  // confirm(prompt: string | ((args: A) => string)): Action<P, A> {
+  //   this._addSelection(new Selection<P>('__confirm__', { prompt, skipIfOnlyOne: false, value: true }));
+  //   return this;
+  // }
 
   /**
    * Add a numerical selection to this action. This will be presented with a
@@ -641,19 +648,21 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
     }
   ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}> {
-    this._addSelection(new Selection<P>(pieceName, {
+    if (piece instanceof GameElement) piece = [piece];
+    if (into instanceof GameElement) into = [into];
+    const fromSelection = this._addSelection(new Selection<P>(pieceName, {
       prompt: options?.prompt,
       skipIfOnlyOne: false,
       selectOnBoard: { chooseFrom: piece } as BoardSelection<P, E>,
-      clientContext: { dragInto: into }
     }));
-    this._addSelection(new Selection<P>(intoName, {
+    const intoSelection = this._addSelection(new Selection<P>(intoName, {
       prompt: options?.promptInto || options?.prompt,
       confirm: options?.confirm,
       validation: options?.validate,
       selectOnBoard: { chooseFrom: into } as BoardSelection<P, I>,
-      clientContext: { dragFrom: piece }
     }));
+    fromSelection.clientContext = { dragInto: intoSelection };
+    intoSelection.clientContext = { dragFrom: fromSelection };
     this._cfg.moves.push((args: A & {[key in N1]: E} & {[key in N2]: I}) => (args[pieceName] as Piece<P>).putInto(args[intoName] as GameElement<P>));
     return this as unknown as Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
   }
@@ -720,7 +729,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     if (options?.confirm) this._cfg.selections[this._cfg.selections.length - 1].confirm = options.confirm
     if (options?.validate) this._cfg.selections[this._cfg.selections.length - 1].validation = options.validate
     for (let i = 1; i < Object.values(choices).length; i++) {
-      this._cfg.selections[this._cfg.selections.length - 1 - i].clientContext = {combineWith: this._cfg.selections.slice(-i)};
+      this._cfg.selections[this._cfg.selections.length - 1 - i].clientContext = {combineWith: this._cfg.selections.slice(-i).map(s => s.name)};
     }
     return this as unknown as Action<P, ExpandGroup<P, A, R>>;
   }

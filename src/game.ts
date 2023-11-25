@@ -287,16 +287,16 @@ export default class Game<P extends Player, B extends Board<P>> {
     };
   }
 
-  getResolvedSelections(player: P, action?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
+  getPendingMoves(player: P, action?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;
     if (!action) {
       let possibleActions: string[] = [];
-      let resolvedSelections: PendingMove<P>[] = [];
+      let pendingMoves: PendingMove<P>[] = [];
       for (const action of actions) {
         const playerAction = this.getAction(action, player);
-        let submoves = playerAction._getResolvedSelections({});
+        let submoves = playerAction._getPendingMoves({});
         if (submoves !== undefined) {
           possibleActions.push(action);
           if (expand && submoves.length === 0) {
@@ -309,14 +309,14 @@ export default class Game<P extends Player, B extends Board<P>> {
               ]
             }];
           }
-          resolvedSelections = resolvedSelections.concat(submoves);
+          pendingMoves = pendingMoves.concat(submoves);
         } else {
           console.debug(`Action ${action} not allowed because no valid selections exist`);
         }
       }
       if (!possibleActions.length) return undefined;
-      if (skipIfOnlyOne && possibleActions.length === 1) return { step, prompt, moves: resolvedSelections};
-      if (expand && resolvedSelections.length) return { step, prompt, moves: resolvedSelections};
+      if (skipIfOnlyOne && possibleActions.length === 1) return { step, prompt, moves: pendingMoves};
+      if (expand && pendingMoves.length) return { step, prompt, moves: pendingMoves};
       return {
         step,
         prompt,
@@ -331,7 +331,7 @@ export default class Game<P extends Player, B extends Board<P>> {
       };
 
     } else {
-      const moves = this.getAction(action, player)?._getResolvedSelections(args || {});
+      const moves = this.getAction(action, player)?._getPendingMoves(args || {});
       if (moves) return { step, prompt, moves };
     }
   }
