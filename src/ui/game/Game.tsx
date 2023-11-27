@@ -61,7 +61,7 @@ export default () => {
 
   const controls = useMemo(() => {
     const layouts: Record<string, {moves: UIMove[], style: CSSProperties}> = {};
-    const messages: (UIMove | string)[] = pendingMoves || [];
+    const messages: (UIMove | string)[] = [...pendingMoves || []];
 
     if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
 
@@ -165,7 +165,15 @@ export default () => {
 
   if (!dimensions) return;
 
-  console.debug('Showing game with pending moves:' + (pendingMoves?.map(m => `\n⮕ ${m.name}({${Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`).join('') || ' none'));
+  console.debug('Showing game with pending moves:' +
+    (pendingMoves?.map(m => (
+      `\n⮕ ${typeof m === 'string' ? m :
+        `${m.name}({${
+          Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')
+        }}) ? ${m.selections ? m.selections[0].toString() : 'no choices'}`
+      }`
+    )).join('') || ' none')
+  );
 
   return (
     <div

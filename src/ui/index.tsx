@@ -197,8 +197,9 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       const arg = moves[0].selections[0].isForced();
       if (arg === undefined) break;
 
-      if (typeof moves[0].selections[0].confirm === 'function') {
-        // a confirm function was added tho, so don't skip that. convert to confirm prompt
+      if (moves[0].selections[0].confirm) {
+        // a confirm was added tho, so don't skip that. convert to confirm prompt
+        // TODO: distinguish static from arg-taking? static can probably be skipped
         pendingMoves!.moves[0].selections[0].name = '__confirm__';
         pendingMoves!.moves[0].selections[0].type = 'button';
         pendingMoves!.moves[0].args[pendingMoves!.moves[0].selections[0].name] = arg;
@@ -257,7 +258,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     move.requireExplicitSubmit = (
       move.selections.length !== 1 ||
         !(['board', 'choices', 'button'].includes(move.selections[0].type)) ||
-        typeof move.selections[0].confirm === 'function' ||
+        !!move.selections[0].confirm ||
         move.selections[0].isMulti()
     );
   }

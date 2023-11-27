@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { gameStore } from '../../index.js';
+import { n } from '../../../utils.js';
 import Selection from './Selection.js';
 
 import type { Player } from '../../../player/index.js';
@@ -92,11 +93,13 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       if (s.type === 'board' && s.isMulti() && (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity))) return undefined;
     }
 
-    return move.selections[0].confirm ? (
-      typeof move.selections[0].confirm === 'function' ?
-        move.selections[0].confirm(allArgs as Record<string, Argument<Player>>) :
-        move.selections[0].confirm
-    ) : 'Confirm';
+    let confirm = 'Confirm';
+    let args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
+    if (move.selections[0].confirm) {
+      confirm = move.selections[0].confirm[0];
+      Object.assign(args, typeof move.selections[0].confirm[1] === 'function' ? move.selections[0].confirm[1](args) : move.selections[0].confirm[1])
+    }
+    return n(confirm, args)
   }, [move, allArgs, selected, validationErrors]);
 
   return (

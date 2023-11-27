@@ -14,11 +14,11 @@
     "lint": "eslint . --ext .ts"
   },
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "files": [
-    "src/**/*"
+    "dist/**/*"
   ],
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "sideEffects": [
     "./src/ui/assets/styles/game.scss"
   ],

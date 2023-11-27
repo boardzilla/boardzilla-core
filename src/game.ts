@@ -1,5 +1,6 @@
 import { action } from './action/index.js';
-import { escapeArgument, humanizeArg } from './action/utils.js';
+import { humanizeArg } from './action/utils.js';
+import { n } from './utils.js';
 import {
   Board,
   Space,
@@ -61,7 +62,7 @@ export default class Game<P extends Player, B extends Board<P>> {
   rseed: string;
   random: () => number;
   messages: Message[] = [];
-  godMode = false;
+  godMode = true;
   winner: P[] = [];
 
   constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<P, B>, elementClasses: ElementClass<P, GameElement<P>>[] = []) {
@@ -236,9 +237,11 @@ export default class Game<P extends Player, B extends Board<P>> {
         return godModeAction as Action<P, any> & {name: string};
       }
     }
+
+    if (!this.actions[name]) throw Error(`No action found: "${name}". All actions must be specified in defineActions()`);
+
     return this.inContextOfPlayer(player, () => {
       const action = this.actions[name](player);
-      if (!action) throw Error(`No such action ${name}`);
       action.name = name;
       return action as Action<P, any> & {name: string};
     });
@@ -396,12 +399,6 @@ export default class Game<P extends Player, B extends Board<P>> {
   }
 
   message(message: string, args?: Record<string, Argument<P>>) {
-    Object.entries(args || {}).forEach(([k, v]) => {
-      message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`), escapeArgument(v));
-    })
-    const missingArgs = Array.from(message.matchAll(new RegExp(`\\{\\{(\\w+)\\}\\}`, 'g'))).map(([_, arg]) => arg);
-    if (missingArgs.length) throw Error(`All substitution strings must be specified in 2nd parameter. Missing: ${missingArgs.join('; ')}`);
-
-    this.messages.push({body: message});
+    this.messages.push({body: n(message, args, true)});
   }
 }

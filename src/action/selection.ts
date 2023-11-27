@@ -39,7 +39,7 @@ export type ButtonSelection<P extends Player> = Argument<P>;
 
 export type SelectionDefinition<P extends Player, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = {
   prompt?: string | ((args: A) => string);
-  confirm?: string | ((args: A) => string);
+  confirm?: string | [string, Record<string, Argument<P>> | ((args: A) => Record<string, Argument<P>>) | undefined]
   validation?: ((args: A) => string | boolean | undefined);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
 } & ({
@@ -104,7 +104,7 @@ export default class Selection<P extends Player> {
   type: 'board' | 'choices' | 'text' | 'number' | 'button';
   name: string;
   prompt?: string | ((args: Record<string, Argument<P>>) => string);
-  confirm?: string | ((args: Record<string, Argument<P>>) => string);
+  confirm?: [string, Record<string, Argument<P>> | ((args: Record<string, Argument<P>>) => Record<string, Argument<P>>) | undefined]
   validation?: ((args: Record<string, Argument<P>>) => string | boolean | undefined);
   clientContext: Record<any, any> = {}; // additional meta info that describes the context for this selection
   skipIfOnlyOne: boolean;
@@ -117,6 +117,7 @@ export default class Selection<P extends Player> {
   initial?: Argument<P> | ((args: Record<string, Argument<P>>) => Argument<P>);
   regexp?: RegExp;
   value?: Argument<P>;
+  isNonChoice: boolean = false;
 
   constructor(name: string, s: SelectionDefinition<P> | Selection<P>) {
     this.name = name;
@@ -154,7 +155,7 @@ export default class Selection<P extends Player> {
       }
     }
     this.prompt = s.prompt;
-    this.confirm = s.confirm;
+    this.confirm = typeof s.confirm === 'string' ? [s.confirm, undefined] : s.confirm;
     this.validation = s.validation;
     this.skipIfOnlyOne = 'skipIfOnlyOne' in s ? s.skipIfOnlyOne ?? true : true;
     this.expand = 'expand' in s ? s.expand ?? false : false;
@@ -244,6 +245,9 @@ export default class Selection<P extends Player> {
 
   resolve(args: Record<string, Argument<P>>): ResolvedSelection<P> {
     const resolved = new Selection(this.name, this);
+    if (typeof this.choices !== 'function' && this.choices?.length === 1) resolved.isNonChoice = true;
+    if (typeof this.boardChoices !== 'function' && this.boardChoices?.length === 1) resolved.isNonChoice = true;
+    if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.prompt === 'function') resolved.prompt = this.prompt(args);
     if (typeof this.min === 'function') resolved.min = this.min(args)
     if (typeof this.max === 'function') resolved.max = this.max(args)
@@ -302,5 +306,10 @@ export default class Selection<P extends Player> {
         //max: selection.max
       }
     }) as ResolvedSelection<P>;
+  }
+
+  toString() {
+    if (!this.isResolved()) return `unresolved selection ${this.type}`;
+    return `${this.type === 'board' ? `click ${this.boardChoices![0]?.constructor.name || 'board element'}` : `pick ${this.type}`}${(this.choices || this.boardChoices) ? ` (${(this.choices || this.boardChoices)!.length} choices)` : ''}`
   }
 }

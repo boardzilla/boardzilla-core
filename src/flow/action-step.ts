@@ -61,6 +61,10 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (step) return step;
   }
 
+  allowedActions(): string[] {
+    return this.position?.followups?.length ? [this.position.followups[0].name] : this.position ? [] : this.actions.map(a => a.name);
+  }
+
   actionNeeded(player: Player) {
     if (!this.position) {
       const players = this.getPlayers();
@@ -77,14 +81,14 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       return {
         step: this.name,
         actions: [this.position.followups[0]],
-        skipIfOnlyOne: false,
-        expand: false,
+        skipIfOnlyOne: this.skipIfOnlyOne,
+        expand: this.expand,
       }
     }
   }
 
   processMove(move: Exclude<ActionStepPosition<P>, null>): string | undefined {
-    if (!this.actions.find(a => a.name === move.name)) throw Error(`No action ${move.name} available at this point. Waiting for ${Object.keys(this.actions).join(", ")}`);
+    if (!this.allowedActions().includes(move.name)) throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
     const game = this.game;
 
     if (!game.players.currentPosition.includes(move.player)) {
@@ -132,11 +136,11 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   fromJSON(position: any) {
     return position ? {
       ...position,
-      args: deserializeObject(position.args, this.game) as Record<string, Argument<P>>,
+      args: deserializeObject(position.args ?? {}, this.game) as Record<string, Argument<P>>,
       followups: position.followups?.map((f: any) => ({
         name: f.name,
         player: deserialize(f.player, this.game),
-        args: deserializeObject(f.args, this.game) as Record<string, Argument<P>>,
+        args: deserializeObject(f.args ?? {}, this.game) as Record<string, Argument<P>>,
       }))
     } : null;
   }
@@ -146,6 +150,6 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   toString(): string {
-    return `player-action${this.name ? ":" + this.name : ""} (player #${this.game.players.currentPosition}, ${this.actions.map(a => a.name).join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
+    return `player-action${this.name ? ":" + this.name : ""} (player #${this.game.players.currentPosition}, ${this.allowedActions().join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 }

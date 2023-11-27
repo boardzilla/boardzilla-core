@@ -1,6 +1,7 @@
 import type PlayerCollection from './collection.js';
 import { humanizeArg } from '../action/utils.js';
 
+// TODO <Board> player#has player#find
 export default class Player {
   name: string;
   color: string;

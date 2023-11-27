@@ -152,8 +152,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       if (!possibleOptions.length) return undefined;
       if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
 
-      // return the expanded selection if mayExpand, or if there's a single, skippable choice
-      if (pendingMoves.length && (mayExpand || selection.skipIfOnlyOne && possibleOptions.length === 1)) return pendingMoves;
+      // return the expanded selection if mayExpand, or if there's a single, skippable choice and the next choice is a real choice
+      if (pendingMoves.length && (mayExpand || selection.skipIfOnlyOne && possibleOptions.length === 1 && (pendingMoves.length !== 1 || pendingMoves[0].selections.length !== 1 || !pendingMoves[0].selections[0].isNonChoice))) return pendingMoves;
     }
 
     // return board or final choice for a selection prompt, UI may choose to skip anyways
@@ -256,18 +256,14 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * method after all the methods for player choices so that the choices are
    * properly available to the `message` function.
    *
-   * @param message - The message to send. This can be a string or or a
-   * function. If using the function, this accepts one argument for each choice
-   * added to the action, in the order they were added. The function form can be
-   * used when you want to additional logic in the message. In either case, the
-   * string follows the same rules as {@link Board#message} with the following
-   * additions:
-   * - The player taking the move can be interpolated into the message with
-   *   `{{player}}`. This allows boardzilla to display the player name with
-   *   their color.
-   * - Each choice the player made is automatically added as an argument to the
-   *   message and can be interpolated with `{{n}}` where n is the number
-   *   corresponding to the order of choices, starting with zero.
+   * @param message - The message to send. This can contain interpolated strings
+   * with double braces, i.e. {{player}}. Valid strings are 'player' plus any
+   * choices added to the action. Additional strings can be added in args.
+   *
+   * @param args: If additional strings are needed in the message besides
+   * 'player' and the player choices, these can be specified here. This is a
+   * function that accepts player choices and returns key-value pairs of strings
+   * for interpolation.
    *
    * @example
    * action({
@@ -275,9 +271,9 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * }).enterText({
    *   prompt: "Message",
    * }).message(
-   *   "{{player}} said {{0}}" // string form
+   *   "{{player}} said {{message}}" // without args
    * ).message(
-   *   text => `I said, {{player}} said ${text.toUpperCase()}!` // function form
+   *   `I said, {{player}} said {{loudMessage}}, ({ text }) => { loudMessage: text.toUpperCase() } // with args
    * )
    */
   message(message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
@@ -333,7 +329,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     choices: T[] | Record<string, T> | ((args: A) => T[] | Record<string, T>),
     options?: {
       prompt?: string | ((args: A) => string)
-      confirm?: string | ((args: A & {[key in N]: T}) => string)
+      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
       validate?: ((args: A & {[key in N]: T}) => string | boolean | undefined)
       // initial?: T | ((...arg: A) => T), // needed for select-boxes?
       skipIfOnlyOne?: boolean,
@@ -450,7 +446,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     min?: number | ((args: A) => number),
     max?: number | ((args: A) => number),
     prompt?: string | ((args: A) => string),
-    confirm?: string | ((args: A & {[key in N]: number}) => string),
+    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: number}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: number}) => string | boolean | undefined),
     initial?: number | ((args: A) => number),
     skipIfOnlyOne?: boolean,
@@ -519,7 +515,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
-    confirm?: string | ((args: A & {[key in N]: T}) => string);
+    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: T | T[]}) => string | boolean | undefined);
     min?: never;
     max?: never;
@@ -530,8 +526,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }): Action<P, A & {[key in N]: T}>;
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
-    confirm?: string | ((args: A & {[key in N]: T[]}) => string);
-    validate?: ((args: A & {[key in N]: T | T[]}) => string | boolean | undefined);
+    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T[]}) => Record<string, Argument<P>>) | undefined]
+    validate?: ((args: A & {[key in N]: T[]}) => string | boolean | undefined);
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
@@ -541,7 +537,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }): Action<P, A & {[key in N]: T[]}>;
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
-    confirm?: string | ((args: A & {[key in N]: T | T[]}) => string);
+    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T | T[]}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: T | T[]}) => string | boolean | undefined);
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
@@ -569,7 +565,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     into: BoardQuerySingle<P, I, A & {[key in N1]: E}>,
     options?: {
       prompt?: string | ((args: A) => string);
-      confirm?: string | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string);
+      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
       validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
     }
   ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
@@ -580,7 +576,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     into: BoardQuerySingle<P, I, A & {[key in N1]: E}>,
     options?: {
       prompt?: string | ((args: A) => string);
-      confirm?: string | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string);
+      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
       validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
     }
   ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
@@ -592,7 +588,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     options?: {
       prompt?: string | ((args: A) => string);
       promptInto?: string | ((args: A & {[key in N1]: E}) => string);
-      confirm?: string | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string);
+      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
       validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
     }
   ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
@@ -604,7 +600,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     options?: {
       prompt?: string | ((args: A) => string);
       promptInto?: string | ((args: A & {[key in N1]: E}) => string);
-      confirm?: string | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string);
+      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
       validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
     }
   ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
@@ -653,7 +649,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     options?: {
       prompt?: string | ((args: A) => string);
       promptInto?: string | ((args: A & {[key in N1]: E}) => string);
-      confirm?: string | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string);
+      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
       validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
     }
   ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}> {
@@ -719,7 +715,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     choices: R,
     options?: {
       validate?: (args: ExpandGroup<P, A, R>) => string | boolean | undefined,
-      confirm?: string | ((args: ExpandGroup<P, A, R>) => string)
+      confirm?: string | [string, Record<string, Argument<P>> | ((args: ExpandGroup<P, A, R>) => Record<string, Argument<P>>) | undefined]
     }
   ): Action<P, ExpandGroup<P, A, R>> {
     let hasBoardSelection = false;
@@ -734,7 +730,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       if (choice[0] === 'board') this.chooseOnBoard(name, choice[1], choice[2]);
       if (choice[0] === 'text') this.enterText(name, choice[1]);
     }
-    if (options?.confirm) this.selections[this.selections.length - 1].confirm = options.confirm
+    if (options?.confirm) this.selections[this.selections.length - 1].confirm = typeof options.confirm === 'string' ? [options.confirm, undefined] : options.confirm;
     if (options?.validate) this.selections[this.selections.length - 1].validation = options.validate
     for (let i = 1; i < Object.values(choices).length; i++) {
       this.selections[this.selections.length - 1 - i].clientContext = {combineWith: this.selections.slice(-i).map(s => s.name)};
