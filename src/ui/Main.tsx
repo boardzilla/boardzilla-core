@@ -109,10 +109,10 @@ export type MoveMessage = {
   id: string
   type: 'move'
   data: {
-    action: string,
+    name: string,
     args: Record<string, SerializedArg>
   } | {
-    action: string,
+    name: string,
     args: Record<string, SerializedArg>
   }[]
 }
@@ -197,7 +197,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   useEffect(() => {
     // move is processable
     if (moves?.length) {
-      console.debug(`Submitting valid moves from player #${position}:\n${moves.map(m => `⮕ ${m.action}({${Object.entries(m.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`)}`);
+      console.debug(`Submitting valid moves from player #${position}:\n${moves.map(m => `⮕ ${m.name}({${Object.entries(m.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`)}`);
       moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
       const message: MoveMessage = {
         type: "move",

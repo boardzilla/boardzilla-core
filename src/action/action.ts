@@ -15,6 +15,12 @@ import type { PendingMove } from '../game.js';
 export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | P;
 export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
 
+export type FollowUp<P extends Player> = {
+  name: string,
+  player?: P,
+  args?: Record<string, Argument<P>>
+}
+
 type Group<P extends Player> = Record<string,
   ['number', Parameters<Action<P, any>['chooseNumber']>[1]?] |
   ['select', Parameters<Action<P, any>['chooseFrom']>[1], Parameters<Action<P, any>['chooseFrom']>[2]?] |
@@ -50,16 +56,13 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   /** @internal */
   prompt?: string;
   /** @internal */
-  _cfg: {
-    selections: Selection<P>[],
-    moves: ((args: Record<string, Argument<P>>) => void)[];
-    condition?: (() => boolean) | boolean;
-    messages: (string | ((args: Record<string, Argument<P>>) => string))[];
-  } = {
-    selections: [],
-    moves: [],
-    messages: []
-  }
+  selections: Selection<P>[] = [];
+  /** @internal */
+  moves: ((args: Record<string, Argument<P>>) => void | FollowUp<P>)[] = [];
+  /** @internal */
+  condition?: (() => boolean) | boolean;
+  /** @internal */
+  messages: {message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
 
   /** @internal */
   constructor({ prompt, condition }: {
@@ -67,12 +70,12 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     condition?: (() => boolean) | boolean,
   }) {
     this.prompt = prompt;
-    if (condition !== undefined) this._cfg.condition = condition;
+    if (condition !== undefined) this.condition = condition;
   }
 
   /** @internal */
   isPossible(): boolean {
-    return typeof this._cfg.condition === 'function' ? this._cfg.condition() : this._cfg.condition ?? true;
+    return typeof this.condition === 'function' ? this.condition() : this.condition ?? true;
   }
 
   // given a set of args, return sub-selections possible trying each possible next arg
@@ -91,9 +94,9 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         let confirm: Selection<P>['confirm'] | undefined = move.selections[0].confirm;
         let validation: Selection<P>['validation'] | undefined = move.selections[0].validation;
         // look ahead for any selections that can/should be combined
-        for (let i = this._cfg.selections.findIndex(s => s.name === move.selections[0].name) + 1; i !== this._cfg.selections.length; i++) {
+        for (let i = this.selections.findIndex(s => s.name === move.selections[0].name) + 1; i !== this.selections.length; i++) {
           if (typeof confirm === 'function') break; // do not skip an explicit confirm
-          let selection = this._cfg.selections[i];
+          let selection = this.selections[i];
           if (combineWith?.includes(selection.name)) selection = selection.resolve(move.args);
           if (!selection.isResolved()) break;
           if (!selection.skipIf) {
@@ -122,7 +125,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     if (!selection) return [];
 
     const move = {
-      action: this.name!,
+      name: this.name!,
       prompt: this.prompt,
       args,
       selections: [selection]
@@ -163,7 +166,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   _nextSelection(args: Record<string, Argument<P>>): ResolvedSelection<P> | undefined {
     let nextSelection: ResolvedSelection<P> | undefined = undefined;
-    for (const s of this._cfg.selections) {
+    for (const s of this.selections) {
       const selection = s.resolve(args);
       if (selection.skipIf === true) continue;
       if (!(s.name in args)) {
@@ -178,10 +181,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * process this action with supplied args. returns error if any
    * @internal
    */
-  _process(args: Record<string, Argument<P>>): string | undefined {
+  _process(args: Record<string, Argument<P>>): string | undefined | FollowUp<P>[] {
     // truncate invalid args - is this needed?
     let error: string | undefined = undefined;
-    for (const selection of this._cfg.selections) {
+    for (const selection of this.selections) {
       error = selection.error(args);
       if (error) {
         console.error('invalid arg', selection.name, args[selection.name], error);
@@ -198,17 +201,23 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       return error || 'incomplete action';
     }
 
+    const followups: FollowUp<P>[] = [];
     try {
-      for (const move of this._cfg.moves) move(args);
+      for (const move of this.moves) {
+        const followup = move(args);
+        if (followup) followups.push(followup);
+      }
     } catch(e) {
       console.error(e);
       return e.message;
     }
+
+    if (followups.length) return followups;
   }
 
   _addSelection(selection: Selection<P>) {
-    if (this._cfg.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
-    this._cfg.selections.push(selection);
+    if (this.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
+    this.selections.push(selection);
     return selection;
   }
 
@@ -237,8 +246,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *   );
    * })
    */
-  do(move: (args: A) => void): Action<P, A> {
-    this._cfg.moves.push(move);
+  do(move: (args: A) => void | FollowUp<P>): Action<P, A> {
+    this.moves.push(move);
     return this;
   }
 
@@ -271,8 +280,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *   text => `I said, {{player}} said ${text.toUpperCase()}!` // function form
    * )
    */
-  message(message: string | ((args: A) => string)) {
-    this._cfg.messages.push(message);
+  message(message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
+    this.messages.push({message, args});
     return this;
   }
 
@@ -662,7 +671,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     }));
     fromSelection.clientContext = { dragInto: intoSelection };
     intoSelection.clientContext = { dragFrom: fromSelection };
-    this._cfg.moves.push((args: A & {[key in N1]: E} & {[key in N2]: I}) => (args[pieceName] as Piece<P>).putInto(args[intoName] as GameElement<P>));
+    this.moves.push((args: A & {[key in N1]: E} & {[key in N2]: I}) => (args[pieceName] as Piece<P>).putInto(args[intoName] as GameElement<P>));
     return this as unknown as Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
   }
 
@@ -725,10 +734,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       if (choice[0] === 'board') this.chooseOnBoard(name, choice[1], choice[2]);
       if (choice[0] === 'text') this.enterText(name, choice[1]);
     }
-    if (options?.confirm) this._cfg.selections[this._cfg.selections.length - 1].confirm = options.confirm
-    if (options?.validate) this._cfg.selections[this._cfg.selections.length - 1].validation = options.validate
+    if (options?.confirm) this.selections[this.selections.length - 1].confirm = options.confirm
+    if (options?.validate) this.selections[this.selections.length - 1].validation = options.validate
     for (let i = 1; i < Object.values(choices).length; i++) {
-      this._cfg.selections[this._cfg.selections.length - 1 - i].clientContext = {combineWith: this._cfg.selections.slice(-i).map(s => s.name)};
+      this.selections[this.selections.length - 1 - i].clientContext = {combineWith: this.selections.slice(-i).map(s => s.name)};
     }
     return this as unknown as Action<P, ExpandGroup<P, A, R>>;
   }

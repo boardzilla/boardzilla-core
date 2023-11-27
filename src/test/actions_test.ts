@@ -10,7 +10,7 @@ const { expect } = chai;
 
 describe('Actions', () => {
   let testAction: Action<any>;
-  const actionSpy = chai.spy(({ n, m }: { n: number, m: number }) => ([n, m]));
+  const actionSpy = chai.spy(({ n, m }: { n: number, m: number }) => {[n, m]});
   beforeEach(() => {
     testAction = action({
       prompt: 'add some counters',
@@ -229,7 +229,7 @@ describe('Actions', () => {
     });
 
     it('expands first selection', () => {
-      testAction._cfg.selections[0].expand = true;
+      testAction.selections[0].expand = true;
       const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(2);
       expect(moves![0].selections.length).to.equal(1);
@@ -259,7 +259,7 @@ describe('Actions', () => {
     });
 
     it('skips', () => {
-      testAction._cfg.selections[0].choices = ['oil'];
+      testAction.selections[0].choices = ['oil'];
       const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
@@ -268,8 +268,8 @@ describe('Actions', () => {
     });
 
     it('prevents skips', () => {
-      testAction._cfg.selections[0].choices = ['oil'];
-      testAction._cfg.selections[0].skipIfOnlyOne = false;
+      testAction.selections[0].choices = ['oil'];
+      testAction.selections[0].skipIfOnlyOne = false;
       const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);

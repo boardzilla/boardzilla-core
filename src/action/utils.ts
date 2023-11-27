@@ -85,7 +85,7 @@ export const escapeArgument = <P extends Player>(arg: Argument<P>): string => {
   return String(arg);
 }
 
-export const combinations = <T extends any>(set: T[], min: number, max: number): T[][] => {
+export const combinations = <T>(set: T[], min: number, max: number): T[][] => {
   const combos = [] as T[][];
   const poss = (curr: T[], i: number) => {
     if (set.length - i < min - curr.length) return;

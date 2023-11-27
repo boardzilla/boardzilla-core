@@ -36,9 +36,9 @@ type GameStore = {
   updateBoard: () => void; // call any time state changes to update immutable references for listeners. updates move, selections
   position?: number; // this player
   setPosition: (p: number) => void;
-  move?: {action: string, args: Record<string, Argument<Player>>}; // move in progress
+  move?: {name: string, args: Record<string, Argument<Player>>}; // move in progress
   selectMove: (sel?: UIMove, args?: Record<string, Argument<Player>>) => void; // commit the choice and find new choices or process the choice
-  moves: {action: string, args: Record<string, SerializedArg>}[]; // move ready for processing
+  moves: {name: string, args: Record<string, SerializedArg>}[]; // move ready for processing
   clearMoves: () => void;
   error?: string,
   setError: (error: string) => void,
@@ -101,7 +101,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     }
     const position = s.position || update.state.position;
 
-    console.debug(`Current flow:\n ${game.flow.stacktrace()}`);
+    console.debug(`Loading game for player #${position}. Current flow:\n ${game.flow.stacktrace()}`);
 
     if (game.phase === 'finished') {
       return {
@@ -130,7 +130,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   }),
   selectMove: (pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => set(s => {
     const move = pendingMove ? {
-      action: pendingMove.action,
+      name: pendingMove.name,
       args: {...pendingMove.args, ...args}
     } : undefined;
     return updateSelections(s.game!, s.position!, move);
@@ -174,7 +174,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
 }), shallow);
 
 // refresh move and selections
-const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: {action: string, args: Record<string, Argument<Player>>}) => {
+const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: {name: string, args: Record<string, Argument<Player>>}) => {
   const player = game.players.atPosition(position);
   if (!player) return {};
   let state: Partial<GameStore> = {};
@@ -182,7 +182,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   let isBoardUpToDate = true;
 
   while (true) {
-    pendingMoves = game.getPendingMoves(player, move?.action, move?.args);
+    pendingMoves = game.getPendingMoves(player, move?.name, move?.args);
     if (move && !pendingMoves?.moves) {
       // perhaps an update came while we were in the middle of a move
       console.error('move may no longer be valid. retrying getPendingMoves', move, pendingMoves);
@@ -206,7 +206,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       }
 
       move = {
-        action: moves[0].action,
+        name: moves[0].name,
         args: {...moves[0].args, [moves[0].selections[0].name]: arg}
       };
       continue;
@@ -223,7 +223,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
         // serialize now before we alter our state to ensure proper references
         const serializedMove: SerializedMove = {
-          action: move.action,
+          name: move.name,
           args: Object.fromEntries(Object.entries(move.args).map(([k, v]) => [k, serializeArg(v)]))
         }
 
@@ -243,7 +243,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       } catch (e) {
         // first line of defense for bad game logic. cancel all moves and
         // surface the error but update board anyways to prevent more errors
-        console.error(`Game attempted to complete move but was unable to process:\n⮕ ${move!.action}({${Object.entries(move!.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`);
+        console.error(`Game attempted to complete move but was unable to process:\n⮕ ${move!.name}({${Object.entries(move!.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`);
         console.error(e.stack);
         state.moves = [];
         move = undefined;
@@ -276,7 +276,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   })
 };
 
-const getBoardSelections = (moves: UIMove[], move?: {action: string, args: Record<string, Argument<Player>>}) => {
+const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<string, Argument<Player>>}) => {
   // populate boardSelections
   const boardSelections: Record<string, {
     clickMoves: UIMove[],

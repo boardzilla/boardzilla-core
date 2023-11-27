@@ -1,5 +1,5 @@
 import type PlayerCollection from './collection.js';
-import { escapeArgument } from '../action/utils.js';
+import { humanizeArg } from '../action/utils.js';
 
 export default class Player {
   name: string;
@@ -37,6 +37,6 @@ export default class Player {
   }
 
   toString() {
-    return escapeArgument(this);
+    return humanizeArg(this);
   }
 }

@@ -77,11 +77,11 @@ export default () => {
       layouts['disambiguate-board-selection'] = { moves: disambiguateElement.moves, style };
     } else {
       for (const pendingMove of messages) {
-        if (!move && typeof pendingMove === 'object' && pendingMove.action.slice(0, 4) === '_god') continue; // don't need to display these as top-level choices
+        if (!move && typeof pendingMove === 'object' && pendingMove.name.slice(0, 4) === '_god') continue; // don't need to display these as top-level choices
         // skip non-board moves if board elements selected
         if (selected.length && typeof pendingMove === 'object' && pendingMove.selections.every(s => s.type !== 'board')) continue;
         let layoutName = "";
-        const actionLayout = typeof pendingMove === 'object' ? "action:" + pendingMove.action : undefined;
+        const actionLayout = typeof pendingMove === 'object' ? "action:" + pendingMove.name : undefined;
         const stepLayout = 'step:' + (typeof pendingMove === 'string' ? pendingMove : step);
         if (actionLayout && game.board._ui.stepLayouts[actionLayout]) {
           layoutName = actionLayout;
@@ -165,7 +165,7 @@ export default () => {
 
   if (!dimensions) return;
 
-  console.debug('Showing game with pending moves:' + (pendingMoves?.map(m => `\n⮕ ${m.action}({${Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`).join('') || ' none'));
+  console.debug('Showing game with pending moves:' + (pendingMoves?.map(m => `\n⮕ ${m.name}({${Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`).join('') || ' none'));
 
   return (
     <div

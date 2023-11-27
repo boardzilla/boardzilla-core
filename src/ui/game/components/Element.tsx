@@ -44,7 +44,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const clickable = // !dragElement &&
     selections?.clickMoves.length;
   const selectable = // !dragElement &&
-    selections?.clickMoves.filter(m => m.action.slice(0, 4) !== '_god').length;
+    selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
   // const draggable = !!selections?.dragMoves.length; // ???
   // const droppable = dropSelections.find(move => move.selections[0].boardChoices?.includes(element));
 

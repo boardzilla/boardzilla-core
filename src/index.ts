@@ -21,7 +21,7 @@ export {
 
 export { createInteface } from './interface.js';
 export { times, range, shuffleArray } from './utils.js';
-export { Player, action };
+export { Player };
 export { render } from './ui/index.js';
 export {
   toggleSetting,

@@ -10,7 +10,8 @@ import {
   eachPlayer,
   everyPlayer,
   createBoardClass,
-  createBoardClasses
+  createBoardClasses,
+  loop
 } from '../index.js';
 
 chai.use(spies);
@@ -55,16 +56,11 @@ describe('Game', () => {
         game.message('Starting game with {{tokens}} tokens', {tokens: board.tokens});
       },
       whileLoop({ while: () => board.tokens < 8, do: (
-        playerActions({ actions: {
-          addSome: null,
-          spend: null
-        }})
+        playerActions({ actions: ['addSome', 'spend']})
       )}),
       whileLoop({ while: () => board.tokens > 0, do: (
         eachPlayer({ name: 'player', startingPlayer: players[0], do: [
-          playerActions({ actions: {
-            takeOne: null,
-          }}),
+          playerActions({ actions: ['takeOne']}),
           () => {
             if (board.tokens <= 0) game.finish(game.players.withHighest('tokens'))
           },
@@ -80,7 +76,7 @@ describe('Game', () => {
         min: 1,
         max: 3,
       }).do(
-        ({ n }) => board.tokens += n
+        ({ n }) => { board.tokens += n }
       ).message('{{player}} added {{n}}'),
 
       takeOne: player => game.action({
@@ -116,7 +112,7 @@ describe('Game', () => {
       { type: "action", position: null }
     ]);
     const step = game.flow.actionNeeded();
-    expect(step?.actions).to.deep.equal(['addSome', 'spend']);
+    expect(step?.actions).to.deep.equal([{ name: 'addSome' }, { name: 'spend' }]);
   });
 
   it('messages', () => {
@@ -126,7 +122,7 @@ describe('Game', () => {
         "body": "Starting game with 4 tokens"
       }
     ]);
-    game.processMove({ action: 'addSome', args: {n: 3}, player: game.players[0] });
+    game.processMove({ name: 'addSome', args: {n: 3}, player: game.players[0] });
     game.play();
     expect(game.messages).to.deep.equals([
       {
@@ -148,7 +144,7 @@ describe('Game', () => {
     game.board.fromJSON([ { className: 'TestBoard', tokens: 9 } ]);
     game.players.setCurrent([2]);
     do {
-      game.processMove({ action: 'takeOne', args: {}, player: game.players.current()[0] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players.current()[0] });
       game.play();
     } while (game.phase === 'started');
     expect(game.winner.length).to.equal(1);
@@ -158,7 +154,7 @@ describe('Game', () => {
   describe('state', () => {
     it('is stateless', () => {
       game.play();
-      game.processMove({ action: 'addSome', args: {n: 3}, player: game.players[0] });
+      game.processMove({ name: 'addSome', args: {n: 3}, player: game.players[0] });
       game.play();
       const boardState = game.board.allJSON();
       const flowState = game.flow.branchJSON();
@@ -180,14 +176,14 @@ describe('Game', () => {
       game.players.setCurrent([2]);
       expect(game.players.currentPosition).to.deep.equal([2]);
       game.play();
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([3]);
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[2] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([4]);
       expect(game.flow.branchJSON()[1].position.index).to.equal(0)
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[3] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[3] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1]);
       expect(game.flow.branchJSON()[1].position.index).to.equal(1)
@@ -205,7 +201,7 @@ describe('Game', () => {
       game.play();
       game.processMove({
         player: game.players[0],
-        action: '_godMove',
+        name: '_godMove',
         args: { piece, into: space2 }
       });
       expect(space2.first(Piece)).to.equal(piece);
@@ -218,7 +214,7 @@ describe('Game', () => {
       game.start();
       game.processMove({
         player: game.players[0],
-        action: '_godEdit',
+        name: '_godEdit',
         args: { element: card, property: 'suit', value: 'S' }
       });
       expect(card.suit).to.equal('S');
@@ -232,7 +228,7 @@ describe('Game', () => {
       game.start();
       expect(() => game.processMove({
         player: game.players[0],
-        action: '_godMove',
+        name: '_godMove',
         args: { piece, into: space2 }
       })).to.throw()
     });
@@ -241,12 +237,12 @@ describe('Game', () => {
   describe('processAction', () => {
     it('runs actions', async () => {
       game.play();
-      game.processMove({ action: 'spend', args: {r: 'gold', n: 2}, player: game.players[0] });
+      game.processMove({ name: 'spend', args: {r: 'gold', n: 2}, player: game.players[0] });
       expect(spendSpy).to.have.been.called.with({r: 'gold', n: 2});
       expect(game.flow.branchJSON()).to.deep.equals([
         { type: 'sequence', position: null, sequence: 1 },
         { type: 'loop', position: { index: 0 } },
-        { type: 'action', position: { action: "spend", args: {r: "gold", n: 2}, player: 1 }}
+        { type: 'action', position: { name: "spend", args: {r: "gold", n: 2}, player: 1 }}
       ]);
       game.play();
       expect(game.flow.branchJSON()).to.deep.equals([
@@ -258,11 +254,11 @@ describe('Game', () => {
     it('changes state', async () => {
       game.play();
       expect(board.tokens).to.equal(4);
-      game.processMove({ action: 'addSome', args: {n: 2}, player: game.players[0] });
+      game.processMove({ name: 'addSome', args: {n: 2}, player: game.players[0] });
       expect(game.flow.branchJSON()).to.deep.equals([
         { type: 'sequence', position: null, sequence: 1 },
         { type: 'loop', position: { index: 0 } },
-        { type: 'action', position: { action: "addSome", args: {n: 2}, player: 1 }}
+        { type: 'action', position: { name: "addSome", args: {n: 2}, player: 1 }}
       ]);
       expect(board.tokens).to.equal(6);
     });
@@ -326,13 +322,13 @@ describe('Game', () => {
         () => { board.tokens = 4 },
         playerActions({
           players: board.players,
-          actions: { takeOne: null }
+          actions: ['takeOne']
         }),
       ]);
       game.start();
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[3] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[3] });
       game.play();
       expect(game.phase).to.equal('finished');
     });
@@ -342,7 +338,7 @@ describe('Game', () => {
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
-            actions: { takeOne: null }
+            actions: ['takeOne']
           })
         })
       ]);
@@ -350,19 +346,19 @@ describe('Game', () => {
       game.start();
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[2] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
       game.play();
       expect(game.phase).to.equal('started');
       expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
       game.play();
       expect(game.phase).to.equal('started');
       expect(game.players.currentPosition).to.deep.equal([1, 4])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[0] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
       game.play();
       expect(game.phase).to.equal('started');
       expect(game.players.currentPosition).to.deep.equal([4])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[3] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[3] });
       game.play();
       expect(game.phase).to.equal('finished');
     });
@@ -373,15 +369,16 @@ describe('Game', () => {
         everyPlayer({
           do: playerActions({
             name: 'take-1',
-            actions: {
-              takeOne: playerActions({
-                name: 'declare',
-                actions: {
-                  declare: null
-                },
-              }),
-              pass: null
-            }
+            actions: [
+              {
+                name: 'takeOne',
+                do: playerActions({
+                  name: 'declare',
+                  actions: ['declare']
+                }),
+              },
+              'pass'
+            ]
           })
         })
       ]);
@@ -391,26 +388,26 @@ describe('Game', () => {
       expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
 
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[2] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
       expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.getPendingMoves(game.players[2])?.step).to.equal('declare');
 
-      game.processMove({ action: 'declare', args: {d: 'well i never'}, player: game.players[2] });
+      game.processMove({ name: 'declare', args: {d: 'well i never'}, player: game.players[2] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
       expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
 
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
       expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.getPendingMoves(game.players[1])?.step).to.equal('declare');
       expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
 
-      game.processMove({ action: 'declare', args: {d: 'i do'}, player: game.players[1] });
+      game.processMove({ name: 'declare', args: {d: 'i do'}, player: game.players[1] });
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 4])
       expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
@@ -425,15 +422,16 @@ describe('Game', () => {
         everyPlayer({
           do: playerActions({
             name: 'take-1',
-            actions: {
-              takeOne: playerActions({
-                name: 'declare',
-                actions: {
-                  declare: null
-                },
-              }),
-              pass: null
-            }
+            actions: [
+              {
+                name: 'takeOne',
+                do: playerActions({
+                  name: 'declare',
+                  actions: ['declare']
+                })
+              },
+              'pass'
+            ]
           })
         })
       ]);
@@ -447,7 +445,7 @@ describe('Game', () => {
 
       expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[2] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
 
       boardState = game.board.allJSON();
       flowState = game.flow.branchJSON();
@@ -460,6 +458,58 @@ describe('Game', () => {
       expect(game.getPendingMoves(game.players[2])?.step).to.equal('declare');
     });
   });
+
+  describe('action followups', () => {
+    beforeEach(() => {
+      game = new Game(TestPlayer, TestBoard, [ Card ]);
+      board = game.board;
+
+      game.defineActions({
+        takeOne: player => game.action({
+          prompt: 'take one counter',
+        }).do(() => {
+          board.tokens --;
+          player.tokens ++;
+          if (board.tokens < 10) return {
+            name: 'declare'
+          }
+        }),
+        declare: () => game.action({
+          prompt: 'declare',
+        }).enterText('d', {
+          prompt: 'declaration'
+        }),
+      });
+
+      game.players.fromJSON(players);
+
+      game.defineFlow(loop(eachPlayer({
+        name: 'player',
+        do: playerActions({
+          actions: ['takeOne']
+        }),
+      })));
+    });
+
+    it('allows followup', () => {
+      game.board.tokens = 11;
+      game.start();
+      game.play();
+
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
+      game.play();
+      expect(game.allowedActions(game.players[0]).actions.length).to.equal(0);
+      expect(game.allowedActions(game.players[1]).actions.length).to.equal(1);
+
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
+      game.play();
+      expect(game.allowedActions(game.players[1]).actions.length).to.equal(1);
+      expect(game.allowedActions(game.players[1]).actions[0].name).to.equal('declare');
+      expect(game.allowedActions(game.players[1]).actions[0].player).to.equal(game.players[1]);
+      expect(game.allowedActions(game.players[0]).actions.length).to.equal(0);
+    });
+  });
+
 
   describe('each player', () => {
     beforeEach(() => {
@@ -484,9 +534,7 @@ describe('Game', () => {
         do: eachPlayer({
           name: 'player',
           do: playerActions({
-            actions: {
-              takeOne: null
-            }
+            actions: ['takeOne']
           }),
         })
       }));
@@ -495,19 +543,19 @@ describe('Game', () => {
       game.play();
 
       expect(game.players.currentPosition).to.deep.equal([1])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[0] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
       game.play();
 
       expect(game.players.currentPosition).to.deep.equal([2])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
       game.play();
 
       expect(game.players.currentPosition).to.deep.equal([1])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[0] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
       game.play();
 
       expect(game.players.currentPosition).to.deep.equal([2])
-      game.processMove({ action: 'takeOne', args: {}, player: game.players[1] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
       game.play();
     });
   });

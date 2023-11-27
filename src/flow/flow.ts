@@ -8,9 +8,11 @@ import type { ForLoopPosition } from './for-loop.js';
 import type { ForEachPosition } from './for-each.js';
 import type { SwitchCasePostion } from './switch-case.js';
 import type { ActionStepPosition } from './action-step.js';
+import { Argument, FollowUp } from '../action/action.js';
+import ActionStep from './action-step.js';
 
 export type FlowArguments = Record<string, any>;
-export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => Do | void) | Do | null;
+export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => Do | void) | Do;
 
 /**
  * A FlowDefinition is provided to the game and to all flow function to provide
@@ -98,7 +100,7 @@ export default class Flow<P extends Player> {
         // want to remove
         if (flow.type === 'action' && flow.position) {
           const position = flow.position as ActionStepPosition<P>;
-          args[position!.action] = position!.args;
+          args[position!.name] = position!.args;
         }
         if ('value' in flow.position && flow.name) {
           args[flow.name] = flow.position.value;
@@ -165,7 +167,13 @@ export default class Flow<P extends Player> {
     if (this.type === 'action' || this.type === 'parallel') return this;
   }
 
-  actionNeeded(player?: P): {step?: string, prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
+  actionNeeded(player?: Player): {
+    step?: string,
+    prompt?: string,
+    actions: FollowUp<P>[],
+    skipIfOnlyOne: boolean,
+    expand: boolean
+  } | undefined {
     return this.currentProcessor()?.actionNeeded(player);
   }
 
@@ -205,7 +213,7 @@ export default class Flow<P extends Player> {
     } else if (typeof step === 'string') {
       result = step;
     } else if (step instanceof Flow) {
-      if (step.type === 'action' && !step.position) return; // awaiting action
+      if ('awaitingAction' in step && (step as ActionStep<P>).awaitingAction()) return; // awaiting action
       result = step.playOneStep();
     }
 
@@ -271,8 +279,8 @@ export default class Flow<P extends Player> {
   }
 
   // override return all subflows
-  allSteps(): FlowDefinition<P> {
-    return this.block ?? null;
+  allSteps(): FlowDefinition<P> | undefined {
+    return this.block;
   }
 
   toString() {

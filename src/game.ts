@@ -16,7 +16,7 @@ import type { ElementClass } from './board/element.js';
 import type { FlowDefinition } from './flow/flow.js';
 import type { PlayerPositionState, GameUpdate } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
-import type { Argument } from './action/action.js';
+import type { Argument, FollowUp } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
 
 // find all non-method non-internal attr's
@@ -30,19 +30,19 @@ export type PlayerAttributes<T extends Player> = {
 // a Move is a request from a particular Player to perform a certain Action with supplied args
 export type Move<P extends Player> = {
   player: P,
-  action: string,
+  name: string,
   args: Record<string, Argument<P>>
 };
 
 export type PendingMove<P extends Player> = {
-  action: string,
+  name: string,
   prompt?: string,
   args: Record<string, Argument<P>>,
   selections: ResolvedSelection<P>[],
 };
 
 export type SerializedMove = {
-  action: string,
+  name: string,
   args: Record<string, SerializedArg>
 }
 
@@ -178,14 +178,57 @@ export default class Game<P extends Player, B extends Board<P>> {
   /**
    * action functions
    */
+
+  /**
+   * Create an {@link Action}. An action is a single move that a player can
+   * take. Some actions require choices, sometimes several, before they can be
+   * executed. Some don't have any choices, like if a player can simply
+   * 'pass'. What defines where one actions ends and another begins is how much
+   * you as a player can decide before you "commit". For example, in chess you
+   * select a piece to move and then a place to put it. These are a single move,
+   * not separate. (Unless playing touch-move, which is rarely done in digital
+   * chess.) In hearts, you pass 3 cards to another players. These are a single
+   * move, not 3. You can change your mind as you select the cards, rather than
+   * have to commit to each one. Similarly, other players do not see any
+   * information about your choices until you actually commit the enture move.
+   *
+   * This function is called for each action in the game `actions` you define in
+   * {@link createGame}. The actions is initially declared with only a name,
+   * prompt and condition. Further information is added to the action by chaining
+   * methods that add choices and behaviour. See (@link Action) for more.
+   *
+   * @param definition.prompt - The prompt that will appear for the player to
+   * explain what the action does. Further prompts can be defined for each choice
+   * they subsequently make to complete the action.
+   *
+   * @param definition.condition - A function returning a boolean that determines
+   * whether the action is currently allowed. Note that the choices you define for
+   * your action will further determine if the action is allowed. E.g. if you have
+   * a play card action and you add a choice for cards in your hand, Boardzilla
+   * will automatically disallow this action if there are no cards in your hand
+   * based on the face that there are no valid choices to complete the action. YOu
+   * do not need to specify a `condition` for these types of limitations.
+   *
+   * @example
+   * action({
+   *   prompt: 'Flip one of your cards'
+   * }).chooseOnBoard({
+   *   choices: board.find(Card, {mine: true})
+   * }).do(
+   *   card => card.hideFromAll()
+   * )
+   *
+   * @category Actions
+   */
   action(definition: {
     prompt?: string,
-    condition?: Action<P>['_cfg']['condition'],
+    condition?: Action<P>['condition'],
   }) {
-    return new Action<P>(definition);
+    return action<P>(definition);
   }
 
-  getAction(name: string, player: P): Action<P, any> & {name: string} {
+  /** @internal */
+  getAction(name: string, player: P) {
     if (this.godMode) {
       const godModeAction = this.godModeActions()[name];
       if (godModeAction) {
@@ -194,13 +237,14 @@ export default class Game<P extends Player, B extends Board<P>> {
       }
     }
     return this.inContextOfPlayer(player, () => {
-      const playerAction = this.actions[name](player);
-      if (!playerAction) throw Error(`No such action ${name}`);
-      playerAction.name = name;
-      return playerAction as Action<P, any> & {name: string};
+      const action = this.actions[name](player);
+      if (!action) throw Error(`No such action ${name}`);
+      action.name = name;
+      return action as Action<P, any> & {name: string};
     });
   }
 
+  /** @internal */
   godModeActions(): Record<string, Action<P, any>> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
     return {
@@ -236,6 +280,7 @@ export default class Game<P extends Player, B extends Board<P>> {
     };
   }
 
+  /** @internal */
   play() {
     if (this.phase !== 'started') throw Error('cannot call play until started');
     this.flow.play();
@@ -244,27 +289,36 @@ export default class Game<P extends Player, B extends Board<P>> {
   // given a player's move (minimum a selected action), attempts to process
   // it. if not, returns next selection for that player, plus any implied partial
   // moves
-  processMove({ player, action, args }: Move<P>): string | undefined {
-    let error: string | undefined;
+  /** @internal */
+  processMove({ player, name, args }: Move<P>): string | undefined {
+    let errorOrFollowups: string | undefined | FollowUp<P>[];
     return this.inContextOfPlayer(player, () => {
-      if (this.godMode && this.godModeActions()[action]) {
-        const godModeAction = this.godModeActions()[action];
-        error = godModeAction._process(args);
+      if (this.godMode && this.godModeActions()[name]) {
+        const godModeAction = this.godModeActions()[name];
+        errorOrFollowups = godModeAction._process(args);
       } else {
-        error = this.flow.processMove({
-          action,
+        errorOrFollowups = this.flow.processMove({
+          name,
           player: player.position,
           args
         });
       }
-      console.debug(`Move by player #${player.position} ${action}({${Object.entries(args).map(([k, v]) => k +': ' + humanizeArg(v)).join(', ')}}) ${error ? '❌ ' + error : '✅'}`);
-      if (error) return error;
+      console.debug(`Move by player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => k +': ' + humanizeArg(v)).join(', ')}}) ${typeof errorOrFollowups === 'string' ? '❌ ' + errorOrFollowups : ( errorOrFollowups ? errorOrFollowups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => k +': ' + humanizeArg(v)).join(', ')}})`) : '✅')}`);
+      if (typeof errorOrFollowups === 'string') return errorOrFollowups;
       // successful move
     });
   }
 
-  allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: string[]} {
-    const allowedActions: string[] = this.godMode ? Object.keys(this.godModeActions()) : [];
+  allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: {
+    name: string,
+    player?: P,
+    args?: Record<string, Argument<P>>
+  }[]} {
+    const allowedActions: {
+      name: string,
+      player?: P,
+      args?: Record<string, Argument<P>>
+    }[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
       actions: allowedActions,
       skipIfOnlyOne: true,
@@ -277,7 +331,11 @@ export default class Game<P extends Player, B extends Board<P>> {
         prompt: actionStep.prompt,
         skipIfOnlyOne: actionStep.skipIfOnlyOne,
         expand: actionStep.expand,
-        actions: allowedActions.concat(actionStep.actions?.filter(a => this.getAction(a, player).isPossible()) || [])
+        actions: allowedActions.concat(
+          actionStep.actions?.filter(
+            a => this.getAction(a.name, player).isPossible()
+          ).map(a => ({ ...a, player })) || []
+        )
       }
     }
     return {
@@ -287,31 +345,32 @@ export default class Game<P extends Player, B extends Board<P>> {
     };
   }
 
-  getPendingMoves(player: P, action?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
+  getPendingMoves(player: P, name?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;
-    if (!action) {
+    if (!name) {
       let possibleActions: string[] = [];
       let pendingMoves: PendingMove<P>[] = [];
       for (const action of actions) {
-        const playerAction = this.getAction(action, player);
-        let submoves = playerAction._getPendingMoves({});
+        const playerAction = this.getAction(action.name, player);
+        const args = action.args || {}
+        let submoves = playerAction._getPendingMoves(args);
         if (submoves !== undefined) {
-          possibleActions.push(action);
+          possibleActions.push(action.name);
           if (expand && submoves.length === 0) {
             submoves = [{
-              action,
+              name: action.name,
               prompt,
-              args: {},
+              args,
               selections: [
-                new Selection<P>('__action__', { prompt: playerAction.prompt, value: action }).resolve({})
+                new Selection<P>('__action__', { prompt: playerAction.prompt, value: action.name }).resolve({})
               ]
             }];
           }
           pendingMoves = pendingMoves.concat(submoves);
         } else {
-          console.debug(`Action ${action} not allowed because no valid selections exist`);
+          console.debug(`Action ${action.name} not allowed because no valid selections exist`);
         }
       }
       if (!possibleActions.length) return undefined;
@@ -321,17 +380,17 @@ export default class Game<P extends Player, B extends Board<P>> {
         step,
         prompt,
         moves: [{
-          action: '/',
+          name: '/',
           prompt,
           args: {},
           selections: [
-            new Selection<P>('__action__', { prompt, selectFromChoices: { choices: actions }}).resolve({})
+            new Selection<P>('__action__', { prompt, selectFromChoices: { choices: actions.map(a => a.name) }}).resolve({})
           ]
         }]
       };
 
     } else {
-      const moves = this.getAction(action, player)?._getPendingMoves(args || {});
+      const moves = this.getAction(name, player)?._getPendingMoves(args || {});
       if (moves) return { step, prompt, moves };
     }
   }
@@ -340,6 +399,9 @@ export default class Game<P extends Player, B extends Board<P>> {
     Object.entries(args || {}).forEach(([k, v]) => {
       message = message.replace(new RegExp(`\\{\\{${k}\\}\\}`), escapeArgument(v));
     })
+    const missingArgs = Array.from(message.matchAll(new RegExp(`\\{\\{(\\w+)\\}\\}`, 'g'))).map(([_, arg]) => arg);
+    if (missingArgs.length) throw Error(`All substitution strings must be specified in 2nd parameter. Missing: ${missingArgs.join('; ')}`);
+
     this.messages.push({body: message});
   }
 }

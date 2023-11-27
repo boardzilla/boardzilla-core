@@ -30,7 +30,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
 
   // closure wrapper for super's methods that will setPosition temporarily to a
   // specific player and pretend to be a normal flow with just one subflow
-  withPlayer<T extends any>(value: number, fn: () => T, mutate=false): T {
+  withPlayer<T>(value: number, fn: () => T, mutate=false): T {
     this.value = value;
     this.setPosition(this.position);
     const result = fn();
@@ -97,10 +97,10 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
     return this.value >= 0 && this.value < this.getPlayers().length ? this.block : undefined;
   }
 
-  actionNeeded(player?: P): {step?: string, prompt?: string, actions: string[], skipIfOnlyOne: boolean, expand: boolean} | undefined {
-    if (player && this.getPlayers().includes(player)) {
-      return this.withPlayer(this.getPlayers().indexOf(player), () => super.actionNeeded(player));
-    };
+  actionNeeded(player?: Player) {
+    if (player && this.getPlayers().includes(player as P)) {
+      return this.withPlayer(this.getPlayers().indexOf(player as P), () => super.actionNeeded(player));
+    }
   }
 
   processMove(move: Exclude<ActionStepPosition<P>, null>): string | undefined {

@@ -87,7 +87,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       for (let i = 0; i !== move.data.length; i++) {
         error ||= game.processMove({
           player: game.players.atPosition(move.position)!,
-          action: move.data[i].action,
+          name: move.data[i].name,
           args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, game)]))
         });
         //console.timeLog('processMove', 'process');

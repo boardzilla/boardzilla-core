@@ -101,9 +101,9 @@ const ActionForm = ({ move, stepName, onSubmit }: {
 
   return (
     <form
-      id={move.action}
+      id={move.name}
       onSubmit={e => onSubmitForm(e)}
-      className={`action ${move.action}`}
+      className={`action ${move.name}`}
     >
       {/** move.prompt && move.selections.some(s => s.type !== 'board') && <span className="prompt">{move.prompt}</span> */}
 
