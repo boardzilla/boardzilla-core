@@ -156,7 +156,7 @@ export default () => {
           height: 100
         })
       }
-      (window.document.childNodes[0] as HTMLHtmlElement).style.fontSize = rem + 'px';
+      window.document.documentElement.style.fontSize = rem + 'px';
     }
     window.addEventListener('resize', resize);
     resize();
