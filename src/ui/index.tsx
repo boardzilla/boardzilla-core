@@ -200,9 +200,9 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       if (moves[0].selections[0].confirm) {
         // a confirm was added tho, so don't skip that. convert to confirm prompt
         // TODO: distinguish static from arg-taking? static can probably be skipped
+        pendingMoves!.moves[0].args[pendingMoves!.moves[0].selections[0].name] = arg;
         pendingMoves!.moves[0].selections[0].name = '__confirm__';
         pendingMoves!.moves[0].selections[0].type = 'button';
-        pendingMoves!.moves[0].args[pendingMoves!.moves[0].selections[0].name] = arg;
         break;
       }
 
@@ -328,10 +328,10 @@ export type SetupComponentProps = {
   updateKey: (key: string, value: any) => void
 }
 
-export const render = (setup: SetupFunction, { settings, breakpoints, layout }: {
+export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, { settings, breakpoints, layout }: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   breakpoints?: (aspectRatio: number) => string,
-  layout?: (board: Board, breakpoint: string) => void
+  layout?: (board: B, breakpoint: string) => void
 }): void => {
   const state = gameStore.getState();
   const setupGame: SetupFunction = (state) => {

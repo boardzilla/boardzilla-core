@@ -170,7 +170,7 @@ export default () => {
       `\n⮕ ${typeof m === 'string' ? m :
         `${m.name}({${
           Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')
-        }}) ? ${m.selections ? m.selections[0].toString() : 'no choices'}`
+        }}) ? ${m.selections?.length ? m.selections[0].toString() : 'no choices'}`
       }`
     )).join('') || ' none')
   );

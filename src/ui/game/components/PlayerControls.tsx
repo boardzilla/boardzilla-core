@@ -38,7 +38,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
 
       {boardPrompt && <div className="prompt">{boardPrompt}</div>}
 
-      {moves.map(pendingMove => <ActionForm key={pendingMove.name + pendingMove.selections[0].prompt} move={pendingMove} stepName={name} onSubmit={onSubmit}/>)}
+      {moves.map(pendingMove => <ActionForm key={pendingMove.name + pendingMove.selections[0]?.prompt} move={pendingMove} stepName={name} onSubmit={onSubmit}/>)}
 
       {(move || selected.length > 0 || name === 'disambiguate-board-selection') && <button onClick={() => onSubmit()}>Cancel</button>}
     </div>

@@ -94,8 +94,8 @@ const ActionForm = ({ move, stepName, onSubmit }: {
     }
 
     let confirm = 'Confirm';
-    let args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
-    if (move.selections[0].confirm) {
+    const args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
+    if (move.selections[0]?.confirm) {
       confirm = move.selections[0].confirm[0];
       Object.assign(args, typeof move.selections[0].confirm[1] === 'function' ? move.selections[0].confirm[1](args) : move.selections[0].confirm[1])
     }
@@ -110,7 +110,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
     >
       {/** move.prompt && move.selections.some(s => s.type !== 'board') && <span className="prompt">{move.prompt}</span> */}
 
-      {move.selections.map((s: ResolvedSelection<Player>) => (
+      {move.selections.filter(s => s.name !== '__confirm__').map((s: ResolvedSelection<Player>) => (
         <Selection
           key={s.name}
           value={allArgs[s.name]}

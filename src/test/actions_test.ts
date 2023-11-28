@@ -4,9 +4,11 @@ import chai from 'chai';
 import spies from 'chai-spies';
 
 import { action, Action } from '../action/index.js';
+import Player from '../player/player.js';
 
 chai.use(spies);
 const { expect } = chai;
+const player = new Player();
 
 describe('Actions', () => {
   let testAction: Action<any>;
@@ -26,7 +28,7 @@ describe('Actions', () => {
   });
 
   it('returns moves', () => {
-    const error = testAction._process({});
+    const error = testAction._process(player, {});
     expect(error).to.not.be.undefined;
     const moves = testAction._getPendingMoves({});
     expect(moves![0].selections[0].type).to.equal('number');
@@ -35,7 +37,7 @@ describe('Actions', () => {
   });
 
   it('resolves dependant selections', () => {
-    const error = testAction._process({n: 1});
+    const error = testAction._process(player, {n: 1});
     expect(error).to.not.be.undefined;
     const moves = testAction._getPendingMoves({n: 1});
     expect(moves![0].selections[0].type).to.equal('number');
@@ -44,7 +46,7 @@ describe('Actions', () => {
   });
 
   it('processes', () => {
-    testAction._process({n: 1, m: 2});
+    testAction._process(player, {n: 1, m: 2});
     expect(actionSpy).to.have.been.called.with({n: 1, m: 2});
   });
 

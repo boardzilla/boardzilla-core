@@ -299,7 +299,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[name]) {
         const godModeAction = this.godModeActions()[name];
-        errorOrFollowups = godModeAction._process(args);
+        errorOrFollowups = godModeAction._process(player, args);
       } else {
         errorOrFollowups = this.flow.processMove({
           name,

@@ -773,7 +773,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    */
 
   /** @internal */
-  _ui: ElementUI<GameElement> = {
+  _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
   }

@@ -8,6 +8,7 @@ import type {
   ElementContext,
   Box,
   Vector,
+  ElementUI,
 } from './element.js';
 import type Player from '../player/player.js';
 
@@ -74,10 +75,10 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
 
   // UI
 
-  _ui: GameElement<P>['_ui'] & {
+  _ui: ElementUI<this> & {
     breakpoint?: string,
     breakpoints?: (aspectRatio: number) => string;
-    setupLayout?: (board: Board<P>, breakpoint: string) => void;
+    setupLayout?: (board: B, breakpoint: string) => void;
     layoutsSet?: boolean;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
@@ -110,7 +111,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     return this._ui.breakpoints && this._ui.breakpoints(aspectRatio) || '_default';
   }
 
-  applyLayouts(force=false) {
+  applyLayouts(this: B, force=false) {
     if (!this._ui.breakpoint) this.setBreakpoint('_default');
     if (!this._ui.layoutsSet) {
       this.resetUI();
