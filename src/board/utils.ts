@@ -1,10 +1,9 @@
 import { GameElement, ElementCollection } from './index.js';
 
-import type { Player } from '../player/index.js';
 import type { Box, Vector } from './element.js';
 
-export function union<P extends Player>(...queries: (GameElement<P> | ElementCollection<P, GameElement<P>> | undefined)[]): ElementCollection<P, GameElement<P>> {
-  let c = new ElementCollection<P, GameElement<P>>();
+export function union(...queries: (GameElement | ElementCollection | undefined)[]): ElementCollection {
+  let c = new ElementCollection();
   for (const q of queries) {
     if (q) {
       if ('forEach' in q) {
@@ -13,7 +12,7 @@ export function union<P extends Player>(...queries: (GameElement<P> | ElementCol
         c.push(q);
       }
     }
-  };
+  }
   return c;
 }
 

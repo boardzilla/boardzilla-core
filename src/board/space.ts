@@ -10,30 +10,30 @@ import type { ElementClass, ElementAttributes } from './element.js';
 import type { ElementFinder } from './element-collection.js';
 import type Player from '../player/player.js';
 
-export type ElementEventHandler<P extends Player, T extends GameElement<P>> = {callback: (el: T) => void} & Record<any, any>;
+export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => void} & Record<any, any>;
 
 /**
  * Spaces are areas of the board. The spaces of your board are declared during
  * setup in {@link createGame} and never change during play.
  * @category Board
  */
-export default class Space<P extends Player, B extends Board<P> = Board<P>> extends GameElement<P, B> {
+export default class Space<P extends Player<P, B> = any, B extends Board<P, B> = any> extends GameElement<P, B> {
   _eventHandlers: {
-    enter: ElementEventHandler<P, GameElement<P>>[],
+    enter: ElementEventHandler<GameElement>[],
   } = { enter: [] };
 
   /** internal */
   isSpace() { return true; }
 
   /** internal */
-  createElement<T extends GameElement<P>>(className: ElementClass<P, T>, name: string, attrs?: ElementAttributes<P, T>): T {
+  createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
     const el = super.createElement(className, name, attrs);
     this.triggerEvent("enter", el);
     return el;
   }
 
   /** internal */
-  addEventHandler<T extends GameElement<P>>(type: "enter", handler: ElementEventHandler<P, T>) {
+  addEventHandler<T extends GameElement>(type: "enter", handler: ElementEventHandler<T>) {
     this._eventHandlers[type].push(handler);
   }
 
@@ -49,12 +49,12 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    * @example
    * deck.onEnter(Card, card => card.hideFromAll()) // card placed in the deck are automatically turned face down
    */
-  onEnter<T extends GameElement<P>>(type: ElementClass<P, T>, callback: (el: T) => void) {
+  onEnter<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void) {
     this.addEventHandler<T>("enter", { callback, type });
   }
 
   /** internal */
-  triggerEvent(event: "enter", entering: GameElement<P>) {
+  triggerEvent(event: "enter", entering: GameElement) {
     for (const handler of this._eventHandlers[event]) {
       if (event === 'enter' && !(entering instanceof handler.type)) continue;
       handler.callback(entering);
@@ -70,11 +70,11 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    * @param distance - Add a custom distance to this connection for the purposes
    * of distance-measuring.
    */
-  connectTo(space: Space<P>, distance: number = 1) {
+  connectTo(space: Space<P, B>, distance: number = 1) {
     if (!this._t.parent || this._t.parent !== space._t.parent) throw Error("Cannot connect two spaces that are not in the same parent space");
 
     if (!this._t.parent._t.graph) {
-      this._t.parent._t.graph = new graphology.UndirectedGraph<{space: Space<P>}, {distance: number}>();
+      this._t.parent._t.graph = new graphology.UndirectedGraph<{space: Space<P, B>}, {distance: number}>();
     }
     const graph = this._t.parent._t.graph;
     if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {space: this});
@@ -87,7 +87,7 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    * If this space is adjacent to another space
    * @category Structure
    */
-  adjacentTo(space: Space<P>) {
+  adjacentTo(space: Space<P, B>) {
     if (!this._t.parent?._t.graph) return false;
     return this._t.parent!._t.graph.areNeighbors(this._t.id, space._t.id);
   }
@@ -101,7 +101,7 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    * @returns shortest distance measured by the `distance` values added to each
    * connection in {@link connectTo}
    */
-  distanceTo(space: Space<P>) {
+  distanceTo(space: Space<P, B>) {
     if (!this._t.parent?._t.graph) return undefined;
     try {
       const graph = this._t.parent._t.graph;
@@ -121,20 +121,20 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    * GameElement#all}
    * @category Queries
    */
-  adjacencies<F extends Space<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F>;
-  adjacencies(className?: ElementFinder<P, Space<P>>, ...finders: ElementFinder<P, Space<P>>[]): ElementCollection<P, Space<P>>;
-  adjacencies<F extends Space<P>>(className?: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): ElementCollection<P, F> | ElementCollection<P, Space<P>> {
-    let classToSearch: ElementClass<P, Space<P>> = Space<P>;
+  adjacencies<F extends Space<P, B>>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
+  adjacencies(className?: ElementFinder<Space<P, B>>, ...finders: ElementFinder<Space<P, B>>[]): ElementCollection<Space<P, B>>;
+  adjacencies<F extends Space<P, B>>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<Space<P, B>> {
+    let classToSearch: ElementClass<Space<P, B>> = Space<P, B>;
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
     } else {
       classToSearch = className;
     }
-    if (!this._t.parent?._t.graph) return new ElementCollection<P, Space<P>>();
-    return new ElementCollection<P, Space<P>>(...this._t.parent?._t.graph.mapNeighbors(
+    if (!this._t.parent?._t.graph) return new ElementCollection<Space<P, B>>();
+    return new ElementCollection<Space<P, B>>(...this._t.parent?._t.graph.mapNeighbors(
       this._t.id,
       node => this._t.parent!._t.graph!.getNodeAttribute(node, 'space')
-    ) as Space<P>[]).all(classToSearch, ...finders)
+    ) as Space<P, B>[]).all(classToSearch, ...finders)
   }
 
   /**
@@ -142,10 +142,10 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    * the same parameters as {@link GameElement#first}
    * @category Queries
    */
-  closest<F extends Space<P>>(className: ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | undefined;
-  closest(className?: ElementFinder<P, Space<P>>, ...finders: ElementFinder<P, Space<P>>[]): Space<P> | undefined;
-  closest<F extends Space<P>>(className?: ElementFinder<P, F> | ElementClass<P, F>, ...finders: ElementFinder<P, F>[]): F | Space<P> | undefined {
-    let classToSearch: ElementClass<P, Space<P>> = Space<P>;
+  closest<F extends Space<P, B>>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
+  closest(className?: ElementFinder<Space<P, B>>, ...finders: ElementFinder<Space<P, B>>[]): Space<P, B> | undefined;
+  closest<F extends Space<P, B>>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | Space<P, B> | undefined {
+    let classToSearch: ElementClass<Space<P, B>> = Space<P, B>;
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
     } else {
@@ -166,7 +166,7 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
    * @category Queries
    */
   withinDistance(distance: number) {
-    const c = new ElementCollection<P, Space<P>>();
+    const c = new ElementCollection<Space<P, B>>();
     try {
       const graph = this._t.parent!._t.graph!;
       bfsFromNode(graph, this._t.id, node => {
@@ -183,21 +183,21 @@ export default class Space<P extends Player, B extends Board<P> = Board<P>> exte
   }
 
   /** internal */
-  _otherFinder<T extends GameElement<P>>(finders: ElementFinder<P, T>[]): ElementFinder<P, GameElement<P>> {
-    let otherFinder: ElementFinder<P, GameElement<P>> = el => el !== (this as GameElement<P>);
+  _otherFinder<T extends GameElement>(finders: ElementFinder<T>[]): ElementFinder<GameElement> {
+    let otherFinder: ElementFinder<GameElement> = el => el !== (this as GameElement);
     for (const finder of finders) {
       if (typeof finder === 'object') {
         if (finder.adjacent !== undefined) {
           const adj = finder.adjacent;
-          otherFinder = (el: Space<P>) => this.adjacentTo(el) === adj && el !== (this as GameElement<P>)
+          otherFinder = (el: Space<P, B>) => this.adjacentTo(el) === adj && el !== (this as GameElement)
           delete(finder.adjacent);
         }
         if (finder.withinDistance !== undefined) {
           const distance = finder.withinDistance;
-          otherFinder = (el: Space<P>) => {
+          otherFinder = (el: Space<P, B>) => {
             const d = this.distanceTo(el);
             if (d === undefined) return false;
-            return d <= distance && el !== (this as GameElement<P>);
+            return d <= distance && el !== (this as GameElement);
           }
           delete(finder.withinDistance);
         }

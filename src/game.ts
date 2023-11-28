@@ -24,7 +24,7 @@ import type { ResolvedSelection } from './action/selection.js';
 export type PlayerAttributes<T extends Player> = {
   [
     K in keyof InstanceType<{new(...args: any[]): T}>
-      as InstanceType<{new(...args: any[]): T}>[K] extends (...args: unknown[]) => unknown ? never : (K extends '_players' ? never : K)
+      as InstanceType<{new(...args: any[]): T}>[K] extends (...args: unknown[]) => unknown ? never : (K extends '_players' | 'board' | 'game' ? never : K)
   ]: InstanceType<{new(...args: any[]): T}>[K]
 }
 
@@ -52,7 +52,7 @@ export type Message = {
   body: string
 }
 
-export default class Game<P extends Player, B extends Board<P>> {
+export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = any> {
   flow: Flow<P>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
   board: B;
@@ -62,10 +62,10 @@ export default class Game<P extends Player, B extends Board<P>> {
   rseed: string;
   random: () => number;
   messages: Message[] = [];
-  godMode = true;
+  godMode = false;
   winner: P[] = [];
 
-  constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<P, B>, elementClasses: ElementClass<P, GameElement<P>>[] = []) {
+  constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
     this.board = new boardClass({ game: this, classRegistry: [GameElement, Space, Piece, ...elementClasses]})
     this.players = new PlayerCollection<P>();
     this.players.className = playerClass;
@@ -221,11 +221,11 @@ export default class Game<P extends Player, B extends Board<P>> {
    *
    * @category Actions
    */
-  action(definition: {
+  action<A extends Record<string, Argument<P>> = Record<string, never>>(definition: {
     prompt?: string,
-    condition?: Action<P>['condition'],
+    condition?: Action<P, A>['condition'],
   }) {
-    return action<P>(definition);
+    return action<P, A>(definition);
   }
 
   /** @internal */
@@ -242,6 +242,7 @@ export default class Game<P extends Player, B extends Board<P>> {
 
     return this.inContextOfPlayer(player, () => {
       const action = this.actions[name](player);
+      action.game = this;
       action.name = name;
       return action as Action<P, any> & {name: string};
     });
@@ -254,13 +255,13 @@ export default class Game<P extends Player, B extends Board<P>> {
       _godMove: action<P>({
         prompt: "Move",
       }).move(
-        'piece', this.board.all(Piece<P>),
-        'into', this.board.all(GameElement<P>)
+        'piece', this.board.all(Piece<P, B>),
+        'into', this.board.all(GameElement<P, B>)
       ),
       _godEdit: action<P>({
         prompt: "Change",
       })
-        .chooseOnBoard('element', this.board.all(GameElement))
+        .chooseOnBoard('element', this.board.all(GameElement<P, B>))
         .chooseFrom<'property', string>(
           'property',
           ({ element }) => Object.keys(element).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'board', 'game', 'pile', 'mine'].includes(a)),

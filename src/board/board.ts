@@ -11,8 +11,8 @@ import type {
 } from './element.js';
 import type Player from '../player/player.js';
 
-type ActionLayout<P extends Player> = {
-  element: GameElement<P> | (() => GameElement<P>),
+type ActionLayout = {
+  element: GameElement | (() => GameElement),
   top?: number,
   bottom?: number,
   left?: number,
@@ -22,16 +22,16 @@ type ActionLayout<P extends Player> = {
 };
 
 /** @category Board */
-export default class Board<P extends Player> extends Space<P> {
+export default class Board<P extends Player<P, B> = any, B extends Board<P, B> = any> extends Space<P, B> {
   pile: GameElement<P>;
-  constructor(ctx: Partial<ElementContext<P>>) {
+  constructor(ctx: Partial<ElementContext<P, B>>) {
     super({ ...ctx, trackMovement: false });
-    this.board = this;
-    this._ctx.removed = this.createElement(Space, 'removed'),
+    this.board = this as unknown as B; // ???
+    this._ctx.removed = this.createElement(Space<P, B>, 'removed'),
     this.pile = this._ctx.removed;
   }
 
-  registerClasses(...classList: ElementClass<P, GameElement<P>>[]) {
+  registerClasses(...classList: ElementClass[]) {
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
   }
 
@@ -81,7 +81,7 @@ export default class Board<P extends Player> extends Space<P> {
     layoutsSet?: boolean;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
-    stepLayouts: Record<string, ActionLayout<P>>;
+    stepLayouts: Record<string, ActionLayout>;
     previousStyles: Record<any, Box>;
     dragOffset: Record<any, Vector>;
   } = {
@@ -130,12 +130,12 @@ export default class Board<P extends Player> extends Space<P> {
     return super.applyLayouts(force);
   }
 
-  layoutStep(step: string, attributes: ActionLayout<P>) {
+  layoutStep(step: string, attributes: ActionLayout) {
     if (step !== 'out-of-turn' && !this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
     this._ui.stepLayouts["step:" + step] = attributes;
   }
 
-  layoutAction(action: string, attributes: ActionLayout<P>) {
+  layoutAction(action: string, attributes: ActionLayout) {
     this._ui.stepLayouts["action:" + action] = attributes;
   }
 

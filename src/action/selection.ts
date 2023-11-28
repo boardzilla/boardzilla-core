@@ -308,8 +308,8 @@ export default class Selection<P extends Player> {
     }) as ResolvedSelection<P>;
   }
 
-  toString() {
+  toString(): string {
     if (!this.isResolved()) return `unresolved selection ${this.type}`;
-    return `${this.type === 'board' ? `click ${this.boardChoices![0]?.constructor.name || 'board element'}` : `pick ${this.type}`}${(this.choices || this.boardChoices) ? ` (${(this.choices || this.boardChoices)!.length} choices)` : ''}`
+    return `${this.type === 'board' ? `click ${this.boardChoices![0]?.constructor.name || 'board element'}` : `pick ${this.type}`}${(this.choices || this.boardChoices) ? ` (${(this.choices || this.boardChoices)!.length} choices)` : ''}`;
   }
 }

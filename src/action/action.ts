@@ -10,7 +10,7 @@ import type {
 } from './selection.js';
 import type { Piece } from '../board/index.js';
 import type { Player } from '../player/index.js';
-import type { PendingMove } from '../game.js';
+import type { default as Game, PendingMove } from '../game.js';
 
 export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | P;
 export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
@@ -63,6 +63,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   condition?: (() => boolean) | boolean;
   /** @internal */
   messages: {message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
+
+  game: Game;
 
   /** @internal */
   constructor({ prompt, condition }: {
@@ -181,7 +183,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * process this action with supplied args. returns error if any
    * @internal
    */
-  _process(args: Record<string, Argument<P>>): string | undefined | FollowUp<P>[] {
+  _process(player: P, args: Record<string, Argument<P>>): string | undefined | FollowUp<P>[] {
     // truncate invalid args - is this needed?
     let error: string | undefined = undefined;
     for (const selection of this.selections) {
@@ -199,6 +201,11 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     }
     if (pendingMoves.length) {
       return error || 'incomplete action';
+    }
+
+    for (const message of this.messages) {
+      const messageArgs = ((typeof message.args === 'function') ? message.args(args as A) : message.args);
+      this.game.message(message.message, {...args, player, ...messageArgs});
     }
 
     const followups: FollowUp<P>[] = [];

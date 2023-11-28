@@ -24,7 +24,7 @@ export default class Piece<P extends Player, B extends Board<P> = Board<P>> exte
    * @param options.fromBottom - Place the piece into a specific numbered position
    * counting from the last element
    */
-  putInto(to: GameElement<P>, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
+  putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
     if (to.isDescendantOf(this)) throw Error(`Cannot put ${this} into itself`);
     let pos: number = to._t.order === 'stacking' ? 0 : to._t.children.length;
     if (options?.position !== undefined) pos = options.position >= 0 ? options.position : to._t.children.length + options.position + 1;

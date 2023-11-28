@@ -26,6 +26,10 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     const player = new this.className(attrs);
     Object.assign(player, attrs, {_players: this});
     this.push(player);
+    if (this.game) {
+      player.game = this.game;
+      player.board = this.game.board;
+    }
   }
 
   /**

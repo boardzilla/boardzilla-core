@@ -52,17 +52,17 @@ type GameStore = {
     }[]
   }>; // pending moves on board
   prompt?: string; // prompt for choosing action if applicable
-  selected: GameElement<Player>[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
-  setSelected: (s: GameElement<Player>[]) => void;
+  selected: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
+  setSelected: (s: GameElement[]) => void;
   setAspectRatio: (a: number) => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
   dropSelections: UIMove[];
-  currentDrop?: GameElement<Player>;
-  setCurrentDrop: (el?: GameElement<Player>) => void;
-  zoomable?: GameElement<Player>;
-  setZoomable: (el?: GameElement<Player>) => void;
-  zoomElement?: GameElement<Player>;
+  currentDrop?: GameElement;
+  setCurrentDrop: (el?: GameElement) => void;
+  zoomable?: GameElement;
+  setZoomable: (el?: GameElement) => void;
+  zoomElement?: GameElement;
   setZoom: (zoom: boolean) => void;
 }
 
@@ -328,20 +328,20 @@ export type SetupComponentProps = {
   updateKey: (key: string, value: any) => void
 }
 
-export const render = <P extends Player, B extends Board<P>>(setup: SetupFunction<P, B>, { settings, breakpoints, layout }: {
+export const render = (setup: SetupFunction, { settings, breakpoints, layout }: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   breakpoints?: (aspectRatio: number) => string,
-  layout?: (board: B, breakpoint: string) => void
+  layout?: (board: Board, breakpoint: string) => void
 }): void => {
   const state = gameStore.getState();
-  const setupGame: SetupFunction<P, B> = (state) => {
+  const setupGame: SetupFunction = (state) => {
     const game = setup(state);
     game.board._ui.breakpoints = breakpoints;
     game.board._ui.setupLayout = layout;
     return game;
   }
   // we can anonymize Player class internally
-  state.setSetup(setupGame as unknown as SetupFunction<Player, Board<Player>>);
+  state.setSetup(setupGame);
   // state.setGame(setupGame({ players: [], settings: {} }) as unknown as Game<Player, Board<Player>>);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');

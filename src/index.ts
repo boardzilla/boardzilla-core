@@ -2,9 +2,7 @@ import Game from './game.js';
 import { Player } from './player/index.js';
 import { Board, Piece, Space, GameElement } from './board/index.js';
 
-import { action } from './action/index.js';
-
-export { union } from './board/index.js';
+export { Board, union } from './board/index.js';
 
 export {
   playerActions,
@@ -36,9 +34,7 @@ export {
 import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
 
-export const createBoardClass = <P extends Player>(_: {new(...a: any[]): P}) => Board<P>;
-
-export const createBoardClasses = <P extends Player, B extends Board<P>>(boardClass: ElementClass<P, B>) => {
+export const createBoardClasses = <P extends Player<P, B>, B extends Board<P, B>>() => {
   return {
     GameElement: GameElement<P, B>,
     Space: Space<P, B>,
@@ -46,7 +42,8 @@ export const createBoardClasses = <P extends Player, B extends Board<P>>(boardCl
   };
 };
 
-export type SetupFunction<P extends Player, B extends Board<P>> = (
+
+export type SetupFunction<P extends Player<P, B> = any, B extends Board<P, B> = any> = (
   state: SetupState<P> | GameState<P>,
 ) => Game<P, B>
 
@@ -76,9 +73,9 @@ export type SetupFunction<P extends Player, B extends Board<P>> = (
     - an instance of the `boardClass` above
     - the breakpoint string from your `breakpoints` function, or '_default' if none specified.
  */
-export const createGame = <P extends Player, B extends Board<P>>(
+export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
   playerClass: {new(...a: any[]): P},
-  boardClass: ElementClass<P, B>,
+  boardClass: ElementClass<B>,
   gameCreator: (game: Game<P, B>) => void
 ): SetupFunction<P, B> => (
   state: SetupState<P> | GameState<P>

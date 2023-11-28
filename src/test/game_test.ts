@@ -9,7 +9,7 @@ import {
   whileLoop,
   eachPlayer,
   everyPlayer,
-  createBoardClass,
+  Board,
   createBoardClasses,
   loop
 } from '../index.js';
@@ -25,17 +25,15 @@ describe('Game', () => {
     { name: 'Jin', color: 'purple', position: 4, tokens: 0, avatar: '', host: false, },
   ];
 
-  class TestPlayer extends Player {
+  class TestPlayer extends Player<TestPlayer, TestBoard> {
     tokens: number = 0;
   }
 
-  const Board = createBoardClass(TestPlayer);
-
-  class TestBoard extends Board {
+  class TestBoard extends Board<TestPlayer, TestBoard> {
     tokens: number = 0;
   }
 
-  const { Space, Piece } = createBoardClasses(TestBoard);
+  const { Space, Piece } = createBoardClasses<TestPlayer, TestBoard>();
 
   class Card extends Piece {
     suit: string;
