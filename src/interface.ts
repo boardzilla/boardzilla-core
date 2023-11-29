@@ -77,10 +77,9 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board._ctx.game;
-      const game = cachedGame || setup(previousState);
+      const game = cachedGame || setup(previousState, {trackMovement: true});
       game.players.setCurrent(previousState.currentPlayers),
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
-      game.trackMovement();
       game.messages = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
       let error = undefined;

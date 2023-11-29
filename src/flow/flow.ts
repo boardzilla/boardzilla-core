@@ -98,8 +98,13 @@ export default class Flow<P extends Player> {
     while (flow instanceof Flow) {
       if ('position' in flow && flow.position) {
         // want to remove
-        if (flow.type === 'action' && flow.position) {
-          const position = flow.position as ActionStepPosition<P>;
+        if (flow.type === 'action' && 'name' in flow.position) {
+          const position = flow.position as {
+            player: number,
+            name: string,
+            args: Record<string, Argument<P>>,
+            followups?: FollowUp<P>[]
+          };
           args[position!.name] = position!.args;
         }
         if ('value' in flow.position && flow.name) {

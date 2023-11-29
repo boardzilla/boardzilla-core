@@ -107,7 +107,7 @@ describe('Game', () => {
     expect(game.flow.branchJSON()).to.deep.equals([
       { type: 'sequence', position: null, sequence: 1 },
       { type: "loop", position: { index: 0 } },
-      { type: "action", position: null }
+      { type: "action", position: {players: undefined} }
     ]);
     const step = game.flow.actionNeeded();
     expect(step?.actions).to.deep.equal([{ name: 'addSome' }, { name: 'spend' }]);
@@ -246,7 +246,7 @@ describe('Game', () => {
       expect(game.flow.branchJSON()).to.deep.equals([
         { type: 'sequence', position: null, sequence: 1 },
         { type: 'loop', position: { index: 1 } },
-        { type: "action", position: null }
+        { type: "action", position: {players: undefined} }
       ]);
     });
     it('changes state', async () => {

@@ -10,7 +10,9 @@ export type ActionStepPosition<P extends Player> = {
   name: string,
   args: Record<string, Argument<P>>,
   followups?: FollowUp<P>[]
-} | null;
+} | {
+  players: number[]
+};
 
 export default class ActionStep<P extends Player> extends Flow<P> {
   players?: P | P[] | ((args: Record<string, any>) => P | P[]); // if restricted to a particular player list. otherwise uses current player
@@ -41,34 +43,34 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   reset() {
     const players = this.getPlayers();
     if (players) this.game.players.setCurrent(players);
-    this.setPosition(null);
+    this.setPosition({players});
   }
 
   getPlayers() {
     if (this.players) {
       const players = typeof this.players === 'function' ? this.players(this.flowStepArgs()) : this.players;
-      return players instanceof Array ? players : [players];
+      return (players instanceof Array ? players : [players]).map(p => p.position);
     }
   }
 
   awaitingAction() {
-    return !this.position || this.position.followups?.length;
+    return 'players' in this.position || this.position.followups?.length;
   }
 
   currentBlock() {
-    if (!this.position || this.position.followups) return;
-    const step = this.actions.find(a => a.name === this.position?.name)?.do;
+    if ('players' in this.position || this.position.followups) return;
+    const actionName = this.position.name;
+    const step = this.actions.find(a => a.name === actionName)?.do;
     if (step) return step;
   }
 
   allowedActions(): string[] {
-    return this.position?.followups?.length ? [this.position.followups[0].name] : this.position ? [] : this.actions.map(a => a.name);
+    return 'followups' in this.position && this.position.followups?.length ? [this.position.followups[0].name] : ('players' in this.position ? this.actions.map(a => a.name) : []);
   }
 
   actionNeeded(player: Player) {
-    if (!this.position) {
-      const players = this.getPlayers();
-      if (!player || !players || players.includes(player as P)) {
+    if ('players' in this.position) {
+      if (!player || !this.position.players || this.position.players.includes(player.position)) {
         return {
           prompt: this.prompt,
           step: this.name,
@@ -87,7 +89,11 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     }
   }
 
-  processMove(move: Exclude<ActionStepPosition<P>, null>): string | undefined {
+  processMove(move: {
+    player: number,
+    name: string,
+    args: Record<string, Argument<P>>,
+  }): string | undefined {
     if (!this.allowedActions().includes(move.name)) throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
     const game = this.game;
 
@@ -111,7 +117,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   toJSON(forPlayer=true) {
-    if (this.position) {
+    if (!('players' in this.position)) {
       const json: any = {
         player: this.position.player,
         name: this.position.name,
@@ -126,11 +132,12 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       }
       return json;
     }
-    return null;
+    return { players: this.getPlayers() };
   }
 
   fromJSON(position: any) {
-    return position ? {
+    if (!position) return {players: undefined};
+    return 'players' in position ? position : {
       ...position,
       args: deserializeObject(position.args ?? {}, this.game) as Record<string, Argument<P>>,
       followups: position.followups?.map((f: any) => ({
@@ -138,7 +145,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
         player: deserialize(f.player, this.game),
         args: deserializeObject(f.args ?? {}, this.game) as Record<string, Argument<P>>,
       }))
-    } : null;
+    };
   }
 
   allSteps() {

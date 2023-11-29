@@ -14,12 +14,12 @@ import type { UIMove } from '../../index.js';
 import type { Player } from '../../../player/index.js';
 //import type { DraggableData } from 'react-draggable';
 
-const elementAttributes = (el: GameElement<Player>) => {
-  return Object.fromEntries(Object.entries(el).filter(([key, val]) => (
-    !['_t', '_ctx', '_ui', 'name', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
+const elementAttributes = (el: GameElement) => {
+  return Object.assign({'data-player': el.player?.position}, Object.fromEntries(Object.entries(el).filter(([key, val]) => (
+    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
   )).map(([key, val]) => (
     [`data-${key.toLowerCase()}`, serialize(val)]
-  )));
+  ))));
 }
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{humanizeArg(el)}</div>;

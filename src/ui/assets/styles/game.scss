@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Agbalumo&family=Kanit&display=swap');
-
 @keyframes fadeIn {
   0% { opacity: 0; filter: blur(2em); transform: translate(-40vw, 0) }
   50% { opacity: 0; filter: blur(2em); transform: translate(-20vw, 0) }
   100% { opacity: 1; filter: none; transform: none }
 }
+
+html, body { height: 100% }
 
 @layer game {
 
@@ -16,7 +16,7 @@
   body {
     margin: 0;
     padding: 0;
-    font-family: Kanit;
+    font-family: 'DM Sans Variable';
     > #root {
       position: absolute;
       width: 100%;
@@ -24,8 +24,20 @@
     }
   }
 
+  #background {
+    background-image: url(../grain.jpg);
+    background-size: cover;
+    filter:  brightness(1.5) contrast(0.3);
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: -10;
+  }
 
   #game {
+    margin: auto;
     #play-area {
       overflow: hidden;
       position: relative;
@@ -207,7 +219,7 @@
         position: relative;
         select {
           appearance: none;
-          font-family: Kanit;
+          font-family: 'DM Sans Variable';
           text-align-last: center;
           text-align: center;
           font-size: 1.5em;
@@ -228,7 +240,7 @@
           color: white;
           position: absolute;
           font-size: 1.4em;
-          top: 28%;
+          top: 16%;
           right: 4%;
           transition: transform .2s;
           &:hover {
@@ -258,7 +270,7 @@
       flex: 1;
       font-size: 1.3em;
       input, select {
-        font-family: Kanit;
+        font-family: 'DM Sans Variable';
         font-size: 1em;
         padding: 0em 0.5em;
         margin: 0.1em 0;
@@ -277,7 +289,7 @@
     }
 
     input.start {
-      font-family: Kanit;
+      font-family: 'DM Sans Variable';
       border-radius: .2em;
       border-width: 0;
       text-shadow: .1em .1em 0 #fff5;

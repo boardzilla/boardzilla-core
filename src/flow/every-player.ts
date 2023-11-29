@@ -4,6 +4,7 @@ import { FlowControl, Do } from './enums.js';
 import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
 import type { ActionStepPosition } from './action-step.js';
 import type { Player } from '../player/index.js';
+import { Argument } from '../action/action.js';
 
 export default class EveryPlayer<P extends Player> extends Flow<P> {
   position: FlowBranchJSON[][];
@@ -103,7 +104,11 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
     }
   }
 
-  processMove(move: Exclude<ActionStepPosition<P>, null>): string | undefined {
+  processMove(move: {
+    player: number,
+    name: string,
+    args: Record<string, Argument<P>>,
+  }): string | undefined {
     const player = this.getPlayers().findIndex(p => p.position === move.player);
     if (player < 0) throw Error(`Cannot process action from ${move.player}`);
     return this.withPlayer(player, () => {

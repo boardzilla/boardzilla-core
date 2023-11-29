@@ -128,20 +128,20 @@ describe('Flow', () => {
     testFlow.setBranchFromJSON([
       { type: 'sequence', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: null }
+      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
     ]);
     testFlow.playOneStep();
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: "sequence", name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: null }
+      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
     ]);
   });
   it('receives action', () => {
     testFlow.setBranchFromJSON([
       { type: "sequence", name: "test", sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: null }
+      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
     ]);
     testFlow.processMove({ name: 'play', args: {a: 'violin'}, player: 1 });
     expect(actionSpy).to.have.been.called();
@@ -155,7 +155,7 @@ describe('Flow', () => {
     testFlow.setBranchFromJSON([
       { type: 'sequence', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: null }
+      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
     ]);
     expect(() => testFlow.processMove({ name: 'play', args: {a: 'violin'}, player: 2 })).to.throw;
   });
@@ -176,7 +176,7 @@ describe('Flow', () => {
     testFlow.setBranchFromJSON([
       { type: 'sequence', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: null }
+      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
     ]);
     testFlow.processMove({ name: 'pass', args: {}, player: 1 });
     expect(testFlow.branchJSON()).to.deep.equals([
@@ -190,7 +190,7 @@ describe('Flow', () => {
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: 'sequence', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: null }
+      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
     ]);
     testFlow.processMove({ name: 'pass', args: {}, player: 1 });
     testFlow.play();

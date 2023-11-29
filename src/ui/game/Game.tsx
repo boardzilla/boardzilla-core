@@ -183,10 +183,11 @@ export default () => {
         game.board._ui.breakpoint,
         step
       )}
-      style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%' }}
+      style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%', top: 50 - dimensions.height/2 + '%' }}
       onClick={() => game.phase === 'finished' && setVictoryMessageDismissed(true)}
     >
       <audio ref={clickAudio} src={click} id="click"/>
+      <div id="background"/>
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         <Element
           element={game.board}
