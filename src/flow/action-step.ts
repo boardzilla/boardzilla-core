@@ -5,12 +5,12 @@ import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
 import type { Argument, FollowUp } from '../action/action.js';
 
-export type ActionStepPosition<P extends Player> = {
+export type ActionStepPosition<P extends Player> = { // turn taken by `player`
   player: number,
   name: string,
   args: Record<string, Argument<P>>,
   followups?: FollowUp<P>[]
-} | {
+} | { // waiting for `players`
   players: number[]
 };
 
@@ -54,11 +54,11 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   awaitingAction() {
-    return 'players' in this.position || this.position.followups?.length;
+    return !('player' in this.position) || this.position.followups?.length;
   }
 
   currentBlock() {
-    if ('players' in this.position || this.position.followups) return;
+    if (!('player' in this.position) || this.position.followups) return;
     const actionName = this.position.name;
     const step = this.actions.find(a => a.name === actionName)?.do;
     if (step) return step;
@@ -69,7 +69,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   actionNeeded(player: Player) {
-    if ('players' in this.position) {
+    if (!('player' in this.position)) {
       if (!player || !this.position.players || this.position.players.includes(player.position)) {
         return {
           prompt: this.prompt,
@@ -117,7 +117,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   toJSON(forPlayer=true) {
-    if (!('players' in this.position)) {
+    if ('player' in this.position) {
       const json: any = {
         player: this.position.player,
         name: this.position.name,
@@ -137,7 +137,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
   fromJSON(position: any) {
     if (!position) return {players: undefined};
-    return 'players' in position ? position : {
+    return !('player' in position) ? position : {
       ...position,
       args: deserializeObject(position.args ?? {}, this.game) as Record<string, Argument<P>>,
       followups: position.followups?.map((f: any) => ({
