@@ -4,6 +4,7 @@
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
+    "clean": "rm -rf dist docs",
     "build": "tsc && node esbuild.mjs && rm -rf dist/test",
     "prepack": "yarn build",
     "build:test": "tsc && node esbuild.mjs",
@@ -19,9 +20,6 @@
     "dist/**/*"
   ],
   "types": "dist/index.d.ts",
-  "sideEffects": [
-    "./src/ui/assets/styles/game.scss"
-  ],
   "dependencies": {
     "classnames": "^2.3.1",
     "graphology": "^0.25.4",
@@ -49,7 +47,6 @@
     "chai": "^4.3.8",
     "chai-spies": "^1.0.0",
     "esbuild": "^0.19.5",
-    "esbuild-sass-plugin": "^2.16.0",
     "eslint": "^8.53.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "mocha": "^10.2.0",
