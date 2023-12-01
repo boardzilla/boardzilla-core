@@ -3,6 +3,7 @@ import {sassPlugin} from 'esbuild-sass-plugin'
 
 await esbuild.build({
   entryPoints: ['./src/ui/assets'],
+  assetNames: '[name]',
   bundle: true,
   format: 'esm',
   outfile: 'dist/ui/assets/index.js',
