@@ -6,8 +6,9 @@ await esbuild.build({
   bundle: true,
   format: 'esm',
   outfile: 'dist/ui/assets/index.js',
-  loader: { '.ogg': 'dataurl' },
-  plugins: [sassPlugin({
-    "type": "style"
-  })],
+  loader: {
+    '.ogg': 'dataurl',
+    '.jpg': 'file',
+  },
+  plugins: [sassPlugin()],
 })
