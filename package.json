@@ -4,6 +4,7 @@
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
+    "clean": "rm -rf dist docs",
     "build": "tsc && node esbuild.mjs && rm -rf dist/test",
     "prepack": "yarn build",
     "build:test": "tsc && node esbuild.mjs",
