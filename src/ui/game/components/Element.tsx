@@ -274,6 +274,21 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const attrs = elementAttributes(element);
   if (element.player?.position === position) attrs.mine = 'true';
 
+  let grids: React.JSX.Element[] = [];
+  if (element._ui.appearance.showGrid) {
+    grids = Object.entries(element._ui.appearance.showGrid).map(([k, box]) => (
+      <div key={k} className="bz-show-grid" style={{
+        left: box.left + '%',
+        top: box.top + '%',
+        width: box.width + '%',
+        height: box.height + '%'
+      }}>
+        <span>{k}</span>
+      </div>
+    ));
+  }
+
+
   // "base" semantic GameElement dom element
   contents = (
     <div
@@ -292,6 +307,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       onMouseLeave={() => { if (element._ui.appearance.zoomable) setZoomable(undefined); if (onMouseLeave) onMouseLeave(); }}
       {...attrs}
     >
+      {grids}
       {appearance(element)}
       {contents}
     </div>

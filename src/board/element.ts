@@ -63,6 +63,7 @@ export type ElementUI<T extends GameElement> = {
       direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
       limit?: number,
       haphazardly?: number,
+      showGrid?: string,
     }
   }[],
   appearance: {
@@ -78,6 +79,7 @@ export type ElementUI<T extends GameElement> = {
       label?: ({distance, to, from}: {distance: number, to: Space, from: Space }) => React.JSX.Element | null,
       labelScale?: number,
     },
+    showGrid?: Record<string, Box>,
   },
   computedStyle?: Box,
 }
@@ -787,7 +789,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         scaling: 'fit',
         alignment: 'center',
         gap: 0,
-        direction: 'square'
+        direction: 'square',
       }
     }];
     this._ui.appearance = {};
@@ -936,6 +938,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     direction?: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
     limit?: number,
     haphazardly?: number,
+    showGrid?: string
   }) {
     const {area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
@@ -986,7 +989,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
       const { attributes } = this._ui.layouts[l];
       let children = layoutItems[l];
-      if (!children) continue;
 
       let cellBox: (n: number) => Box | undefined;
       let cell: ((n: number) => { row: number, column: number });
@@ -994,6 +996,13 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       const { slots, direction, gap, scaling, alignment, limit } = attributes;
       let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
       const area = this.getArea(attributes);
+
+      if (attributes.showGrid) {
+        if (!this._ui.appearance.showGrid) this._ui.appearance.showGrid = {};
+        this._ui.appearance.showGrid[attributes.showGrid] = area;
+      }
+
+      if (!children) continue;
       if (limit) children = children.slice(0, limit);
 
       if (slots) {
@@ -1079,6 +1088,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         if (!size) {
           // start with largest size needed to accommodate
           size = cellSizeForArea(rows, columns, area, cellGap, offsetColumn, offsetRow);
+          //console.log('cellSizeForArea', size, area)
 
           if (!aspectRatio) {
             // find all aspect ratios of child elements and choose best fit
@@ -1100,7 +1110,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
           if (aspectRatio) {
             aspectRatio *= absoluteTransform.height / absoluteTransform.width;
-            if (aspectRatio > 1) {
+            if (aspectRatio > size.width / size.height) {
               size.height = size.width / aspectRatio;
             } else {
               size.width = aspectRatio * size.height;
@@ -1119,7 +1129,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
         const startingOffset = {x: 0, y: 0};
         const cellBoxRC = ({ row, column }: { row: number, column: number }): Box | undefined => {
-          //console.log('cell # ', n, row, column, size, area, cellGap);
           if (column > maxColumns || row > maxRows) return;
 
           return {
@@ -1163,8 +1172,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         }
         let totalAreaNeeded = getTotalArea();
 
-        //console.log('size, area', size, area, totalAreaNeeded)
-
         let scale: Vector = {x: 1, y: 1};
 
         if (scaling === 'fill') {
@@ -1196,6 +1203,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
         if (!cellGap) { // non-othogonal grid
           if (scaling === 'fill') {
+            //console.log('pre-scale', {area, size, totalAreaNeeded, alignOffset, scale});
             // reduce offset along dimesion needed to squish
             if (area.width * scale.x / totalAreaNeeded.width > area.height * scale.y / totalAreaNeeded.height) {
               const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
@@ -1216,8 +1224,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
             totalAreaNeeded = getTotalArea();
           }
           // align in reduced area
-          startingOffset.x += area.left - totalAreaNeeded.left + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
-          startingOffset.y += area.top - totalAreaNeeded.top + alignOffset.top * (area.height - totalAreaNeeded.height * scale.y);
+          startingOffset.x += area.left - totalAreaNeeded.left + alignOffset.left * (area.width - totalAreaNeeded.width);
+          startingOffset.y += area.top - totalAreaNeeded.top + alignOffset.top * (area.height - totalAreaNeeded.height);
+          //console.log('align', {area, totalAreaNeeded, alignOffset, startingOffset, scale});
 
         } else { // orthogonal
 

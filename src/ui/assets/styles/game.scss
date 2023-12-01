@@ -136,6 +136,20 @@ html, body { height: 100% }
       .selected {
         transform: scale(1.2);
       }
+
+      .bz-show-grid {
+        position: absolute;
+        border: 1px dashed white;
+        > span {
+          position: absolute;
+          font-size: .5rem;
+          background: white;
+          color: black;
+          padding: 2px;
+          top: 0;
+          left: 0;
+        }
+      }
     }
 
     .player-controls {
