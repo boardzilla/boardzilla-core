@@ -15,14 +15,14 @@
     "lint": "eslint . --ext .ts"
   },
   "type": "module",
-  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./index.css": "./dist/ui/assets/index.css"
+  },
   "files": [
     "dist/**/*"
   ],
   "types": "dist/index.d.ts",
-  "sideEffects": [
-    "./src/ui/assets/styles/game.scss"
-  ],
   "dependencies": {
     "classnames": "^2.3.1",
     "graphology": "^0.25.4",

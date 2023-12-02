@@ -13,6 +13,10 @@ html, body { height: 100% }
   /* 150: player messages */
   /* 200: system messages */
 
+  html.dark #background {
+    filter: brightness(0.45) contrast(1.2);
+  }
+
   body {
     margin: 0;
     padding: 0;
@@ -27,7 +31,7 @@ html, body { height: 100% }
   #background {
     background-image: url(../grain.jpg);
     background-size: cover;
-    filter:  brightness(1.5) contrast(0.3);
+    filter: brightness(1.3) contrast(0.7);
     width: 100vw;
     height: 100vh;
     position: fixed;

@@ -37,7 +37,10 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
     )) : null;
 
   return (
-    <>
+    <div
+      id="game"
+    >
+      <div id="background"/>
       <div id="setup" className={host ? '' : 'disabled'}>
         <div id="seating">
           <Seating
@@ -54,6 +57,6 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
           {settingsComponents}
         </div>
       </div>
-    </>
+    </div>
   );
 }
