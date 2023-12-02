@@ -66,6 +66,11 @@ export default () => {
     if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
 
     if (disambiguateElement) {
+      if (!pendingMoves?.some(m => m.selections[0]?.boardChoices?.includes(disambiguateElement.element))) {
+        // no longer valid
+        setDisambiguateElement(undefined);
+        return layouts;
+      }
       const elementPosition = disambiguateElement.element.relativeTransformToBoard();
       const style: CSSProperties = {};
       if (elementPosition.left > 100 - elementPosition.left - elementPosition.width) {

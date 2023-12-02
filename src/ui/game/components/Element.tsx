@@ -151,10 +151,8 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       // no longer zoomed - go back to normal size
       wrapper.current.removeAttribute('data-zoomed');
       wrapper.current.style.transform = '';
-    }
-    if (zoomElement !== element && zoomElement && wrapper.current?.style.zIndex) {
-      // something else is zoomed - go back to normal z-index so we don't overlap it
       wrapper.current.style.zIndex = '';
+      wrapper.current.style.transform = '.5s, top .6s, left .6s, width .6s, height .6s';
     }
     if (zoomElement === element && wrapper.current && !wrapper.current?.style.transform) {
       // this is zoomed, calculate zoom transform
@@ -162,16 +160,10 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       const scale = Math.max(1, Math.min(80 / transform.height, 80 / transform.width));
       const left = (50 - scale * transform.width / 2 - transform.left) * 100 / transform.width;
       const top = (50 - scale * transform.height / 2 - transform.top) * 100 / transform.height;
+      wrapper.current.style.transition = `none`;
       wrapper.current.style.transform = `translate(${left}%, ${top}%) scale(${scale}) `;
       wrapper.current.style.zIndex = '300';
       wrapper.current.setAttribute('data-zoomed', '1');
-      const cancel = (e: TransitionEvent) => {
-        if (e.propertyName === 'transform' && e.target === wrapper.current && !wrapper.current?.style.transform && wrapper.current?.style.zIndex) {
-          wrapper.current.style.zIndex = '';
-          wrapper.current!.removeEventListener('transitionend', cancel);
-        }
-      };
-      wrapper.current?.addEventListener('transitionend', cancel);
     }
   }, [element, zoomElement]);
 

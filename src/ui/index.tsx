@@ -119,7 +119,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     return {
       game,
       position,
-      ...updateSelections(game, position),
+      selected: [],
+      ...updateSelections(game, position, undefined),
       ...updateBoard(game, position, update.state.state.board),
     }
   }),
