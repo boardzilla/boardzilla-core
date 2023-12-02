@@ -13,12 +13,13 @@ const colors = [
   '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
   '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'];
 
-const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
+const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlayer }: {
   users: User[],
   players: UserPlayer[],
   minPlayers: number,
   maxPlayers: number,
   onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
+  onUpdateSelfPlayer: ({ color, name }: { color: string, name: string }) => void,
 }) => {
   const [userID, host] = gameStore(s => [s.userID, s.host]);
 
@@ -45,12 +46,16 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers }: {
 
   const updateColor = (position: number, color: string) => {
     setPickingColor(undefined);
-    const operation: UpdateOperation = {
-      type: "update",
-      position,
-      color,
-    };
-    onUpdatePlayers([operation]);
+    if (host) {
+      const operation: UpdateOperation = {
+        type: "update",
+        position,
+        color,
+      };
+      onUpdatePlayers([operation]);
+    } else {
+      onUpdateSelfPlayer({ color, name: playerAt(position)!.name });
+    }
   }
 
   const playerAt = (position: number) => players.find(p => p.position === position);

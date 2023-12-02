@@ -98,6 +98,13 @@ export type UpdatePlayersMessage = {
   operations: PlayerOperation[]
 }
 
+export type UpdateSelfPlayerMessage = {
+  type: "updateSelfPlayer"
+  id: string
+  name: string
+  color: string
+}
+
 export type UpdateSettingsMessage = {
   type: "updateSettings"
   id: string
@@ -225,6 +232,17 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     window.top!.postMessage(message, "*");
   }, [])
 
+  const updateSelfPlayer = useCallback(({ color, name }: { color: string, name: string }) => {
+    const message: UpdateSelfPlayerMessage = {
+      id: 'updateSelfPlayer',
+      type: 'updateSelfPlayer',
+      color,
+      name
+    }
+    console.log(message);
+    window.top!.postMessage(message, "*");
+  }, [])
+
   const start = useCallback(() => {
     const message: StartMessage = {type: "start", id: 'start'};
     window.top!.postMessage(message, "*");
@@ -241,6 +259,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
           players={players}
           settings={settings}
           onUpdatePlayers={updatePlayers}
+          onUpdateSelfPlayer={updateSelfPlayer}
           onUpdateSettings={updateSettings}
           onStart={start}
         />
