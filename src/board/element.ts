@@ -664,6 +664,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     const branches = [];
     let node = this as GameElement;
     while (node._t.parent) {
+      const index = node._t.parent._t.children.indexOf(node);
+      if (index === -1) throw Error(`Reference to element ${this.constructor.name}${this.name ? ':' + this.name : ''} is no longer current`);
       branches.unshift(node._t.parent._t.children.indexOf(node));
       node = node._t.parent;
     }
@@ -1406,10 +1408,14 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /** @internal */
   doneMoving() {
-    const branch = this.branch();
-    this._t.was = branch;
-    if (this._ui.computedStyle) {
-      this.board._ui.previousStyles[branch] = this.relativeTransformToBoard();
+    try {
+      const branch = this.branch();
+      this._t.was = branch;
+      if (this._ui.computedStyle) {
+        this.board._ui.previousStyles[branch] = this.relativeTransformToBoard();
+      }
+    } catch (e) {
+      return;
     }
   }
 }

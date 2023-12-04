@@ -74,6 +74,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
         data: SerializedMove | SerializedMove[]
       },
     ): GameUpdate<Player> => {
+      //console.time('processMove');
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board._ctx.game;

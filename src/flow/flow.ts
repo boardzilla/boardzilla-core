@@ -221,7 +221,6 @@ export default class Flow<P extends Player> {
       if ('awaitingAction' in step && (step as ActionStep<P>).awaitingAction()) return; // awaiting action
       result = step.playOneStep();
     }
-
     if (result === FlowControl.ok || !result) return result;
     if (result !== FlowControl.complete) {
       if ('advance' in this && typeof this.advance === 'function' && result === Do.continue) return this.advance();

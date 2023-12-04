@@ -286,6 +286,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
 
   /** @internal */
   play() {
+    if (this.phase === 'finished') return;
     if (this.phase !== 'started') throw Error('cannot call play until started');
     this.flow.play();
   }
