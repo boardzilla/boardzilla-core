@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import classNames from 'classnames';
 //import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../index.js';
+import { Tooltip } from 'react-tooltip';
 
 import {
   Piece,
@@ -339,10 +340,24 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       key={branch}
       className={classNames("transform-wrapper" /* , { dragging } */ )}
       style={{ ...style }}
+      data-tooltip-id={branch}
+      data-tooltip-delay-show={500}
     >
       {contents}
     </div>
   );
+
+  if (element._ui.appearance.tooltip) {
+    const tooltip = element._ui.appearance.tooltip(element);
+    if (tooltip) contents = (
+      <>
+        {contents}
+        <Tooltip id={branch} className='tooltip' disableStyleInjection={true}>
+          {tooltip}
+        </Tooltip>
+      </>
+    );
+  }
 
   // contents = (
   //   <DraggableCore

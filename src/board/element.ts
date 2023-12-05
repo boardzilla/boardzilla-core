@@ -72,6 +72,7 @@ export type ElementUI<T extends GameElement> = {
     aspectRatio?: number,
     zoomable?: boolean | ((el: T) => boolean),
     effects?: { attributes: ElementAttributes<T>, className: string }[],
+    tooltip?: (el: T) => React.JSX.Element,
     connections?: {
       thickness?: number,
       style?: 'solid' | 'double',

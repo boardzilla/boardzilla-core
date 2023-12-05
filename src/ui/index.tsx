@@ -332,7 +332,7 @@ export type SetupComponentProps = {
 export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, { settings, breakpoints, layout }: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   breakpoints?: (aspectRatio: number) => string,
-  layout?: (board: B, breakpoint: string) => void
+  layout?: (board: B, player: P, breakpoint: string) => void
 }): void => {
   const state = gameStore.getState();
   const setupGame: SetupFunction = (state) => {

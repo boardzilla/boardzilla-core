@@ -1,6 +1,6 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
@@ -34,6 +34,7 @@
     "react-color": "^2.19.3",
     "react-dom": "^18.2",
     "react-draggable": "^4.4.5",
+    "react-tooltip": "^5.25.0",
     "zustand": "^4.4.0"
   },
   "devDependencies": {

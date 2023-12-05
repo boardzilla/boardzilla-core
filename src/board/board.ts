@@ -89,7 +89,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
   _ui: ElementUI<this> & {
     breakpoint?: string,
     breakpoints?: (aspectRatio: number) => string;
-    setupLayout?: (board: B, breakpoint: string) => void;
+    setupLayout?: (board: B, player: P, breakpoint: string) => void;
     layoutsSet?: boolean;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
@@ -126,7 +126,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     if (!this._ui.breakpoint) this.setBreakpoint('_default');
     if (!this._ui.layoutsSet) {
       this.resetUI();
-      if (this._ui.setupLayout) this._ui.setupLayout(this, this._ui.breakpoint!);
+      if (this._ui.setupLayout) this._ui.setupLayout(this, this._ctx.player!, this._ui.breakpoint!);
       this._ui.layoutsSet = true;
     }
 
