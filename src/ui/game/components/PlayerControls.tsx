@@ -14,27 +14,26 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
 }) => {
   const [game, position, prompt, selected, move] = gameStore(s => [s.game, s.position, s.prompt, s.selected, s.move]);
 
-  // all prompts from all board moves, using the most specific selection that applies
-  const boardPrompts = useMemo(() => {
-    const prompts = [];
+  const boardPrompt = useMemo(() => {
+    if (name === 'step:out-of-turn') return `${game.players.current().map(p => p.name).join(' ,')} is taking their turn`;
+
+    // all prompts from all board moves, using the most specific selection that applies
+    const prompts: string[] = [];
     for (const m of moves) {
       for (const s of m.selections) if (s.type === 'board' && (s.prompt ?? m.prompt)) prompts.push(s.prompt ?? m.prompt!);
     }
-    return prompts;
-  }, [moves]);
 
-  // if only one, use that, otherwise use the step prompt
-  const boardPrompt = useMemo(() => new Set(boardPrompts).size === 1 ? boardPrompts[0] : prompt, [prompt, boardPrompts]);
+    // if only one, use that, otherwise use the step prompt
+    return new Set(prompts).size === 1 ? prompts[0] : prompt;
+  }, [moves, game.players, name, prompt]);
+
   //const boardID = useMemo(() => boardPrompt ? moves.find(m => m.selections.find(s => s.prompt === boardPrompt))?.action : '', [moves, boardPrompt]);
 
   if (!position) return null;
+  //if (!boardPrompt && moves.every(m => !m.requireControls)) return null;
 
   return (
     <div key={name} className={`player-controls ${name.replace(":", "-")}`} style={style}>
-
-      {name === 'step:out-of-turn' && (
-        `${game.players.current().map(p => p.name).join(' ,')} is taking their turn`
-      )}
 
       {boardPrompt && <div className="prompt">{boardPrompt}</div>}
 

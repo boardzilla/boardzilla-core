@@ -1,7 +1,12 @@
-@keyframes fadeIn {
+@keyframes fade-in-prompt {
   0% { opacity: 0; filter: blur(2em); transform: translate(-40vw, 0) }
   50% { opacity: 0; filter: blur(2em); transform: translate(-20vw, 0) }
   100% { opacity: 1; filter: none; transform: none }
+}
+
+@keyframes fade-out-prompt {
+  0% { opacity: 1; filter: none; }
+  100% { opacity: 0; filter: blur(10em); }
 }
 
 html, body { height: 100% }
@@ -156,12 +161,17 @@ html, body { height: 100% }
     }
 
     .player-controls {
-      animation: fadeIn .4s;
       z-index: 150;
       position: absolute;
       padding: .25rem;
       font-size: .75rem;
       background: #fffc;
+      &.fade-out {
+        animation: fade-out-prompt .5s forwards;
+      }
+      &:not(.fade-out) {
+        animation: fade-in-prompt .4s;
+      }
       form {
         margin: 0;
       }

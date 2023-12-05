@@ -12,15 +12,26 @@ import type {
 } from './element.js';
 import type Player from '../player/player.js';
 
-type ActionLayout = {
-  element: GameElement | (() => GameElement),
+export type ActionLayout = {
+  element: GameElement,
   top?: number,
   bottom?: number,
-  left?: number,
-  right?: number,
   width?: number,
-  height?: number
-};
+  height?: number,
+  noAnchor?: string[],
+} & ({
+  left?: number,
+  right?: never,
+  leftOrRight?: never,
+} | {
+  left?: never,
+  right?: number,
+  leftOrRight?: never,
+} | {
+  left?: never,
+  right?: never,
+  leftOrRight?: number,
+});
 
 /** @category Board */
 export default class Board<P extends Player<P, B> = any, B extends Board<P, B> = any> extends Space<P, B> {

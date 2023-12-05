@@ -35,6 +35,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   // const [dragging, setDragging] = useState(false); // currently dragging
   const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
   const wrapper = useRef<HTMLDivElement>(null);
+  const domElement = useRef<HTMLDivElement>(null);
   const branch = element.branch()
   const selections = boardSelections[branch];
   const isSelected = selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element));
@@ -167,6 +168,31 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     }
   }, [element, zoomElement]);
 
+  useEffect(() => {
+    if (element._ui.appearance.effects) {
+      if (!domElement.current) return;
+      const callback: MutationCallback = mutations => {
+        for (const {attributes, className} of element._ui.appearance.effects as {attributes: Record<string, any>, className: string}[]) {
+          if (mutations.some(m => {
+            const attr = Object.keys(attributes).find(a => `data-${a.toLowerCase()}` === m.attributeName);
+            return attr &&
+              m.oldValue !== String(attributes[attr]) &&
+              Object.entries(attributes).every(([k, v]) => (m.target as HTMLElement).getAttribute(`data-${k.toLowerCase()}`) === String(v));
+          })) {
+            domElement.current?.classList.add(className);
+          }
+        }
+      };
+
+      const observer = new MutationObserver(callback);
+      observer.observe(domElement.current, {
+        attributeFilter: element._ui.appearance.effects.map(e => Object.keys(e.attributes)).flat().map(a => `data-${a.toLowerCase()}`),
+        attributeOldValue: true
+      });
+      return () => observer.disconnect();
+    }
+  }, [element]);
+
   let contents: React.JSX.Element[] | React.JSX.Element = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
@@ -285,6 +311,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   contents = (
     <div
       id={element.name}
+      ref={domElement}
       className={classNames(
         baseClass,
         element._ui.appearance.className,

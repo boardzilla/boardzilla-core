@@ -71,6 +71,7 @@ export type ElementUI<T extends GameElement> = {
     render?: ((el: T) => React.JSX.Element | null) | false,
     aspectRatio?: number,
     zoomable?: boolean | ((el: T) => boolean),
+    effects?: { attributes: ElementAttributes<T>, className: string }[],
     connections?: {
       thickness?: number,
       style?: 'solid' | 'double',
@@ -366,7 +367,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   }
 
   /** @internal */
-  _otherFinder<T extends GameElement>(finders: ElementFinder<T>[]): ElementFinder<GameElement> {
+  _otherFinder<T extends GameElement>(finders: ElementFinder<T>[]): ElementFinder<GameElement<P, B>> {
     return (el: T) => el !== (this as GameElement);
   }
 

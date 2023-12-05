@@ -5,16 +5,18 @@ import { gameStore } from '../index.js';
 import Element from './components/Element.js';
 import PlayerControls from './components/PlayerControls.js';
 import { click } from '../assets/index.js';
+import { GameElement } from '../../board/index.js'
+import { humanizeArg } from '../../action/utils.js';
 
-import type { GameElement } from '../../board/index.js'
+import type { ActionLayout } from '../../board/board.js'
 import type { UIMove } from '../index.js';
 import type { Argument } from '../../action/action.js';
 import type { Player } from '../../player/index.js';
-import { humanizeArg } from '../../action/utils.js';
+import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, selectMove, selected, setSelected, setAspectRatio, dragElement, setZoom, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.setZoom, s.boardJSON]);
+  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setAspectRatio, dragElement, setZoom, boardJSON] =
+    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
@@ -40,90 +42,131 @@ export default () => {
       setSelected([element]);
       return setDisambiguateElement({ element, moves });
     }
-    const move = moves[0];
-    const selection = move.selections.find(s => s.type === 'board');
-    if (selection) {
-      if (!move.requireExplicitSubmit) {
-        submitMove(move, {[selection.name]: element});
-        return;
-      }
 
-      const newSelected = selection.isMulti() ? (
-        selected.includes(element) ?
-          selected.filter(s => s !== element) :
-          selected.concat([element])
-      ) : (
-        selected[0] === element ? [] : [element]
-      );
-      setSelected(newSelected);
+    const move = moves[0];
+    const selection = move.selections[0]; // simple one-selection UIMove created by getBoardSelections
+    if (!move.requireExplicitSubmit) {
+      submitMove(move, {[selection.name]: element});
+      return;
     }
+
+    const newSelected = selection.isMulti() ? (
+      selected.includes(element) ?
+        selected.filter(s => s !== element) :
+        selected.concat([element])
+    ) : (
+      selected[0] === element ? [] : [element]
+    );
+    setSelected(newSelected);
   }, [selected, setSelected, submitMove]);
 
-  const controls = useMemo(() => {
-    const layouts: Record<string, {moves: UIMove[], style: CSSProperties}> = {};
-    const messages: (UIMove | string)[] = [...pendingMoves || []];
+  const {style, name, moves} = useMemo(() => {
+    // find the best layout for the current moves, going in this order:
+    // - the last selected, visible game element as part of the current move(s) that hasn't been disabled via layoutAction.noAnchor
+    // - a supplied layoutAction for the only current move
+    // - a supplied layoutStep belonging to the step to which the current move(s) belong
+    // - if no moves available, but another player can move, out-of-turn
+    let layout: ActionLayout | undefined = undefined;
+    let name: string = '';
+    let moves = pendingMoves || [];
+    let style: CSSProperties = { };
 
-    if (game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) messages.push('out-of-turn');
+    if (!layout && disambiguateElement?.element) {
+      layout = { element: disambiguateElement.element, leftOrRight: 2 };
+      moves = disambiguateElement.moves;
+      name = 'disambiguate-board-selection';
+    }
 
-    if (disambiguateElement) {
-      if (!pendingMoves?.some(m => m.selections[0]?.boardChoices?.includes(disambiguateElement.element))) {
-        // no longer valid
-        setDisambiguateElement(undefined);
-        return layouts;
+    if (!layout && selected.length === 1) {
+      const clickMoves = boardSelections[selected[0].branch()]?.clickMoves;
+      if (clickMoves.length === 1 && !clickMoves[0].selections[0].isMulti()) {
+        layout = { element: selected[0], leftOrRight: 2 };
+        name = 'action:' + moves[0].name;
+        moves = clickMoves;
       }
-      const elementPosition = disambiguateElement.element.relativeTransformToBoard();
-      const style: CSSProperties = {};
-      if (elementPosition.left > 100 - elementPosition.left - elementPosition.width) {
-        style.right = `calc(${100 - elementPosition.left}% + 1rem)`;
-      } else {
-        style.left = `calc(${elementPosition.left + elementPosition.width}% + 1rem)`;
-      }
-      style.top = `${elementPosition.top}%`;
-      layouts['disambiguate-board-selection'] = { moves: disambiguateElement.moves, style };
-    } else {
-      for (const pendingMove of messages) {
-        if (!move && typeof pendingMove === 'object' && pendingMove.name.slice(0, 4) === '_god') continue; // don't need to display these as top-level choices
-        // skip non-board moves if board elements selected
-        if (selected.length && typeof pendingMove === 'object' && pendingMove.selections.every(s => s.type !== 'board')) continue;
-        let layoutName = "";
-        const actionLayout = typeof pendingMove === 'object' ? "action:" + pendingMove.name : undefined;
-        const stepLayout = 'step:' + (typeof pendingMove === 'string' ? pendingMove : step);
-        if (actionLayout && game.board._ui.stepLayouts[actionLayout]) {
-          layoutName = actionLayout;
-        } else if (stepLayout && game.board._ui.stepLayouts[stepLayout]) {
-          layoutName = stepLayout;
-        }
+    }
 
-        if (layoutName) {
-          const existing = layouts[layoutName];
-          if (existing) {
-            if (typeof pendingMove === 'object') existing.moves.push(pendingMove);
-          } else {
-            let style: CSSProperties = { left: 0, top: 0 };
-            const layout = game.board._ui.stepLayouts[layoutName];
-            const position = (typeof layout.element === 'function' ? layout.element() : layout.element)._ui.computedStyle;
-            if (position) style = {
-              left: layout.left !== undefined ? (layout.left * position.width / 100) + position.left + '%' : undefined,
-              top: layout.top !== undefined ? (layout.top * position.height / 100) + position.top + '%' : undefined,
-              right: layout.right !== undefined ? 100 + ((layout.right * position.width / 100) - position.left - position.width) + '%' : undefined,
-              bottom: layout.bottom !== undefined ? 100 + ((layout.bottom * position.height / 100) - position.top - position.height) + '%' : undefined,
-              width: layout.width !== undefined ? (layout.width * position.width / 100) + '%' : undefined,
-              height: layout.height !== undefined ? (layout.height * position.height / 100) + '%' : undefined,
-            }
-            layouts[layoutName] = {moves: typeof pendingMove === 'object' ? [pendingMove] : [], style};
+    if (!layout && move) {
+      const element = Object.entries(move.args).reverse().find(([name, el]) => (
+        game.board._ui.stepLayouts["action:" + name]?.noAnchor?.includes(name) && el instanceof GameElement
+      ));
+      if (element && (element[1] as GameElement)._ui?.computedStyle) {
+        layout = { element: element[1] as GameElement, leftOrRight: 2 };
+        name = 'action:' + element[0];
+      }
+    }
+
+    if (!layout && pendingMoves?.length) {
+      const moves = pendingMoves.filter(m => move || m.name.slice(0, 4) !== '_god'); // no display for these normally
+      if (moves.length === 1) {
+        // skip non-board moves if board elements already selected (cant this be more specific? just moves that could apply?)
+        if (!selected.length || moves[0].selections.some(s => s.type !== 'board')) {
+          const actionLayout = game.board._ui.stepLayouts["action:" + moves[0].name];
+          if (actionLayout?.element?._ui?.computedStyle) {
+            layout = actionLayout;
+            name = 'action:' + moves[0].name;
           }
-        } else {
-          layouts._default = {
-            moves: [...layouts._default?.moves || []].concat(
-              typeof pendingMove === 'object' ? [pendingMove] : []
-            ),
-            style: {left: 0, top: 0}
-          };
         }
       }
     }
-    return layouts;
-  }, [selected, pendingMoves, move, position, disambiguateElement, step, game.players.currentPosition, game.board._ui.stepLayouts]);
+
+    if (!layout && pendingMoves?.length && step) {
+      name = 'step:' + step;
+      layout = game.board._ui.stepLayouts[name];
+    }
+
+    if (!layout && game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) {
+      name = 'step:out-of-turn';
+      layout = game.board._ui.stepLayouts[name];
+    }
+
+    if (layout) {
+      let box: Box | undefined = layout.element.relativeTransformToBoard();
+
+      if (layout.leftOrRight !== undefined && box) {
+        if (box.left > 100 - box.left - box.width) {
+          style.right = `calc(${100 - box.left}% + ${layout.leftOrRight}vw)`;
+          style.left = undefined;
+        } else {
+          style.left = `calc(${box.left + box.width}% + ${layout.leftOrRight}vw)`;
+        }
+      }
+
+      if (layout.right !== undefined) {
+        style.right = 100 + ((layout.right * box.width / 100) - box.left - box.width) + '%';
+      } else if (layout.leftOrRight === undefined) {
+        style.left ??= ((layout.left ?? 0) * box.width / 100) + box.left + '%';
+      }
+      if (layout.bottom !== undefined) {
+        style.bottom = 100 + ((layout.bottom * box.height / 100) - box.top - box.height) + '%';
+      } else {
+        style.top = ((layout.top ?? 0) * box.height / 100) + box.top + '%';
+      }
+      if (layout.width !== undefined) style.width = (layout.width * box.width / 100) + '%';
+      if (layout.height !== undefined) style.height = (layout.height * box.height / 100) + '%';
+    } else {
+      style = {left: 0, top: 0};
+    }
+
+    return {style, name, moves};
+  }, [selected, pendingMoves, boardSelections, move, position, disambiguateElement, step, game.players.currentPosition, game.board._ui.stepLayouts]);
+
+  const domRef = useCallback((node: HTMLDivElement) => {
+    if (!node) return;
+    const callback: MutationCallback = deletions => {
+      deletions.forEach(m => m.removedNodes.forEach((d: HTMLElement) => {
+        if (d.classList.contains('player-controls') && !d.classList.contains('fade-out')) {
+          const fadeOut = d.cloneNode(true);
+          (fadeOut as HTMLElement).classList.add('fade-out');
+          node.appendChild(fadeOut);
+          setTimeout(() => node.removeChild(fadeOut), 500);
+        }
+      }));
+    };
+
+    const observer = new MutationObserver(callback);
+    observer.observe(node, { childList: true });
+  }, []);
 
   useEffect(() => {
     const keydownHandler = (e: KeyboardEvent) => {
@@ -183,6 +226,7 @@ export default () => {
   return (
     <div
       id="game"
+      ref={domRef}
       className={classNames(
         game.board._ui.appearance.className,
         game.board._ui.breakpoint,
@@ -202,15 +246,14 @@ export default () => {
         />
         <div style={{position: 'absolute', backgroundColor: 'red'}}/>
       </div>
-      {Object.entries(controls).map(([layoutName, {moves, style}]) => (
-        <PlayerControls
-          key={layoutName}
-          name={layoutName}
-          style={style}
-          moves={moves}
-          onSubmit={submitMove}
-        />
-      ))}
+
+      <PlayerControls
+        name={name}
+        style={style}
+        moves={moves}
+        onSubmit={submitMove}
+      />
+
       {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
       {game.phase === 'finished' && !victoryMessageDismissed && (
         <div className="game-finished">
