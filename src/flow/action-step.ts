@@ -84,7 +84,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
         step: this.name,
         actions: [this.position.followups[0]],
         skipIfOnlyOne: this.skipIfOnlyOne,
-        expand: this.expand,
+        expand: this.expand, // umm...
       }
     }
   }
@@ -109,6 +109,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       // failed with a selection required
       return errorOrFollowups;
     } else if (errorOrFollowups) {
+      // this doesnt seem right. did the followup info just overwrite the position? what about the base move? and followups is an array. what happened to the rest?
       this.setPosition({...move, followups: errorOrFollowups});
     } else {
       // succeeded

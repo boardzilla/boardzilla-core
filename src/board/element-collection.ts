@@ -32,7 +32,7 @@ import type { Player } from '../player/index.js';
  */
 export type ElementFinder<T extends GameElement = any> = (
   ((e: T) => boolean) |
-    (ElementAttributes<T> & {mine?: boolean, empty?: boolean, adjacent?: boolean, withinDistance?: number}) |
+    (ElementAttributes<T> & {mine?: boolean, owner?: T['player'], empty?: boolean, adjacent?: boolean, withinDistance?: number}) |
     string
 );
 

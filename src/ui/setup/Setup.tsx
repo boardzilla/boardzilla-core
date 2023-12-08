@@ -34,7 +34,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
         players,
         updateKey: updateSettingsKey
       }
-    )) : null;
+    )) : [];
 
   return (
     <div
@@ -42,20 +42,27 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
     >
       <div id="background"/>
       <div id="setup" className={host ? '' : 'disabled'}>
-        <div id="seating">
-          <Seating
-            users={users}
-            players={players}
-            minPlayers={minPlayers}
-            maxPlayers={maxPlayers}
-            onUpdatePlayers={onUpdatePlayers}
-            onUpdateSelfPlayer={onUpdateSelfPlayer}
-          />
-          <input type="button" className="start" disabled={(players?.length || 0) < minPlayers} value="Start Game" onClick={onStart}/>
+        <div className="heading">
+          <h1>Game Setup</h1>
+          {host && <p>Select the open seats to seat yourself and your players at the table. Use the invite link above to get other players to join. They will be in the lobby until seated.</p>}
         </div>
-        <div id="settings">
-          {settingsComponents}
-        </div>
+        <Seating
+          users={users}
+          players={players}
+          minPlayers={minPlayers}
+          maxPlayers={maxPlayers}
+          onUpdatePlayers={onUpdatePlayers}
+          onUpdateSelfPlayer={onUpdateSelfPlayer}
+        />
+        {settingsComponents.length > 0 && (
+          <div className="heading">
+            <h2>Game Settings</h2>
+            <div id="settings">
+              {settingsComponents}
+            </div>
+          </div>
+        )}
+        <input type="button" className="start" disabled={(players?.length || 0) < minPlayers} value={(players?.length || 0) < minPlayers ? "Waiting for enough players" : "Start Game"} onClick={onStart}/>
       </div>
     </div>
   );

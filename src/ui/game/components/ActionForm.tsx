@@ -29,7 +29,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
   useEffect(() => setArgs(initial()), [initial, move]);
 
   const allArgs = useMemo(() => {
-    const args2 = {...args};
+    const args2 = {...move.args, ...args};
     for (const s of move.selections) {
       if (s.type === 'board') {
         args2[s.name] = s.isMulti() ? selected : selected[0];

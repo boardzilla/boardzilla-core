@@ -16,11 +16,20 @@ import type { Argument } from '../action/action.js'
 import type { PendingMove, SerializedMove } from '../game.js'
 import type { SetupFunction } from '../index.js'
 
+// this feels like the makings of a class
 export type UIMove = PendingMove<Player> & {
-  requireExplicitSubmit: boolean;
+  requireExplicitSubmit: boolean; // true if explicit submit has been provided or is not needed
 }
 
 type GamePendingMoves = ReturnType<Game<Player, Board<Player>>['getPendingMoves']>;
+
+const needsConfirm = (move: UIMove | PendingMove<Player>): boolean => (
+  ('requireExplicitSubmit' in move && move.requireExplicitSubmit) ||
+    move.selections.length !== 1 ||
+    !(['board', 'choices', 'button'].includes(move.selections[0].type)) ||
+    !!move.selections[0].confirm ||
+    move.selections[0].isMulti()
+);
 
 type GameStore = {
   host: boolean,
@@ -36,7 +45,7 @@ type GameStore = {
   updateBoard: () => void; // call any time state changes to update immutable references for listeners. updates move, selections
   position?: number; // this player
   setPosition: (p: number) => void;
-  move?: {name: string, args: Record<string, Argument<Player>>}; // move in progress
+  move?: {name: string, args: Record<string, Argument<Player>>}; // move in progress, this is the LCD of pendingMoves, but is kept here as well for convenience
   selectMove: (sel?: UIMove, args?: Record<string, Argument<Player>>) => void; // commit the choice and find new choices or process the choice
   moves: {name: string, args: Record<string, SerializedArg>}[]; // move ready for processing
   clearMoves: () => void;
@@ -57,6 +66,7 @@ type GameStore = {
   setAspectRatio: (a: number) => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
+  dragOffset: {element?: string, x?: number, y?: number}; // mutable non-reactive record of drag offset
   dropSelections: UIMove[];
   currentDrop?: GameElement;
   setCurrentDrop: (el?: GameElement) => void;
@@ -129,11 +139,19 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     if (!s.position) return {};
     return updateBoard(s.game, s.position);
   }),
+  // pendingMove we're trying to complete, args are the ones we're committing to
   selectMove: (pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => set(s => {
-    const move = pendingMove ? {
-      name: pendingMove.name,
-      args: {...pendingMove.args, ...args}
-    } : undefined;
+    let move: UIMove | undefined = undefined;
+    if (pendingMove) {
+      move = {
+        ...pendingMove,
+        args: {...pendingMove.args, ...args},
+      };
+      for (const sel of move.selections) {
+        // the current selection cannot be filled in unless explicity supplied. this could be a forced arg with a confirmation step
+        if (!args || !(sel.name in args)) delete move!.args[sel.name];
+      }
+    }
     return updateSelections(s.game!, s.position!, move);
   }),
   moves: [],
@@ -158,14 +176,24 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     const moves = s.boardSelections[dragElement].dragMoves;
     let dropSelections: UIMove[] = [];
     if (moves) for (let {move, drag} of moves) {
-      dropSelections.push({...move, selections: [
-        drag.resolve({...(s.move?.args || {}), [move.selections[0].name]: s.game!.board.atBranch(dragElement)})
-      ]});
+      const elementChosen = {[move.selections[0].name]: s.game!.board.atBranch(dragElement)};
+      const sel = drag.resolve({...(s.move?.args || {}), ...elementChosen});
+      // create new move with the dragElement included as an arg and the dropzone as the new selection
+      dropSelections.push({
+        name: move.name,
+        prompt: move.prompt,
+        args: { ...move.args, ...elementChosen },
+        selections: [sel],
+        requireExplicitSubmit: !!sel.confirm
+      });
     }
     return { dragElement, dropSelections }
   }),
+  dragOffset: {},
   dropSelections: [],
-  setCurrentDrop: currentDrop => set({ currentDrop }),
+  setCurrentDrop: currentDrop => set(() => {
+    return { currentDrop };
+  }),
   setZoomable: zoomable => set({ zoomable }),
   setZoom: zoom => set(s => {
     return {
@@ -175,7 +203,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
 }), shallow);
 
 // refresh move and selections
-const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: {name: string, args: Record<string, Argument<Player>>}) => {
+const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: UIMove) => {
   const player = game.players.atPosition(position);
   if (!player) return {};
   let state: Partial<GameStore> = {};
@@ -201,15 +229,16 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       if (moves[0].selections[0].confirm) {
         // a confirm was added tho, so don't skip that. convert to confirm prompt
         // TODO: distinguish static from arg-taking? static can probably be skipped
-        pendingMoves!.moves[0].args[pendingMoves!.moves[0].selections[0].name] = arg;
-        pendingMoves!.moves[0].selections[0].name = '__confirm__';
-        pendingMoves!.moves[0].selections[0].type = 'button';
+        moves[0].args[moves[0].selections[0].name] = arg;
+        moves[0].selections[0].name = '__confirm__';
+        moves[0].selections[0].type = 'button';
         break;
       }
 
       move = {
-        name: moves[0].name,
-        args: {...moves[0].args, [moves[0].selections[0].name]: arg}
+        ...moves[0],
+        args: {...moves[0].args, [moves[0].selections[0].name]: arg},
+        requireExplicitSubmit: needsConfirm(moves[0])
       };
       continue;
     }
@@ -217,7 +246,6 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
     // move is processable - add to queue and rerun
     if (moves?.length === 0) {
       try {
-        // if last option is forced and skippable, automove
         if (!move) break;
 
         const player = game.players.atPosition(position);
@@ -256,17 +284,17 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   }
 
   if (pendingMoves) for (const move of pendingMoves.moves as UIMove[]) {
-    move.requireExplicitSubmit = (
-      move.selections.length !== 1 ||
-        !(['board', 'choices', 'button'].includes(move.selections[0].type)) ||
-        !!move.selections[0].confirm ||
-        move.selections[0].isMulti()
-    );
+    move.requireExplicitSubmit = needsConfirm(move);
   }
 
   const boardSelections = pendingMoves ? getBoardSelections(pendingMoves.moves as UIMove[], move) : {};
 
-  if (!isBoardUpToDate) state = {...state, ...updateBoard(game, position)};
+  if (!isBoardUpToDate) state = {
+    ...state,
+    ...updateBoard(game, position),
+    dragElement: undefined,
+    currentDrop: undefined
+  };
 
   return ({
     ...state,
@@ -295,7 +323,7 @@ const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<
           boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
           boardSelections[el.branch()].clickMoves.push(boardMove);
         }
-        let { dragInto, dragFrom } = sel.clientContext as { dragInto: Selection<Player>, dragFrom: Selection<Player> };
+        let { dragInto, dragFrom } = sel.clientContext as { dragInto?: Selection<Player>, dragFrom?: Selection<Player> };
         if (dragInto) {
           for (const el of sel.boardChoices) {
             boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };

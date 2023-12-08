@@ -422,14 +422,20 @@ describe('Board', () => {
       players1Mat.create(Card, 'player-1-card', { suit: 'H', pip: 1, player: players[0] });
       players1Mat.create(Card, 'player-2-card', { suit: 'H', pip: 1, player: players[1] });
       players1Mat.create(Card, 'neutral-card', { suit: 'H', pip: 2 });
+      players[0].board = board;
+      players[1].board = board;
 
-      //expect(board.all(Card, { mine: true })).to.throw();
       board._ctx.player = players[0];
       expect(board.all(Card, { mine: true }).length).to.equal(2);
       expect(board.all(Card, { mine: false }).length).to.equal(1);
+      expect(board.all(Card, { owner: players[0] }).length).to.equal(2);
+      expect(players[0].allMy(Card).length).to.equal(2);
       expect(board.last(Card, { mine: true })!.name).to.equal('neutral-card');
+      expect(board.first('neutral-card')!.owner).to.equal(players[0]);
       board._ctx.player = players[1];
       expect(board.all(Card, { mine: true }).length).to.equal(1);
+      expect(board.all(Card, { owner: players[1] }).length).to.equal(1);
+      expect(players[1].allMy(Card).length).to.equal(1);
       expect(board.all(Card, { mine: false }).length).to.equal(2);
     });
 

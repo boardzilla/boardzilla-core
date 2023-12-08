@@ -1,5 +1,5 @@
 import { humanizeArg } from '../action/utils.js';
-import { GameElement, union } from '../board/index.js';
+import { GameElement } from '../board/index.js';
 
 import type PlayerCollection from './collection.js';
 import type { Board } from '../board/index.js';
@@ -41,20 +41,24 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
     return Array.from(this._players).find(p => p !== this)!;
   }
 
-  all<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  all(this: P, className: ElementFinder<GameElement<P, B>>, ...finders: ElementFinder<GameElement<P, B>>[]): ElementCollection<GameElement<P, B>>;
-  all<F extends GameElement<P, B>>(this: P, className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement<P, B>> {
+  allMy<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
+  allMy(this: P, className: ElementFinder<GameElement<P, B>>, ...finders: ElementFinder<GameElement<P, B>>[]): ElementCollection<GameElement<P, B>>;
+  allMy<F extends GameElement<P, B>>(this: P, className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement<P, B>> {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      return union(
-        this.board.all<GameElement<P, B>>(GameElement<P, B>, {player: this}, className, ...finders),
-        this.board.all(GameElement<P, B>, {player: this}).all(className, ...finders)
-      );
+      return this.board.all({owner: this}, className, ...finders);
     }
 
-    return union(
-      this.board.all<GameElement<P, B>>(className, {player: this}, ...finders),
-      this.board.all({player: this}).all<F>(className, ...finders)
-    );
+    return this.board.all<GameElement<P, B>>(className, {owner: this}, ...finders);
+  }
+
+  my<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
+  my(this: P, className: ElementFinder<GameElement<P, B>>, ...finders: ElementFinder<GameElement<P, B>>[]): GameElement<P, B> | undefined;
+  my<F extends GameElement<P, B>>(this: P, className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement<P, B> | undefined {
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      return this.board.first({owner: this}, className, ...finders);
+    }
+
+    return this.board.first<GameElement>(className, {owner: this}, ...finders);
   }
 
   has<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): boolean;

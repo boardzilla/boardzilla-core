@@ -7,7 +7,6 @@ import type {
   ElementClass,
   ElementContext,
   Box,
-  Vector,
   ElementUI,
 } from './element.js';
 import type Player from '../player/player.js';
@@ -95,13 +94,11 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout>;
     previousStyles: Record<any, Box>;
-    dragOffset: Record<any, Vector>;
   } = {
     layouts: [],
     appearance: {},
     stepLayouts: {},
     previousStyles: {},
-    dragOffset: {},
   };
 
   // restore default layout rules before running setupLayout

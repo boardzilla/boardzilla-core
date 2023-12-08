@@ -63,7 +63,7 @@ export type ElementUI<T extends GameElement> = {
       direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
       limit?: number,
       haphazardly?: number,
-      showGrid?: string,
+      showBoundingBox?: string,
     }
   }[],
   appearance: {
@@ -72,7 +72,7 @@ export type ElementUI<T extends GameElement> = {
     aspectRatio?: number,
     zoomable?: boolean | ((el: T) => boolean),
     effects?: { attributes: ElementAttributes<T>, className: string }[],
-    tooltip?: (el: T) => React.JSX.Element,
+    tooltip?: ((el: T) => React.JSX.Element | null) | false,
     connections?: {
       thickness?: number,
       style?: 'solid' | 'double',
@@ -81,7 +81,7 @@ export type ElementUI<T extends GameElement> = {
       label?: ({distance, to, from}: {distance: number, to: Space, from: Space }) => React.JSX.Element | null,
       labelScale?: number,
     },
-    showGrid?: Record<string, Box>,
+    showBoundingBox?: Record<string, Box>,
   },
   computedStyle?: Box,
 }
@@ -222,7 +222,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       return this._t.children._finder<GameElement>(GameElement, {limit: 1}, className, ...finders)[0];
     }
-    return this._t.children.all<F>(className, ...finders)[0];
+    return this._t.children._finder<F>(className, {limit: 1}, ...finders)[0];
   }
 
   /**
@@ -423,23 +423,23 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   }
 
   /**
-   * Returns the player that owns this element, or the first element that
-   * contains this element searching up through the parent hierarchy. This is
-   * related to, but different than {@link player}. E.g. if a common card is in
-   * a player's hand, typically the `hand.player` will be assigned to that
-   * player but the card does not have a `player`. The card.owner() will return
-   * the player in whose hand the card is placed. Similarly, if an army is in
-   * another player's country, the `army.owner()` will be the player controlling
-   * that army (i.e. same as `army.player`) rather than the player who owns the
-   * country in which it's placed.
+   * The player that owns this element, or the first element that contains this
+   * element searching up through the parent hierarchy. This is related to, but
+   * different than {@link player}. E.g. if a common card is in a player's hand,
+   * typically the `hand.player` will be assigned to that player but the card
+   * does not have a `player`. The card.owner() will return the player in whose
+   * hand the card is placed. Similarly, if an army is in another player's
+   * country, the `army.owner()` will be the player controlling that army
+   * (i.e. same as `army.player`) rather than the player who owns the country in
+   * which it's placed.
    * @category Structure
    */
-  owner() {
+  get owner() {
     return this.player !== undefined ? this.player : this._t.parent?.player;
   }
 
   /**
-   * Returns whether this element belongs to the "current" player. A player is
+   * Whether this element belongs to the "current" player. A player is
    * considered the current player if this is called in the context of an action
    * taken by a given player, or if this is called from a given player's view of
    * the board. It is an error to call this method when not in a player
@@ -449,8 +449,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @category Queries
    */
   get mine() {
-    if (!this._ctx.player) return false;
-    return this.owner() === this._ctx.player;
+    if (!this._ctx.player) return false; // throw?
+    return this.owner === this._ctx.player;
   }
 
   /**
@@ -942,7 +942,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     direction?: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
     limit?: number,
     haphazardly?: number,
-    showGrid?: string
+    showBoundingBox?: string
   }) {
     const {area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
@@ -1001,9 +1001,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
       const area = this.getArea(attributes);
 
-      if (attributes.showGrid) {
-        if (!this._ui.appearance.showGrid) this._ui.appearance.showGrid = {};
-        this._ui.appearance.showGrid[attributes.showGrid] = area;
+      if (attributes.showBoundingBox) {
+        if (!this._ui.appearance.showBoundingBox) this._ui.appearance.showBoundingBox = {};
+        this._ui.appearance.showBoundingBox[attributes.showBoundingBox] = area;
       }
 
       if (!children) continue;

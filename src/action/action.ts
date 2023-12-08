@@ -60,7 +60,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   /** @internal */
   moves: ((args: Record<string, Argument<P>>) => void | FollowUp<P>)[] = [];
   /** @internal */
-  condition?: (() => boolean) | boolean;
+  condition?: ((args: A) => boolean) | boolean;
   /** @internal */
   messages: {message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
 
@@ -69,15 +69,15 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   /** @internal */
   constructor({ prompt, condition }: {
     prompt?: string,
-    condition?: (() => boolean) | boolean,
+    condition?: ((args: A) => boolean) | boolean,
   }) {
     this.prompt = prompt;
     if (condition !== undefined) this.condition = condition;
   }
 
   /** @internal */
-  isPossible(): boolean {
-    return typeof this.condition === 'function' ? this.condition() : this.condition ?? true;
+  isPossible(args: A): boolean {
+    return typeof this.condition === 'function' ? this.condition(args) : this.condition ?? true;
   }
 
   // given a set of args, return sub-selections possible trying each possible next arg
@@ -97,7 +97,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         let validation: Selection<P>['validation'] | undefined = move.selections[0].validation;
         // look ahead for any selections that can/should be combined
         for (let i = this.selections.findIndex(s => s.name === move.selections[0].name) + 1; i !== this.selections.length; i++) {
-          if (typeof confirm === 'function') break; // do not skip an explicit confirm
+          if (confirm) break; // do not skip an explicit confirm
           let selection = this.selections[i];
           if (combineWith?.includes(selection.name)) selection = selection.resolve(move.args);
           if (!selection.isResolved()) break;

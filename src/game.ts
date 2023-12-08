@@ -264,7 +264,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
         .chooseOnBoard('element', this.board.all(GameElement<P, B>))
         .chooseFrom<'property', string>(
           'property',
-          ({ element }) => Object.keys(element).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'board', 'game', 'pile', 'mine'].includes(a)),
+          ({ element }) => Object.keys(element).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'owner', 'board', 'game', 'pile'].includes(a)),
           { prompt: "Change property" }
         ).enterText('value', {
           prompt: ({ property }) => `Change ${property}`,
@@ -279,7 +279,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
             v = parseInt(value);
           }
           const prop = property as keyof GameElement<P>;
-          if (prop !== 'mine') element[prop] = v
+          if (prop !== 'mine' && prop !== 'owner') element[prop] = v
       })
     };
   }
@@ -331,16 +331,18 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     };
     const actionStep = this.flow.actionNeeded(player);
     if (actionStep) {
+      const actions = allowedActions.concat(
+        actionStep.actions?.filter(
+          a => this.getAction(a.name, player).isPossible(a.args)
+        ).map(a => ({ ...a, player })) || []
+      )
+      //if (actions.length === 0) skip somehow? how do we know this is skippable? is this the only player that can act?
       return {
         step: actionStep.step,
         prompt: actionStep.prompt,
         skipIfOnlyOne: actionStep.skipIfOnlyOne,
         expand: actionStep.expand,
-        actions: allowedActions.concat(
-          actionStep.actions?.filter(
-            a => this.getAction(a.name, player).isPossible()
-          ).map(a => ({ ...a, player })) || []
-        )
+        actions
       }
     }
     return {

@@ -15,8 +15,8 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setAspectRatio, dragElement, setZoom, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.setZoom, s.boardJSON]);
+  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setAspectRatio, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
+    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [dimensions, setDimensions] = useState<{width: number, height: number}>();
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
@@ -30,8 +30,10 @@ export default () => {
     clickAudio.current?.play();
     setDisambiguateElement(undefined);
     setSelected([]);
+    setDragElement(undefined);
+    setCurrentDrop(undefined);
     selectMove(pendingMove, args);
-  }, [selectMove, setSelected]);
+  }, [selectMove, setSelected, setDragElement, setCurrentDrop]);
 
   const onSelectElement = useCallback((moves: UIMove[], element: GameElement<Player>) => {
     clickAudio.current?.play();
@@ -49,6 +51,7 @@ export default () => {
       submitMove(move, {[selection.name]: element});
       return;
     }
+    selectMove(move);
 
     const newSelected = selection.isMulti() ? (
       selected.includes(element) ?
@@ -58,7 +61,7 @@ export default () => {
       selected[0] === element ? [] : [element]
     );
     setSelected(newSelected);
-  }, [selected, setSelected, submitMove]);
+  }, [selected, setSelected, selectMove, submitMove]);
 
   const {style, name, moves} = useMemo(() => {
     // find the best layout for the current moves, going in this order:
@@ -79,7 +82,7 @@ export default () => {
 
     if (!layout && selected.length === 1) {
       const clickMoves = boardSelections[selected[0].branch()]?.clickMoves;
-      if (clickMoves.length === 1 && !clickMoves[0].selections[0].isMulti()) {
+      if (clickMoves?.length === 1 && !clickMoves[0].selections[0].isMulti()) {
         layout = { element: selected[0], leftOrRight: 2 };
         name = 'action:' + moves[0].name;
         moves = clickMoves;
@@ -222,6 +225,7 @@ export default () => {
       }`
     )).join('') || ' none')
   );
+  //if (move) console.debug('Move in progress:' + `${move.name}({${Object.entries(move.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`);
 
   return (
     <div
