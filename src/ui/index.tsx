@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
-import { default as Game, PlayerAttributes } from '../game.js'
+import { default as Game } from '../game.js'
 import { humanizeArg, serializeArg } from '../action/utils.js';
 
-import type { GameUpdateEvent, GameFinishedEvent } from './Main.js'
+import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
 import Player from '../player/player.js'
 import { Board, GameElement } from '../board/index.js'
 import type { ElementJSON } from '../board/element.js'
@@ -351,10 +351,10 @@ const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?:
 }
 
 export type SetupComponentProps = {
-  name: string
-  settings: Record<string, any>
-  players: PlayerAttributes<Player>[]
-  updateKey: (key: string, value: any) => void
+  name: string,
+  settings: Record<string, any>,
+  players: User[],
+  updateKey: (key: string, value: any) => void,
 }
 
 export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, { settings, breakpoints, layout }: {

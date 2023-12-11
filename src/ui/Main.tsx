@@ -7,114 +7,112 @@ import { humanizeArg } from '../action/utils.js';
 import type { GameState } from '../interface.js';
 import type { SerializedArg } from '../action/utils.js';
 import type Player from '../player/player.js';
-import { PlayerAttributes } from '../game.js';
 import { SetupComponentProps } from './index.js';
 
 export type User = {
-  id: string
-  name: string
-}
+  id: string;
+  name: string;
+  avatar: string;
+  playerDetails?: {
+    color: string;
+    position: number;
+    settings?: any;
+  };
+};
 
-export type SetupPlayer = PlayerAttributes<Player>;
-
-export type UserPlayer = SetupPlayer & {
-  userID?: string
-}
+type UsersEvent = {
+  type: "users";
+  users: User[];
+};
 
 export type GameSettings = Record<string, any>
 
-export type PlayersEvent = {
-  type: "players"
-  players: UserPlayer[]
-  users: User[]
-}
-
 // an update to the setup state
 export type SettingsUpdateEvent = {
-  type: "settingsUpdate"
-  settings: GameSettings
+  type: "settingsUpdate";
+  settings: GameSettings;
 }
 
 export type GameUpdateEvent = {
-  type: "gameUpdate"
+  type: "gameUpdate";
   state: {
     position: number,
     state: GameState<Player>
   }
-  currentPlayers: number[]
+  currentPlayers: number[];
 }
 
 export type GameFinishedEvent = {
-  type: "gameFinished"
+  type: "gameFinished";
   state: {
     position: number,
     state: GameState<Player>
   }
-  winners: number[]
+  winners: number[];
 }
 
 // indicates the disposition of a message that was processed
 export type MessageProcessedEvent = {
-  type: "messageProcessed"
-  id: string
-  error?: string
+  type: "messageProcessed";
+  id: string;
+  error?: string;
 }
 
 export type SeatOperation = {
-  type: 'seat'
-  position: number,
-  userID: string
-  color: string
-  name: string
-  settings?: any
+  type: 'seat';
+  position: number;
+  userID: string;
+  color: string;
+  name: string;
+  settings?: any;
 }
 
 export type UnseatOperation = {
-  type: 'unseat'
-  position: number,
+  type: 'unseat';
+  userID: string;
 }
 
 export type UpdateOperation = {
-  type: 'update'
-  position: number,
-  color?: string
-  name?: string
-  settings?: any
+  type: 'update';
+  userID: string;
+  color?: string;
+  name?: string;
+  settings?: any;
 }
 
 export type ReserveOperation = {
-  type: 'reserve'
-  position: number,
-  color: string
-  name: string
-  settings?: any
+  type: 'reserve';
+  position: number;
+  color: string;
+  name: string;
+  settings?: any;
 }
 
 type PlayerOperation = SeatOperation | UnseatOperation | UpdateOperation | ReserveOperation
 
 export type UpdatePlayersMessage = {
-  type: "updatePlayers"
-  id: string
-  operations: PlayerOperation[]
+  type: "updatePlayers";
+  id: string;
+  operations: PlayerOperation[];
 }
 
 export type UpdateSelfPlayerMessage = {
-  type: "updateSelfPlayer"
-  id: string
-  name: string
-  color: string
+  type: "updateSelfPlayer";
+  id: string;
+  name: string;
+  color: string;
 }
 
 export type UpdateSettingsMessage = {
-  type: "updateSettings"
-  id: string
-  settings: GameSettings
+  type: "updateSettings";
+  id: string;
+  settings: GameSettings;
 }
 
 // used to send a move
 export type MoveMessage = {
-  id: string
-  type: 'move'
+  id: string;
+  type: 'move';
   data: {
     name: string,
     args: Record<string, SerializedArg>
@@ -126,18 +124,18 @@ export type MoveMessage = {
 
 // used to actually start the game
 export type StartMessage = {
-  id: string
-  type: 'start'
+  id: string;
+  type: 'start';
 }
 
 // used to tell the top that you're ready to recv events
 export type ReadyMessage = {
-  type: 'ready'
+  type: 'ready';
 }
 
 export type SwitchPlayerMessage = {
-  type: "switchPlayer"
-  index: number
+  type: "switchPlayer";
+  index: number;
 }
 
 export default ({ minPlayers, maxPlayers, setupComponents }: {
@@ -146,10 +144,10 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
   const [game, moves, clearMoves, setSelected, error, setError, position, updateState] = gameStore(s => [s.game, s.moves, s.clearMoves, s.setSelected, s.error, s.setError, s.position, s.updateState]);
-  const [players, setPlayers] = useState<UserPlayer[]>([]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
+  const players = useMemo(() => users.filter(u => !!u.playerDetails), [users]);
 
   const moveCallbacks = useMemo<((e: string) => void)[]>(() => [], []);
 
@@ -160,7 +158,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   }, [setError]);
 
   const listener = useCallback((event: MessageEvent<
-    PlayersEvent |
+    UsersEvent |
     SettingsUpdateEvent |
     GameUpdateEvent |
     GameFinishedEvent |
@@ -172,8 +170,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     case 'settingsUpdate':
       setSettings(data.settings);
       break;
-    case 'players':
-      setPlayers(data.players);
+    case 'users':
       setUsers(data.users);
       break;
     case 'gameUpdate':

@@ -5,7 +5,7 @@ import { times } from '../../../index.js';
 import * as ReactColor from 'react-color';
 const { GithubPicker } = ReactColor;
 
-import type { User, UserPlayer, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
+import type { User, UnseatOperation, UpdateOperation, UpdatePlayersMessage } from '../../Main.js';
 
 const colors = [
   '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
@@ -15,7 +15,7 @@ const colors = [
 
 const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlayer }: {
   users: User[],
-  players: UserPlayer[],
+  players: User[],
   minPlayers: number,
   maxPlayers: number,
   onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
@@ -23,15 +23,15 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlay
 }) => {
   const [userID, host] = gameStore(s => [s.userID, s.host]);
 
-  const [pickingColor, setPickingColor] = useState<number>();
+  const [pickingColor, setPickingColor] = useState<string>();
 
   const seatPlayer = (position: number, userID: string) => {
     const user = users.find(u => u.id === userID);
-    const unseats = players.filter(p => p.userID === userID && p.position !== position || p.userID !== userID && p.position === position);
-    const usedColors = players.filter(p => p.userID !== userID && p.position !== position).map(p => p.color);
+    const unseats = players.filter(p => p.id === userID && p.playerDetails?.position !== position || p.id !== userID && p.playerDetails?.position === position);
+    const usedColors = players.filter(p => p.id !== userID && p.playerDetails?.position !== position).map(p => p.playerDetails?.color);
     const color = colors.find(c => !usedColors.includes(c))!;
     const operations: UpdatePlayersMessage['operations'] = unseats.map(u => (
-      {type: 'unseat', position: u.position} as UnseatOperation
+      {type: 'unseat', userID: u.id} as UnseatOperation
     ));
     if (user) operations.push({
       type: "seat",
@@ -44,47 +44,45 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlay
     onUpdatePlayers(operations);
   }
 
-  const updateColor = (position: number, color: string) => {
+  const updateColor = (userID: string, color: string) => {
     setPickingColor(undefined);
     if (host) {
       const operation: UpdateOperation = {
         type: "update",
-        position,
+        userID,
         color,
       };
       onUpdatePlayers([operation]);
     } else {
-      onUpdateSelfPlayer({ color, name: playerAt(position)!.name });
+      onUpdateSelfPlayer({ color, name: players.find(p => p.id === userID)!.name });
     }
   }
-
-  const playerAt = (position: number) => players.find(p => p.position === position);
 
   return (
     <div id="seating">
       <div id="seats">
-        {times(maxPlayers, p => {
-          const player = playerAt(p);
+        {times(maxPlayers, position => {
+          const player = players.find(p => p.playerDetails?.position === position);
           return (
-            <div className="seat" key={p}>
+            <div className="seat" key={position}>
               <select
                 onDragOver={e => {e.preventDefault(); e.dataTransfer.dropEffect = "move";}}
-                onDrop={e => seatPlayer(p, e.dataTransfer.getData('user'))}
-                value={player?.userID || ""}
-                onChange={e => seatPlayer(p, e.target.value)}
-                style={{backgroundColor: player?.color }}
+                onDrop={e => seatPlayer(position, e.dataTransfer.getData('user'))}
+                value={player?.id || ""}
+                onChange={e => seatPlayer(position, e.target.value)}
+                style={{backgroundColor: player?.playerDetails?.color }}
               >
                 <option key="" value="">&lt; open seat &gt;</option>
                 {users.filter(u => (
-                  player?.userID === u.id || !players.find(player => player.userID === u.id)
+                  player?.id === u.id || !players.find(player => player.id === u.id)
                 )).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
-              {player && (host || player.userID === userID) && (
+              <img className="avatar" draggable="false" src={player?.avatar}/>
+              {player && (host || player.id === userID) && (
                 <>
-                  <img className="avatar" src={player?.avatar}/>
                   <div
                     className="pencil"
-                    onClick={() => setPickingColor(picking => picking === p ? undefined : p)}
+                    onClick={() => setPickingColor(picking => picking === player.id ? undefined : player.id)}
                   >
                     <svg
                       className="svg-icon"
@@ -98,11 +96,11 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlay
                       ></path>
                     </svg>
                   </div>
-                  {pickingColor === p && (
+                  {pickingColor === player.id && (
                     <GithubPicker
-                      color={player.color}
-                      colors={colors.filter(c => c === player.color || !players.map(p => p.color).includes(c))}
-                      onChange={c => updateColor(p, c.hex)}
+                      color={player.playerDetails?.color}
+                      colors={colors.filter(c => c === player.playerDetails?.color || !players.map(p => p.playerDetails?.color).includes(c))}
+                      onChange={c => updateColor(player.id, c.hex)}
                     />
                   )}
                 </>
@@ -114,10 +112,10 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlay
       <div id="lobby">
         <div>Waiting in lobby</div>
         <div id="users">
-          {users.filter(u => !players.find(player => player.userID === u.id)).map(
+          {users.filter(u => !players.find(player => player.id === u.id)).map(
             u => (
               <div key={u.id} draggable="true" onDragStart={e => e.dataTransfer.setData('user', u.id)} className="user">
-                <img src="https://i.pravatar.cc/200?u=bup1"/>{/* u.avatar */}{u.name}
+                <img draggable="false" src={u.avatar}/>{u.name}
               </div>
             )
           )}

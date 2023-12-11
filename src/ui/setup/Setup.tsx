@@ -3,11 +3,11 @@ import Seating from './components/Seating.js';
 import { gameStore } from '../index.js';
 
 import { SetupComponentProps } from '../index.js';
-import type { User, UserPlayer, UpdatePlayersMessage, GameSettings } from '../Main.js';
+import type { User, UpdatePlayersMessage, GameSettings } from '../Main.js';
 
 export default ({ users, players, minPlayers, maxPlayers, setupComponents, settings, onUpdatePlayers, onUpdateSelfPlayer, onUpdateSettings, onStart }: {
   users: User[],
-  players: UserPlayer[],
+  players: User[],
   minPlayers: number,
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>

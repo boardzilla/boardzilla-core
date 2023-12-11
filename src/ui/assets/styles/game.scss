@@ -286,6 +286,7 @@ html, body { height: 100% }
             text-align-last: center;
             text-align: center;
             font-size: 1.5em;
+            height: 2.75em;
             border-radius: 20em;
             border-width: 0;
             padding: 0.8em 1em;
@@ -306,9 +307,9 @@ html, body { height: 100% }
 
           img.avatar {
             position: absolute;
-            left: 0.2rem;
-            top: 15%;
-            height: 70%;
+            left: 0.5em;
+            top: 0.75em;
+            height: 3.3em;
             border-radius: 50%;
           }
 
