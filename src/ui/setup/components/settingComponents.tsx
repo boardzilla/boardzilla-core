@@ -8,8 +8,8 @@ export const toggleSetting = (label: string) => ({ name, settings, updateKey }: 
 
   return (
     <div>
-      <input type="checkbox" value={settings && settings[name]} onChange={e => updateKey(name, e.target.checked)}/>
-      <label>{label}</label>
+      <input id={name} type="checkbox" value={settings && settings[name]} onChange={e => updateKey(name, e.target.checked)}/>
+      <label htmlFor={name}>{label}</label>
     </div>
   );
 };
