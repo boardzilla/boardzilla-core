@@ -10,7 +10,7 @@ import {
 } from '../../../board/index.js'
 import { serialize, humanizeArg } from '../../../action/utils.js'
 
-import type { Box, ElementJSON } from '../../../board/element.js';
+import type { ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../index.js';
 import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
@@ -26,13 +26,12 @@ const elementAttributes = (el: GameElement) => {
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{humanizeArg(el)}</div>;
 
-const Element = ({element, json, selected, onSelectElement, onMouseLeave, localTransform}: {
+const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
   selected: GameElement<Player>[],
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onMouseLeave?: () => void,
-  localTransform?: Box | undefined,
 }) => {
   const [boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop] =
     gameStore(s => [s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.boardJSON]);
@@ -92,7 +91,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave, localT
         }
         const move = dropSelections.find(move => move.selections[0].boardChoices?.includes(currentDrop));
         if (move) {
-          console.log('dragmove', move, currentDrop.branch());
           onSelectElement([move], currentDrop);
           return;
         } else if (wrapper.current && element._ui.computedStyle) {
@@ -167,11 +165,10 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave, localT
       delete styleBuilder.left;
       delete styleBuilder.top;
     }
-    if (localTransform) console.log(absoluteTransform.height, localTransform.height);
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
     return styleBuilder;
-  }, [element, dragging, absoluteTransform, localTransform]);
+  }, [element, dragging, absoluteTransform]);
 
   useEffect(() => {
     if (zoomElement !== element && wrapper.current?.getAttribute('data-zoomed')) {
@@ -245,10 +242,8 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave, localT
     if (!el._ui.computedStyle || el._ui.appearance.render === false) continue;
 
     let container = contents;
-    let localTransform: Box | undefined = undefined;
     if (drawerAssignments.has(el)) {
       container = drawerContent[drawerAssignments.get(el)!] ??= [];
-      localTransform = drawers[drawerAssignments.get(el)!].area;
     }
 
     container.push(
@@ -259,7 +254,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave, localT
         selected={selected}
         onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
         onSelectElement={onSelectElement}
-        localTransform={localTransform}
       />
     );
   }
@@ -267,11 +261,17 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave, localT
   for (let d = 0; d !== drawers.length; d++) {
     const layout = drawers[d];
     const drawer = layout.drawer!;
-    const openContent = typeof drawer.openTab === 'function' ? drawer.openTab(element) : drawer.openTab;open
-    const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab;
+    const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
+    const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab ?? openContent;
 
     contents.push(
-      <Drawer key={d} area={layout.area} closeDirection={drawer.closeDirection}>
+      <Drawer
+        key={d}
+        area={layout.area}
+        closeDirection={drawer.closeDirection}
+        openIf={drawer.openIf}
+        closeIf={drawer.closeIf}
+      >
         <Drawer.Open>
           {openContent}
         </Drawer.Open>

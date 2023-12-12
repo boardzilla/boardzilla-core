@@ -9,6 +9,7 @@ import type Player from '../player/player.js';
 import type Board from './board.js';
 import type Space from './space.js';
 import type { ElementFinder } from './element-collection.js';
+import type { Argument } from '../action/action.js';
 
 import type { UndirectedGraph } from 'graphology';
 
@@ -66,8 +67,10 @@ export type ElementUI<T extends GameElement> = {
       showBoundingBox?: string,
       drawer?: {
         closeDirection: 'up' | 'down' | 'left' | 'right',
-        openTab: ((el: T) => React.ReactNode) | false,
-        closedTab: ((el: T) => React.ReactNode) | false,
+        tab: ((el: T) => React.ReactNode) | false,
+        closedTab?: ((el: T) => React.ReactNode) | false,
+        openIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
+        closeIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
       }
     }
   }[],
@@ -937,29 +940,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @param attributes.haphazardly - A number specifying an amount of randomness
    * added to the layout to provide a more natural looking placement
    */
-  layout<T extends this>(this: T, applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
-    margin?: number | { top: number, bottom: number, left: number, right: number },
-    area?: Box,
-    rows?: number | {min: number, max?: number} | {min?: number, max: number},
-    columns?: number | {min: number, max?: number} | {min?: number, max: number},
-    slots?: Box[],
-    size?: { width: number, height: number },
-    aspectRatio?: number, // w / h
-    scaling?: 'fit' | 'fill' | 'none'
-    gap?: number | { x: number, y: number },
-    alignment?: 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'bottom left' | 'top right' | 'bottom right' | 'center',
-    offsetColumn?: Vector,
-    offsetRow?: Vector,
-    direction?: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
-    limit?: number,
-    haphazardly?: number,
-    showBoundingBox?: string,
-    drawer?: {
-      closeDirection: 'up' | 'down' | 'left' | 'right',
-      openTab: ((el: T) => React.ReactNode) | false,
-      closedTab: ((el: T) => React.ReactNode) | false,
-    }
-  }) {
+  layout<T extends this>(
+    this: T,
+    applyTo: typeof this._ui.layouts[number]['applyTo'],
+    attributes: Partial<typeof this._ui.layouts[number]['attributes']>
+  ) {
     const {area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
     if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
