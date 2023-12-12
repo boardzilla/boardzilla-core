@@ -64,6 +64,11 @@ export type ElementUI<T extends GameElement> = {
       limit?: number,
       haphazardly?: number,
       showBoundingBox?: string,
+      drawer?: {
+        closeDirection: 'up' | 'down' | 'left' | 'right',
+        openTab: ((el: T) => React.ReactNode) | false,
+        closedTab: ((el: T) => React.ReactNode) | false,
+      }
     }
   }[],
   appearance: {
@@ -81,9 +86,15 @@ export type ElementUI<T extends GameElement> = {
       label?: ({distance, to, from}: {distance: number, to: Space, from: Space }) => React.ReactNode,
       labelScale?: number,
     },
-    showBoundingBox?: Record<string, Box>,
   },
   computedStyle?: Box,
+  computedLayouts?: {
+    area: Box,
+    name: string,
+    showBoundingBox?: string,
+    children: GameElement[],
+    drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
+  }[]
 }
 
 /**
@@ -926,7 +937,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @param attributes.haphazardly - A number specifying an amount of randomness
    * added to the layout to provide a more natural looking placement
    */
-  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
+  layout<T extends this>(this: T, applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
     margin?: number | { top: number, bottom: number, left: number, right: number },
     area?: Box,
     rows?: number | {min: number, max?: number} | {min?: number, max: number},
@@ -942,7 +953,12 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     direction?: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
     limit?: number,
     haphazardly?: number,
-    showBoundingBox?: string
+    showBoundingBox?: string,
+    drawer?: {
+      closeDirection: 'up' | 'down' | 'left' | 'right',
+      openTab: ((el: T) => React.ReactNode) | false,
+      closedTab: ((el: T) => React.ReactNode) | false,
+    }
   }) {
     const {area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
@@ -991,7 +1007,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     const absoluteTransform = this.absoluteTransform();
 
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
-      const { attributes } = this._ui.layouts[l];
+      const { attributes, applyTo } = this._ui.layouts[l];
       let children = layoutItems[l];
 
       let cellBox: (n: number) => Box | undefined;
@@ -1001,9 +1017,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
       const area = this.getArea(attributes);
 
-      if (attributes.showBoundingBox) {
-        if (!this._ui.appearance.showBoundingBox) this._ui.appearance.showBoundingBox = {};
-        this._ui.appearance.showBoundingBox[attributes.showBoundingBox] = area;
+      if (attributes.showBoundingBox || attributes.drawer) {
+        if (!this._ui.computedLayouts) this._ui.computedLayouts = [];
+        this._ui.computedLayouts[l] = {
+          area,
+          children,
+          name: applyTo.toString(),
+          showBoundingBox: attributes.showBoundingBox,
+          drawer: attributes.drawer
+        };
       }
 
       if (!children) continue;
