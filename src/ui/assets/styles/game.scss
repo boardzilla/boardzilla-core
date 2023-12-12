@@ -175,34 +175,28 @@ html, body { height: 100% }
     }
 
     .drawer {
-      position: absolute;
-      .drawer-tab {
+      > .drawer-tab {
         position: absolute;
         z-index: 2;
         font-size: .5rem;
         text-align: center;
-        &.close-direction-down {
-          width: 100%;
-          height: 1rem;
-          bottom: 100%;
-          left: 0;
-        }
-        &.close-direction-up {
-          width: 100%;
-          height: 1rem;
-          top: 100%;
-          left: 0;
-        }
+        transition: left .2s, top .2s, bottom .2s, right .2s;
+        background: #0008;
+        color: white;
       }
-      .drawer-content {
-        overflow: hidden;
+
+      > .drawer-content {
         position: absolute;
-        width: 100%;
-        height: 100%;
-        left: 0;
-        top: 0;
-        .drawer-container {
+        transition: left .2s, top .2s, bottom .2s, right .2s, transform .2s;
+        > .drawer-container {
           position: absolute;
+        }
+        > .drawer-background {
+          position: absolute;
+          inset: 0;
+          border: .1rem solid #0008;
+          border-top-width: 0;
+          background: white;
         }
       }
     }

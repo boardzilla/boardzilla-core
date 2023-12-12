@@ -266,9 +266,9 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave, localT
 
   for (let d = 0; d !== drawers.length; d++) {
     const layout = drawers[d];
-    const drawer = layout.drawer;
-    const openContent = typeof drawer?.openTab === 'function' ? drawer.openTab(element) : drawer?.openTab;open
-    const closedContent = typeof drawer?.closedTab === 'function' ? drawer.closedTab(element) : drawer?.closedTab;
+    const drawer = layout.drawer!;
+    const openContent = typeof drawer.openTab === 'function' ? drawer.openTab(element) : drawer.openTab;open
+    const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab;
 
     contents.push(
       <Drawer key={d} area={layout.area} closeDirection={drawer.closeDirection}>
