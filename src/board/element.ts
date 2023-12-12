@@ -9,6 +9,7 @@ import type Player from '../player/player.js';
 import type Board from './board.js';
 import type Space from './space.js';
 import type { ElementFinder } from './element-collection.js';
+import type { Argument } from '../action/action.js';
 
 import type { UndirectedGraph } from 'graphology';
 
@@ -64,26 +65,39 @@ export type ElementUI<T extends GameElement> = {
       limit?: number,
       haphazardly?: number,
       showBoundingBox?: string,
+      drawer?: {
+        closeDirection: 'up' | 'down' | 'left' | 'right',
+        tab: ((el: T) => React.ReactNode) | false,
+        closedTab?: ((el: T) => React.ReactNode) | false,
+        openIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
+        closeIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
+      }
     }
   }[],
   appearance: {
     className?: string,
-    render?: ((el: T) => React.JSX.Element | null) | false,
+    render?: ((el: T) => React.ReactNode) | false,
     aspectRatio?: number,
     zoomable?: boolean | ((el: T) => boolean),
     effects?: { attributes: ElementAttributes<T>, className: string }[],
-    tooltip?: ((el: T) => React.JSX.Element | null) | false,
+    tooltip?: ((el: T) => React.ReactNode) | false,
     connections?: {
       thickness?: number,
       style?: 'solid' | 'double',
       color?: string,
       fill?: string,
-      label?: ({distance, to, from}: {distance: number, to: Space, from: Space }) => React.JSX.Element | null,
+      label?: ({distance, to, from}: {distance: number, to: Space, from: Space }) => React.ReactNode,
       labelScale?: number,
     },
-    showBoundingBox?: Record<string, Box>,
   },
   computedStyle?: Box,
+  computedLayouts?: {
+    area: Box,
+    name: string,
+    showBoundingBox?: string,
+    children: GameElement[],
+    drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
+  }[]
 }
 
 /**
@@ -926,24 +940,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @param attributes.haphazardly - A number specifying an amount of randomness
    * added to the layout to provide a more natural looking placement
    */
-  layout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
-    margin?: number | { top: number, bottom: number, left: number, right: number },
-    area?: Box,
-    rows?: number | {min: number, max?: number} | {min?: number, max: number},
-    columns?: number | {min: number, max?: number} | {min?: number, max: number},
-    slots?: Box[],
-    size?: { width: number, height: number },
-    aspectRatio?: number, // w / h
-    scaling?: 'fit' | 'fill' | 'none'
-    gap?: number | { x: number, y: number },
-    alignment?: 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'bottom left' | 'top right' | 'bottom right' | 'center',
-    offsetColumn?: Vector,
-    offsetRow?: Vector,
-    direction?: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
-    limit?: number,
-    haphazardly?: number,
-    showBoundingBox?: string
-  }) {
+  layout<T extends this>(
+    this: T,
+    applyTo: typeof this._ui.layouts[number]['applyTo'],
+    attributes: Partial<typeof this._ui.layouts[number]['attributes']>
+  ) {
     const {area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
     if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
@@ -991,7 +992,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     const absoluteTransform = this.absoluteTransform();
 
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
-      const { attributes } = this._ui.layouts[l];
+      const { attributes, applyTo } = this._ui.layouts[l];
       let children = layoutItems[l];
 
       let cellBox: (n: number) => Box | undefined;
@@ -1001,9 +1002,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
       const area = this.getArea(attributes);
 
-      if (attributes.showBoundingBox) {
-        if (!this._ui.appearance.showBoundingBox) this._ui.appearance.showBoundingBox = {};
-        this._ui.appearance.showBoundingBox[attributes.showBoundingBox] = area;
+      if (attributes.showBoundingBox || attributes.drawer) {
+        if (!this._ui.computedLayouts) this._ui.computedLayouts = [];
+        this._ui.computedLayouts[l] = {
+          area,
+          children,
+          name: applyTo.toString(),
+          showBoundingBox: attributes.showBoundingBox,
+          drawer: attributes.drawer
+        };
       }
 
       if (!children) continue;

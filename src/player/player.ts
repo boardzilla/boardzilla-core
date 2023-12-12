@@ -38,7 +38,7 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
    */
   other(this: P) {
     if (this._players.length !== 2) throw Error('Can only use `other` for 2 player games');
-    return Array.from(this._players).find(p => p !== this)!;
+    return this._players.find(p => p !== this)!;
   }
 
   allMy<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;

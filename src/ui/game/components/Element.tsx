@@ -14,6 +14,7 @@ import type { ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../index.js';
 import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
+import Drawer from './Drawer.js';
 
 const elementAttributes = (el: GameElement) => {
   return Object.assign({'data-player': el.player?.position}, Object.fromEntries(Object.entries(el).filter(([key, val]) => (
@@ -32,8 +33,8 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, selectMove] =
-    gameStore(s => [s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.selectMove, s.boardJSON]);
+  const [boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop] =
+    gameStore(s => [s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
   const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
@@ -90,7 +91,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         }
         const move = dropSelections.find(move => move.selections[0].boardChoices?.includes(currentDrop));
         if (move) {
-          console.log('dragmove', move, currentDrop.branch());
           onSelectElement([move], currentDrop);
           return;
         } else if (wrapper.current && element._ui.computedStyle) {
@@ -222,11 +222,31 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     //throw Error('JSON does not match board');
     return null;
   }
+
+  // find all drawered children and take them out of the normal stack and assign them to their drawers
+  let drawers: GameElement['_ui']['computedLayouts'] = [];
+  let drawerAssignments = new Map<GameElement, number>();
+  let drawerContent: React.JSX.Element[][] = [];
+  if (element._ui.computedLayouts) {
+    drawers = element._ui.computedLayouts.filter(layout => layout.drawer)
+    for (let l = 0; l !== drawers.length; l++) {
+      for (const child of drawers[l].children) {
+        drawerAssignments.set(child, l);
+      }
+    }
+  }
+
   for (let i = 0; i !== element._t.children.length; i++) {
     const el = element._t.order === 'stacking' ? element._t.children[element._t.children.length - i - 1] : element._t.children[i];
     const childJSON = element._t.order === 'stacking' ? json.children![json.children!.length - i - 1] : json.children![i];
     if (!el._ui.computedStyle || el._ui.appearance.render === false) continue;
-    contents.push(
+
+    let container = contents;
+    if (drawerAssignments.has(el)) {
+      container = drawerContent[drawerAssignments.get(el)!] ??= [];
+    }
+
+    container.push(
       <Element
         key={el.branch()}
         element={el}
@@ -235,6 +255,31 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
         onSelectElement={onSelectElement}
       />
+    );
+  }
+
+  for (let d = 0; d !== drawers.length; d++) {
+    const layout = drawers[d];
+    const drawer = layout.drawer!;
+    const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
+    const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab ?? openContent;
+
+    contents.push(
+      <Drawer
+        key={d}
+        area={layout.area}
+        closeDirection={drawer.closeDirection}
+        openIf={drawer.openIf}
+        closeIf={drawer.closeIf}
+      >
+        <Drawer.Open>
+          {openContent}
+        </Drawer.Open>
+        <Drawer.Closed>
+          {closedContent}
+        </Drawer.Closed>
+        {drawerContent[d]}
+      </Drawer>
     );
   }
 
@@ -316,20 +361,19 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const attrs = elementAttributes(element);
   if (element.player?.position === position) attrs.mine = 'true';
 
-  let grids: React.JSX.Element[] = [];
-  if (element._ui.appearance.showBoundingBox) {
-    grids = Object.entries(element._ui.appearance.showBoundingBox).map(([k, box]) => (
+  let boundingBoxes: React.JSX.Element[] = [];
+  if (element._ui.computedLayouts) {
+    boundingBoxes = element._ui.computedLayouts.filter(layout => layout.showBoundingBox).map((layout, k) => (
       <div key={k} className="bz-show-grid" style={{
-        left: box.left + '%',
-        top: box.top + '%',
-        width: box.width + '%',
-        height: box.height + '%'
+        left: layout.area.left + '%',
+        top: layout.area.top + '%',
+        width: layout.area.width + '%',
+        height: layout.area.height + '%'
       }}>
-        <span>{k}</span>
+        <span>{layout.showBoundingBox}</span>
       </div>
     ));
   }
-
 
   // "base" semantic GameElement dom element
   contents = (
@@ -350,7 +394,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       onMouseLeave={handleMouseLeave}
       {...attrs}
     >
-      {grids}
+      {boundingBoxes}
       {appearance(element)}
       {contents}
     </div>
@@ -370,6 +414,19 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     </div>
   );
 
+  if (element instanceof Piece) {
+    contents = (
+      <DraggableCore
+        disabled={!draggable}
+        onStart={handleDragStart}
+        onDrag={handleDrag}
+        onStop={handleDragStop}
+      >
+        {contents}
+      </DraggableCore>
+    );
+  }
+
   if (element._ui.appearance.tooltip) {
     const tooltip = element._ui.appearance.tooltip(element);
     if (tooltip) contents = (
@@ -381,17 +438,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       </>
     );
   }
-
-  contents = (
-    <DraggableCore
-      disabled={!draggable}
-      onStart={handleDragStart}
-      onDrag={handleDrag}
-      onStop={handleDragStop}
-    >
-      {contents}
-    </DraggableCore>
-  );
 
   //if (!element._t.parent) console.log('GAMEELEMENTS render');
 

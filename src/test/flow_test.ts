@@ -347,7 +347,7 @@ describe('Loop', () => {
     })
 
     it ('resets counters', () => {
-      while(nestedLoop.playOneStep() === FlowControl.ok) { }
+      while(nestedLoop.playOneStep() === FlowControl.ok);
       expect(stepSpy).to.have.been.called.exactly(6);
       expect(stepSpy).on.nth(1).be.called.with(0, 0);
       expect(stepSpy).on.nth(2).be.called.with(0, 1);
@@ -363,7 +363,7 @@ describe('Loop', () => {
       const stepSpy = chai.spy((x:number) => {x});
       const loop = forEach({ name: 'foreach', collection: [3, 5, 7], do: ({ foreach }) => stepSpy(foreach) });
       loop.reset();
-      while(loop.playOneStep() === FlowControl.ok) { }
+      while(loop.playOneStep() === FlowControl.ok);
       expect(stepSpy).to.have.been.called.exactly(3);
       expect(stepSpy).on.nth(1).be.called.with(3);
       expect(stepSpy).on.nth(2).be.called.with(5);
@@ -391,7 +391,7 @@ describe('Loop', () => {
         forEach({ name: 'foreach', collection: ({ loop }) => [10 + loop, 20 + loop], do: ({ foreach }) => stepSpy(foreach) })
       )});
       outerLoop.reset();
-      while(outerLoop.playOneStep() === FlowControl.ok) { }
+      while(outerLoop.playOneStep() === FlowControl.ok);
       expect(stepSpy).to.have.been.called.exactly(4);
       expect(stepSpy).on.nth(1).be.called.with(11);
       expect(stepSpy).on.nth(2).be.called.with(21);
@@ -402,7 +402,7 @@ describe('Loop', () => {
       const stepSpy = chai.spy((x:number) => {x});
       const empty = forEach({ name: 'foreach', collection: [], do: ({ foreach }) => stepSpy(foreach) });
       empty.reset();
-      while(empty.playOneStep() === FlowControl.ok) { }
+      while(empty.playOneStep() === FlowControl.ok);
       expect(stepSpy).not.to.have.been.called;
     });
 

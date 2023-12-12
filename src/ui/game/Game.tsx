@@ -248,7 +248,6 @@ export default () => {
           selected={selected}
           onSelectElement={onSelectElement}
         />
-        <div style={{position: 'absolute', backgroundColor: 'red'}}/>
       </div>
 
       <PlayerControls
