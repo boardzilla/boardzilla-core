@@ -32,6 +32,12 @@ export type ActionLayout = {
   leftOrRight?: number,
 });
 
+export type BoardSize = {
+  name: string,
+  aspectRatio: number,
+  fixed?: 'landscape' | 'portrait'
+};
+
 /** @category Board */
 export default class Board<P extends Player<P, B> = any, B extends Board<P, B> = any> extends Space<P, B> {
   pile: GameElement<P>;
@@ -86,15 +92,16 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
   // UI
 
   _ui: ElementUI<this> & {
-    breakpoint?: string,
-    breakpoints?: (aspectRatio: number) => string;
-    setupLayout?: (board: B, player: P, breakpoint: string) => void;
+    boardSize: BoardSize,
+    boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
+    setupLayout?: (board: B, player: P, boardSize: string) => void;
     layoutsSet?: boolean;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout>;
     previousStyles: Record<any, Box>;
   } = {
+    boardSize: {name: '_default', aspectRatio: 1},
     layouts: [],
     appearance: {},
     stepLayouts: {},
@@ -108,34 +115,32 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     this._ui.previousStyles ||= {};
   }
 
-  setBreakpoint(breakpoint: string) {
-    if (breakpoint !== this._ui.breakpoint) {
-      if (this._ui.breakpoint) this._ui.layoutsSet = false
-      this._ui.breakpoint = breakpoint;
+  setBoardSize(this: B, boardSize: BoardSize) {
+    if (boardSize.name !== this._ui.boardSize.name) {
+      if (this._ui.boardSize) this._ui.layoutsSet = false
+      this._ui.boardSize = boardSize;
+      // this.applyLayouts(true);
     }
   }
 
-  getBreakpoint(aspectRatio: number) {
-    return this._ui.breakpoints && this._ui.breakpoints(aspectRatio) || '_default';
+  getBoardSize(screenX: number, screenY: number, mobile: boolean) {
+    return this._ui.boardSizes && this._ui.boardSizes(screenX, screenY, mobile) || { name: '_default', aspectRatio: 1 };
   }
 
   applyLayouts(this: B, force=false) {
-    if (!this._ui.breakpoint) this.setBreakpoint('_default');
     if (!this._ui.layoutsSet) {
       this.resetUI();
-      if (this._ui.setupLayout) this._ui.setupLayout(this, this._ctx.player!, this._ui.breakpoint!);
+      if (this._ui.setupLayout) this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
       this._ui.layoutsSet = true;
     }
 
-    const aspectRatio = this._ui.appearance.aspectRatio;
-    if (aspectRatio) {
-      this._ui.frame = {
-        left: 0,
-        top: 0,
-        width: aspectRatio < 1 ? aspectRatio * 100 : 100,
-        height: aspectRatio > 1 ? 100 / aspectRatio : 100
-      };
-    }
+    const aspectRatio = this._ui.boardSize.aspectRatio;
+    this._ui.frame = {
+      left: 0,
+      top: 0,
+      width: aspectRatio < 1 ? aspectRatio * 100 : 100,
+      height: aspectRatio > 1 ? 100 / aspectRatio : 100
+    };
     return super.applyLayouts(force);
   }
 

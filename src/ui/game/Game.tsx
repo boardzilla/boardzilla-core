@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, CSSProperties } from 'react';
-import classNames from 'classnames';
 import { gameStore } from '../index.js';
 
 import Element from './components/Element.js';
@@ -15,10 +14,10 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setAspectRatio, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setAspectRatio, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
+  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
+    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
-  const [dimensions, setDimensions] = useState<{width: number, height: number}>();
+  // const [dimensions, setDimensions] = useState<{width: number, height: number}>();
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
 
@@ -189,32 +188,20 @@ export default () => {
   }, [setZoom, submitMove]);
 
   useEffect(() => {
-    const resize = () => {
-      const aspectRatio = window.innerWidth / window.innerHeight;
-      setAspectRatio(aspectRatio);
+    window.addEventListener('resize', setBoardSize);
+    return () => window.removeEventListener('resize', setBoardSize);
+  }, [setBoardSize]);
 
-      const ratio = (game.board._ui.appearance.aspectRatio ?? 1) / aspectRatio;
-      let rem = window.innerHeight / 25;
-      if (ratio > 1) {
-        setDimensions({
-          width: 100,
-          height: 100 / ratio
-        });
-        rem /= ratio;
-      } else {
-        setDimensions({
-          width: 100 * ratio,
-          height: 100
-        })
-      }
-      window.document.documentElement.style.fontSize = rem + 'px';
+  useEffect(() => {
+    window.document.documentElement.style.setProperty('font-size', 'min(4vw / var(--aspect-ratio), 4vh)');
+    window.document.documentElement.style.setProperty('--aspect-ratio', String(game.board._ui.boardSize.aspectRatio))
+    return () => {
+      window.document.documentElement.style.removeProperty('font-size');
+      window.document.documentElement.style.removeProperty('--aspect-ratio');
     }
-    window.addEventListener('resize', resize);
-    resize();
-    return () => window.removeEventListener('resize', resize);
-  }, [game.board._ui.appearance.aspectRatio, setAspectRatio]);
+  }, [game.board._ui.boardSize]);
 
-  if (!dimensions) return;
+  if (!boardJSON.length) return null;
 
   console.debug('Showing game with pending moves:' +
     (pendingMoves?.map(m => (
@@ -231,12 +218,9 @@ export default () => {
     <div
       id="game"
       ref={domRef}
-      className={classNames(
-        game.board._ui.appearance.className,
-        game.board._ui.breakpoint,
-        step
-      )}
-      style={{ position: 'relative', width: dimensions.width + '%', height: dimensions.height + '%', top: 50 - dimensions.height/2 + '%' }}
+      data-board-size={game.board._ui.boardSize?.name}
+      data-step={step}
+      style={{ ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio }}
       onClick={() => game.phase === 'finished' && setVictoryMessageDismissed(true)}
     >
       <audio ref={clickAudio} src={click} id="click"/>
@@ -250,12 +234,12 @@ export default () => {
         />
       </div>
 
-      <PlayerControls
+      {game.phase !== 'finished' && <PlayerControls
         name={name}
         style={style}
         moves={moves}
         onSubmit={submitMove}
-      />
+      />}
 
       {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
       {game.phase === 'finished' && !victoryMessageDismissed && (

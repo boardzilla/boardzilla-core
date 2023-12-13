@@ -53,7 +53,12 @@ html, body { height: 100% }
   }
 
   #game {
-    margin: auto;
+    position: absolute;
+    --aspect-ratio: 1;
+    top: calc(50vh - .5 * min(100vw / var(--aspect-ratio), 100vh));
+    left: calc(50vw - .5 * min(100vw, 100vh * var(--aspect-ratio)));
+    width: min(100vw, 100vh * var(--aspect-ratio));
+    height: min(100vw / var(--aspect-ratio), 100vh);
     #play-area {
       position: relative;
       user-select: none;

@@ -262,7 +262,6 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
         />
       }
       {(game.phase === 'started' || game.phase === 'finished') && <Game/>}
-      {error && <div className="error">{error}</div>}
     </>
   );
 }

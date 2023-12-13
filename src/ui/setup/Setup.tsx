@@ -37,9 +37,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
     )) : [];
 
   return (
-    <div
-      id="game"
-    >
+    <div id="setup">
       <div id="background"/>
       <div id="setup" className={host ? '' : 'disabled'}>
         <div className="heading">

@@ -15,6 +15,7 @@ import type Selection from '../action/selection.js'
 import type { Argument } from '../action/action.js'
 import type { PendingMove, SerializedMove } from '../game.js'
 import type { SetupFunction } from '../index.js'
+import type { BoardSize } from '../board/board.js';
 
 // this feels like the makings of a class
 export type UIMove = PendingMove<Player> & {
@@ -63,7 +64,7 @@ type GameStore = {
   prompt?: string; // prompt for choosing action if applicable
   selected: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   setSelected: (s: GameElement[]) => void;
-  setAspectRatio: (a: number) => void;
+  setBoardSize: () => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
   dragOffset: {element?: string, x?: number, y?: number}; // mutable non-reactive record of drag offset
@@ -95,6 +96,9 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       window.board = game.board;
       // @ts-ignore;
       for (const className of game.board._ctx.classRegistry) window[className.name] = className;
+      game.board.setBoardSize(
+        game.board.getBoardSize(window.innerWidth, window.innerHeight, !!navigator.userAgent.match(/Mobi/))
+      );
     } else {
       game.players.fromJSON(update.state.state.players);
       game.board.fromJSON(update.state.state.board);
@@ -111,7 +115,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     }
     const position = s.position || update.state.position;
 
-    console.debug(`Loading game for player #${position}. Current flow:\n ${game.flow.stacktrace()}`);
+    console.debug(`Game update for player #${position}. Current flow:\n ${game.flow.stacktrace()}`);
 
     if (game.phase === 'finished') {
       return {
@@ -163,10 +167,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   pendingMoves: [],
   selected: [],
   setSelected: sel => set({ selected: [...new Set(sel)] }),
-  setAspectRatio: aspectRatio => set(s => {
-    const breakpoint = s.game.board.getBreakpoint(aspectRatio);
-    if (breakpoint !== s.game.board._ui.breakpoint) {
-      s.game.board.setBreakpoint(breakpoint);
+  setBoardSize: () => set(s => {
+    const boardSize = s.game.board.getBoardSize(window.innerWidth, window.innerHeight, !!navigator.userAgent.match(/Mobi/));
+    if (boardSize.name !== s.game.board._ui.boardSize.name) {
+      s.game.board.setBoardSize(boardSize);
       s.updateBoard();
     }
     return {};
@@ -357,21 +361,20 @@ export type SetupComponentProps = {
   updateKey: (key: string, value: any) => void,
 }
 
-export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, { settings, breakpoints, layout }: {
+export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, { settings, boardSizes, layout }: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
-  breakpoints?: (aspectRatio: number) => string,
-  layout?: (board: B, player: P, breakpoint: string) => void
+  boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize,
+  layout?: (board: B, player: P, boardSize: string) => void
 }): void => {
   const state = gameStore.getState();
   const setupGame: SetupFunction = (state) => {
     const game = setup(state);
-    game.board._ui.breakpoints = breakpoints;
+    game.board._ui.boardSizes = boardSizes;
     game.board._ui.setupLayout = layout;
     return game;
   }
   // we can anonymize Player class internally
   state.setSetup(setupGame);
-  // state.setGame(setupGame({ players: [], settings: {} }) as unknown as Game<Player, Board<Player>>);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
   const { host, userID, minPlayers, maxPlayers }: { host: boolean, userID: string, minPlayers: number, maxPlayers: number } = boostrap;
