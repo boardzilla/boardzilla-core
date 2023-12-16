@@ -1237,7 +1237,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           // align in reduced area
           startingOffset.x += area.left - totalAreaNeeded.left + alignOffset.left * (area.width - totalAreaNeeded.width);
           startingOffset.y += area.top - totalAreaNeeded.top + alignOffset.top * (area.height - totalAreaNeeded.height);
-          //console.log('align', {area, totalAreaNeeded, alignOffset, startingOffset, scale});
+          //console.log('align', {area, size, totalAreaNeeded, alignOffset, startingOffset, scale});
 
         } else { // orthogonal
 

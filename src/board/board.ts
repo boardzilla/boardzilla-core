@@ -13,23 +13,34 @@ import type Player from '../player/player.js';
 
 export type ActionLayout = {
   element: GameElement,
-  top?: number,
-  bottom?: number,
   width?: number,
   height?: number,
   noAnchor?: string[],
-} & ({
+} & (({
+  position?: 'inset'
+}) & (({
   left?: number,
   right?: never,
-  leftOrRight?: never,
+  gap?: never,
 } | {
   left?: never,
   right?: number,
-  leftOrRight?: never,
+  gap?: never,
+}) & ({
+  top?: number,
+  bottom?: never,
+  gap?: never
 } | {
+  top?: never,
+  bottom?: number,
+  gap?: never
+})) | {
+  position: 'beside' | 'stack'
   left?: never,
   right?: never,
-  leftOrRight?: number,
+  top?: never,
+  bottom?: never,
+  gap?: number,
 });
 
 export type BoardSize = {
@@ -119,7 +130,6 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     if (boardSize.name !== this._ui.boardSize.name) {
       if (this._ui.boardSize) this._ui.layoutsSet = false
       this._ui.boardSize = boardSize;
-      // this.applyLayouts(true);
     }
   }
 

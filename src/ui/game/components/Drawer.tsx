@@ -5,8 +5,9 @@ import type { Player } from '../../../player/index.js';
 import type { Argument } from '../../../action/action.js';
 import type { Box } from '../../../board/element.js';
 
-const Drawer = ({ area, children, closeDirection, openIf, closeIf }: {
+const Drawer = ({ area, absoluteAspectRatio, children, closeDirection, openIf, closeIf }: {
   area: Box,
+  absoluteAspectRatio: number,
   children: React.ReactNode,
   closeDirection: 'up' | 'down' | 'left' | 'right',
   openIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
@@ -51,22 +52,22 @@ const Drawer = ({ area, children, closeDirection, openIf, closeIf }: {
     if (closeDirection === 'left') {
       return {
         left: `${area.left + (open ? area.width : 0)}%`,
-        top: `${area.top}%`,
-        width: `${area.height}%`,
+        bottom: `${100 - area.top}%`,
+        width: `${area.height / absoluteAspectRatio}%`,
         transform: `rotate(90deg)`,
-        transformOrigin: 'top left',
+        transformOrigin: 'bottom left',
       }
     }
     if (closeDirection === 'right') {
       return {
         right: `${100 - area.left - (open ? 0 : area.width)}%`,
-        top: `${area.top}%`,
-        width: `${area.height}%`,
+        bottom: `${100 - area.top}%`,
+        width: `${area.height / absoluteAspectRatio}%`,
         transform: `rotate(-90deg)`,
-        transformOrigin: 'top right',
+        transformOrigin: 'bottom right',
       }
     }
-  }, [area, closeDirection, open]);
+  }, [area, closeDirection, absoluteAspectRatio, open]);
 
   /** inverse size to provide a relative box that matches the parent that the content was calculated against */
   const containerStyle = useMemo(() => {
@@ -104,10 +105,10 @@ const Drawer = ({ area, children, closeDirection, openIf, closeIf }: {
         {open ? openContent : closedContent}
       </div>
       <div className="drawer-content" style={style}>
+        <div className="drawer-background"/>
         <div className="drawer-container" style={containerStyle}>
           {content}
         </div>
-        <div className="drawer-background"/>
       </div>
     </div>
   );

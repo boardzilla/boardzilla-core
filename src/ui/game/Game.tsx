@@ -6,6 +6,7 @@ import PlayerControls from './components/PlayerControls.js';
 import { click } from '../assets/index.js';
 import { GameElement } from '../../board/index.js'
 import { humanizeArg } from '../../action/utils.js';
+import classnames from 'classnames';
 
 import type { ActionLayout } from '../../board/board.js'
 import type { UIMove } from '../index.js';
@@ -17,7 +18,6 @@ export default () => {
   const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
     gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
-  // const [dimensions, setDimensions] = useState<{width: number, height: number}>();
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
 
@@ -74,7 +74,7 @@ export default () => {
     let style: CSSProperties = { };
 
     if (!layout && disambiguateElement?.element) {
-      layout = { element: disambiguateElement.element, leftOrRight: 2 };
+      layout = { element: disambiguateElement.element, position: 'beside', gap: 2 };
       moves = disambiguateElement.moves;
       name = 'disambiguate-board-selection';
     }
@@ -82,7 +82,7 @@ export default () => {
     if (!layout && selected.length === 1) {
       const clickMoves = boardSelections[selected[0].branch()]?.clickMoves;
       if (clickMoves?.length === 1 && !clickMoves[0].selections[0].isMulti()) {
-        layout = { element: selected[0], leftOrRight: 2 };
+        layout = { element: selected[0], position: 'beside', gap: 2 };
         name = 'action:' + moves[0].name;
         moves = clickMoves;
       }
@@ -93,7 +93,7 @@ export default () => {
         game.board._ui.stepLayouts["action:" + name]?.noAnchor?.includes(name) && el instanceof GameElement
       ));
       if (element && (element[1] as GameElement)._ui?.computedStyle) {
-        layout = { element: element[1] as GameElement, leftOrRight: 2 };
+        layout = { element: element[1] as GameElement, position: 'beside', gap: 2 };
         name = 'action:' + element[0];
       }
     }
@@ -123,27 +123,37 @@ export default () => {
     }
 
     if (layout) {
-      let box: Box | undefined = layout.element.relativeTransformToBoard();
+      const box: Box = layout.element.relativeTransformToBoard();
 
-      if (layout.leftOrRight !== undefined && box) {
+      if (layout.position === 'beside' || layout.position === 'stack') {
         if (box.left > 100 - box.left - box.width) {
-          style.right = `calc(${100 - box.left}% + ${layout.leftOrRight}vw)`;
+          style.right = `calc(${100 - box.left - (layout.position === 'beside' ? 0 : box.width)}% + ${layout.position === 'beside' ? layout.gap : 0}vw)`;
           style.left = undefined;
         } else {
-          style.left = `calc(${box.left + box.width}% + ${layout.leftOrRight}vw)`;
+          style.left = `calc(${box.left + (layout.position === 'beside' ? box.width : 0)}% + ${layout.position === 'beside' ? layout.gap : 0}vw)`;
+        }
+
+        if (box.top > 100 - box.top - box.height) {
+          style.bottom = `calc(${100 - box.top - (layout.position === 'beside' ? box.height : 0)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw)`;
+          style.top = undefined;
+        } else {
+          style.top = `calc(${box.top + (layout.position === 'beside' ? 0: box.height)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw)`;
+        }
+      } else {
+        // inset
+        if (layout.right !== undefined) {
+          style.right = 100 + ((layout.right * box.width / 100) - box.left - box.width) + '%';
+        } else {
+          style.left ??= ((layout.left ?? 0) * box.width / 100) + box.left + '%';
+        }
+
+        if (layout.bottom !== undefined) {
+          style.bottom = 100 + ((layout.bottom * box.height / 100) - box.top - box.height) + '%';
+        } else {
+          style.top = ((layout.top ?? 0) * box.height / 100) + box.top + '%';
         }
       }
 
-      if (layout.right !== undefined) {
-        style.right = 100 + ((layout.right * box.width / 100) - box.left - box.width) + '%';
-      } else if (layout.leftOrRight === undefined) {
-        style.left ??= ((layout.left ?? 0) * box.width / 100) + box.left + '%';
-      }
-      if (layout.bottom !== undefined) {
-        style.bottom = 100 + ((layout.bottom * box.height / 100) - box.top - box.height) + '%';
-      } else {
-        style.top = ((layout.top ?? 0) * box.height / 100) + box.top + '%';
-      }
       if (layout.width !== undefined) style.width = (layout.width * box.width / 100) + '%';
       if (layout.height !== undefined) style.height = (layout.height * box.height / 100) + '%';
     } else {
@@ -220,6 +230,12 @@ export default () => {
       ref={domRef}
       data-board-size={game.board._ui.boardSize?.name}
       data-step={step}
+      className={classnames(
+        navigator.userAgent.match(/Mobi/) ? 'mobile' : 'desktop', {
+          'browser-chrome': navigator.userAgent.indexOf('Chrome') > -1,
+          'browser-firefox': navigator.userAgent.indexOf('Firefox') > -1,
+        }
+      )}
       style={{ ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio }}
       onClick={() => game.phase === 'finished' && setVictoryMessageDismissed(true)}
     >

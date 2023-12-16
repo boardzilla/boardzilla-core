@@ -41,6 +41,7 @@ type GameStore = {
   setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
   game: Game<Player, Board<Player>>;
   setGame: (game: Game<Player, Board<Player>>) => void;
+  isMobile: boolean;
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes
   updateState: (s: GameUpdateEvent | GameFinishedEvent) => void;
   updateBoard: () => void; // call any time state changes to update immutable references for listeners. updates move, selections
@@ -85,6 +86,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setSetup: setup => set({ setup }),
   game: new Game(Player, Board),
   setGame: (game: Game<Player, Board<Player>>) => set({ game }),
+  isMobile: !!navigator.userAgent.match(/Mobi/),
   boardJSON: [],
   updateState: update => set(s => {
     let { game } = s;
@@ -168,7 +170,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   selected: [],
   setSelected: sel => set({ selected: [...new Set(sel)] }),
   setBoardSize: () => set(s => {
-    const boardSize = s.game.board.getBoardSize(window.innerWidth, window.innerHeight, !!navigator.userAgent.match(/Mobi/));
+    const boardSize = s.game.board.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
     if (boardSize.name !== s.game.board._ui.boardSize.name) {
       s.game.board.setBoardSize(boardSize);
       s.updateBoard();
@@ -216,6 +218,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
   while (true) {
     pendingMoves = game.getPendingMoves(player, move?.name, move?.args);
+
     if (move && !pendingMoves?.moves) {
       // perhaps an update came while we were in the middle of a move
       console.error('move may no longer be valid. retrying getPendingMoves', move, pendingMoves);

@@ -57,12 +57,12 @@ export function cellSizeForArea(
     height = (area.height - (gap!.y || 0) * (rows - 1)) / rows;
   } else {
     width = area.width / (
-      (rows - 1) * Math.abs(offsetColumn.x / 100) + 1 +
-        (columns - 1) * Math.abs(offsetRow!.x / 100)
+      (rows - 1) * Math.abs(offsetRow!.x / 100) + 1 +
+        (columns - 1) * Math.abs(offsetColumn.x / 100)
     )
     height = area.height / (
-      (columns - 1) * Math.abs(offsetRow!.y / 100) + 1 +
-        (rows - 1) * Math.abs(offsetColumn.y / 100)
+      (columns - 1) * Math.abs(offsetColumn.y / 100) + 1 +
+        (rows - 1) * Math.abs(offsetRow!.y / 100)
     )
   }
 

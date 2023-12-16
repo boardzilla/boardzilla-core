@@ -330,6 +330,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       expand: true,
     };
     const actionStep = this.flow.actionNeeded(player);
+
     if (actionStep) {
       const actions = allowedActions.concat(
         actionStep.actions?.filter(
@@ -380,6 +381,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
           console.debug(`Action ${action.name} not allowed because no valid selections exist`);
         }
       }
+
       if (!possibleActions.length) return undefined;
       if (skipIfOnlyOne && possibleActions.length === 1) return { step, prompt, moves: pendingMoves};
       if (expand && pendingMoves.length) return { step, prompt, moves: pendingMoves};

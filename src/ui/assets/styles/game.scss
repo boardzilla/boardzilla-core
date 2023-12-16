@@ -32,6 +32,8 @@ html, body { height: 100% }
     color: #002;
     margin: 0;
     padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
     font-family: 'DM Sans Variable';
     > #root {
       position: absolute;
@@ -75,6 +77,9 @@ html, body { height: 100% }
       }
 
       .Space {
+        > * {
+          visibility: visible;
+        }
         > img {
           width: 100%;
           height: 100%;
@@ -87,6 +92,9 @@ html, body { height: 100% }
       }
 
       .Piece {
+        > * {
+          visibility: visible;
+        }
         > img {
           width: 100%;
           height: 100%;
@@ -121,6 +129,7 @@ html, body { height: 100% }
         position: absolute;
         transform-origin: top left;
         transition: transform .5s, top .6s, left .6s, width .6s, height .6s;
+        visibility: hidden;
         &.animating {
           z-index: 100;
         }
@@ -167,6 +176,7 @@ html, body { height: 100% }
       .bz-show-grid {
         position: absolute;
         border: 1px dashed white;
+        pointer-events: none;
         > span {
           position: absolute;
           font-size: .5rem;
@@ -182,18 +192,22 @@ html, body { height: 100% }
     .drawer {
       > .drawer-tab {
         position: absolute;
-        z-index: 2;
         font-size: .5rem;
         text-align: center;
         transition: height .1s, left .2s, top .2s, bottom .2s, right .2s;
         background: #0008;
         color: white;
         cursor: pointer;
-        height: 1.5em;
+        height: .75rem;
+        border-radius: .75em .75em 0 0;
       }
 
       &.closed > .drawer-tab:hover {
-        height: 1.6em;
+        height: .85rem;
+      }
+
+      &.close-direction-up > .drawer-tab {
+        border-radius: 0 0 .75em .75em;
       }
 
       > .drawer-content {
@@ -201,13 +215,17 @@ html, body { height: 100% }
         transition: left .2s, top .2s, bottom .2s, right .2s, transform .2s;
         > .drawer-container {
           position: absolute;
+          visibility: hidden;
+          > * {
+            visibility: visible;
+          }
         }
         > .drawer-background {
           position: absolute;
           inset: 0;
           border: .1rem solid #0008;
           border-top-width: 0;
-          background: white;
+          background: #fffc;
         }
       }
     }
@@ -218,6 +236,7 @@ html, body { height: 100% }
       padding: .25rem;
       font-size: .75rem;
       background: #fffc;
+
       &.fade-out {
         animation: fade-out-prompt .5s forwards;
       }
@@ -247,6 +266,7 @@ html, body { height: 100% }
         background: #ccc;
         cursor: pointer;
         transition: transform 0.2s;
+        white-space: normal;
         &:hover {
           transform: scale(1.1);
           box-shadow: 0.2rem 0.2rem .5rem #0008;
@@ -284,12 +304,24 @@ html, body { height: 100% }
       color: #433;
       z-index: 200;
     }
+
+    &.mobile {
+      .player-controls {
+        font-size: 1.5rem;
+        padding: .5rem;
+      }
+
+      .drawer .drawer-tab {
+        height: 1.35rem !important;
+        font-size: 1rem;
+      }
+    }
   }
 
   #setup {
     padding: 1rem;
     max-width: 800px;
-    margin: 0 auto;
+    margin: 0 auto 5rem;
     .heading {
       h1, h2 {
         text-align: center;
@@ -313,7 +345,6 @@ html, body { height: 100% }
 
       #seats {
         flex: 1;
-
 
         .seat {
           position: relative;
@@ -399,6 +430,7 @@ html, body { height: 100% }
           border-radius: 0 0 .2em .2em;
           padding: .2em;
           text-align: left;
+          min-height: 50px;
           .user {
             display: inline-block;
             margin: .2em;
@@ -417,6 +449,14 @@ html, body { height: 100% }
               left: 0.1em;
             }
           }
+        }
+      }
+
+      @media only screen and (max-width: 600px) {
+        display: block;
+
+        #lobby {
+          margin: .5rem 0 0;
         }
       }
     }
@@ -447,6 +487,7 @@ html, body { height: 100% }
     input.start {
       margin: 0 auto;
       display: block;
+      white-space: normal;
       font-family: 'DM Sans Variable';
       border-radius: .2em;
       border-width: 0;
@@ -475,7 +516,14 @@ html, body { height: 100% }
       max-height: 20vh;
       max-width: 80vw;
     }
+    max-height: 90vh;
+    max-width: 90vw;
+    #game.mobile & {
+      font-size: .8rem;
+    }
   }
+
+
 
   /* react-tooltip/dist/react-tooltip.min.css */
   :root{--rt-color-white:#fff;--rt-color-dark:#222;--rt-color-success:#8dc572;--rt-color-error:#be6464;--rt-color-warning:#f0ad4e;--rt-color-info:#337ab7;--rt-opacity:0.9;--rt-transition-show-delay:0.15s;--rt-transition-closing-delay:0.15s}.core-styles-module_tooltip__3vRRp{left:0;opacity:0;pointer-events:none;position:absolute;top:0;will-change:opacity}.core-styles-module_fixed__pcSol{position:fixed}.core-styles-module_arrow__cvMwQ{background:inherit;position:absolute}.core-styles-module_noArrow__xock6{display:none}.core-styles-module_clickable__ZuTTB{pointer-events:auto}.core-styles-module_show__Nt9eE{opacity:var(--rt-opacity);transition:opacity var(--rt-transition-show-delay) ease-out}.core-styles-module_closing__sGnxF{opacity:0;transition:opacity var(--rt-transition-closing-delay) ease-in}.styles-module_tooltip__mnnfp{border-radius:3px;font-size:90%;padding:8px 16px;width:max-content}.styles-module_arrow__K0L3T{height:8px;width:8px}[class*=react-tooltip__place-top]>.styles-module_arrow__K0L3T{transform:rotate(45deg)}[class*=react-tooltip__place-right]>.styles-module_arrow__K0L3T{transform:rotate(135deg)}[class*=react-tooltip__place-bottom]>.styles-module_arrow__K0L3T{transform:rotate(225deg)}[class*=react-tooltip__place-left]>.styles-module_arrow__K0L3T{transform:rotate(315deg)}.styles-module_dark__xNqje{background:var(--rt-color-dark);color:var(--rt-color-white)}.styles-module_light__Z6W-X{background-color:var(--rt-color-white);color:var(--rt-color-dark)}.styles-module_success__A2AKt{background-color:var(--rt-color-success);color:var(--rt-color-white)}.styles-module_warning__SCK0X{background-color:var(--rt-color-warning);color:var(--rt-color-white)}.styles-module_error__JvumD{background-color:var(--rt-color-error);color:var(--rt-color-white)}.styles-module_info__BWdHW{background-color:var(--rt-color-info);color:var(--rt-color-white)}
