@@ -248,7 +248,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
 
     container.push(
       <Element
-        key={el.branch()}
+        key={el.branch() + el.name}
         element={el}
         json={childJSON}
         selected={selected}
@@ -365,7 +365,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   let boundingBoxes: React.JSX.Element[] = [];
   if (element._ui.computedLayouts) {
     boundingBoxes = element._ui.computedLayouts.filter(layout => layout.showBoundingBox).map((layout, k) => (
-      <div key={k} className="bz-show-grid" style={{
+      <div key={k + (layout.showBoundingBox || '')} className="bz-show-grid" style={{
         left: layout.area.left + '%',
         top: layout.area.top + '%',
         width: layout.area.width + '%',
@@ -405,7 +405,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   contents = (
     <div
       ref={wrapper}
-      key={branch}
       className={classNames("transform-wrapper", { dragging })}
       style={{ ...style }}
       data-tooltip-id={branch}

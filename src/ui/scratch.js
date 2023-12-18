@@ -1,3 +1,9 @@
+intermediate animations need full state1,2,3 to position elements
+- send deltas
+- position only changed regions?
+- selectable, zoomable use non-state update style?
+  - simply add selectors
+
 
       {selection.type === 'choices' && selection.choices && (
         <>

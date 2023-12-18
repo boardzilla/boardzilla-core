@@ -153,7 +153,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
 
   const catchError = useCallback((error: string) => {
     if (!error) return
-    alert(error);
+    console.error(error);
     setError(error);
   }, [setError]);
 
