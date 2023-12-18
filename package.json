@@ -23,6 +23,9 @@
     "dist/**/*"
   ],
   "types": "dist/index.d.ts",
+  "sideEffects": [
+    "./src/ui/assets/styles/game.scss"
+  ],
   "dependencies": {
     "classnames": "^2.3.1",
     "graphology": "^0.25.4",
