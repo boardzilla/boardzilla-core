@@ -231,9 +231,9 @@ export default () => {
       data-board-size={game.board._ui.boardSize?.name}
       data-step={step}
       className={classnames(
-        navigator.userAgent.match(/Mobi/) ? 'mobile' : 'desktop', {
-          'browser-chrome': navigator.userAgent.indexOf('Chrome') > -1,
-          'browser-firefox': navigator.userAgent.indexOf('Firefox') > -1,
+        globalThis.navigator?.userAgent.match(/Mobi/) ? 'mobile' : 'desktop', {
+          'browser-chrome': globalThis.navigator?.userAgent.indexOf('Chrome') > -1,
+          'browser-firefox': globalThis.navigator?.userAgent.indexOf('Firefox') > -1,
         }
       )}
       style={{ ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio }}

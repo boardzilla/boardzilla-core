@@ -65,7 +65,9 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   allowedActions(): string[] {
-    return 'followups' in this.position && this.position.followups?.length ? [this.position.followups[0].name] : ('players' in this.position ? this.actions.map(a => a.name) : []);
+    return 'followups' in this.position && this.position.followups?.length ? [this.position.followups[0].name] : (
+      'player' in this.position ? [] : this.actions.map(a => a.name)
+    );
   }
 
   actionNeeded(player: Player) {

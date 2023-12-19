@@ -86,7 +86,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setSetup: setup => set({ setup }),
   game: new Game(Player, Board),
   setGame: (game: Game<Player, Board<Player>>) => set({ game }),
-  isMobile: !!navigator.userAgent.match(/Mobi/),
+  isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
   boardJSON: [],
   updateState: update => set(s => {
     let { game } = s;
@@ -99,7 +99,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       // @ts-ignore;
       for (const className of game.board._ctx.classRegistry) window[className.name] = className;
       game.board.setBoardSize(
-        game.board.getBoardSize(window.innerWidth, window.innerHeight, !!navigator.userAgent.match(/Mobi/))
+        game.board.getBoardSize(window.innerWidth, window.innerHeight, !!globalThis.navigator?.userAgent.match(/Mobi/))
       );
     } else {
       game.players.fromJSON(update.state.state.players);
