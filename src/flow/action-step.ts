@@ -64,6 +64,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (step) return step;
   }
 
+  // current actions that can process. does not check player
   allowedActions(): string[] {
     return 'followups' in this.position && this.position.followups?.length ? [this.position.followups[0].name] : (
       'player' in this.position ? [] : this.actions.map(a => a.name)
@@ -110,9 +111,16 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (typeof errorOrFollowups === 'string') {
       // failed with a selection required
       return errorOrFollowups;
-    } else if (errorOrFollowups) {
-      // this doesnt seem right. did the followup info just overwrite the position? what about the base move? and followups is an array. what happened to the rest?
-      this.setPosition({...move, followups: errorOrFollowups});
+    } else if (errorOrFollowups && errorOrFollowups.length) {
+      // validate that this is a proper action list
+      if (errorOrFollowups.some(f => !game.actions[f.name])) {
+        throw Error(`Action ${move.name} must return an error string or followup actions. Instead it returned: ${errorOrFollowups}`);
+      }
+      if ('followups' in this.position && this.position.followups?.length) {
+        this.setPosition({ ...this.position, followups: this.position.followups.slice(1) });
+      } else {
+        this.setPosition({...move, followups: errorOrFollowups});
+      }
     } else {
       // succeeded
       this.setPosition(move);

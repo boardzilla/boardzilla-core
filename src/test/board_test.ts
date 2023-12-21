@@ -136,8 +136,7 @@ describe('Board', () => {
     expect(board.allJSON()).to.deep.equals(json);
     expect(board.first(Country, 'france')).to.equal(france);
     expect(board.first(Country, 'france')!.rival).to.equal(england);
-    expect(board.first(Country, 'france')!.general).to.not.equal(napolean);
-    expect(board.first(Country, 'france')!.general).to.equal(board.first(Piece, 'napolean'));
+    expect(board.first(Country, 'france')!.general).to.equal(napolean);
   });
 
   it('understands branches', () => {
@@ -479,14 +478,14 @@ describe('Board', () => {
     });
 
     it("hides", () => {
-      Card.hide('suit');
+      Card.revealWhenHidden('pip', 'flipped', 'state');
       const card = board.create(Card, 'AH', { suit: 'H', pip: 1 });
       card.showOnlyTo(1);
       expect(card.toJSON(1)).to.deep.equal(
-        { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _visible: { default: false, except: [1] } },
+        { className: 'Card', _id: 2, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _visible: { default: false, except: [1] } },
       );
       expect(card.toJSON(2)).to.deep.equal(
-        { className: 'Card', flipped: false, state: 'initial', name: 'AH', pip: 1, _visible: { default: false, except: [1] } },
+        { className: 'Card', flipped: false, state: 'initial', pip: 1, _visible: { default: false, except: [1] } },
       )
       board.fromJSON(JSON.parse(JSON.stringify(board.allJSON(2))));
       const card3 = board.first(Card)!;
@@ -643,8 +642,8 @@ describe('Board', () => {
         margin: 0,
         gap: 0,
       });
-      board._ui.layoutsSet = true;
-    })
+    });
+
     it('applies', () => {
       const a = board.create(Space, 'a');
       const b = board.create(Space, 'b');

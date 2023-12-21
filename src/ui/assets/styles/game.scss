@@ -128,7 +128,7 @@ html, body { height: 100% }
       .transform-wrapper {
         position: absolute;
         transform-origin: top left;
-        transition: transform .5s, top .6s, left .6s, width .6s, height .6s;
+        transition: transform .6s, top .6s, left .6s, width .6s, height .6s;
         visibility: hidden;
         &.animating {
           z-index: 100;
@@ -143,14 +143,6 @@ html, body { height: 100% }
       &.in-drag-movement {
         .transform-wrapper {
           transition: none;
-        }
-      }
-
-      .zoomable {
-        transition: transform 0.2s;
-        &:hover:not(.animating) {
-          transform: scale(1.5);
-          z-index: 50;
         }
       }
 
