@@ -2,10 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { gameStore } from './index.js';
 import Game from './game/Game.js';
 import Setup from './setup/Setup.js';
-import { humanizeArg } from '../action/utils.js';
 
 import type { GameState } from '../interface.js';
-import type { SerializedArg } from '../action/utils.js';
 import type Player from '../player/player.js';
 import { SetupComponentProps } from './index.js';
 
@@ -109,19 +107,6 @@ export type UpdateSettingsMessage = {
   settings: GameSettings;
 }
 
-// used to send a move
-export type MoveMessage = {
-  id: string;
-  type: 'move';
-  data: {
-    name: string,
-    args: Record<string, SerializedArg>
-  } | {
-    name: string,
-    args: Record<string, SerializedArg>
-  }[]
-}
-
 // used to actually start the game
 export type StartMessage = {
   id: string;
@@ -143,7 +128,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, moves, clearMoves, setSelected, error, setError, position, updateState] = gameStore(s => [s.game, s.moves, s.clearMoves, s.setSelected, s.error, s.setError, s.position, s.updateState]);
+  const [game, setError, updateState] = gameStore(s => [s.game, s.setError, s.updateState]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
@@ -197,22 +182,6 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     }
     return () => window.removeEventListener('message', listener)
   }, [readySent, listener]);
-
-  useEffect(() => {
-    // move is processable
-    if (moves?.length) {
-      console.debug(`Submitting valid moves from player #${position}:\n${moves.map(m => `⮕ ${m.name}({${Object.entries(m.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`)}`);
-      moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
-      const message: MoveMessage = {
-        type: "move",
-        id: String(moveCallbacks.length),
-        data: moves
-      };
-      window.top!.postMessage(message, "*");
-      setSelected([]);
-      clearMoves();
-    }
-  }, [game, position, moves, clearMoves, moveCallbacks, setSelected]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
     setSettings(settings);

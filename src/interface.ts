@@ -18,6 +18,7 @@ export type GameState<P extends Player> = {
   settings: Record<string, any>
   position: FlowBranchJSON[],
   board: ElementJSON[],
+  sequence: number,
   rseed: string,
 }
 
@@ -84,24 +85,28 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       game.messages = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
+
       let error = undefined;
       for (let i = 0; i !== move.data.length; i++) {
-        error ||= game.processMove({
+        error = game.processMove({
           player: game.players.atPosition(move.position)!,
           name: move.data[i].name,
           args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, game)]))
         });
+        if (error) {
+          throw Error(`Unable to process move: ${error}`);
+        }
         //console.timeLog('processMove', 'process');
         if (game.phase !== 'finished') game.play();
         //console.timeLog('processMove', 'play');
       }
-      if (error) {
-        throw Error(`Unable to process move: ${error}`);
-      }
-      // @ts-ignore
-      if (globalThis.window) window.board = game.board;
+
+      game.sequence += 1;
       const update = game.getUpdate();
       //console.timeLog('processMove', 'update');
+
+      // @ts-ignore
+      if (globalThis.window) window.board = game.board;
       // @ts-ignore
       if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
       //console.timeEnd('processMove');
@@ -117,6 +122,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
           position: game.flow.branchJSON(true),
           board: game.board.allJSON(position),
           rseed: game.rseed,
+          sequence: game.sequence,
           phase: state.phase,
           currentPlayers: state.currentPlayers
         }
@@ -127,6 +133,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
         position: game.flow.branchJSON(true),
         board: game.board.allJSON(position),
         rseed: game.rseed,
+        sequence: game.sequence,
         phase: 'finished',
         winners: game.winner.map(p => p.position)
       }

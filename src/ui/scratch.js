@@ -1,3 +1,14 @@
+el.was = the last known location. if this exists and does not match current, we have animations to run
+- this gets reset by server.game when json hydrates from sql or when client completes a render
+
+previousRenderedElements = key/pos from state render #previousSeq
+- can be looked up with el.was if matching #previousSeq
+- add movedTo (inverse of was) to prevent re-animating
+
+renderedElements = key/pos from current state render #currSeq
+- can be demoted to pRE if new state with Game.was = #currSeq
+- if internal processMove demote this and create new one, increment #seq
+
 intermediate animations need full state1,2,3 to position elements
 - send deltas
 - position only changed regions?
@@ -24,8 +35,9 @@ intermediate animations need full state1,2,3 to position elements
 
 board layout setup
 - initially needs a breakpoint and then setupLayout, then applyLayouts
-- on setState, rerun setupLayout (to cover recreated pieces. could be optimized but this is a cheap call) then applyLayouts 
-- on updateBoard, applyLayouts
+- on internal processMove, setupLayout & applyLayouts (updateBoard)
+- on setState, rerun setupLayout (to cover recreated pieces. could be optimized but this is a cheap call) then applyLayouts (updateBoard)
+- on updateBoard, applyLayouts?
 - on breakpoint change, clear layouts
 
 p1 -> sC m1 bc(s[]) dF

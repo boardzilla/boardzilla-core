@@ -58,10 +58,12 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   board: B;
   settings: Record<string, any>;
   actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>;
+  sequence: number = 0;
   phase: 'new' | 'started' | 'finished' = 'new';
   rseed: string;
   random: () => number;
   messages: Message[] = [];
+  intermediateUpdates: GameUpdate<P>[] = [];
   godMode = false;
   winner: P[] = [];
 
@@ -112,6 +114,9 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     if (winner) this.winner = winner instanceof Array ? winner : [winner];
   }
 
+  /**
+   * state functions
+   */
   getPlayerStates(): PlayerPositionState<P>[] {
     return this.players.map(p => ({
       position: p.position,
@@ -120,6 +125,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
         settings: this.settings,
         position: this.flow.branchJSON(true),
         board: this.board.allJSON(p.position),
+        sequence: this.sequence,
         rseed: this.rseed,
       }
     }));
@@ -134,6 +140,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
           position: this.flow.branchJSON(),
           board: this.board.allJSON(),
           rseed: this.rseed,
+          sequence: this.sequence,
           currentPlayers: this.players.currentPosition,
           phase: this.phase
         },
@@ -149,6 +156,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
           position: this.flow.branchJSON(),
           board: this.board.allJSON(),
           rseed: this.rseed,
+          sequence: this.sequence,
           winners: this.winner.map(p => p.position),
           phase: this.phase
         },
@@ -174,6 +182,13 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
 
   trackMovement(track=true) {
     this.board._ctx.trackMovement = track;
+    if (track) this.intermediateUpdates = [];
+  }
+
+  addIntermediateUpdate() {
+    if (!this.board._ctx.trackMovement) return;
+    this.intermediateUpdates.push(this.getUpdate());
+    this.board.resetMovementTracking();
   }
 
   /**
@@ -337,7 +352,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
           a => this.getAction(a.name, player).isPossible(a.args)
         ).map(a => ({ ...a, player })) || []
       )
-      //if (actions.length === 0) skip somehow? how do we know this is skippable? is this the only player that can act?
+      //if (actions.length === 0) check any other current players, if no action possible, warn and skip somehow
       return {
         step: actionStep.step,
         prompt: actionStep.prompt,

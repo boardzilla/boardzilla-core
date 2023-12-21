@@ -20,7 +20,6 @@ export type ElementJSON = ({className: string, children?: ElementJSON[]} & Recor
 export type ElementClass<T extends GameElement = any> = {
   new(ctx: Partial<ElementContext>): T;
   isGameElement: boolean; // here to help enforce types
-  hiddenAttributes: string[];
   visibleAttributes?: string[];
 }
 
@@ -160,9 +159,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /** @internal */
   static isGameElement = true;
-
-  /** @internal */
-  static hiddenAttributes: string[] = ['name'];
 
   /** @internal */
   static visibleAttributes: string[] | undefined;
@@ -556,19 +552,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   }
 
   /**
-   * Provide list of attributes that are obscured when instances of this element
-   * class are hidden. E.g. In a game with multiple card decks with different
-   * backs, the identity of the card is hiddem, but the deck it belongs to is
-   * not. In this case, Card may have attributes: suit; pip; deck and calling:
-   * `Card.hide('suit', 'pip')` will cause suit and pip to be invisible when the
-   * card is flipped, while still revealing which deck it is.
-   * @category Visibility
-   */
-  static hide<T extends GameElement>(this: ElementClass<T>, ...attrs: (string & keyof T)[]): void {
-    this.hiddenAttributes = attrs;
-  }
-
-  /**
    * Provide list of attributes that are visible when instances of this element
    * class are visible. E.g. In a game with multiple card decks with different
    * backs, identified by Card#deck, the identity of the card is hiddem, but the
@@ -577,7 +560,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * be hidden when card is flipped, while still revealing which deck it is.
    * @category Visibility
    */
-  static hideAllExcept<T extends GameElement>(this: ElementClass<T>, ...attrs: (string & keyof T)[]): void {
+  static revealWhenHidden<T extends GameElement>(this: ElementClass<T>, ...attrs: (string & keyof T)[]): void {
     this.visibleAttributes = attrs;
   }
 
@@ -739,12 +722,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
       attrs = Object.fromEntries(Object.entries(attrs).filter(
-        ([attr]) => !(this.constructor as typeof GameElement).hiddenAttributes.includes(attr) && ((this.constructor as typeof GameElement).visibleAttributes === undefined || (this.constructor as typeof GameElement).visibleAttributes?.includes(attr))
+        ([attr]) => attr === '_visible' || attr !== 'name' && (this.constructor as typeof GameElement).visibleAttributes?.includes(attr)
       )) as typeof attrs;
     }
-
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
-    if (seenBy === undefined || 'isSpace' in this) json._id = this._t.id;
+    if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name
     if (this._t.children.length) json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
     if (this._t.order) json.order = this._t.order;
     if (this._t.was) json.was = this._t.was;
@@ -753,8 +735,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /** @internal */
   createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string) {
-    // truncate non-spaces
-    const spaces = this._t.children.filter(c => 'isSpace' in c);
+    // preserve previous children references
+    const childrenRefs = [...this._t.children];
     this._t.children = new ElementCollection();
 
     for (let i = 0; i !== childrenJSON.length; i++) {
@@ -762,8 +744,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       let { className, children, was, _id, name, order, ...rest } = json;
       if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
       let child: GameElement | undefined = undefined;
-      if (_id !== undefined) { // try to match space, preserve the object and any references
-        child = spaces.find(c => c._t.id === _id);
+      if (_id !== undefined) { // try to match space, preserve the object and any references. this should also match the .was if it's a sibling
+        child = childrenRefs.find(c => c._t.id === _id && c.name === name);
         if (child) {
           // reset all on child
           for (const key of Object.keys(child)) {
@@ -780,9 +762,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         child._t.setId(_id);
         child._t.parent = this;
         child._t.order = order;
-        child._t.was = was;
-        if (this._ctx.trackMovement) child._t.was = branch + '/' + i;
       }
+      child._t.was = was;
+      if (this._ctx.trackMovement && !('isSpace' in child)) child._t.was = branch + '/' + i;
       this._t.children.push(child);
       child.createChildrenFromJSON(children || [], branch + '/' + i);
     }
@@ -821,8 +803,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * the same scale, unlike {@link relativeTransformToBoard}.
    * @category UI
    */
-  absoluteTransform(): Box {
-    return this.board._ui.frame ? translate(this.relativeTransformToBoard(), this.board._ui.frame) : this.relativeTransformToBoard();
+  absoluteTransform(preComputedRelativeTransform?: Box): Box {
+    preComputedRelativeTransform ??= this.relativeTransformToBoard();
+    return this.board._ui.frame ? translate(preComputedRelativeTransform, this.board._ui.frame) : preComputedRelativeTransform;
   }
 
   /**
@@ -1401,30 +1384,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     Object.assign(this._ui.appearance, appearance);
   }
 
-  /** @internal */
-  getMoveTransform() {
-    if (!this._ui.computedStyle || !this._t.was || this._t.was === this.branch()) return;
-    const previousPosition = this.board._ui.previousStyles[this._t.was];
-    if (!previousPosition) return;
-    const newPosition = this.relativeTransformToBoard();
-    return {
-      scaleX: previousPosition.width / newPosition.width,
-      scaleY: previousPosition.height / newPosition.height,
-      translateX: (previousPosition.left - newPosition.left) / newPosition.width * 100,
-      translateY: (previousPosition.top - newPosition.top) / newPosition.height * 100,
-    };
-  }
-
-  /** @internal */
-  doneMoving() {
-    try {
-      const branch = this.branch();
-      this._t.was = branch;
-      if (this._ui.computedStyle) {
-        this.board._ui.previousStyles[branch] = this.relativeTransformToBoard();
-      }
-    } catch (e) {
-      return;
-    }
+  resetMovementTracking() {
+    this._t.was = this.branch();
+    for (const child of this._t.children) child.resetMovementTracking();
   }
 }
