@@ -100,7 +100,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
           throw Error(`Unable to process move: ${error}`);
         }
         //console.timeLog('processMove', 'process');
-        game.play();
+        if (game.phase !== 'finished') game.play();
         //console.timeLog('processMove', 'play');
         if (game.phase === 'finished') break;
       }
