@@ -30,7 +30,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
   //const boardID = useMemo(() => boardPrompt ? moves.find(m => m.selections.find(s => s.prompt === boardPrompt))?.action : '', [moves, boardPrompt]);
 
   if (!position) return null;
-  //if (!boardPrompt && moves.every(m => !m.requireControls)) return null;
+  if (!boardPrompt && moves.length === 0 && !move && selected.length === 0 && name !== 'disambiguate-board-selection') return null;
 
   return (
     <div key={name} className={`player-controls ${name.replace(":", "-")}`} style={style}>

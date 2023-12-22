@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { gameStore } from './index.js';
 import Game from './game/Game.js';
 import Setup from './setup/Setup.js';
+import Queue from './queue.js';
 
 import type { GameState } from '../interface.js';
 import type Player from '../player/player.js';
-import { SetupComponentProps } from './index.js';
+import type { SetupComponentProps } from './index.js';
 
 export type User = {
   id: string;
@@ -33,19 +34,15 @@ export type SettingsUpdateEvent = {
 
 export type GameUpdateEvent = {
   type: "gameUpdate";
-  state: {
-    position: number,
-    state: GameState<Player>
-  }
+  state: GameState<Player> | GameState<Player>[];
+  position: number;
   currentPlayers: number[];
 }
 
 export type GameFinishedEvent = {
   type: "gameFinished";
-  state: {
-    position: number,
-    state: GameState<Player>
-  }
+  state: GameState<Player> | GameState<Player>[];
+  position: number;
   winners: number[];
 }
 
@@ -142,6 +139,8 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     setError(error);
   }, [setError]);
 
+  const queue = useMemo(() => new Queue(1) /* speed */, []);
+
   const listener = useCallback((event: MessageEvent<
     UsersEvent |
     SettingsUpdateEvent |
@@ -160,7 +159,18 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       break;
     case 'gameUpdate':
     case 'gameFinished':
-      updateState(data);
+      {
+        if (data.state instanceof Array) {
+          let delay = data.state[0].sequence === game.sequence + 1;
+          for (const state of data.state) {
+            queue.schedule(() => updateState({...data, state}), delay);
+            delay = true;
+          }
+        } else {
+          let delay = data.state.sequence === game.sequence + 1;
+          queue.schedule(() => updateState(data as typeof data & {state: typeof data.state}), delay); // TS needs help here...
+        }
+      }
       break;
     case 'messageProcessed':
       if (data.error) {
@@ -171,7 +181,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, [catchError, moveCallbacks, updateState]);
+  }, [queue, game, catchError, moveCallbacks, updateState]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
@@ -205,7 +215,6 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       color,
       name
     }
-    console.log(message);
     window.top!.postMessage(message, "*");
   }, [])
 

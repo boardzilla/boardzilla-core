@@ -15,7 +15,7 @@ import random from 'random-seed';
 
 import type { ElementClass } from './board/element.js';
 import type { FlowDefinition } from './flow/flow.js';
-import type { PlayerPositionState, GameUpdate } from './interface.js';
+import type { PlayerState, GameUpdate, GameState } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
 import type { Argument, FollowUp } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
@@ -63,7 +63,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   rseed: string;
   random: () => number;
   messages: Message[] = [];
-  intermediateUpdates: GameUpdate<P>[] = [];
+  intermediateUpdates: GameState<P>[][] = [];
   godMode = false;
   winner: P[] = [];
 
@@ -117,30 +117,32 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   /**
    * state functions
    */
-  getPlayerStates(): PlayerPositionState<P>[] {
-    return this.players.map(p => ({
+  getState(player?: P): GameState<P> {
+    return {
+      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub for player
+      settings: this.settings,
+      position: this.flow.branchJSON(!!player),
+      board: this.board.allJSON(player?.position),
+      sequence: this.sequence,
+      rseed: this.rseed,
+    }
+  }
+
+  getPlayerStates(): PlayerState<P>[] {
+    return this.players.map((p, i) => ({
       position: p.position,
-      state: {
-        players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-        settings: this.settings,
-        position: this.flow.branchJSON(true),
-        board: this.board.allJSON(p.position),
-        sequence: this.sequence,
-        rseed: this.rseed,
-      }
+      state: this.intermediateUpdates.length ?
+        this.intermediateUpdates.map(state => state[i]).concat([this.getState(p)]) :
+        this.getState(p)
     }));
   }
 
   getUpdate(): GameUpdate<P> {
+    this.sequence += 1;
     if (this.phase === 'started') {
       return {
         game: {
-          players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-          settings: this.settings,
-          position: this.flow.branchJSON(),
-          board: this.board.allJSON(),
-          rseed: this.rseed,
-          sequence: this.sequence,
+          state: this.getState(),
           currentPlayers: this.players.currentPosition,
           phase: this.phase
         },
@@ -151,12 +153,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     if (this.phase === 'finished') {
       return {
         game: {
-          players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub
-          settings: this.settings,
-          position: this.flow.branchJSON(),
-          board: this.board.allJSON(),
-          rseed: this.rseed,
-          sequence: this.sequence,
+          state: this.getState(),
           winners: this.winner.map(p => p.position),
           phase: this.phase
         },
@@ -185,9 +182,10 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     if (track) this.intermediateUpdates = [];
   }
 
-  addIntermediateUpdate() {
+  addDelay() {
     if (!this.board._ctx.trackMovement) return;
-    this.intermediateUpdates.push(this.getUpdate());
+    this.sequence += 1;
+    this.intermediateUpdates.push(this.players.map(p => this.getState(p)));
     this.board.resetMovementTracking();
   }
 
@@ -311,6 +309,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   // moves
   /** @internal */
   processMove({ player, name, args }: Move<P>): string | undefined {
+    if (this.phase === 'finished') return 'Game is finished';
     let errorOrFollowups: string | undefined | FollowUp<P>[];
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[name]) {
@@ -369,6 +368,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   }
 
   getPendingMoves(player: P, name?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
+    if (this.phase === 'finished') return;
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;

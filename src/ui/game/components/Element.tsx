@@ -4,6 +4,7 @@ import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../index.js';
 import { Tooltip } from 'react-tooltip';
 import uuid from 'uuid-random';
+import Drawer from './Drawer.js';
 
 import {
   Piece,
@@ -15,7 +16,6 @@ import type { Box, ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../index.js';
 import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
-import Drawer from './Drawer.js';
 
 const elementAttributes = (el: GameElement) => {
   return Object.assign({'data-player': el.player?.position}, Object.fromEntries(Object.entries(el).filter(([key, val]) => (
@@ -38,7 +38,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.isMobile, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
-  const [animatedFrom, setAnimatedFrom] = useState<string>(); // track position animated from to prevent client and server update both triggering same animation
   const wrapper = useRef<HTMLDivElement>(null);
   const domElement = useRef<HTMLDivElement>(null);
   const branch = element.branch();
@@ -56,25 +55,25 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const absoluteTransform = useMemo(() => element.absoluteTransform(relativeTransform), [element, relativeTransform]);
 
   const doneMoving = useCallback((style: Box) => {
-    console.log('donemoving?', branch, renderedState[branch]?.style);
     element._t.was = branch;
     if (!renderedState[branch]) return;
     renderedState[branch].style = style;
-    console.log('donemoving!', renderedState[branch].style, renderedState);
   }, [element, renderedState, branch]);
 
   const getMoveTransform = useCallback(() => {
-    console.log('gMT?', element._t.was, branch);
     if (!element._ui.computedStyle || !element._t.was || element._t.was === branch) return;
-    const previousPosition = previousRenderedState.elements[element._t.was]?.style;
-    console.log('gMT!', previousRenderedState.elements[element._t.was]);
-    if (!previousPosition) return;
+    if (element._t.was.substring(0, element._t.was.lastIndexOf('/')) === branch.substring(0, branch.lastIndexOf('/'))) return;
+    const previous = previousRenderedState.elements[element._t.was];
+    if (!previous?.style || previous?.movedTo === branch) {
+      //console.log('already moved', element._t.was, previous?.movedTo, branch);
+      return; // already processed
+    }
     const newPosition = relativeTransform;
     return {
-      scaleX: previousPosition.width / newPosition.width,
-      scaleY: previousPosition.height / newPosition.height,
-      translateX: (previousPosition.left - newPosition.left) / newPosition.width * 100,
-      translateY: (previousPosition.top - newPosition.top) / newPosition.height * 100,
+      scaleX: previous.style.width / newPosition.width,
+      scaleY: previous.style.height / newPosition.height,
+      translateX: (previous.style.left - newPosition.left) / newPosition.width * 100,
+      translateY: (previous.style.top - newPosition.top) / newPosition.height * 100,
     };
   }, [element, relativeTransform, branch, previousRenderedState]);
 
@@ -145,13 +144,15 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   }, [droppable, element, setCurrentDrop, setZoomable, onMouseLeave]);
 
   useEffect(() => {
-    const moveTransform = getMoveTransform(); //element.getMoveTransform();
-    if (!moveTransform || animatedFrom === element._t.was) {
-      console.log(moveTransform ? `not moving ${branch} - already moved from ${element._t.was}` : `no move for ${branch}`);
-      doneMoving(relativeTransform); //element.doneMoving();
+    const moveTransform = getMoveTransform();
+    if (!moveTransform) {
+      //console.log(`no move for ${branch}`);
+      doneMoving(relativeTransform);
     } else if (wrapper.current) {
       let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
-      console.log(`moving ${branch} from ${element._t.was}`, moveTransform, transformToNew, element.board._ui.previousStyles[element._t.was || ''], element.relativeTransformToBoard(), element._ui.computedStyle);
+      previousRenderedState.elements[element._t.was!]!.movedTo = branch;
+
+      //console.log(`moving ${branch} from ${element._t.was}`, moveTransform, transformToNew, element.board._ui.previousStyles[element._t.was || ''], element.relativeTransformToBoard(), element._ui.computedStyle);
       if (dragOffset.element && dragOffset.element === element._t.was) {
         transformToNew = `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + transformToNew;
         dragOffset.element = undefined;
@@ -166,20 +167,18 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         // move to 'new' by removing transform and animate
         wrapper.current!.style.removeProperty('transition');
         wrapper.current!.style.removeProperty('transform');
-      }, 0);
-      setAnimatedFrom(element._t.was);
+      }, 10);
 
       const cancel = (e: TransitionEvent) => {
         if (e.propertyName === 'transform' && e.target === wrapper.current) {
-          doneMoving(relativeTransform); //element.doneMoving();
+          doneMoving(relativeTransform);
           wrapper.current!.classList.remove('animating');
-          setAnimatedFrom(undefined);
           wrapper.current!.removeEventListener('transitionend', cancel);
         }
       };
       wrapper.current?.addEventListener('transitionend', cancel);
     }
-  }, [element, branch, wrapper, relativeTransform, getMoveTransform, doneMoving, animatedFrom, dragElement, dragOffset]);
+  }, [element, branch, wrapper, relativeTransform, previousRenderedState, getMoveTransform, doneMoving, dragElement, dragOffset]);
 
   let style = useMemo(() => {
     let styleBuilder: React.CSSProperties = {};
@@ -273,11 +272,10 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     }
 
     const childBranch = child.branch();
-    const key = 'isSpace' in element ? childBranch : (
+    const key = 'isSpace' in child ? childBranch : (
       renderedState[childBranch]?.key ?? (child._t.was && previousRenderedState.elements[child._t.was]?.key) ?? uuid()
     );
     renderedState[childBranch] ??= { key };
-    console.log(childBranch, key, child._t.was);
 
     container.push(
       <Element

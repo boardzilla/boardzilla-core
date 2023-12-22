@@ -39,7 +39,7 @@ describe('Board', () => {
   beforeEach(() => {
     board = new Board({
       // @ts-ignore
-      game: { players },
+      game: { players, addDelay: () => {} },
       classRegistry: [Space, Piece, GameElement]
     });
     board._ctx.game.board = board;
