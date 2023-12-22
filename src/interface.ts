@@ -22,36 +22,39 @@ export type GameState<P extends Player> = {
   rseed: string,
 }
 
-type GameStartedState<P extends Player> = Omit<GameState<P>, 'currentPlayerPosition'> & {
+type GameStartedState<P extends Player> = {
   phase: 'started',
-  currentPlayers: number[]
+  currentPlayers: number[],
+  state: GameState<P>,
 }
 
-type GameFinishedState<P extends Player> = Omit<GameState<P>, 'currentPlayerPosition'> & {
+type GameFinishedState<P extends Player> = {
   phase: 'finished',
-  winners: number[]
+  winners: number[],
+  state: GameState<P>,
 }
 
-export type PlayerPositionState<P extends Player> = {
+export type PlayerState<P extends Player> = {
   position: number
-  state: GameState<P> // Game state, scrubbed
+  state: GameState<P> | GameState<P>[] // Game state, scrubbed
+  summary?: string
+  score?: number
 }
 
 export type GameUpdate<P extends Player> = {
   game: GameStartedState<P> | GameFinishedState<P>
-  players: PlayerPositionState<P>[]
+  players: PlayerState<P>[]
   messages: Message[]
 }
 
 export type GameInterface<P extends Player> = {
   initialState: (state: SetupState<P>, rseed: string) => GameUpdate<P>
   processMove: (
-    previousState: GameState<P>,
+    previousState: GameStartedState<P>,
     move: {
       position: number
       data: SerializedMove
     },
-    trackMovement?: boolean
   ) => GameUpdate<P>
   getPlayerState: (
     state: GameState<P>,
@@ -80,7 +83,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board._ctx.game;
-      const game = cachedGame || setup(previousState, {trackMovement: true});
+      const game = cachedGame || setup(previousState.state, {trackMovement: true});
       game.players.setCurrent(previousState.currentPlayers),
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       game.messages = [];
@@ -97,11 +100,11 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
           throw Error(`Unable to process move: ${error}`);
         }
         //console.timeLog('processMove', 'process');
-        if (game.phase !== 'finished') game.play();
+        game.play();
         //console.timeLog('processMove', 'play');
+        if (game.phase === 'finished') break;
       }
 
-      game.sequence += 1;
       const update = game.getUpdate();
       //console.timeLog('processMove', 'update');
 
@@ -112,31 +115,10 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       //console.timeEnd('processMove');
       return update;
     },
-    getPlayerState: (state: GameStartedState<Player> | GameFinishedState<Player>, position: number): GameStartedState<Player> | GameFinishedState<Player> => {
+    getPlayerState: (state: GameState<Player>, position: number): GameState<Player> => {
       if (!position) throw Error('getPlayerState without position');
       const game = setup(state);
-      if (state.phase === 'started') {
-        return {
-          players: game.players.map(p => p.toJSON() as PlayerAttributes<Player>), // TODO scrub
-          settings: game.settings,
-          position: game.flow.branchJSON(true),
-          board: game.board.allJSON(position),
-          rseed: game.rseed,
-          sequence: game.sequence,
-          phase: state.phase,
-          currentPlayers: state.currentPlayers
-        }
-      }
-      return {
-        players: game.players.map(p => p.toJSON() as PlayerAttributes<Player>), // TODO scrub
-        settings: game.settings,
-        position: game.flow.branchJSON(true),
-        board: game.board.allJSON(position),
-        rseed: game.rseed,
-        sequence: game.sequence,
-        phase: 'finished',
-        winners: game.winner.map(p => p.position)
-      }
+      return game.getState(game.players.atPosition(position));
     }
   };
 }
