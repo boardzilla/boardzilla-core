@@ -1,7 +1,7 @@
 class Queue {
   updates: (() => any)[] = [];
   justProcessed: boolean = false; // queue was just processed
-  timeout: NodeJS.Timeout;
+  timeout: number;
 
   constructor(
     public speed: number = 1
@@ -23,7 +23,7 @@ class Queue {
     }
     this.justProcessed = true;
     clearTimeout(this.timeout);
-    this.timeout = setTimeout(() => this.pump(), this.speed * 1000);
+    this.timeout = window.setTimeout(() => this.pump(), this.speed * 1000);
     update();
   }
 }

@@ -17,14 +17,6 @@ import type { UIMove } from '../../index.js';
 import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 
-const elementAttributes = (el: GameElement) => {
-  return Object.assign({'data-player': el.player?.position}, Object.fromEntries(Object.entries(el).filter(([key, val]) => (
-    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
-  )).map(([key, val]) => (
-    [`data-${key.toLowerCase()}`, serialize(val)]
-  ))));
-}
-
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{humanizeArg(el)}</div>;
 
 const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
@@ -34,13 +26,12 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, isMobile] =
+  const [previousRenderedState, renderedState, boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, isMobile, boardJSON] =
     gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.isMobile, s.boardJSON]);
-
   const [dragging, setDragging] = useState(false); // currently dragging
   const wrapper = useRef<HTMLDivElement>(null);
   const domElement = useRef<HTMLDivElement>(null);
-  const branch = element.branch();
+  const branch = useMemo(() => element.branch(), [element, boardJSON]);
   const selections = boardSelections[branch];
   const isSelected = selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
@@ -60,9 +51,8 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     renderedState[branch].style = style;
   }, [element, renderedState, branch]);
 
-  const getMoveTransform = useCallback(() => {
-    if (!element._ui.computedStyle || !element._t.was || element._t.was === branch) return;
-    if (element._t.was.substring(0, element._t.was.lastIndexOf('/')) === branch.substring(0, branch.lastIndexOf('/'))) return;
+  const moveTransform = useMemo(() => {
+    if (!element._ui.computedStyle || !element._t.was || element.hasSameParent()) return;
     const previous = previousRenderedState.elements[element._t.was];
     if (!previous?.style || previous?.movedTo === branch) {
       //console.log('already moved', element._t.was, previous?.movedTo, branch);
@@ -76,6 +66,16 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       translateY: (previous.style.top - newPosition.top) / newPosition.height * 100,
     };
   }, [element, relativeTransform, branch, previousRenderedState]);
+
+  const attrs = useMemo(() => {
+    const el = element;
+    const attrs = Object.assign({'data-player': el.player?.position}, Object.fromEntries(Object.entries(el).filter(([key, val]) => (
+      !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
+    )).map(([key, val]) => (
+      [`data-${key.toLowerCase()}`, serialize(val)]
+    ))));
+    return attrs;
+  }, [element]);
 
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
@@ -144,7 +144,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   }, [droppable, element, setCurrentDrop, setZoomable, onMouseLeave]);
 
   useEffect(() => {
-    const moveTransform = getMoveTransform();
     if (!moveTransform) {
       //console.log(`no move for ${branch}`);
       doneMoving(relativeTransform);
@@ -178,7 +177,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       };
       wrapper.current?.addEventListener('transitionend', cancel);
     }
-  }, [element, branch, wrapper, relativeTransform, previousRenderedState, getMoveTransform, doneMoving, dragElement, dragOffset]);
+  }, [element, branch, wrapper, relativeTransform, previousRenderedState, moveTransform, doneMoving, dragElement, dragOffset]);
 
   let style = useMemo(() => {
     let styleBuilder: React.CSSProperties = {};
@@ -390,7 +389,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     );
   }
 
-  const attrs = elementAttributes(element);
   if (element.player?.position === position) attrs.mine = 'true';
 
   let boundingBoxes: React.JSX.Element[] = [];

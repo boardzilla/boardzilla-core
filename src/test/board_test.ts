@@ -252,8 +252,9 @@ describe('Board', () => {
       board.create(Card, 'AH', { suit: 'H', pip: 1 });
       board.create(Card, '2H', { suit: 'H', pip: 2 });
       const pile = board._ctx.removed;
-      pile.create(Card, '3H', { suit: 'H', pip: 3 });
+      const h3 = pile.create(Card, '3H', { suit: 'H', pip: 3 });
 
+      expect(h3.branch()).to.equal('1/0');
       expect(board.allJSON()).to.deep.equals(
         [
           { className: 'Board', _id: 0, children: [
