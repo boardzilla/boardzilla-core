@@ -9,3 +9,6 @@ yarn-error.log
 # build artifacts
 /dist
 /docs
+
+todos.txt
+scratch.js
