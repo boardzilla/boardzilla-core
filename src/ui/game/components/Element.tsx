@@ -28,6 +28,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
 }) => {
   const [previousRenderedState, renderedState, boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, isMobile, boardJSON] =
     gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.isMobile, s.boardJSON]);
+  const [update, setUpdate] = useState(0);
   const [dragging, setDragging] = useState(false); // currently dragging
   const wrapper = useRef<HTMLDivElement>(null);
   const domElement = useRef<HTMLDivElement>(null);
@@ -68,14 +69,16 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   }, [element, relativeTransform, branch, previousRenderedState]);
 
   const attrs = useMemo(() => {
-    const el = element;
+    update; // used to force rerender after old attr's are deleted
+    const el = moveTransform ? previousRenderedState.elements[branch]?.old ?? element : element;
     const attrs = Object.assign({'data-player': el.player?.position}, Object.fromEntries(Object.entries(el).filter(([key, val]) => (
       !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
     )).map(([key, val]) => (
       [`data-${key.toLowerCase()}`, serialize(val)]
     ))));
+    delete previousRenderedState.elements[branch]?.old;
     return attrs;
-  }, [element]);
+  }, [moveTransform, previousRenderedState, branch, element, update]);
 
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
@@ -166,6 +169,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         // move to 'new' by removing transform and animate
         wrapper.current!.style.removeProperty('transition');
         wrapper.current!.style.removeProperty('transform');
+        setUpdate(n => n + 1);
       }, 10);
 
       const cancel = (e: TransitionEvent) => {

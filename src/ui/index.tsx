@@ -131,6 +131,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       );
     } else {
       game.players.fromJSON(update.state.players);
+      cacheOldBoardAttributes(previousRenderedState, game.board, '0', update.state.board[0]);
       game.board.fromJSON(update.state.board);
       game.flow.setBranchFromJSON(update.state.position);
     }
@@ -417,6 +418,18 @@ const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?:
   game.board.applyLayouts(true);
 
   return ({ boardJSON: json || game.board.allJSON() })
+}
+
+const cacheOldBoardAttributes = (state: GameStore['previousRenderedState'], board: Board, branch: string, json: ElementJSON) => {
+  let attrs;
+  if (json.was && json.was !== branch && json.was?.substring(0, json.was?.lastIndexOf('/')) !== branch.substring(0, branch.lastIndexOf('/'))) {
+    attrs = board.atBranch(json.was)?.attributeList();
+  }
+  if (attrs) {
+    state.elements[branch] ??= {};
+    state.elements[branch].old = attrs;
+  }
+  json.children?.forEach((j, i) => cacheOldBoardAttributes(state, board, branch + '/' + i, j));
 }
 
 export type SetupComponentProps = {
