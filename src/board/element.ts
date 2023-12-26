@@ -668,7 +668,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       branches.unshift(node._t.parent._t.children.indexOf(node));
       node = node._t.parent;
     }
-    branches.unshift(this._ctx.removed._t.children.indexOf(node) >= 0 ? 1 : 0);
+    branches.unshift(this._ctx.removed === node ? 1 : 0);
     return branches.join("/");
   }
 
@@ -704,20 +704,24 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     return this._t.parent === el || !!this._t.parent?.isDescendantOf(el)
   }
 
+  attributeList() {
+    let attrs: Record<any, any>;
+    ({ ...attrs } = this);
+    for (const attr of ['_t', '_ctx', '_ui', 'board', 'game', 'pile', '_eventHandlers']) delete attrs[attr];
+
+    // remove methods
+    return Object.fromEntries(Object.entries(attrs).filter(
+      ([, value]) => typeof value !== 'function'
+    )) as typeof attrs;
+  }
+
   /**
    * JSON representation
    * @param seenBy - optional player position viewing the board
    * @internal
    */
   toJSON(seenBy?: number) {
-    let attrs: Record<any, any>;
-    ({ ...attrs } = this);
-    for (const attr of ['_t', '_ctx', '_ui', 'board', 'game', 'pile', '_eventHandlers', 'players', 'finish', 'message']) delete attrs[attr];
-
-    // remove methods
-    attrs = Object.fromEntries(Object.entries(attrs).filter(
-      ([, value]) => typeof value !== 'function'
-    )) as typeof attrs;
+    let attrs = this.attributeList();
 
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
@@ -1387,5 +1391,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   resetMovementTracking() {
     this._t.was = this.branch();
     for (const child of this._t.children) child.resetMovementTracking();
+  }
+
+  hasSameParent() {
+    const branch = this.branch();
+    if (!this._t.was || this._t.was === branch) return true;
+    return this._t.was?.substring(0, this._t.was?.lastIndexOf('/')) === branch.substring(0, branch.lastIndexOf('/'));
   }
 }

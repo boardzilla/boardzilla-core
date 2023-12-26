@@ -78,8 +78,9 @@ type GameStore = {
   prompt?: string; // prompt for choosing action if applicable
   selected: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   setSelected: (s: GameElement[]) => void;
+  automove?: number;
   renderedState: Record<string, {key: string, style?: Box}>;
-  previousRenderedState: { sequence: number, elements: Record<string, {key: string, style?: Box, movedTo?: string}> };
+  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, movedTo?: string, old?: Record<string, any>}> };
   setBoardSize: () => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
@@ -106,6 +107,16 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   updateState: update => set(s => {
     let { game } = s;
     const position = s.position || update.position;
+    let previousRenderedState = s.previousRenderedState;
+    window.clearTimeout(s.automove);
+    if (update.state.sequence === s.game.sequence + 1) {
+      // demote current state to previous and play over top
+      previousRenderedState = {sequence: s.game.sequence, elements: {...s.renderedState}};
+    } else if (update.state.sequence !== s.previousRenderedState.sequence + 1) {
+      // old state is invalid
+      previousRenderedState = {sequence: -1, elements: {}};
+    }
+    // otherwise reuse previous state, we're overwriting an internal version of the same state
 
     if (game.phase === 'new' && s.setup) {
       game = s.setup(update.state);
@@ -146,16 +157,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       ...updateSelections(game, position, undefined)
     }
 
-    if (update.state.sequence === s.game.sequence + 1) {
-      // demote current state to previous and play over top
-      state.previousRenderedState = {sequence: s.game.sequence, elements: {...s.renderedState}};
-    } else if (update.state.sequence !== s.previousRenderedState.sequence + 1) {
-      // old state is invalid
-      state.previousRenderedState = {sequence: -1, elements: {}};
-    }
-    // reuse previous state, we're overwriting an internal version of the same state
-
     state.renderedState = {};
+    state.previousRenderedState = previousRenderedState;
     s.game.sequence = update.state.sequence;
 
     if (game.phase === 'finished') {
@@ -250,7 +253,6 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   if (!player) return {};
   let state: Partial<GameStore> = {};
   let pendingMoves: GamePendingMoves
-  let processableMoves = [];
   let maySubmit = !!move;
   let autoSubmit = false;
 
@@ -319,7 +321,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
         if (autoSubmit) {
           // no need to run locally, just queue the submit and remove any moves from being presented
           // not using game queue because updates must come in before this if revealed information alters our forced move
-          window.setTimeout(() => window.top!.postMessage(message, "*"), 1000); // speed
+          state.automove = window.setTimeout(() => window.top!.postMessage(message, "*"), 1000); // speed
         } else {
           // run the move locally and submit in parallel
           try {
