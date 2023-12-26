@@ -67,16 +67,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     };
   }, [element, relativeTransform, branch, previousRenderedState]);
 
-  const attrs = useMemo(() => {
-    const el = element;
-    const attrs = Object.assign({'data-player': el.player?.position}, Object.fromEntries(Object.entries(el).filter(([key, val]) => (
-      !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
-    )).map(([key, val]) => (
-      [`data-${key.toLowerCase()}`, serialize(val)]
-    ))));
-    return attrs;
-  }, [element]);
-
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
     onSelectElement(selections.clickMoves, element);
@@ -388,6 +378,12 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
       <svg key="svg-edge-labels" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${absoluteTransform.width} ${absoluteTransform.height}`}>{labels}</svg>
     );
   }
+
+  const attrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
+    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
+  )).map(([key, val]) => (
+    [`data-${key.toLowerCase()}`, serialize(val)]
+  ))));
 
   if (element.player?.position === position) attrs.mine = 'true';
 
