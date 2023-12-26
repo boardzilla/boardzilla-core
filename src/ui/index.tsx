@@ -17,6 +17,7 @@ import type { PendingMove, SerializedMove } from '../game.js'
 import type { SetupFunction } from '../index.js'
 import type { BoardSize } from '../board/board.js';
 import type { GameState } from '../interface.js';
+import type { ResolvedSelection } from '../action/selection.js';
 
 // this feels like the makings of a class
 export type UIMove = PendingMove<Player> & {
@@ -72,7 +73,7 @@ type GameStore = {
     clickMoves: UIMove[],
     dragMoves: {
       move: UIMove,
-      drag: Selection<Player>
+      drag: ResolvedSelection<Player>
     }[]
   }>; // pending moves on board
   prompt?: string; // prompt for choosing action if applicable
@@ -265,29 +266,32 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
   let moves = pendingMoves?.moves;
 
-  // the only selection is skippable - skip and rerun selections
-  if (moves?.length === 1 && moves[0].selections.length === 1 && moves[0].selections[0].skipIfOnlyOne) {
-    const arg = moves[0].selections[0].isForced();
-    if (arg !== undefined) {
+  if (moves?.length === 1 && moves[0].selections.length === 1) {
+    // the only selection is skippable - skip and confirm or autoplay if possible
+    const skipIf = moves[0].selections[0].skipIf;
+    if (skipIf === true || skipIf === 'always' || (moves[0].selections.length === 1 && (skipIf === 'only-one' || skipIf === false))) {
+      const arg = moves[0].selections[0].isForced();
+      if (arg !== undefined) {
 
-      if (moves[0].selections[0].confirm) {
-        // a confirm was added tho, so don't skip that. convert to confirm prompt
-        // TODO: distinguish static from arg-taking? static can probably be skipped
-        moves[0].args[moves[0].selections[0].name] = arg;
-        moves[0].selections[0].name = '__confirm__';
-        moves[0].selections[0].type = 'button';
-      } else {
-        move = {
-          ...moves[0],
-          args: {...moves[0].args, [moves[0].selections[0].name]: arg},
-          requireExplicitSubmit: needsConfirm(moves[0])
-        };
-        if (game.getPendingMoves(player, move.name, move.args)?.moves.length === 0) {
-          if (maySubmit === false) {
-            autoSubmit = true;
-            maySubmit = true;
+        if (moves[0].selections[0].confirm) {
+          // a confirm was added tho, so don't skip that. convert to confirm prompt
+          // TODO: distinguish static from arg-taking? static can probably be skipped
+          moves[0].args[moves[0].selections[0].name] = arg;
+          moves[0].selections[0].name = '__confirm__';
+          moves[0].selections[0].type = 'button';
+        } else {
+          move = {
+            ...moves[0],
+            args: {...moves[0].args, [moves[0].selections[0].name]: arg},
+            requireExplicitSubmit: needsConfirm(moves[0])
+          };
+          if (game.getPendingMoves(player, move.name, move.args)?.moves.length === 0) {
+            if (maySubmit === false) {
+              autoSubmit = true;
+              maySubmit = true;
+            }
+            moves = [];
           }
-          moves = [];
         }
       }
     }
@@ -378,7 +382,7 @@ const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<
     clickMoves: UIMove[],
     dragMoves: {
       move: UIMove,
-      drag: Selection<Player>
+      drag: ResolvedSelection<Player>
     }[]
   }> = {};
   for (const p of moves) {

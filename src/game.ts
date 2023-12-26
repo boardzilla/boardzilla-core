@@ -328,7 +328,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     });
   }
 
-  allowedActions(player: P): {step?: string, prompt?: string, skipIfOnlyOne: boolean, expand: boolean, actions: {
+  allowedActions(player: P): {step?: string, prompt?: string, skipIf: 'always' | 'never' | 'only-one', actions: {
     name: string,
     player?: P,
     args?: Record<string, Argument<P>>
@@ -340,8 +340,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     }[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
       actions: allowedActions,
-      skipIfOnlyOne: true,
-      expand: true,
+      skipIf: 'always',
     };
     const actionStep = this.flow.actionNeeded(player);
 
@@ -355,14 +354,12 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       return {
         step: actionStep.step,
         prompt: actionStep.prompt,
-        skipIfOnlyOne: actionStep.skipIfOnlyOne,
-        expand: actionStep.expand,
+        skipIf: actionStep.skipIf,
         actions
       }
     }
     return {
-      skipIfOnlyOne: true,
-      expand: true,
+      skipIf: 'always',
       actions: []
     };
   }
@@ -371,7 +368,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     if (this.phase === 'finished') return;
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
-    const { step, prompt, actions, skipIfOnlyOne, expand } = allowedActions;
+    const { step, prompt, actions, skipIf } = allowedActions;
     if (!name) {
       let possibleActions: string[] = [];
       let pendingMoves: PendingMove<P>[] = [];
@@ -381,7 +378,8 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
         let submoves = playerAction._getPendingMoves(args);
         if (submoves !== undefined) {
           possibleActions.push(action.name);
-          if (expand && submoves.length === 0) {
+          // no sub-selections to show so just create a prompt selection of this action
+          if (skipIf === 'always' && submoves.length === 0) {
             submoves = [{
               name: action.name,
               prompt,
@@ -398,20 +396,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       }
 
       if (!possibleActions.length) return undefined;
-      if (skipIfOnlyOne && possibleActions.length === 1) return { step, prompt, moves: pendingMoves};
-      if (expand && pendingMoves.length) return { step, prompt, moves: pendingMoves};
-      return {
-        step,
-        prompt,
-        moves: [{
-          name: '/',
-          prompt,
-          args: {},
-          selections: [
-            new Selection<P>('__action__', { prompt, selectFromChoices: { choices: actions.map(a => a.name) }}).resolve({})
-          ]
-        }]
-      };
+      return { step, prompt, moves: pendingMoves};
 
     } else {
       const moves = this.getAction(name, player)?._getPendingMoves(args || {});

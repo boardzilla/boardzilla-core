@@ -212,7 +212,7 @@ describe('Actions', () => {
     });
   });
 
-  describe('getPendingMoves with skip/expand', () => {
+  describe('getPendingMoves with skip strategies', () => {
     let testAction: Action<any, {r: string, n: number}>;
     beforeEach(() => {
       testAction = action({ prompt: 'p' })
@@ -231,7 +231,7 @@ describe('Actions', () => {
     });
 
     it('expands first selection', () => {
-      testAction.selections[0].expand = true;
+      testAction.selections[0].skipIf = 'always';
       const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(2);
       expect(moves![0].selections.length).to.equal(1);
@@ -271,7 +271,7 @@ describe('Actions', () => {
 
     it('prevents skips', () => {
       testAction.selections[0].choices = ['oil'];
-      testAction.selections[0].skipIfOnlyOne = false;
+      testAction.selections[0].skipIf = 'never';
       const moves = testAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);

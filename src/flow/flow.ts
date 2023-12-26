@@ -176,8 +176,7 @@ export default class Flow<P extends Player> {
     step?: string,
     prompt?: string,
     actions: FollowUp<P>[],
-    skipIfOnlyOne: boolean,
-    expand: boolean
+    skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
     return this.currentProcessor()?.actionNeeded(player);
   }
