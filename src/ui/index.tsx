@@ -280,8 +280,14 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       } catch (e) {
         // first line of defense for bad game logic. cancel all moves and
         // surface the error but update board anyways to prevent more errors
-        console.error(`Game attempted to complete move but was unable to process:\n⮕ ${move!.name}({${Object.entries(move!.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`);
-        console.error(e.stack);
+        console.error(
+          `Game attempted to complete move but was unable to process:\n` +
+            `⮕ ${move!.name}({${Object.entries(move!.args).map(
+              ([k, v]) => k + ': ' + humanizeArg(v)
+            ).join(', ')}})\n`
+        );
+        console.error(e.message);
+        console.debug(e.stack);
         state.moves = [];
         move = undefined;
         break
