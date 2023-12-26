@@ -424,6 +424,9 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
   }
 
   putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
+    if (to._ctx.trackMovement && this.some(el => !el.hasSameParent())) {
+      to.game.addDelay();
+    }
     for (const el of this) {
       if (!(el instanceof Piece)) throw Error('cannot move Space');
       el.putInto(to, options);

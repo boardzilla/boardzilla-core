@@ -97,7 +97,6 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     if (children) this.createChildrenFromJSON(children, '0');
     if (order) this._t.order = order;
     this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1), '1');
-    this._ui.layoutsSet = false; // TODO optimize
   }
 
   // UI
@@ -106,7 +105,6 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     boardSize: BoardSize,
     boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
     setupLayout?: (board: B, player: P, boardSize: string) => void;
-    layoutsSet?: boolean;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout>;
@@ -128,7 +126,6 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
 
   setBoardSize(this: B, boardSize: BoardSize) {
     if (boardSize.name !== this._ui.boardSize.name) {
-      if (this._ui.boardSize) this._ui.layoutsSet = false
       this._ui.boardSize = boardSize;
     }
   }
@@ -138,10 +135,9 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
   }
 
   applyLayouts(this: B, force=false) {
-    if (!this._ui.layoutsSet) {
+    if (this._ui.setupLayout) {
       this.resetUI();
-      if (this._ui.setupLayout) this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
-      this._ui.layoutsSet = true;
+      this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
     }
 
     const aspectRatio = this._ui.boardSize.aspectRatio;

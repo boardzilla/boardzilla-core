@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { gameStore } from './index.js';
 import Game from './game/Game.js';
 import Setup from './setup/Setup.js';
-import { humanizeArg } from '../action/utils.js';
+import Queue from './queue.js';
 
 import type { GameState } from '../interface.js';
-import type { SerializedArg } from '../action/utils.js';
 import type Player from '../player/player.js';
-import { SetupComponentProps } from './index.js';
+import type { SetupComponentProps } from './index.js';
 
 export type User = {
   id: string;
@@ -35,19 +34,15 @@ export type SettingsUpdateEvent = {
 
 export type GameUpdateEvent = {
   type: "gameUpdate";
-  state: {
-    position: number,
-    state: GameState<Player>
-  }
+  state: GameState<Player> | GameState<Player>[];
+  position: number;
   currentPlayers: number[];
 }
 
 export type GameFinishedEvent = {
   type: "gameFinished";
-  state: {
-    position: number,
-    state: GameState<Player>
-  }
+  state: GameState<Player> | GameState<Player>[];
+  position: number;
   winners: number[];
 }
 
@@ -109,19 +104,6 @@ export type UpdateSettingsMessage = {
   settings: GameSettings;
 }
 
-// used to send a move
-export type MoveMessage = {
-  id: string;
-  type: 'move';
-  data: {
-    name: string,
-    args: Record<string, SerializedArg>
-  } | {
-    name: string,
-    args: Record<string, SerializedArg>
-  }[]
-}
-
 // used to actually start the game
 export type StartMessage = {
   id: string;
@@ -143,7 +125,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, moves, clearMoves, setSelected, error, setError, position, updateState] = gameStore(s => [s.game, s.moves, s.clearMoves, s.setSelected, s.error, s.setError, s.position, s.updateState]);
+  const [game, setError, updateState] = gameStore(s => [s.game, s.setError, s.updateState]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
@@ -156,6 +138,8 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     console.error(error);
     setError(error);
   }, [setError]);
+
+  const queue = useMemo(() => new Queue(1) /* speed */, []);
 
   const listener = useCallback((event: MessageEvent<
     UsersEvent |
@@ -175,7 +159,18 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       break;
     case 'gameUpdate':
     case 'gameFinished':
-      updateState(data);
+      {
+        if (data.state instanceof Array) {
+          let delay = data.state[0].sequence === game.sequence + 1;
+          for (const state of data.state) {
+            queue.schedule(() => updateState({...data, state}), delay);
+            delay = true;
+          }
+        } else {
+          let delay = data.state.sequence === game.sequence + 1;
+          queue.schedule(() => updateState(data as typeof data & {state: typeof data.state}), delay); // TS needs help here...
+        }
+      }
       break;
     case 'messageProcessed':
       if (data.error) {
@@ -186,7 +181,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, [catchError, moveCallbacks, updateState]);
+  }, [queue, game, catchError, moveCallbacks, updateState]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
@@ -197,22 +192,6 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     }
     return () => window.removeEventListener('message', listener)
   }, [readySent, listener]);
-
-  useEffect(() => {
-    // move is processable
-    if (moves?.length) {
-      console.debug(`Submitting valid moves from player #${position}:\n${moves.map(m => `⮕ ${m.name}({${Object.entries(m.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})\n`)}`);
-      moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
-      const message: MoveMessage = {
-        type: "move",
-        id: String(moveCallbacks.length),
-        data: moves
-      };
-      window.top!.postMessage(message, "*");
-      setSelected([]);
-      clearMoves();
-    }
-  }, [game, position, moves, clearMoves, moveCallbacks, setSelected]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
     setSettings(settings);
@@ -236,7 +215,6 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       color,
       name
     }
-    console.log(message);
     window.top!.postMessage(message, "*");
   }, [])
 

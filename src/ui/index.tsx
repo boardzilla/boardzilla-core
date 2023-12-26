@@ -3,23 +3,37 @@ import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
-import { default as Game } from '../game.js'
+import Game from '../game.js'
 import { humanizeArg, serializeArg } from '../action/utils.js';
 
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
 import Player from '../player/player.js'
 import { Board, GameElement } from '../board/index.js'
-import type { ElementJSON } from '../board/element.js'
+import type { Box, ElementJSON } from '../board/element.js'
 import type { SerializedArg } from '../action/utils.js'
 import type Selection from '../action/selection.js'
 import type { Argument } from '../action/action.js'
 import type { PendingMove, SerializedMove } from '../game.js'
 import type { SetupFunction } from '../index.js'
 import type { BoardSize } from '../board/board.js';
+import type { GameState } from '../interface.js';
 
 // this feels like the makings of a class
 export type UIMove = PendingMove<Player> & {
   requireExplicitSubmit: boolean; // true if explicit submit has been provided or is not needed
+}
+
+// used to send a move
+export type MoveMessage = {
+  id: string;
+  type: 'move';
+  data: {
+    name: string,
+    args: Record<string, SerializedArg>
+  } | {
+    name: string,
+    args: Record<string, SerializedArg>
+  }[]
 }
 
 type GamePendingMoves = ReturnType<Game<Player, Board<Player>>['getPendingMoves']>;
@@ -42,9 +56,8 @@ type GameStore = {
   game: Game<Player, Board<Player>>;
   setGame: (game: Game<Player, Board<Player>>) => void;
   isMobile: boolean;
-  boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes
-  updateState: (s: GameUpdateEvent | GameFinishedEvent) => void;
-  updateBoard: () => void; // call any time state changes to update immutable references for listeners. updates move, selections
+  boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with game.sequence
+  updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}) => void;
   position?: number; // this player
   setPosition: (p: number) => void;
   move?: {name: string, args: Record<string, Argument<Player>>}; // move in progress, this is the LCD of pendingMoves, but is kept here as well for convenience
@@ -65,6 +78,9 @@ type GameStore = {
   prompt?: string; // prompt for choosing action if applicable
   selected: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   setSelected: (s: GameElement[]) => void;
+  automove?: number;
+  renderedState: Record<string, {key: string, style?: Box}>;
+  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, movedTo?: string, old?: Record<string, any>}> };
   setBoardSize: () => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
@@ -90,8 +106,20 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   boardJSON: [],
   updateState: update => set(s => {
     let { game } = s;
+    const position = s.position || update.position;
+    let previousRenderedState = s.previousRenderedState;
+    window.clearTimeout(s.automove);
+    if (update.state.sequence === s.game.sequence + 1) {
+      // demote current state to previous and play over top
+      previousRenderedState = {sequence: s.game.sequence, elements: {...s.renderedState}};
+    } else if (update.state.sequence !== s.previousRenderedState.sequence + 1) {
+      // old state is invalid
+      previousRenderedState = {sequence: -1, elements: {}};
+    }
+    // otherwise reuse previous state, we're overwriting an internal version of the same state
+
     if (game.phase === 'new' && s.setup) {
-      game = s.setup(update.state.state);
+      game = s.setup(update.state);
       // @ts-ignore;
       window.game = game;
       // @ts-ignore;
@@ -102,9 +130,9 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
         game.board.getBoardSize(window.innerWidth, window.innerHeight, !!globalThis.navigator?.userAgent.match(/Mobi/))
       );
     } else {
-      game.players.fromJSON(update.state.state.players);
-      game.board.fromJSON(update.state.state.board);
-      game.flow.setBranchFromJSON(update.state.state.position);
+      game.players.fromJSON(update.state.players);
+      game.board.fromJSON(update.state.board);
+      game.flow.setBranchFromJSON(update.state.position);
     }
     game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
     game.phase = 'started';
@@ -115,35 +143,39 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       game.winner = update.winners.map(p => game.players.atPosition(p)!);
       game.phase = 'finished';
     }
-    const position = s.position || update.state.position;
-
     console.debug(`Game update for player #${position}. Current flow:\n ${game.flow.stacktrace()}`);
+
+    let state: Partial<GameStore> = {
+      game,
+      position,
+      ...updateBoard(game, position, update.state.board),
+    };
+
+    // may override board with new information
+    if (game.phase !== 'finished') state = {
+      ...state,
+      ...updateSelections(game, position, undefined)
+    }
+
+    state.renderedState = {};
+    state.previousRenderedState = previousRenderedState;
+    s.game.sequence = update.state.sequence;
 
     if (game.phase === 'finished') {
       return {
-        game,
-        position,
+        ...state,
         move: undefined,
         step: undefined,
         prompt: undefined,
         boardSelections: {},
         pendingMoves: undefined,
-        ...updateBoard(game, position, update.state.state.board),
-      }
+      };
     }
 
     return {
-      game,
-      position,
+      ...state,
       selected: [],
-      ...updateSelections(game, position, undefined),
-      ...updateBoard(game, position, update.state.state.board),
-    }
-  }),
-  // function to ensure react detects a change. must be called immediately after any function that alters board state
-  updateBoard: () => set(s => {
-    if (!s.position) return {};
-    return updateBoard(s.game, s.position);
+    };
   }),
   // pendingMove we're trying to complete, args are the ones we're committing to
   selectMove: (pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => set(s => {
@@ -158,7 +190,12 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
         if (!args || !(sel.name in args)) delete move!.args[sel.name];
       }
     }
-    return updateSelections(s.game!, s.position!, move);
+    const update = updateSelections(s.game!, s.position!, move);
+    if (s.game.sequence > Math.floor(s.game.sequence)) {
+      update.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
+      update.renderedState = {};
+    }
+    return update;
   }),
   moves: [],
   clearMoves: () => set({ moves: [] }),
@@ -169,11 +206,13 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   pendingMoves: [],
   selected: [],
   setSelected: sel => set({ selected: [...new Set(sel)] }),
+  renderedState: {},
+  previousRenderedState: {sequence: -1, elements: {}},
   setBoardSize: () => set(s => {
     const boardSize = s.game.board.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
-    if (boardSize.name !== s.game.board._ui.boardSize.name) {
+    if (boardSize.name !== s.game.board._ui.boardSize.name && s.position) {
       s.game.board.setBoardSize(boardSize);
-      s.updateBoard();
+      updateBoard(s.game, s.position);
     }
     return {};
   }),
@@ -209,29 +248,29 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
 }), shallow);
 
 // refresh move and selections
-const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: UIMove) => {
+const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: UIMove): Partial<GameStore> => {
   const player = game.players.atPosition(position);
   if (!player) return {};
   let state: Partial<GameStore> = {};
   let pendingMoves: GamePendingMoves
-  let isBoardUpToDate = true;
+  let maySubmit = !!move;
+  let autoSubmit = false;
 
-  while (true) {
-    pendingMoves = game.getPendingMoves(player, move?.name, move?.args);
+  pendingMoves = game.getPendingMoves(player, move?.name, move?.args);
 
-    if (move && !pendingMoves?.moves) {
-      // perhaps an update came while we were in the middle of a move
-      console.error('move may no longer be valid. retrying getPendingMoves', move, pendingMoves);
-      move = undefined;
-      pendingMoves = game.getPendingMoves(player);
-    }
+  if (move && !pendingMoves?.moves) {
+    // perhaps an update came while we were in the middle of a move
+    console.error('move may no longer be valid. retrying getPendingMoves', move, pendingMoves);
+    move = undefined;
+    pendingMoves = game.getPendingMoves(player);
+  }
 
-    const moves = pendingMoves?.moves;
+  let moves = pendingMoves?.moves;
 
-    // the only selection is skippable - skip and rerun selections
-    if (moves?.length === 1 && moves[0].selections.length === 1 && moves[0].selections[0].skipIfOnlyOne) {
-      const arg = moves[0].selections[0].isForced();
-      if (arg === undefined) break;
+  // the only selection is skippable - skip and rerun selections
+  if (moves?.length === 1 && moves[0].selections.length === 1 && moves[0].selections[0].skipIfOnlyOne) {
+    const arg = moves[0].selections[0].isForced();
+    if (arg !== undefined) {
 
       if (moves[0].selections[0].confirm) {
         // a confirm was added tho, so don't skip that. convert to confirm prompt
@@ -239,24 +278,28 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
         moves[0].args[moves[0].selections[0].name] = arg;
         moves[0].selections[0].name = '__confirm__';
         moves[0].selections[0].type = 'button';
-        break;
+      } else {
+        move = {
+          ...moves[0],
+          args: {...moves[0].args, [moves[0].selections[0].name]: arg},
+          requireExplicitSubmit: needsConfirm(moves[0])
+        };
+        if (game.getPendingMoves(player, move.name, move.args)?.moves.length === 0) {
+          if (maySubmit === false) {
+            autoSubmit = true;
+            maySubmit = true;
+          }
+          moves = [];
+        }
       }
-
-      move = {
-        ...moves[0],
-        args: {...moves[0].args, [moves[0].selections[0].name]: arg},
-        requireExplicitSubmit: needsConfirm(moves[0])
-      };
-      continue;
     }
+  }
 
-    // move is processable - add to queue and rerun
-    if (moves?.length === 0) {
-      try {
-        if (!move) break;
-
-        const player = game.players.atPosition(position);
-        if (!player) break;
+  // move is processable
+  if (maySubmit && moves?.length === 0) {
+    if (move) {
+      const player = game.players.atPosition(position);
+      if (player) {
 
         // serialize now before we alter our state to ensure proper references
         const serializedMove: SerializedMove = {
@@ -264,36 +307,61 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
           args: Object.fromEntries(Object.entries(move.args).map(([k, v]) => [k, serializeArg(v)]))
         }
 
-        state.error = game.processMove({ player, ...move });
-
-        isBoardUpToDate = false;
-        if (state.error) {
-          console.error(state.error);
-          break;
-        } else {
-          state.moves ??= [];
-          state.moves.push(serializedMove);
-          game.play();
-          move = undefined;
-          continue;
-        }
-      } catch (e) {
-        // first line of defense for bad game logic. cancel all moves and
-        // surface the error but update board anyways to prevent more errors
-        console.error(
-          `Game attempted to complete move but was unable to process:\n` +
-            `⮕ ${move!.name}({${Object.entries(move!.args).map(
-              ([k, v]) => k + ': ' + humanizeArg(v)
-            ).join(', ')}})\n`
+        console.debug(
+          `${autoSubmit ? 'Autoplay' : 'Submitting'} valid move from player #${position}:\n` +
+            `⮕ ${move.name}({${Object.entries(move.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`
         );
-        console.error(e.message);
-        console.debug(e.stack);
-        state.moves = [];
+        //moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
+        const message: MoveMessage = {
+          type: "move",
+          id: '0', // String(moveCallbacks.length),
+          data: serializedMove
+        };
+
+        if (autoSubmit) {
+          // no need to run locally, just queue the submit and remove any moves from being presented
+          // not using game queue because updates must come in before this if revealed information alters our forced move
+          state.automove = window.setTimeout(() => window.top!.postMessage(message, "*"), 1000); // speed
+        } else {
+          // run the move locally and submit in parallel
+          try {
+            state.error = game.processMove({ player, ...move });
+
+            if (state.error) {
+              console.error(state.error);
+            } else {
+              game.play();
+              game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
+              state = {
+                ...state,
+                ...updateBoard(game, position),
+              }
+
+              window.top!.postMessage(message, "*");
+            }
+          } catch (e) {
+            // first line of defense for bad game logic. cancel all moves and
+            // surface the error but update board anyways to prevent more errors
+            console.error(
+              `Game attempted to complete move but was unable to process:\n` +
+                `⮕ ${move!.name}({${Object.entries(move!.args).map(
+                  ([k, v]) => k + ': ' + humanizeArg(v)
+                ).join(', ')}})\n`
+            );
+            console.error(e.message);
+            console.debug(e.stack);
+          }
+        }
+        state = {
+          ...state,
+          dragElement: undefined,
+          currentDrop: undefined,
+          selected: [],
+        };
         move = undefined;
-        break
+        pendingMoves = undefined;
       }
     }
-    break;
   }
 
   if (pendingMoves) for (const move of pendingMoves.moves as UIMove[]) {
@@ -302,20 +370,13 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
   const boardSelections = pendingMoves ? getBoardSelections(pendingMoves.moves as UIMove[], move) : {};
 
-  if (!isBoardUpToDate) state = {
-    ...state,
-    ...updateBoard(game, position),
-    dragElement: undefined,
-    currentDrop: undefined
-  };
-
   return ({
     ...state,
     move,
     step: pendingMoves?.step,
     prompt: pendingMoves?.prompt,
     boardSelections,
-    pendingMoves: pendingMoves?.moves,
+    pendingMoves: pendingMoves?.moves as UIMove[],
   })
 };
 
@@ -355,10 +416,11 @@ const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<
   return boardSelections;
 }
 
+// function to ensure react detects a change. must be called immediately after any function that alters board state
 const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?: ElementJSON[]) => {
   // rerun layouts. probably optimize TODO
   game.contextualizeBoardToPlayer(game.players.atPosition(position));
-  game.board.applyLayouts();
+  game.board.applyLayouts(true);
 
   return ({ boardJSON: json || game.board.allJSON() })
 }
