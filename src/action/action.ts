@@ -213,14 +213,9 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     }
 
     const followups: FollowUp<P>[] = [];
-    try {
-      for (const move of this.moves) {
-        const followup = move(args);
-        if (followup) followups.push(followup);
-      }
-    } catch(e) {
-      console.error(e);
-      return e.message;
+    for (const move of this.moves) {
+      const followup = move(args);
+      if (followup) followups.push(followup);
     }
 
     if (followups.length) return followups;

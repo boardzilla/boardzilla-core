@@ -8,7 +8,7 @@ import type Player from '../player/player.js';
  * Pieces are game elements that move during play
  * @category Board
  */
-export default class Piece<P extends Player, B extends Board<P> = Board<P>> extends GameElement<P, B> {
+export default class Piece<P extends Player<P, B> = any, B extends Board<P, B> = any> extends GameElement<P, B> {
 
   /**
    * Move this piece into another element. This triggers any {@link

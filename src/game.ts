@@ -5,6 +5,7 @@ import {
   Board,
   Space,
   Piece,
+  Die,
   GameElement
 } from './board/index.js';
 import { Action, Selection } from './action/index.js';
@@ -68,7 +69,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   winner: P[] = [];
 
   constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
-    this.board = new boardClass({ game: this, classRegistry: [GameElement, Space, Piece, ...elementClasses]})
+    this.board = new boardClass({ game: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})
     this.players = new PlayerCollection<P>();
     this.players.className = playerClass;
     this.players.game = this;
@@ -124,7 +125,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       position: this.flow.branchJSON(!!player),
       board: this.board.allJSON(player?.position),
       sequence: this.sequence,
-      rseed: this.rseed,
+      rseed: player ? '' : this.rseed,
     }
   }
 

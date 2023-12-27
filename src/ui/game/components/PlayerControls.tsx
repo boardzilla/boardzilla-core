@@ -12,7 +12,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
   moves: UIMove[],
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
 }) => {
-  const [game, position, prompt, selected, move] = gameStore(s => [s.game, s.position, s.prompt, s.selected, s.move]);
+  const [game, position, prompt, step, selected, move] = gameStore(s => [s.game, s.position, s.prompt, s.step, s.selected, s.move]);
 
   const boardPrompt = useMemo(() => {
     if (name === 'step:out-of-turn') return `${game.players.current().map(p => p.name).join(' ,')} is taking their turn`;
@@ -24,6 +24,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
     }
 
     // if only one, use that, otherwise use the step prompt
+    if (new Set(prompts).size > 1 && !prompt) console.error(`No prompt defined for playerAction ${step}`)
     return new Set(prompts).size === 1 ? prompts[0] : prompt;
   }, [moves, game.players, name, prompt]);
 

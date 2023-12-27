@@ -5,10 +5,11 @@ import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
 import Game from '../game.js'
 import { humanizeArg, serializeArg } from '../action/utils.js';
+import { Board, Die, GameElement } from '../board/index.js'
+import DieComponent from './game/components/Die.js'
+import Player from '../player/player.js'
 
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
-import Player from '../player/player.js'
-import { Board, GameElement } from '../board/index.js'
 import type { Box, ElementJSON } from '../board/element.js'
 import type { SerializedArg } from '../action/utils.js'
 import type Selection from '../action/selection.js'
@@ -424,7 +425,12 @@ const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<
 const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?: ElementJSON[]) => {
   // rerun layouts. probably optimize TODO
   game.contextualizeBoardToPlayer(game.players.atPosition(position));
-  game.board.applyLayouts(true);
+  game.board.applyLayouts(true, board => {
+    board.all(Die).appearance({
+      render: DieComponent,
+      aspectRatio: 1,
+    });
+  });
 
   return ({ boardJSON: json || game.board.allJSON() })
 }

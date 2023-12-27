@@ -130,11 +130,12 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     return this._ui.boardSizes && this._ui.boardSizes(screenX, screenY, mobile) || { name: '_default', aspectRatio: 1 };
   }
 
-  applyLayouts(this: B, force=false) {
+  applyLayouts(this: B, force=false, base?: (b: this) => void) {
     if (this._ui.setupLayout) {
       this.resetUI();
       this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
     }
+    if (base) base(this);
 
     const aspectRatio = this._ui.boardSize.aspectRatio;
     this._ui.frame = {

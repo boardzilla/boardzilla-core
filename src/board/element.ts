@@ -730,10 +730,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       )) as typeof attrs;
     }
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
-    if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name
+    if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name or we'll leak information
     if (this._t.children.length) json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
     if (this._t.order) json.order = this._t.order;
-    if (this._t.was) json.was = this._t.was;
+    if (this._t.was && (!this.hasSameParent() || this._t.parent?._t.order !== 'stacking')) json.was = this._t.was;
     return json;
   }
 

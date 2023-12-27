@@ -1,6 +1,12 @@
 import Game from './game.js';
 import { Player } from './player/index.js';
-import { Board, Piece, Space, GameElement } from './board/index.js';
+import {
+  Board,
+  Piece,
+  Space,
+  Die,
+  GameElement,
+} from './board/index.js';
 
 export { Board, union } from './board/index.js';
 
@@ -39,6 +45,7 @@ export const createBoardClasses = <P extends Player<P, B>, B extends Board<P, B>
     GameElement: GameElement<P, B>,
     Space: Space<P, B>,
     Piece: Piece<P, B>,
+    Die: Die<P, B>
   };
 };
 
@@ -98,7 +105,7 @@ export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
       rseed = String(Math.random());
     }
   }
-  game.setRandomSeed(rseed);
+  game.setRandomSeed('sequence' in state ? String(state.sequence) + '-' + rseed : rseed);
   game.setSettings(state.settings);
   game.players.fromJSON(state.players);
 
