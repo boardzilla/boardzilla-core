@@ -63,10 +63,6 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
   }
 
-  get players() {
-    return this._ctx.game.players;
-  }
-
   /**
    * The setting value created by the host
    *

@@ -28,6 +28,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
 }) => {
   const [previousRenderedState, renderedState, boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, isMobile, boardJSON] =
     gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.isMobile, s.boardJSON]);
+
   const [dragging, setDragging] = useState(false); // currently dragging
   const wrapper = useRef<HTMLDivElement>(null);
   const domElement = useRef<HTMLDivElement>(null);

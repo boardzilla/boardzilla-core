@@ -98,21 +98,19 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         // look ahead for any selections that can/should be combined
         for (let i = this.selections.findIndex(s => s.name === move.selections[0].name) + 1; i !== this.selections.length; i++) {
           if (confirm) break; // do not skip an explicit confirm
-          let selection = this.selections[i];
+          let selection: Selection<P> | ResolvedSelection<P> = this.selections[i];
           if (combineWith?.includes(selection.name)) selection = selection.resolve(move.args);
           if (!selection.isResolved()) break;
-          if (!selection.skipIf) {
-            const arg = selection.isForced();
-            if (arg !== undefined) { // forced future args are added here to shorten the form and pre-prompt any confirmation
-              move.args[selection.name] = arg;
-            } else if (combineWith?.includes(selection.name)) { // future combined selections are added as well
-              move.selections.push(selection);
-            } else {
-              break;
-            }
-            confirm = selection.confirm ?? confirm; // find latest confirm for the overall combination
-            validation = selection.validation ?? validation;
+          const arg = selection.isForced();
+          if (arg !== undefined) { // forced future args are added here to shorten the form and pre-prompt any confirmation
+            move.args[selection.name] = arg;
+          } else if (combineWith?.includes(selection.name)) { // future combined selections are added as well
+            move.selections.push(selection);
+          } else {
+            break;
           }
+          confirm = selection.confirm ?? confirm; // find latest confirm for the overall combination
+          validation = selection.validation ?? validation;
         }
         if (confirm) move.selections[0].confirm = confirm; // and put it on top
         if (validation) move.selections[move.selections.length - 1].validation = validation; // on bottom
@@ -138,7 +136,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       let possibleOptions: Argument<P>[] = [];
       let pruned = false;
       let pendingMoves: PendingMove<P>[] = [];
-      let mayExpand = selection.expand;
+      let hasCompleteMove = false
       for (const option of selection.options()) {
         const allArgs = {...args, [selection.name]: option};
         if (selection.validation && selection.error(allArgs)) continue;
@@ -147,18 +145,24 @@ export default class Action<P extends Player, A extends Record<string, Argument<
           pruned = true;
         } else {
           possibleOptions.push(option);
-          if (selection.expand && submoves.length === 0) mayExpand = false; // TODO smarter expansion needed when triggered/optional selections are added
+          hasCompleteMove ||= submoves.length === 0; // TODO smarter expansion needed when triggered/optional selections are added
           pendingMoves = pendingMoves.concat(submoves);
         }
       }
       if (!possibleOptions.length) return undefined;
       if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
 
-      // return the expanded selection if mayExpand, or if there's a single, skippable choice and the next choice is a real choice
-      if (pendingMoves.length && (mayExpand || selection.skipIfOnlyOne && possibleOptions.length === 1 && (pendingMoves.length !== 1 || pendingMoves[0].selections.length !== 1 || !pendingMoves[0].selections[0].isNonChoice))) return pendingMoves;
+      // return the next selection(s) if skipIf and no completed move, or if there's a single, skippable choice and the next choice is a real choice
+      if (pendingMoves.length && (
+        ((selection.skipIf === 'always' || selection.skipIf === true) && !hasCompleteMove) ||
+          selection.skipIf === 'only-one' && possibleOptions.length === 1 &&
+            (pendingMoves.length !== 1 || pendingMoves[0].selections.length !== 1 || !pendingMoves[0].selections[0].isNonChoice))
+      ) {
+        return pendingMoves;
+      }
     }
 
-    // return board or final choice for a selection prompt, UI may choose to skip anyways
+    // return board or final choice for a selection prompt, UI may choose to autoplay
     return [move];
   }
 
@@ -339,9 +343,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
       validate?: ((args: A & {[key in N]: T}) => string | boolean | undefined)
       // initial?: T | ((...arg: A) => T), // needed for select-boxes?
-      skipIfOnlyOne?: boolean,
-      skipIf?: boolean | ((args: A) => boolean);
-      expand?: boolean
+      skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
     }
   ): Action<P, A & {[key in N]: T}> {
     this._addSelection(new Selection<P>(name, { ...(options || {}), selectFromChoices: { choices } }));
@@ -456,12 +458,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: number}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: number}) => string | boolean | undefined),
     initial?: number | ((args: A) => number),
-    skipIfOnlyOne?: boolean,
-    skipIf?: boolean | ((args: A) => boolean);
-    expand?: boolean,
+    skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   } = {}): Action<P, A & {[key in N]: number}> {
-    const { min, max, prompt, confirm, validate, initial, skipIfOnlyOne, skipIf, expand } = options;
-    this._addSelection(new Selection<P>(name, { prompt, confirm, validation: validate, skipIfOnlyOne, skipIf, expand, selectNumber: { min, max, initial } }));
+    const { min, max, prompt, confirm, validate, initial, skipIf } = options;
+    this._addSelection(new Selection<P>(name, { prompt, confirm, validation: validate, skipIf, selectNumber: { min, max, initial } }));
     return this as unknown as Action<P, A & {[key in N]: number}>;
   }
 
@@ -527,9 +527,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     min?: never;
     max?: never;
     number?: never;
-    skipIfOnlyOne?: boolean,
-    skipIf?: boolean | ((args: A) => boolean);
-    expand?: boolean,
+    skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   }): Action<P, A & {[key in N]: T}>;
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
@@ -538,9 +536,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
-    skipIfOnlyOne?: boolean,
-    skipIf?: boolean | ((args: A) => boolean);
-    expand?: boolean,
+    skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   }): Action<P, A & {[key in N]: T[]}>;
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
@@ -549,16 +545,12 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
-    skipIfOnlyOne?: boolean,
-    skipIf?: boolean | ((args: A) => boolean);
-    expand?: boolean,
+    skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   }): Action<P, A & {[key in N]: T | T[]}> {
-    const { prompt, confirm, validate, min, max, number, skipIfOnlyOne, skipIf, expand } = options || {};
+    const { prompt, confirm, validate, min, max, number, skipIf } = options || {};
     this._addSelection(new Selection<P>(
-      name, { prompt, confirm, validation: validate, skipIfOnlyOne, skipIf, expand,
-        selectOnBoard: { chooseFrom: choices, min, max, number }
-      })
-    );
+      name, { prompt, confirm, validation: validate, skipIf, selectOnBoard: { chooseFrom: choices, min, max, number } }
+    ));
     if (min !== undefined || max !== undefined || number !== undefined) {
       return this as unknown as Action<P, A & {[key in N]: T[]}>;
     }

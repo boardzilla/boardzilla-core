@@ -20,23 +20,20 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   actions: {name: string, do?: FlowDefinition<P>}[];
   type: FlowBranchNode<P>['type'] = "action";
   prompt?: string; // needed if multiple board actions
-  skipIfOnlyOne: boolean;
-  expand: boolean;
+  skipIf: 'always' | 'never' | 'only-one';
 
-  constructor({ name, player, players, actions, prompt, expand, skipIfOnlyOne }: {
+  constructor({ name, player, players, actions, prompt, skipIf }: {
     name?: string,
     players?: P[] | ((args: Record<string, any>) => P[]),
     player?: P | ((args: Record<string, any>) => P),
     actions: (string | {name: string, do?: FlowDefinition<P>})[],
     prompt?: string,
-    expand?: boolean,
-    skipIfOnlyOne?: boolean,
+    skipIf?: 'always' | 'never' | 'only-one';
   }) {
     super({ name });
     this.actions = actions.map(a => typeof a === 'string' ? {name: a} : a);
     this.prompt = prompt;
-    this.expand = expand ?? true;
-    this.skipIfOnlyOne = skipIfOnlyOne ?? false;
+    this.skipIf = skipIf ?? 'always';
     this.players = players ?? player;
   }
 
@@ -78,16 +75,14 @@ export default class ActionStep<P extends Player> extends Flow<P> {
           prompt: this.prompt,
           step: this.name,
           actions: this.actions.map(action => ({name: action.name})),
-          skipIfOnlyOne: this.skipIfOnlyOne,
-          expand: this.expand,
+          skipIf: this.skipIf,
         }
       }
     } else if (this.position.followups?.length && (!player || this.position.followups[0].player === undefined || this.position.followups[0].player === player)) {
       return {
         step: this.name,
         actions: [this.position.followups[0]],
-        skipIfOnlyOne: this.skipIfOnlyOne,
-        expand: this.expand, // umm...
+        skipIf: this.skipIf, // not sure what goes here
       }
     }
   }

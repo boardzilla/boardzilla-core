@@ -43,27 +43,21 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
   validation?: ((args: A) => string | boolean | undefined);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
 } & ({
-  skipIfOnlyOne?: boolean;
-  skipIf?: boolean | ((args: A) => boolean);
-  expand?: boolean;
+  skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   selectOnBoard: BoardSelection<P, GameElement<P>>;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
   value?: never;
 } | {
-  skipIfOnlyOne?: boolean;
-  skipIf?: boolean | ((args: A) => boolean);
-  expand?: boolean;
+  skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   selectOnBoard?: never;
   selectFromChoices: ChoiceSelection<P>;
   selectNumber?: never;
   enterText?: never;
   value?: never;
 } | {
-  skipIfOnlyOne?: boolean;
-  skipIf?: boolean | ((args: A) => boolean);
-  expand?: boolean;
+  skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   selectOnBoard?: never;
   selectFromChoices?: never;
   selectNumber: NumberSelection<P>;
@@ -84,7 +78,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
 });
 
 // any lambdas have been resolved to actual values
-export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp'> & {
+export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp' | 'skipIf'> & {
   prompt?: string;
   choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>>;
   boardChoices?: GameElement<P>[];
@@ -92,6 +86,7 @@ export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 
   max?: number;
   initial?: Argument<P>;
   regexp?: RegExp;
+  skipIf?: 'never' | 'always' | 'only-one' | boolean;
 }
 
 /**
@@ -107,9 +102,7 @@ export default class Selection<P extends Player> {
   confirm?: [string, Record<string, Argument<P>> | ((args: Record<string, Argument<P>>) => Record<string, Argument<P>>) | undefined]
   validation?: ((args: Record<string, Argument<P>>) => string | boolean | undefined);
   clientContext: Record<any, any> = {}; // additional meta info that describes the context for this selection
-  skipIfOnlyOne: boolean;
-  skipIf?: boolean | ((args: Record<string, Argument<P>>) => boolean);
-  expand: boolean = false;
+  skipIf?: 'never' | 'always' | 'only-one' | ((args: Record<string, Argument<P>>) => boolean);
   choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>> | ((args: Record<string, Argument<P>>) => SingleArgument<P>[] | Record<string, SingleArgument<P>>);
   boardChoices?: BoardQueryMulti<P, GameElement<P>>;
   min?: number | ((args: Record<string, Argument<P>>) => number);
@@ -151,15 +144,13 @@ export default class Selection<P extends Player> {
       } else {
         this.type = 'button';
         this.value = s.value;
-        this.skipIfOnlyOne ??= true;
+        this.skipIf ??= 'only-one';
       }
     }
     this.prompt = s.prompt;
     this.confirm = typeof s.confirm === 'string' ? [s.confirm, undefined] : s.confirm;
     this.validation = s.validation;
-    this.skipIfOnlyOne = 'skipIfOnlyOne' in s ? s.skipIfOnlyOne ?? true : true;
-    this.expand = 'expand' in s ? s.expand ?? false : false;
-    if ('skipIf' in s) this.skipIf = s.skipIf;
+    this.skipIf = ('skipIf' in s && s.skipIf) || 'only-one';
     this.clientContext = s.clientContext ?? {};
   }
 
@@ -172,7 +163,6 @@ export default class Selection<P extends Player> {
   error(args: Record<string, Argument<P>>): string | undefined {
     const arg = args[this.name];
     const s = this.resolve(args);
-    if (s.skipIf === true) return;
 
     if (s.validation) {
       const error = s.validation(args);
@@ -244,7 +234,7 @@ export default class Selection<P extends Player> {
   }
 
   resolve(args: Record<string, Argument<P>>): ResolvedSelection<P> {
-    const resolved = new Selection(this.name, this);
+    const resolved = new Selection(this.name, this) as ResolvedSelection<P>;
     if (typeof this.choices !== 'function' && this.choices?.length === 1) resolved.isNonChoice = true;
     if (typeof this.boardChoices !== 'function' && this.boardChoices?.length === 1) resolved.isNonChoice = true;
     if (typeof this.boardChoices === 'string') throw Error("not impl");
@@ -257,9 +247,7 @@ export default class Selection<P extends Player> {
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.boardChoices === 'function') resolved.boardChoices = this.boardChoices(args);
     //if (resolved.boardChoices instanceof GameElement) resolved.boardChoices = [resolved.boardChoices];
-
-    resolved.skipIfOnlyOne ??= true;
-    return resolved as ResolvedSelection<P>;
+    return resolved;
   }
 
   isPossible(this: ResolvedSelection<P>): boolean {
@@ -275,22 +263,20 @@ export default class Selection<P extends Player> {
   }
 
   isForced(this: ResolvedSelection<P>): Argument<P> | undefined {
-    if (this.skipIfOnlyOne !== true) return;
+    if (this.skipIf === 'never') return;
     if (this.type === 'button') {
       return this.value;
-    } else if (this.boardChoices?.length === 1 && !this.isMulti()) {
+    } else if (this.boardChoices && (this.skipIf === true || this.boardChoices?.length === 1) && !this.isMulti()) {
       return this.boardChoices[0];
-    } else if (this.boardChoices &&
-      this.boardChoices.length === this.min &&
-      this.min === this.max) {
-      return this.boardChoices;
+    } else if (this.boardChoices && (this.skipIf === true || this.boardChoices.length === this.min && this.min === this.max)) {
+      return this.boardChoices.slice(this.min);
     } else if (this.type === 'number' &&
       this.min !== undefined &&
       this.min === this.max) {
       return this.min;
     } else if (this.type === 'choices' && this.choices) {
       const choices = this.choices instanceof Array ? this.choices : Object.keys(this.choices);
-      if (choices.length === 1) return choices[0];
+      if (choices.length === 1 || this.skipIf === true) return choices[0];
     }
   }
 

@@ -319,7 +319,7 @@ describe('Game', () => {
       game.defineFlow([
         () => { board.tokens = 4 },
         playerActions({
-          players: board.players,
+          players: game.players,
           actions: ['takeOne']
         }),
       ]);
