@@ -3,12 +3,9 @@ import { GameElement } from '../board/index.js';
 
 import type {
   ResolvedSelection,
-  BoardQuery,
   BoardQueryMulti,
-  BoardQuerySingle,
-  BoardSelection,
 } from './selection.js';
-import type { Piece } from '../board/index.js';
+import { Piece } from '../board/index.js';
 import type { Player } from '../player/index.js';
 import type { default as Game, PendingMove } from '../game.js';
 
@@ -50,7 +47,7 @@ type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R exte
  *
  * @category Actions
  */
-export default class Action<P extends Player, A extends Record<string, Argument<P>> = Record<string, never>> {
+export default class Action<P extends Player, A extends Record<string, Argument<P>> = NonNullable<unknown>> {
   /** @internal */
   name?: string;
   /** @internal */
@@ -552,119 +549,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return this as unknown as Action<P, A & {[key in N]: T}>;
   }
 
-  move<E extends Piece<P>, I extends GameElement<P>, N1 extends string, N2 extends string>(
-    pieceName: N1,
-    piece: BoardQuerySingle<P, E, A>,
-    intoName: N2,
-    into: BoardQuerySingle<P, I, A & {[key in N1]: E}>,
-    options?: {
-      prompt?: string | ((args: A) => string);
-      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
-      validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
-    }
-  ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
-  move<E extends Piece<P>, I extends GameElement<P>, N1 extends string, N2 extends string>(
-    pieceName: N1,
-    choosePiece: BoardQueryMulti<P, E, A>,
-    intoName: N2,
-    into: BoardQuerySingle<P, I, A & {[key in N1]: E}>,
-    options?: {
-      prompt?: string | ((args: A) => string);
-      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
-      validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
-    }
-  ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
-  move<E extends Piece<P>, I extends GameElement<P>, N1 extends string, N2 extends string>(
-    pieceName: N1,
-    piece: BoardQuerySingle<P, E, A>,
-    intoName: N2,
-    chooseInto: BoardQueryMulti<P, I, A & {[key in N1]: E}>,
-    options?: {
-      prompt?: string | ((args: A) => string);
-      promptInto?: string | ((args: A & {[key in N1]: E}) => string);
-      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
-      validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
-    }
-  ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
-  move<E extends Piece<P>, I extends GameElement<P>, N1 extends string, N2 extends string>(
-    pieceName: N1,
-    choosePiece: BoardQueryMulti<P, E, A>,
-    intoName: N2,
-    chooseInto: BoardQueryMulti<P, I, A & {[key in N1]: E}>,
-    options?: {
-      prompt?: string | ((args: A) => string);
-      promptInto?: string | ((args: A & {[key in N1]: E}) => string);
-      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
-      validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
-    }
-  ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
-  /**
-   * Add a board move to the action. Moves may involve making between zero and
-   * two choices depending on the type of move. After the player makes their
-   * selections, the move will happen as part of resolving the action. If `do`
-   * is called on this action, the behaviour will happen after the move.
-   *
-   * @param {Object} options
-   *
-   * @param options.prompt - Prompt displayed to the user for this choice.
-   *
-   * @param options.promptInto - If there should be a separate prompt for
-   * choosing the move to move and where to place it, specify this for the
-   * placement choice.
-   *
-   * @param options.piece - The piece to move. Specify this if there is only
-   * ever one choice, e.g. drawing the top card of the deck.
-   *
-   * @param options.choosePiece - The pieces allowed to move. Specify this if
-   * there are potentially multiple choices, e.g. playing a card from hand.
-   *
-   * @param options.into - Where to move the piece(s) into. Specify this if
-   * there is only ever one choice, e.g. discarding a card into the discard pile
-   *
-   * @param options.chooseInto - The places allowed to move the piece(s)
-   * into. Specify this if there are potentially multiple choices, e.g. playing
-   * a card from hand into your tableau or into discard.
-   *
-   * @example
-   * action({
-   *   prompt: "Discard",
-   * }).move({
-   *   // choose any of my cards to discard
-   *   choosePiece: board.all(Card, {mine: true})
-   *   // it can only go one place, the discard
-   *   into: board.first('discard')
-   * })
-   */
-  move<E extends Piece<P>, I extends GameElement<P>, N1 extends string, N2 extends string>(
-    pieceName: N1,
-    piece: BoardQuery<P, E, A & {[key in N1]: E}>,
-    intoName: N2,
-    into: BoardQuery<P, I, A & {[key in N1]: E} & {[key in N2]: I}>,
-    options?: {
-      prompt?: string | ((args: A) => string);
-      promptInto?: string | ((args: A & {[key in N1]: E}) => string);
-      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N1]: E} & {[key in N2]: I}) => Record<string, Argument<P>>) | undefined]
-      validate?: ((args: A & {[key in N1]: E} & {[key in N2]: I}) => string | boolean | undefined);
-    }
-  ): Action<P, A & {[key in N1]: E} & {[key in N2]: I}> {
-    if (piece instanceof GameElement) piece = [piece];
-    if (into instanceof GameElement) into = [into];
-    const fromSelection = this._addSelection(new Selection<P>(pieceName, {
-      prompt: options?.prompt,
-      selectOnBoard: { chooseFrom: piece } as BoardSelection<P, E>,
-    }));
-    const intoSelection = this._addSelection(new Selection<P>(intoName, {
-      prompt: options?.promptInto || options?.prompt,
-      confirm: options?.confirm,
-      validation: options?.validate,
-      selectOnBoard: { chooseFrom: into } as BoardSelection<P, I>,
-    }));
-    fromSelection.clientContext = { dragInto: intoSelection };
-    intoSelection.clientContext = { dragFrom: fromSelection };
-    this.moves.push((args: A & {[key in N1]: E} & {[key in N2]: I}) => (args[pieceName] as Piece<P>).putInto(args[intoName] as GameElement<P>));
-    return this as unknown as Action<P, A & {[key in N1]: E} & {[key in N2]: I}>;
-  }
-
   choose<N extends string, S extends 'number'>(
     name: N,
     type: S,
@@ -730,5 +614,18 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       this.selections[this.selections.length - 1 - i].clientContext = {combineWith: this.selections.slice(-i).map(s => s.name)};
     }
     return this as unknown as Action<P, ExpandGroup<P, A, R>>;
+  }
+
+  move(piece: keyof A | Piece, into: keyof A | GameElement) {
+    this.moves.push((args: A) => {
+      const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece;
+      const selectedInto = into instanceof GameElement ? into : args[into] as GameElement;
+      selectedPiece.putInto(selectedInto);
+    });
+    const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
+    const intoSelection = typeof into === 'string' ? this.selections.find(s => s.name === into) : undefined;
+    if (pieceSelection) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
+    if (intoSelection) intoSelection.clientContext = { dragFrom: pieceSelection ?? piece };
+    return this;
   }
 }

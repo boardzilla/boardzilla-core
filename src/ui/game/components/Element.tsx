@@ -40,7 +40,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const clickable = !dragElement && selections?.clickMoves.length;
   const selectable = !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
   const draggable = !!selections?.dragMoves?.length; // ???
-  const droppable = dropSelections.find(move => move.selections[0].boardChoices?.includes(element));
+  const droppable = dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const relativeTransform = useMemo(() => element.relativeTransformToBoard(), [element, element._ui.computedStyle]);
@@ -75,17 +75,15 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
 
   const handleDragStart = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
-    // const clone = (e.target as HTMLElement).cloneNode(true) as HTMLElement;
-    // clone.style.top = "-20vh"; /* or visibility: hidden, or any of the above */
-    // (e.target as HTMLElement).parentElement!.appendChild(clone);
-    // e.dataTransfer.setDragImage(clone, 0, 0);
     if (wrapper.current) {
       wrapper.current.setAttribute('data-lastx', String(data.lastX));
       wrapper.current.setAttribute('data-lasty', String(data.lastY))
     }
   }, [wrapper]);
 
-  if (dragging && dragElement !== branch) setDragging(false);
+  useEffect(() => {
+    if (dragging && dragElement !== branch) setDragging(false);
+  }, [dragging, dragElement, branch]);
 
   const handleDrag = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();

@@ -12,7 +12,7 @@ import Player from '../player/player.js'
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
 import type { Box, ElementJSON } from '../board/element.js'
 import type { SerializedArg } from '../action/utils.js'
-import type Selection from '../action/selection.js'
+import Selection from '../action/selection.js'
 import type { Argument } from '../action/action.js'
 import type { PendingMove, SerializedMove } from '../game.js'
 import type { SetupFunction } from '../index.js'
@@ -74,7 +74,7 @@ type GameStore = {
     clickMoves: UIMove[],
     dragMoves: {
       move: UIMove,
-      drag: ResolvedSelection<Player>
+      drag: Selection<Player> | ResolvedSelection<Player>
     }[]
   }>; // pending moves on board
   prompt?: string; // prompt for choosing action if applicable
@@ -326,7 +326,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
         if (autoSubmit) {
           // no need to run locally, just queue the submit and remove any moves from being presented
           // not using game queue because updates must come in before this if revealed information alters our forced move
-          state.automove = window.setTimeout(() => window.top!.postMessage(message, "*"), 1000); // speed
+          state.automove = window.setTimeout(() => window.top!.postMessage(message, "*"), 500); // speed
         } else {
           // run the move locally and submit in parallel
           try {
@@ -391,7 +391,7 @@ const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<
     clickMoves: UIMove[],
     dragMoves: {
       move: UIMove,
-      drag: ResolvedSelection<Player>
+      drag: Selection<Player> | ResolvedSelection<Player>
     }[]
   }> = {};
   for (const p of moves) {
@@ -402,15 +402,19 @@ const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<
           boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
           boardSelections[el.branch()].clickMoves.push(boardMove);
         }
-        let { dragInto, dragFrom } = sel.clientContext as { dragInto?: Selection<Player>, dragFrom?: Selection<Player> };
+        let { dragInto, dragFrom } = sel.clientContext as { dragInto?: Selection<Player> | GameElement, dragFrom?: Selection<Player> | GameElement };
         if (dragInto) {
+          if (dragInto instanceof GameElement) {
+            // convert to confirmation for a single drop target
+            dragInto = new Selection('__confirm__', { selectOnBoard: { chooseFrom: [dragInto] } });
+          }
           for (const el of sel.boardChoices) {
             boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-            boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel.clientContext?.dragInto });
+            boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: dragInto });
           }
         }
         if (dragFrom) {
-          for (const el of dragFrom.resolve(move?.args || {}).boardChoices || []) {
+          for (const el of dragFrom instanceof GameElement ? [dragFrom] : dragFrom.resolve(move?.args || {}).boardChoices || []) {
             boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
             boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel });
           }

@@ -120,6 +120,7 @@ html, body { height: 100% }
       }
 
       .droppable {
+        visibility: visible;
         > .bz-default {
           border: .1em solid red;
         }
@@ -679,7 +680,6 @@ html, body { height: 100% }
       font-size: .8rem;
     }
   }
-
 
 
   /* react-tooltip/dist/react-tooltip.min.css */

@@ -235,7 +235,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    *
    * @category Actions
    */
-  action<A extends Record<string, Argument<P>> = Record<string, never>>(definition: {
+  action<A extends Record<string, Argument<P>> = NonNullable<unknown>>(definition: {
     prompt?: string,
     condition?: Action<P, A>['condition'],
   }) {
@@ -268,9 +268,12 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     return {
       _godMove: action<P>({
         prompt: "Move",
-      }).move(
+      }).chooseOnBoard(
         'piece', this.board.all(Piece<P, B>),
+      ).chooseOnBoard(
         'into', this.board.all(GameElement<P, B>)
+      ).move(
+        'piece', 'into'
       ),
       _godEdit: action<P>({
         prompt: "Change",

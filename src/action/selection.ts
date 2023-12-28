@@ -246,7 +246,6 @@ export default class Selection<P extends Player> {
     if (typeof this.choices === 'function') resolved.choices = this.choices(args)
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.boardChoices === 'function') resolved.boardChoices = this.boardChoices(args);
-    //if (resolved.boardChoices instanceof GameElement) resolved.boardChoices = [resolved.boardChoices];
     return resolved;
   }
 

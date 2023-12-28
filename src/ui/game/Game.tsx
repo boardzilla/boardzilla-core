@@ -233,6 +233,8 @@ export default () => {
       className={classnames(
         globalThis.navigator?.userAgent.match(/Mobi/) ? 'mobile' : 'desktop', {
           'browser-chrome': globalThis.navigator?.userAgent.indexOf('Chrome') > -1,
+          'browser-safari': globalThis.navigator?.userAgent.indexOf('Safari') > -1,
+          'browser-edge': globalThis.navigator?.userAgent.indexOf('Edge') > -1,
           'browser-firefox': globalThis.navigator?.userAgent.indexOf('Firefox') > -1,
         }
       )}
