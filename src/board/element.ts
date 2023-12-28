@@ -28,7 +28,7 @@ export type ElementClass<T extends GameElement = any> = {
  * the base GameElement, except `name` and `player`
  */
 export type ElementAttributes<T extends GameElement> =
-  Partial<Pick<T, {[K in keyof T]: K extends keyof GameElement ? never : (T[K] extends (...a:any[]) => any ? never : K)}[keyof T] | 'name' | 'player'>>
+  Partial<Pick<T, {[K in keyof T]: K extends keyof GameElement ? never : (T[K] extends (...a:any[]) => any ? never : K)}[keyof T] | 'name' | 'player' | 'row' | 'column'>>
 
 export type ElementContext<P extends Player<P, B> = any, B extends Board<P, B> = any> = {
   game: Game<P, B>;
@@ -118,6 +118,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @category Queries
    */
   player?: P;
+
+  row?: number;
+
+  column?: number;
 
   /**
    * The {@link Board} to which this element belongs
@@ -618,14 +622,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       rows: number,
       columns: number,
       style?: 'square' | 'hex' | 'hex-inverse'
-    }, className: ElementClass<T>,
+    },
+    className: ElementClass<T>,
     name: string,
-    attributes?: ElementAttributes<T> | ((row: number, column: number) => ElementAttributes<T>)
+    attributes?: ElementAttributes<T>
   ): ElementCollection<T> {
     const grid = new ElementCollection<T>();
     times(rows, row =>
       times(columns, column => {
-        const el = this.create(className, name, typeof attributes === 'function' ? attributes(row, column) : attributes);
+        const el = this.create(className, name, {row, column, ...attributes} as ElementAttributes<T>);
         grid[(row - 1) * columns + column - 1] = el;
         if (row > 1) el.connectTo(grid[(row - 2) * columns + column - 1]);
         if (column > 1) el.connectTo(grid[(row - 1) * columns + column - 2]);
@@ -848,8 +853,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * height from 0-100, unless otherwise noted (`margin` and `gap`)
    *
    * @param {Box} attributes.area - A box defining the layout's bounds within
-   * this element. If unspecified, the entire area is used, i.e. `{ left: 0,
-   * top: 0, width: 100, height: 100 }`
+   * this element. Unless `scaling` is `"none"`, no elements will ever overflow
+   * this area. If unspecified, the entire area is used, i.e. `{ left: 0, top:
+   * 0, width: 100, height: 100 }`
    *
    * @param attributes.margin - Instead of providing `area`, providing a
    * `margin` defines the bounding box in terms of a margin around the edges of
@@ -881,8 +887,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    *
    * @param attributes.scaling - Scaling strategy for the elements placed in this layout.
    * - *none*: Elements use the `size` value and do not scale. If no `size` is provided, this behaves like `fit` (default)
-   * - *fit*: elements scale up or down to fit within the area alloted without squshing
-   * - *fill*: elements scale up or down to completely fill the area, squishing themselves together as needed along one dimension.
+   * - *fit*: Elements scale up or down to fit within the area alloted without squshing
+   * - *fill*: Elements scale up or down to completely fill the area, squishing themselves together as needed along one dimension.
    *
    * @param attributes.gap - If provided, this places a gap between elements. If
    * scaling is 'fill', this is considered a maximum but may shrink or even
@@ -1196,13 +1202,14 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           scale.y *= reduction;
         }
 
+        //console.log('pre-scale', {area, size, totalAreaNeeded, alignOffset, scale});
+
         size.width *= scale.x;
         size.height *= scale.y;
 
         if (!cellGap) { // non-othogonal grid
           if (scaling === 'fill') {
-            //console.log('pre-scale', {area, size, totalAreaNeeded, alignOffset, scale});
-            // reduce offset along dimesion needed to squish
+            // reduce offset along dimension needed to squish
             if (area.width * scale.x / totalAreaNeeded.width > area.height * scale.y / totalAreaNeeded.height) {
               const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
               if (offsetScale < 1) {
@@ -1222,8 +1229,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
             totalAreaNeeded = getTotalArea();
           }
           // align in reduced area
-          startingOffset.x += area.left - totalAreaNeeded.left + alignOffset.left * (area.width - totalAreaNeeded.width);
-          startingOffset.y += area.top - totalAreaNeeded.top + alignOffset.top * (area.height - totalAreaNeeded.height);
+          startingOffset.x += area.left - totalAreaNeeded.left * scale.x + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
+          startingOffset.y += area.top - totalAreaNeeded.top * scale.y + alignOffset.top * (area.height - totalAreaNeeded.height * scale.y);
           //console.log('align', {area, size, totalAreaNeeded, alignOffset, startingOffset, scale});
 
         } else { // orthogonal

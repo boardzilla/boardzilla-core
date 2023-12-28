@@ -582,57 +582,54 @@ describe('Board', () => {
   });
 
   describe('grids', () => {
-    class Cell extends Space<Player> {
-      x: number;
-      y: number;
-    }
+    class Cell extends Space<Player> { }
 
     it('creates squares', () => {
       board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
-      board.createGrid({ rows: 3, columns: 3 }, Cell, 'cell', (x, y) => ({x, y}));
+      board.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
       expect(board.all(Cell).length).to.equal(9);
-      expect(board.first(Cell)!.x).to.equal(1);
-      expect(board.first(Cell)!.y).to.equal(1);
-      expect(board.last(Cell)!.x).to.equal(3);
-      expect(board.last(Cell)!.y).to.equal(3);
+      expect(board.first(Cell)!.row).to.equal(1);
+      expect(board.first(Cell)!.column).to.equal(1);
+      expect(board.last(Cell)!.row).to.equal(3);
+      expect(board.last(Cell)!.column).to.equal(3);
 
-      const corner = board.first(Cell, {x:1, y:1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1]]);
+      const corner = board.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
 
-      const middle = board.first(Cell, {x:2, y:2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
+      const middle = board.first(Cell, {row: 2, column: 2})!;
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
     });
 
     it('creates hexes', () => {
-      board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
-      board.createGrid({ rows: 3, columns: 3, style: 'hex' }, Cell, 'cell', (x, y) => ({x, y}));
+      board = new Board({ classRegistry:  [Space, Piece, GameElement, Cell] });
+      board.createGrid({ rows: 3, columns: 3, style: 'hex' }, Cell, 'cell');
       expect(board.all(Cell).length).to.equal(9);
-      expect(board.first(Cell)!.x).to.equal(1);
-      expect(board.first(Cell)!.y).to.equal(1);
-      expect(board.last(Cell)!.x).to.equal(3);
-      expect(board.last(Cell)!.y).to.equal(3);
+      expect(board.first(Cell)!.row).to.equal(1);
+      expect(board.first(Cell)!.column).to.equal(1);
+      expect(board.last(Cell)!.row).to.equal(3);
+      expect(board.last(Cell)!.column).to.equal(3);
 
-      const corner = board.first(Cell, {x:1, y:1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1], [2,2]]);
+      const corner = board.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
 
-      const middle = board.first(Cell, {x:2, y:2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,1], [1,2], [2,1], [2,3], [3,2], [3,3]]);
+      const middle = board.first(Cell, {row: 2, column: 2})!;
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [1,2], [2,1], [2,3], [3,2], [3,3]]);
     });
 
     it('creates inverse hexes', () => {
       board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
-      board.createGrid({ rows: 3, columns: 3, style: 'hex-inverse' }, Cell, 'cell', (x, y) => ({x, y}));
+      board.createGrid({ rows: 3, columns: 3, style: 'hex-inverse' }, Cell, 'cell');
       expect(board.all(Cell).length).to.equal(9);
-      expect(board.first(Cell)!.x).to.equal(1);
-      expect(board.first(Cell)!.y).to.equal(1);
-      expect(board.last(Cell)!.x).to.equal(3);
-      expect(board.last(Cell)!.y).to.equal(3);
+      expect(board.first(Cell)!.row).to.equal(1);
+      expect(board.first(Cell)!.column).to.equal(1);
+      expect(board.last(Cell)!.row).to.equal(3);
+      expect(board.last(Cell)!.column).to.equal(3);
 
-      const corner = board.first(Cell, {x:1, y:1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [2,1]]);
+      const corner = board.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
 
-      const middle = board.first(Cell, {x:2, y:2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.x, e.y])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
+      const middle = board.first(Cell, {row: 2, column: 2})!;
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
     });
   });
 
@@ -758,9 +755,6 @@ describe('Board', () => {
       const spaces = board.createMany(3, Space, 'space');
       board.applyLayouts();
 
-      // console.log('<div style="width: 200; height: 200; position: relative; outline: 1px solid black">');
-      // for (const c of board._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}%; top: ${c._ui.computedStyle?.top}%; width: ${c._ui.computedStyle?.width}%; height: ${c._ui.computedStyle?.height}%; background: red; outline: 1px solid blue"></div>`);
-      // console.log('</div>');
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 50, top: 60, width: 50, height: 40 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 0, top: 60, width: 50, height: 40 })
       expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 50, top: 20, width: 50, height: 40 })
@@ -911,20 +905,24 @@ describe('Board', () => {
       });
       const spaces = board.createMany(9, Space, 'space');
       board.applyLayouts();
+
+      expect(spaces[8]!._ui.computedStyle!.top).to.equal(0);
+      expect(spaces[0]!._ui.computedStyle!.top + spaces[0]!._ui.computedStyle!.height).to.equal(100);
     });
 
-    it('nested aspect ratios', () => {
-      board.layout(GameElement, {
-        aspectRatio: 4 / 5,
+    it('align+scale', () => {
+      const pieces = board.createMany(6, Piece, 'piece');
+
+      board.layout(Piece, {
+        offsetColumn: {x: 10, y: 10},
+        scaling: 'fit',
       });
-      const space = board.create(Space, 'space');
-      space.layout(GameElement, {
-        aspectRatio: 1,
-      });
-      const inner = space.create(Space, 'inner');
       board.applyLayouts();
-      if (!inner._ui.computedStyle) throw Error();
-      expect(inner._ui.computedStyle.height * 5).to.equal(inner._ui.computedStyle.width * 4);
+
+      expect(pieces[0]!._ui.computedStyle!.top).to.equal(0);
+      expect(pieces[5]!._ui.computedStyle!.top + pieces[5]!._ui.computedStyle!.height).to.equal(100);
+      expect(pieces[3]!._ui.computedStyle!.left).to.equal(0);
+      expect(pieces[2]!._ui.computedStyle!.left + pieces[2]!._ui.computedStyle!.width).to.equal(100);
     });
 
     it('specificity', () => {

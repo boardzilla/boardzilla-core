@@ -293,7 +293,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
             v = parseInt(value);
           }
           const prop = property as keyof GameElement<P>;
-          if (prop !== 'mine' && prop !== 'owner') element[prop] = v
+          if (prop !== 'mine' && prop !== 'owner' && prop !== 'row' && prop !== 'column') element[prop] = v
       })
     };
   }

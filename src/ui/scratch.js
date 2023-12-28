@@ -1,3 +1,5 @@
+
+
 el.was = the last known location. if this exists and does not match current, we have animations to run
 - this gets reset by server.game when json hydrates from sql or when client completes a render
 
