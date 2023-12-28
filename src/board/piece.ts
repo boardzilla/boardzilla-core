@@ -38,7 +38,10 @@ export default class Piece<P extends Player<P, B> = any, B extends Board<P, B> =
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);
-    if (to instanceof Space && previousParent !== to) to.triggerEvent("enter", this);
+    if (previousParent !== to) {
+      if (to instanceof Space) to.triggerEvent("enter", this);
+      if (previousParent instanceof Space) previousParent.triggerEvent("exit", this);
+    }
   }
 
   /**

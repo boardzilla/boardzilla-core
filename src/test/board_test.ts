@@ -497,8 +497,8 @@ describe('Board', () => {
     it("listens to add events", () => {
       const eventSpy = chai.spy();
       board.onEnter(Card, eventSpy);
-      board.create(Card, "AH", {suit: "H", pip: 1});
-      expect(eventSpy).to.have.been.called()
+      const card = board.create(Card, "AH", {suit: "H", pip: 1});
+      expect(eventSpy).to.have.been.called.with(card)
     });
 
     it("listens to add events from moves", () => {
@@ -508,7 +508,19 @@ describe('Board', () => {
       deck.onEnter(Card, eventSpy);
       const card = board.create(Card, "AH", {suit: "H", pip: 1});
       card.putInto(deck);
-      expect(eventSpy).to.have.been.called()
+      expect(eventSpy).to.have.been.called.with(card)
+    });
+
+    it("listens to exit events from moves", () => {
+      const eventSpy = chai.spy();
+      const deck = board.create(Space, 'deck');
+      board.create(Space, 'discard');
+      deck.onExit(Card, eventSpy);
+      const card = board.create(Card, "AH", {suit: "H", pip: 1});
+      card.putInto(deck);
+      expect(eventSpy).not.to.have.been.called()
+      card.remove();
+      expect(eventSpy).to.have.been.called.with(card)
     });
 
     it("preserves events in JSON", () => {

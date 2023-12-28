@@ -20,7 +20,8 @@ export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => v
 export default class Space<P extends Player<P, B> = any, B extends Board<P, B> = any> extends GameElement<P, B> {
   _eventHandlers: {
     enter: ElementEventHandler<GameElement>[],
-  } = { enter: [] };
+    exit: ElementEventHandler<GameElement>[],
+  } = { enter: [], exit: [] };
 
   /** internal */
   isSpace() { return true; }
@@ -33,7 +34,7 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
   }
 
   /** internal */
-  addEventHandler<T extends GameElement>(type: "enter", handler: ElementEventHandler<T>) {
+  addEventHandler<T extends GameElement>(type: keyof Space['_eventHandlers'], handler: ElementEventHandler<T>) {
     this._eventHandlers[type].push(handler);
   }
 
@@ -53,11 +54,16 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
     this.addEventHandler<T>("enter", { callback, type });
   }
 
+  onExit<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void) {
+    this.addEventHandler<T>("exit", { callback, type });
+  }
+
   /** internal */
-  triggerEvent(event: "enter", entering: GameElement) {
+  triggerEvent(event: keyof Space['_eventHandlers'], element: GameElement) {
     for (const handler of this._eventHandlers[event]) {
-      if (event === 'enter' && !(entering instanceof handler.type)) continue;
-      handler.callback(entering);
+      if (event === 'enter' && !(element instanceof handler.type)) continue;
+      if (event === 'exit' && !(element instanceof handler.type)) continue;
+      handler.callback(element);
     }
   }
 
