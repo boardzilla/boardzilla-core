@@ -268,7 +268,7 @@ export default class Selection<P extends Player> {
     } else if (this.boardChoices && (this.skipIf === true || this.boardChoices?.length === 1) && !this.isMulti()) {
       return this.boardChoices[0];
     } else if (this.boardChoices && (this.skipIf === true || this.boardChoices.length === this.min && this.min === this.max)) {
-      return this.boardChoices.slice(this.min);
+      return this.boardChoices.slice(0, this.min);
     } else if (this.type === 'number' &&
       this.min !== undefined &&
       this.min === this.max) {

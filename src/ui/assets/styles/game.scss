@@ -79,33 +79,23 @@ html, body { height: 100% }
       .Space {
         > * {
           visibility: visible;
-        }
-        > img {
-          width: 100%;
-          height: 100%;
-        }
-        > .bz-default {
-          width: 100%;
-          height: 100%;
-          background: #ccc;
+          &.bz-default {
+            background: #ccc;
+          }
         }
       }
 
       .Piece {
+        visibility: visible;
         > * {
-          visibility: visible;
-        }
-        > img {
           width: 100%;
           height: 100%;
-        }
-        > .bz-default {
-          width: 100%;
-          height: 100%;
-          background: #ccf;
-          border: .1em solid white;
-          padding: .1em;
-          overflow: hidden;
+          &.bz-default {
+            background: #ccf;
+            border: .1em solid white;
+            padding: .1em;
+            overflow: hidden;
+          }
         }
       }
 

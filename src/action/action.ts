@@ -188,6 +188,11 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     // truncate invalid args - is this needed?
     let error: string | undefined = undefined;
     for (const selection of this.selections) {
+      if (args[selection.name] === undefined) {
+        const arg = selection.resolve(args).isForced()
+        if (arg) args[selection.name] = arg;
+      }
+
       error = selection.error(args);
       if (error) {
         console.error('invalid arg', selection.name, args[selection.name], error);
