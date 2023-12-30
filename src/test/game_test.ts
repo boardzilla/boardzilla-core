@@ -48,7 +48,7 @@ describe('Game', () => {
   beforeEach(() => {
     game = new Game(TestPlayer, TestBoard, [ Card ]);
     board = game.board;
-    game.defineFlow([
+    game.defineFlow(
       () => {
         board.tokens = 4;
         game.message('Starting game with {{tokens}} tokens', {tokens: board.tokens});
@@ -64,7 +64,7 @@ describe('Game', () => {
           },
         ]})
       )}),
-    ]);
+    );
 
     game.defineActions({
       addSome: () => game.action({
@@ -99,13 +99,13 @@ describe('Game', () => {
     game.board.fromJSON([ { className: 'TestBoard', tokens: 0 } ]);
     game.players.setCurrent([1,2,3,4]),
     game.start();
-    game.flow.setBranchFromJSON([ { type: 'sequence', position: null, sequence: 0 } ]);
+    game.flow.setBranchFromJSON([ { type: 'main', position: null, sequence: 0 } ]);
   });
 
   it('plays', () => {
     game.play();
     expect(game.flow.branchJSON()).to.deep.equals([
-      { type: 'sequence', position: null, sequence: 1 },
+      { type: 'main', position: null, sequence: 1 },
       { type: "loop", position: { index: 0 } },
       { type: "action", position: {players: undefined} }
     ]);
@@ -134,7 +134,7 @@ describe('Game', () => {
 
   it('finishes', () => {
     game.flow.setBranchFromJSON([
-      { type: 'sequence', position: null, sequence: 2 },
+      { type: 'main', position: null, sequence: 2 },
       { type: 'loop', position: { index: 0 } },
       { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
       { type: 'action', position: null }
@@ -166,7 +166,7 @@ describe('Game', () => {
     it("does player turns", () => {
       game.board.fromJSON([ { className: 'TestBoard', tokens: 9 } ]);
       game.flow.setBranchFromJSON([
-        { type: 'sequence', position: null, sequence: 2 },
+        { type: 'main', position: null, sequence: 2 },
         { type: 'loop', position: { index: 0 } },
         { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
         { type: 'action', position: null }
@@ -238,13 +238,13 @@ describe('Game', () => {
       game.processMove({ name: 'spend', args: {r: 'gold', n: 2}, player: game.players[0] });
       expect(spendSpy).to.have.been.called.with({r: 'gold', n: 2});
       expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'sequence', position: null, sequence: 1 },
+        { type: 'main', position: null, sequence: 1 },
         { type: 'loop', position: { index: 0 } },
         { type: 'action', position: { name: "spend", args: {r: "gold", n: 2}, player: 1 }}
       ]);
       game.play();
       expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'sequence', position: null, sequence: 1 },
+        { type: 'main', position: null, sequence: 1 },
         { type: 'loop', position: { index: 1 } },
         { type: "action", position: {players: undefined} }
       ]);
@@ -254,7 +254,7 @@ describe('Game', () => {
       expect(board.tokens).to.equal(4);
       game.processMove({ name: 'addSome', args: {n: 2}, player: game.players[0] });
       expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'sequence', position: null, sequence: 1 },
+        { type: 'main', position: null, sequence: 1 },
         { type: 'loop', position: { index: 0 } },
         { type: 'action', position: { name: "addSome", args: {n: 2}, player: 1 }}
       ]);
@@ -316,13 +316,13 @@ describe('Game', () => {
     });
 
     it('accepts move from any', () => {
-      game.defineFlow([
+      game.defineFlow(
         () => { board.tokens = 4 },
         playerActions({
           players: game.players,
           actions: ['takeOne']
         }),
-      ]);
+      );
       game.start();
       game.play();
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
@@ -332,14 +332,14 @@ describe('Game', () => {
     });
 
     it('action for every player', () => {
-      game.defineFlow([
+      game.defineFlow(
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
             actions: ['takeOne']
           })
         })
-      ]);
+      );
 
       game.start();
       game.play();
@@ -362,7 +362,7 @@ describe('Game', () => {
     });
 
     it('action for every player with followups', () => {
-      game.defineFlow([
+      game.defineFlow(
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -379,7 +379,7 @@ describe('Game', () => {
             ]
           })
         })
-      ]);
+      );
 
       game.start();
       game.play();
@@ -415,7 +415,7 @@ describe('Game', () => {
     });
 
     it('survives ser/deser', () => {
-      game.defineFlow([
+      game.defineFlow(
         () => { board.tokens = 4 },
         everyPlayer({
           do: playerActions({
@@ -432,7 +432,7 @@ describe('Game', () => {
             ]
           })
         })
-      ]);
+      );
 
       game.start();
       let boardState = game.board.allJSON();
