@@ -1,5 +1,4 @@
 import { action } from './action/index.js';
-import { humanizeArg } from './action/utils.js';
 import { n } from './utils.js';
 import {
   Board,
@@ -15,7 +14,7 @@ import Flow from './flow/flow.js';
 import random from 'random-seed';
 
 import type { ElementClass } from './board/element.js';
-import type { FlowDefinition } from './flow/flow.js';
+import type { FlowStep } from './flow/flow.js';
 import type { PlayerState, GameUpdate, GameState } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
 import type { Argument, FollowUp } from './action/action.js';
@@ -78,7 +77,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   /**
    * configuration functions
    */
-  defineFlow(flow: FlowDefinition<P>) {
+  defineFlow(...flow: FlowStep<P>[]) {
     if (this.phase !== 'new') throw Error('cannot call defineFlow once started');
     this.flow = new Flow({ do: flow });
     this.flow.game = this;
@@ -326,7 +325,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
           args
         });
       }
-      console.debug(`Move by player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => k +': ' + humanizeArg(v)).join(', ')}}) ${typeof errorOrFollowups === 'string' ? '❌ ' + errorOrFollowups : ( errorOrFollowups ? errorOrFollowups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => k +': ' + humanizeArg(v)).join(', ')}})`) : '✅')}`);
+      console.debug(`Move by player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => k +': ' + v.toString()).join(', ')}}) ${typeof errorOrFollowups === 'string' ? '❌ ' + errorOrFollowups : ( errorOrFollowups ? errorOrFollowups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => k +': ' + v.toString()).join(', ')}})`) : '✅')}`);
       if (typeof errorOrFollowups === 'string') return errorOrFollowups;
       // successful move
     });

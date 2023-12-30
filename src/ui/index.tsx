@@ -4,7 +4,7 @@ import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
 import Game from '../game.js'
-import { humanizeArg, serializeArg } from '../action/utils.js';
+import { serializeArg } from '../action/utils.js';
 import { Board, Die, GameElement } from '../board/index.js'
 import DieComponent from './game/components/Die.js'
 import Player from '../player/player.js'
@@ -314,7 +314,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
         console.debug(
           `${autoSubmit ? 'Autoplay' : 'Submitting'} valid move from player #${position}:\n` +
-            `⮕ ${move.name}({${Object.entries(move.args).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`
+            `⮕ ${move.name}({${Object.entries(move.args).map(([k, v]) => k + ': ' + v.toString()).join(', ')}})`
         );
         //moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
         const message: MoveMessage = {
@@ -350,7 +350,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
             console.error(
               `Game attempted to complete move but was unable to process:\n` +
                 `⮕ ${move!.name}({${Object.entries(move!.args).map(
-                  ([k, v]) => k + ': ' + humanizeArg(v)
+                  ([k, v]) => k + ': ' + v.toString()
                 ).join(', ')}})\n`
             );
             console.error(e.message);

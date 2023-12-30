@@ -5,7 +5,6 @@ import Element from './components/Element.js';
 import PlayerControls from './components/PlayerControls.js';
 import { click } from '../assets/index.js';
 import { GameElement } from '../../board/index.js'
-import { humanizeArg } from '../../action/utils.js';
 import classnames from 'classnames';
 
 import type { ActionLayout } from '../../board/board.js'
@@ -217,12 +216,12 @@ export default () => {
     (pendingMoves?.map(m => (
       `\n⮕ ${typeof m === 'string' ? m :
         `${m.name}({${
-          Object.entries(m.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')
+          Object.entries(m.args || {}).map(([k, v]) => k + ': ' + v.toString()).join(', ')
         }}) ? ${m.selections?.length ? m.selections[0].toString() : 'no choices'}`
       }`
     )).join('') || ' none')
   );
-  //if (move) console.debug('Move in progress:' + `${move.name}({${Object.entries(move.args || {}).map(([k, v]) => k + ': ' + humanizeArg(v)).join(', ')}})`);
+  //if (move) console.debug('Move in progress:' + `${move.name}({${Object.entries(move.args || {}).map(([k, v]) => k + ': ' + v.toString()).join(', ')}})`);
 
   return (
     <div

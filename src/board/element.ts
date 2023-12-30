@@ -1,7 +1,7 @@
 import ElementCollection from './element-collection.js';
 import { shuffleArray, times } from '../utils.js';
 import { translate, cellSizeForArea } from './utils.js';
-import { serializeObject, deserializeObject, humanizeArg } from '../action/utils.js';
+import { serializeObject, deserializeObject } from '../action/utils.js';
 import random from 'random-seed';
 
 import type Game from '../game.js';
@@ -196,7 +196,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /** @internal */
   toString() {
-    return humanizeArg(this);
+    return this.name || this.constructor.name;
   }
 
   /**

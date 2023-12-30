@@ -9,12 +9,6 @@ export type SerializedSingleArg = string | number | boolean;
 export type SerializedArg = SerializedSingleArg | SerializedSingleArg[];
 export type Serializable<P extends Player> = SingleArgument<P> | null | undefined | Serializable<P>[] | { [key: string]: Serializable<P> };
 
-export const humanizeArg = <P extends Player>(arg: Argument<P>) => {
-  if (arg instanceof Player) return arg.name;
-  if (arg instanceof GameElement) return arg.name || arg.constructor.name;
-  return arg.toString();
-}
-
 export const serializeArg = <P extends Player>(arg: Argument<P>, forPlayer=true): SerializedArg => {
   if (arg instanceof Array) return arg.map(a => serializeSingleArg(a, forPlayer));
   return serializeSingleArg(arg, forPlayer);
@@ -81,7 +75,7 @@ export const escapeArgument = <P extends Player>(arg: Argument<P>): string => {
     const escapees = arg.map(escapeArgument);
     return escapees.slice(0, -1).join(', ') + (escapees.length > 1 ? ' and ' : '') + (escapees[escapees.length - 1] || '');
   }
-  if (typeof arg === 'object') return `[[${serializeSingleArg(arg)}|${humanizeArg(arg)}]]`;
+  if (typeof arg === 'object') return `[[${serializeSingleArg(arg)}|${arg.toString()}]]`;
   return String(arg);
 }
 

@@ -7,7 +7,6 @@ export {
   Action,
 }
 export {
-  humanizeArg,
   serializeArg,
   deserializeArg
 } from './utils.js';

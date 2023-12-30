@@ -10,14 +10,14 @@ import {
   Piece,
   GameElement,
 } from '../../../board/index.js'
-import { serialize, humanizeArg } from '../../../action/utils.js'
+import { serialize } from '../../../action/utils.js'
 
 import type { Box, ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../index.js';
 import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 
-const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{humanizeArg(el)}</div>;
+const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
 
 const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,

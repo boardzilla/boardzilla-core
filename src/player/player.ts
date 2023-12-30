@@ -1,4 +1,3 @@
-import { humanizeArg } from '../action/utils.js';
 import { GameElement } from '../board/index.js';
 
 import type PlayerCollection from './collection.js';
@@ -83,6 +82,6 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
   }
 
   toString() {
-    return humanizeArg(this);
+    return this.name;
   }
 }

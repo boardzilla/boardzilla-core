@@ -1,5 +1,4 @@
 import React from 'react';
-import { humanizeArg } from '../../../action/index.js';
 import { serializeArg } from '../../../action/utils.js';
 
 import type { ResolvedSelection } from '../../../action/selection.js';
@@ -23,7 +22,7 @@ const Selection = ({selection, value, error, onChange} : {
           key={String(serializeArg(k))}
           onClick={() => onChange(k)}
         >
-          {humanizeArg(v)}
+          {v.toString()}
         </button>
       )
       )}
@@ -49,7 +48,7 @@ const Selection = ({selection, value, error, onChange} : {
     )}
 
     {selection.type === 'button' &&
-      <button name={selection.name} value='confirm' type="submit">{selection.prompt}</button>
+      <button name={selection.name} value='confirm' type="submit">{selection.prompt ?? String(selection.value)}</button>
     }
 
     {error && <div className="error">{error}</div>}

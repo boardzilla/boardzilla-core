@@ -30,7 +30,7 @@ export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => Do 
 export type FlowDefinition<P extends Player> = FlowStep<P> | FlowStep<P>[]
 
 export type FlowBranchNode<P extends Player> = ({
-  type: 'sequence',
+  type: 'main',
 } | {
   type: 'action',
   position: ActionStepPosition<P>
@@ -52,7 +52,7 @@ export type FlowBranchNode<P extends Player> = ({
 }
 
 export type FlowBranchJSON = ({
-  type: 'sequence'
+  type: 'main'
   position?: any,
 } | {
   type: 'action' | 'loop' | 'foreach' | 'switch-case' | 'parallel'
@@ -71,7 +71,7 @@ export default class Flow<P extends Player> {
   name?: string;
   position?: Position<P>;
   sequence?: number; // if block is an array, indicates the index of execution
-  type: FlowBranchNode<P>['type'] = 'sequence';
+  type: FlowBranchNode<P>['type'] = 'main';
   step?: FlowStep<P>; // cached by setPositionFromJSON
   block?: FlowDefinition<P>;
   top: Flow<P>;
@@ -287,7 +287,7 @@ export default class Flow<P extends Player> {
   }
 
   toString() {
-    return `flow${this.name ? ":" + this.name : ""}${this.block instanceof Array ? ' (item #' + this.sequence + ')' : ''}`;
+    return `flow${this.name ? ":" + this.name : ""}${this.block instanceof Array && this.block.length > 1 ? ' (item #' + this.sequence + ')' : ''}`;
   }
 
   stacktrace(indent=0) {
