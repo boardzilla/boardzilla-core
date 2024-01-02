@@ -234,7 +234,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     for (const [key, val] of entries) {
       if (typeof val === 'function') continue;
       const name = prefix + '-' + key.toLowerCase();
-      if (typeof val === 'object') {
+      if (typeof val === 'object' && val.constructor.name === 'Object') {
         dataAttrs = dataAttrs.concat(attributesToHTML(Object.entries(val), name));
       } else {
         dataAttrs.push([name, String(val)]);

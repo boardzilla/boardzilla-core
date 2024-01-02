@@ -1202,7 +1202,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           scale.y *= reduction;
         }
 
-        //console.log('pre-scale', {area, size, totalAreaNeeded, alignOffset, scale});
+        //console.log('pre-scale', area, size, totalAreaNeeded, alignOffset, scale);
 
         size.width *= scale.x;
         size.height *= scale.y;
@@ -1213,14 +1213,14 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
             if (area.width * scale.x / totalAreaNeeded.width > area.height * scale.y / totalAreaNeeded.height) {
               const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
               if (offsetScale < 1) {
-                scale.y = area.height / totalAreaNeeded.height;
+                scale.y = scale.x = area.height / totalAreaNeeded.height;
                 offsetColumn!.y *= offsetScale;
                 offsetRow!.y *= offsetScale;
               }
             } else {
               const offsetScale = (area.width - size.width) / (totalAreaNeeded.width * scale.x - size.width);
               if (offsetScale < 1) {
-                scale.x = area.width / totalAreaNeeded.width;
+                scale.y = scale.x = area.width / totalAreaNeeded.width;
                 offsetColumn!.x *= offsetScale;
                 offsetRow!.x *= offsetScale;
               }
@@ -1231,7 +1231,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           // align in reduced area
           startingOffset.x += area.left - totalAreaNeeded.left * scale.x + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
           startingOffset.y += area.top - totalAreaNeeded.top * scale.y + alignOffset.top * (area.height - totalAreaNeeded.height * scale.y);
-          //console.log('align', {area, size, totalAreaNeeded, alignOffset, startingOffset, scale});
+          //console.log('align', this.name, this.player?.name, applyTo.toString(), area, size, totalAreaNeeded, alignOffset, startingOffset, scale);
 
         } else { // orthogonal
 

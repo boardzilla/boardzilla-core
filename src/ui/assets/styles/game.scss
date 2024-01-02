@@ -207,6 +207,7 @@ html, body { height: 100% }
         }
         > .drawer-background {
           position: absolute;
+          z-index: -1000;
           inset: 0;
           border: .1rem solid #0008;
           border-top-width: 0;
