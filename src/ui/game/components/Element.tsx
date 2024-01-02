@@ -229,20 +229,6 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     }
   }, [element]);
 
-  const attributesToHTML = useCallback((entries: [string, any][], prefix='') => {
-    let dataAttrs: [string, string][] = [];
-    for (const [key, val] of entries) {
-      if (typeof val === 'function') continue;
-      const name = prefix + '-' + key.toLowerCase();
-      if (typeof val === 'object' && val.constructor.name === 'Object') {
-        dataAttrs = dataAttrs.concat(attributesToHTML(Object.entries(val), name));
-      } else {
-        dataAttrs.push([name, String(val)]);
-      }
-    }
-    return dataAttrs;
-  }, []);
-
   let contents: React.JSX.Element[] | React.JSX.Element = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
@@ -392,14 +378,11 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     );
   }
 
-  const attrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(
-    attributesToHTML(
-      Object.entries(element).filter(([key, _]) => (
-        !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key)
-      )),
-      'data'
-    )
-  ));
+  const attrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
+    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
+  )).map(([key, val]) => (
+    [`data-${key.toLowerCase()}`, serialize(val)]
+  ))));
 
   if (element.player?.position === position) attrs.mine = 'true';
 
