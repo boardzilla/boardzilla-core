@@ -1,4 +1,10 @@
-
+applyLayouts
+- calculate # of rows/cols, define cell n => r,c
+- calculate offset or gap
+- find size needed for scaling strategy
+- reduce scale if necessary to keep size below amount needed for min rows/cols
+- reduce gap/offset as needed
+- align in new area
 
 el.was = the last known location. if this exists and does not match current, we have animations to run
 - this gets reset by server.game when json hydrates from sql or when client completes a render
@@ -16,24 +22,6 @@ intermediate animations need full state1,2,3 to position elements
 - position only changed regions?
 - selectable, zoomable use non-state update style?
   - simply add selectors
-
-
-      {selection.type === 'choices' && selection.choices && (
-        <>
-          {(selection.choices instanceof Array ? selection.choices.map(c => ([c, c])) : Object.entries(selection.choices)).map(([k, v]) => (
-            <span key={String(serializeArg(k))}>
-              <input
-                type="radio"
-                id={`${selection.name}--${String(serializeArg(k))}`}
-                name={selection.name}
-                value={String(serializeArg(k))}
-              />
-              <label htmlFor={`${selection.name}--${String(serializeArg(k))}`}>{humanizeArg(v)}</label>
-            </span>
-          ))}
-        </>
-      )}
-
 
 board layout setup
 - initially needs a breakpoint and then setupLayout, then applyLayouts

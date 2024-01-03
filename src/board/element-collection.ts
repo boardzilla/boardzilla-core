@@ -76,6 +76,9 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
     options: {limit?: number, order?: 'asc' | 'desc'},
     ...finders: ElementFinder<F>[]
   ): ElementCollection<F> {
+    const coll = new ElementCollection<F>();
+    if (options.limit !== undefined && options.limit <= 0) return coll;
+
     const fns: ((e: F) => boolean)[] = finders.map(finder => {
       if (typeof finder === 'object') {
         const attrs = finder;
@@ -89,7 +92,6 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
       }
       return finder;
     })
-    const coll = new ElementCollection<F>();
 
     const finderFn = (el: T, order: 'asc' | 'desc') => {
       if (el instanceof className && fns.every(fn => fn(el as unknown as F))) {

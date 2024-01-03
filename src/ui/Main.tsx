@@ -37,6 +37,7 @@ export type GameUpdateEvent = {
   state: GameState<Player> | GameState<Player>[];
   position: number;
   currentPlayers: number[];
+  readOnly?: boolean;
 }
 
 export type GameFinishedEvent = {

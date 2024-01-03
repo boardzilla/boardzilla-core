@@ -62,6 +62,7 @@ export type ElementUI<T extends GameElement> = {
       offsetRow?: Vector,
       direction: 'square' | 'ltr' | 'rtl' | 'rtl-btt' | 'ltr-btt' | 'ttb' | 'ttb-rtl' | 'btt' | 'btt-rtl',
       limit?: number,
+      maxOverlap?: number,
       haphazardly?: number,
       showBoundingBox?: string,
       drawer?: {
@@ -991,7 +992,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       let cellBox: (n: number) => Box | undefined;
       let cell: ((n: number) => { row: number, column: number });
 
-      const { slots, direction, gap, scaling, alignment, limit } = attributes;
+      const { slots, direction, gap, scaling, alignment, limit, maxOverlap } = attributes;
       let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
       const area = this.getArea(attributes);
 
@@ -1190,6 +1191,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
         // bound by max size for min rows/cols
         const largestCellSize = cellSizeForArea(minRows, minColumns, area, cellGap, offsetColumn, offsetRow);
+        if (maxOverlap !== undefined) {
+          const largestCellSize2 = cellSizeForArea(rows, columns, area,
+            { x: Math.min(100 - maxOverlap, cellGap?.x ?? 100), y: Math.min(maxOverlap, cellGap?.y ?? 100) },
+            { x: Math.min(100 - maxOverlap, offsetColumn?.x ?? 100), y: Math.min(maxOverlap, offsetColumn?.y ?? 100) },
+            { x: Math.min(100 - maxOverlap, offsetRow?.x ?? 100), y: Math.min(maxOverlap, offsetRow?.y ?? 100) }
+          );
+          largestCellSize.width = Math.min(largestCellSize.width, largestCellSize2.width);
+          largestCellSize.height = Math.min(largestCellSize.height, largestCellSize2.height);
+        }
 
         if (size.width * scale.x > largestCellSize.width) {
           const reduction = largestCellSize.width / size.width / scale.x;
