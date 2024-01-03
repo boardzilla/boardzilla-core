@@ -153,8 +153,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       ...updateBoard(game, position, update.state.board),
     };
 
-    // may override board with new information
-    if (game.phase !== 'finished') state = {
+    const readOnly = game.phase === 'finished' || 'readOnly' in update && update.readOnly;
+
+    // may override board with new information from playing forward from the new state
+    if (!readOnly) state = {
       ...state,
       ...updateSelections(game, position, undefined)
     }
@@ -163,7 +165,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     state.previousRenderedState = previousRenderedState;
     s.game.sequence = update.state.sequence;
 
-    if (game.phase === 'finished') {
+    if (readOnly) {
       return {
         ...state,
         move: undefined,
