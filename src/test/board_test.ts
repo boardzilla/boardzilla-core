@@ -660,6 +660,7 @@ describe('Board', () => {
       const c = board.create(Space, 'c');
       const d = board.create(Space, 'd');
       board.applyLayouts();
+
       expect(board._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 100 })
       expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
       expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
@@ -959,6 +960,85 @@ describe('Board', () => {
         'ttb-rtl',
         'btt-rtl'
       ])
+    });
+
+    it('can place', () => {
+      const a = board.create(Space, 'a');
+      const b = board.create(Space, 'b');
+      const c = board.create(Space, 'c');
+      const d = board.create(Space, 'd');
+      a.row = 2;
+      a.column = 2;
+      board.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+    });
+
+    it('can shift bounds', () => {
+      const a = board.create(Space, 'a');
+      const b = board.create(Space, 'b');
+      const c = board.create(Space, 'c');
+      const d = board.create(Space, 'd');
+      a.row = 4;
+      a.column = 4;
+      board.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+    });
+
+    it('can shift negative', () => {
+      const a = board.create(Space, 'a');
+      const b = board.create(Space, 'b');
+      const c = board.create(Space, 'c');
+      const d = board.create(Space, 'd');
+      a.row = -4;
+      a.column = -4;
+      board.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+    });
+
+    it('can stretch bounds', () => {
+      const a = board.create(Space, 'a');
+      const b = board.create(Space, 'b');
+      const c = board.create(Space, 'c');
+      const d = board.create(Space, 'd');
+      a.row = 1;
+      a.column = 2;
+      d.row = 4;
+      d.column = 2;
+      board.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 25 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 25, width: 100, height: 25 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 100, height: 25 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 100, height: 25 })
+    });
+
+    it('can become sparse', () => {
+      const a = board.create(Space, 'a');
+      const b = board.create(Space, 'b');
+      const c = board.create(Space, 'c');
+      const d = board.create(Space, 'd');
+      a.row = 4;
+      a.column = 1;
+      d.row = 1;
+      d.column = 4;
+      board.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 25, height: 25 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 25, height: 25 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 25, top: 0, width: 25, height: 25 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 75, top: 0, width: 25, height: 25 })
     });
   });
 });

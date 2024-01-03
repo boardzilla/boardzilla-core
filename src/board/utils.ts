@@ -41,6 +41,38 @@ export function shift(a: Box, v: Vector): Box {
   }
 }
 
+export function cellBoxRC(
+  column: number,
+  row: number,
+  area: Box,
+  size: {width: number, height: number},
+  columns: number,
+  rows: number,
+  startingOffset: Vector,
+  cellGap?: Vector,
+  offsetColumn?: Vector,
+  offsetRow?: Vector,
+): Box | undefined {
+  if (column > columns || row > rows) return;
+  column -= 1;
+  row -= 1;
+
+  return {
+    left: area!.left + startingOffset.x + (
+      cellGap ?
+        column * (size.width + cellGap!.x) :
+        (size!.width * (column * offsetColumn!.x + row * offsetRow!.x)) / 100
+    ),
+    top: area!.top + startingOffset.y + (
+      cellGap ?
+        row * (size.height + cellGap!.y) :
+        (size!.height * (row * offsetRow!.y + column * offsetColumn!.y)) / 100
+    ),
+    width: size.width,
+    height: size.height,
+  }
+}
+
 export function cellSizeForArea(
   rows: number,
   columns: number,
@@ -67,4 +99,37 @@ export function cellSizeForArea(
   }
 
   return { width, height };
+}
+
+// find the edge boxes and calculate the total size needed
+export function getTotalArea(
+  area: Box,
+  size: {width: number, height: number},
+  columns: number,
+  rows: number,
+  startingOffset: Vector,
+  cellGap?: Vector,
+  offsetColumn?: Vector,
+  offsetRow?: Vector,
+): Box {
+  const boxes = [
+    cellBoxRC(1, 1, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
+    cellBoxRC(1, rows, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
+    cellBoxRC(columns, rows, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
+    cellBoxRC(columns, 1, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
+  ];
+
+  const cellArea = {
+    top: Math.min(...boxes.map(b => b!.top)),
+    bottom: Math.max(...boxes.map(b => b!.top + b!.height)),
+    left: Math.min(...boxes.map(b => b!.left)),
+    right: Math.max(...boxes.map(b => b!.left + b!.width)),
+  };
+
+  return {
+    width: cellArea.right - cellArea.left,
+    height: cellArea.bottom - cellArea.top,
+    left: cellArea.left,
+    top: cellArea.top
+  }
 }
