@@ -152,9 +152,15 @@ html, body { height: 100% }
         }
       }
 
-      .selected {
+      .Piece.selected {
         > .bz-default {
           transform: scale(1.2);
+        }
+      }
+
+      .Space.selected {
+        > .bz-default {
+          border: .1em solid red;
         }
       }
 
@@ -162,6 +168,7 @@ html, body { height: 100% }
         position: absolute;
         border: 1px dashed white;
         pointer-events: none;
+        /* background-image: linear-gradient(to right, #f009 1px, transparent 1px), linear-gradient(to bottom, #f009 1px, transparent 1px); */
         > span {
           position: absolute;
           font-size: .5rem;

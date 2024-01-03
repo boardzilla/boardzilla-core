@@ -645,6 +645,21 @@ describe('Board', () => {
     });
   });
 
+  describe('placement', () => {
+    it('creates squares', () => {
+      board = new Board({ classRegistry: [Space, Piece] });
+      const piece1 = board.create(Piece, 'piece-1', { row: 1, column: 1 });
+      const piece2 = board.create(Piece, 'piece-2', { row: 1, column: 2 });
+      const piece3 = board.create(Piece, 'piece-3', { row: 2, column: 2 });
+
+      expect(piece1.adjacencies(Piece).length).to.equal(1);
+      expect(piece1.adjacencies(Piece)[0]).to.equal(piece2);
+      expect(piece2.adjacencies(Piece).length).to.equal(2);
+      expect(piece2.adjacencies(Piece)).includes(piece1);
+      expect(piece2.adjacencies(Piece)).includes(piece3);
+    });
+  });
+
   describe('layouts', () => {
     beforeEach(() => {
       board = new Board({ classRegistry: [Space, Piece, GameElement] });

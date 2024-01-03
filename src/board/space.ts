@@ -123,27 +123,6 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
   }
 
   /**
-   * Find all spaces adjacent to this space. Uses the same parameters as {@link
-   * GameElement#all}
-   * @category Queries
-   */
-  adjacencies<F extends Space<P, B>>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  adjacencies(className?: ElementFinder<Space<P, B>>, ...finders: ElementFinder<Space<P, B>>[]): ElementCollection<Space<P, B>>;
-  adjacencies<F extends Space<P, B>>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<Space<P, B>> {
-    let classToSearch: ElementClass<Space<P, B>> = Space<P, B>;
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-    } else {
-      classToSearch = className;
-    }
-    if (!this._t.parent?._t.graph) return new ElementCollection<Space<P, B>>();
-    return new ElementCollection<Space<P, B>>(...this._t.parent?._t.graph.mapNeighbors(
-      this._t.id,
-      node => this._t.parent!._t.graph!.getNodeAttribute(node, 'space')
-    ) as Space<P, B>[]).all(classToSearch, ...finders)
-  }
-
-  /**
    * Finds the nearest space connected to this space, measured by distance. Uses
    * the same parameters as {@link GameElement#first}
    * @category Queries

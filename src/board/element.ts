@@ -99,6 +99,7 @@ export type ElementUI<T extends GameElement> = {
   computedStyle?: Box,
   computedLayouts?: {
     area: Box,
+    grid?: { anchor: Vector, offsetColumn: Vector, offsetRow: Vector },
     showBoundingBox?: string,
     children: GameElement[],
     drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
@@ -384,6 +385,35 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       return !!this.first(className, ...finders);
     } else {
       return !!this.first(className, ...finders);
+    }
+  }
+
+  /**
+   * Find all elements adjacent. Uses the same parameters as {@link GameElement#all}
+   * @category Queries
+   */
+  adjacencies<F extends GameElement<P, B>>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
+  adjacencies(className?: ElementFinder<GameElement<P, B>>, ...finders: ElementFinder<GameElement<P, B>>[]): ElementCollection<GameElement<P, B>>;
+  adjacencies<F extends GameElement<P, B>>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement<P, B>> {
+    let classToSearch: ElementClass<GameElement<P, B>> = GameElement<P, B>;
+    if ((typeof className !== 'function') || !('isGameElement' in className)) {
+      if (className) finders = [className, ...finders];
+    } else {
+      classToSearch = className;
+    }
+    if (this._t.parent?._t.graph) {
+      return new ElementCollection<Space<P, B>>(...this._t.parent?._t.graph.mapNeighbors(
+        this._t.id,
+        node => this._t.parent!._t.graph!.getNodeAttribute(node, 'space')
+      ) as Space<P, B>[]).all(classToSearch, ...finders)
+    } else {
+      if (this.row === undefined || this.column === undefined || !this._t.parent) return new ElementCollection<GameElement<P, B>>();
+      return this._t.parent._t.children.filter(c => (
+        c.row !== undefined && c.column !== undefined && (
+          (this.column === c.column && [c.row + 1, c.row - 1].includes(this.row!)) ||
+            (this.row === c.row && [c.column + 1, c.column - 1].includes(this.column!))
+        )
+      ));
     }
   }
 
@@ -944,8 +974,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     applyTo: typeof this._ui.layouts[number]['applyTo'],
     attributes: Partial<typeof this._ui.layouts[number]['attributes']>
   ) {
-    const {area, margin, size, aspectRatio, scaling, gap, offsetColumn, offsetRow} = attributes
+    const {slots, area, size, aspectRatio, scaling, gap, margin, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
+    if (slots && (area || margin || scaling || gap || margin || offsetColumn || offsetRow)) console.warn('Layout has `slots` which overrides supplied grid parameters');
     if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
     if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
     if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
@@ -1000,17 +1031,19 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
       let cellBoxes = slots || [];
 
-      if (attributes.showBoundingBox || attributes.drawer) {
-        if (!this._ui.computedLayouts) this._ui.computedLayouts = [];
-        this._ui.computedLayouts[l] = {
-          area,
-          children,
-          showBoundingBox: attributes.showBoundingBox,
-          drawer: attributes.drawer
-        };
-      }
+      if (!this._ui.computedLayouts) this._ui.computedLayouts = [];
+      this._ui.computedLayouts[l] = {
+        area,
+        children: children ?? [],
+        showBoundingBox: attributes.showBoundingBox,
+        drawer: attributes.drawer
+      };
 
-      if (!children) continue;
+      let minColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.min || 1;
+      let minRows = typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.min || 1;
+
+      if (!children?.length && minRows === 1 && minColumns === 1) continue;
+      children ??= [];
       if (limit) children = children.slice(0, limit);
 
       if (!slots) {
@@ -1035,63 +1068,70 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         max.row ??= 1;
 
         // calculate # of rows/cols
-        let minColumns = Math.max(typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.min || 1, max.column - min.column + 1);
-        let minRows = Math.max(typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.min || 1, max.row - min.row + 1);
+        minColumns = Math.max(minColumns, max.column - min.column + 1);
+        minRows = Math.max(minRows, max.row - min.row + 1);
         let maxColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.max || Infinity;
         let maxRows = typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.max || Infinity;
 
         let columns = minColumns;
         let rows = minRows;
+        let origin = {column: 1, row: 1};
         const alignOffset = {
           left: alignment.includes('left') ? 0 : (alignment.includes('right') ? 1 : 0.5),
           top: alignment.includes('top') ? 0 : (alignment.includes('bottom') ? 1 : 0.5),
         };
 
-        // expand grid as needed in direction specified
-        if (direction === 'square') {
-          columns = Math.max(minColumns,
-            Math.min(
-              maxColumns,
-              Math.ceil(children.length / minRows),
-              Math.max(Math.ceil(children.length / maxRows), Math.ceil(Math.sqrt(children.length)))
-            )
-          );
-          rows = Math.max(minRows,
-            Math.min(
-              maxRows,
-              Math.ceil(children.length / minColumns),
-              Math.ceil(children.length / columns))
-          );
-        } else {
-          if (rows * columns < children.length) {
-            if (['ltr', 'ltr-btt', 'rtl', 'rtl-btt'].includes(direction)) {
-              columns = Math.max(columns, Math.min(maxColumns, Math.ceil(children.length / rows)));
-              rows = Math.max(rows, Math.min(maxRows, Math.ceil(children.length / columns)));
-            }
-            if (['ttb', 'btt', 'ttb-rtl', 'btt-rtl'].includes(direction)) {
-              rows = Math.max(rows, Math.min(maxRows, Math.ceil(children.length / columns)));
-              columns = Math.max(columns, Math.min(maxColumns, Math.ceil(children.length / rows)));
+        // expand grid as needed for children in direction specified
+        if (children.length) {
+          if (direction === 'square') {
+            columns = Math.max(minColumns,
+              Math.min(
+                maxColumns,
+                Math.ceil(children.length / minRows),
+                Math.max(Math.ceil(children.length / maxRows), Math.ceil(Math.sqrt(children.length)))
+              )
+            );
+            rows = Math.max(minRows,
+              Math.min(
+                maxRows,
+                Math.ceil(children.length / minColumns),
+                Math.ceil(children.length / columns))
+            );
+          } else {
+            if (rows * columns < children.length) {
+              if (['ltr', 'ltr-btt', 'rtl', 'rtl-btt'].includes(direction)) {
+                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(children.length / rows)));
+                rows = Math.max(rows, Math.min(maxRows, Math.ceil(children.length / columns)));
+              }
+              if (['ttb', 'btt', 'ttb-rtl', 'btt-rtl'].includes(direction)) {
+                rows = Math.max(rows, Math.min(maxRows, Math.ceil(children.length / columns)));
+                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(children.length / rows)));
+              }
             }
           }
-        }
 
-        // set origin if viewport should shift
-        const origin = {
-          column: Math.min(min.column, max.column, Math.max(1, max.column - columns + 1)),
-          row: Math.min(min.row, max.row, Math.max(1, max.row - rows + 1))
-        }
+          // set origin if viewport should shift
+          origin = {
+            column: Math.min(min.column, max.column, Math.max(1, max.column - columns + 1)),
+            row: Math.min(min.row, max.row, Math.max(1, max.row - rows + 1))
+          }
 
-        let available: Vector;
-        let advance: Vector;
-        let carriageReturn: Vector;
-        let fillDirection = direction;
-        if (fillDirection === 'square') {
-          if (['left', 'top left', 'top', 'center'].includes(alignment)) fillDirection = 'ltr';
-          else if (['right', 'top right'].includes(alignment)) fillDirection = 'rtl';
-          else if (['bottom','bottom left'].includes(alignment)) fillDirection = 'ltr-btt';
-          else fillDirection = 'rtl-btt';
-        }
-        switch (fillDirection) {
+          let available: Vector;
+          let advance: Vector;
+          let carriageReturn: Vector;
+          let fillDirection = direction;
+          if (fillDirection === 'square') {
+            if (['left', 'top left', 'top', 'center'].includes(alignment)) {
+              fillDirection = 'ltr';
+            } else if (['right', 'top right'].includes(alignment)) {
+              fillDirection = 'rtl';
+            } else if (['bottom','bottom left'].includes(alignment)) {
+              fillDirection = 'ltr-btt';
+            } else {
+              fillDirection = 'rtl-btt';
+            }
+          }
+          switch (fillDirection) {
         case 'ltr':
           available = {x: 1, y: 1};
           advance = {x: 1, y: 0};
@@ -1132,30 +1172,31 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           advance = {x: 0, y: -1};
           carriageReturn = {x: -1, y: rows};
           break;
-        }
+          }
 
-        let c = 0;
-        while (c != children.length) {
-          const child = children[c];
-          if (child.column === undefined || child.row === undefined) {
-            const cell: [number, number] = [available.x + origin.column! - 1, available.y + origin.row! - 1];
-            if (cells.every(([x, y]) => x !== cell[0] || y !== cell[1])) {
-              cells[c] = cell;
-              if (attributes.sticky) {
-                child.column = cell[0];
-                child.row = cell[1];
+          let c = 0;
+          while (c != children.length) {
+            const child = children[c];
+            if (child.column === undefined || child.row === undefined) {
+              const cell: [number, number] = [available.x + origin.column! - 1, available.y + origin.row! - 1];
+              if (cells.every(([x, y]) => x !== cell[0] || y !== cell[1])) {
+                cells[c] = cell;
+                if (attributes.sticky) {
+                  child.column = cell[0];
+                  child.row = cell[1];
+                }
+                c++;
               }
+              available.x += advance.x;
+              available.y += advance.y;
+              if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) {
+                available.x += carriageReturn.x;
+                available.y += carriageReturn.y;
+              }
+              if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) break;
+            } else {
               c++;
             }
-            available.x += advance.x;
-            available.y += advance.y;
-            if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) {
-              available.x += carriageReturn.x;
-              available.y += carriageReturn.y;
-            }
-            if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) break;
-          } else {
-            c++;
           }
         }
 
@@ -1204,6 +1245,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
               size.width = aspectRatio * size.height;
             }
           }
+        }
+
+        if (!children.length) {
+          this._ui.computedLayouts[l].grid = {
+            anchor: { x: 0, y: 0 },
+            offsetColumn: offsetColumn ?? { x: size.width + cellGap!.x, y: 0 },
+            offsetRow: offsetRow ?? { x: 0, y: size.height + cellGap!.y }
+          }
+          return;
         }
 
         if (haphazardly) {
@@ -1308,6 +1358,12 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           const box = cellBoxRC(column, row, area, size!, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
           if (box) cellBoxes[c] = box;
         }
+
+        this._ui.computedLayouts[l].grid = {
+          anchor: startingOffset,
+          offsetColumn: offsetColumn ?? { x: size.width + cellGap!.x, y: 0 },
+          offsetRow: offsetRow ?? { x: 0, y: size.height + cellGap!.y }
+        }
       }
 
       // apply the final box to each child
@@ -1378,7 +1434,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /** @internal */
   getLayoutItems() {
-    const layoutItems: GameElement[][] = [];
+    const layoutItems: (GameElement[] | undefined)[] = [];
     for (const child of this._t.children) {
       for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
         const { applyTo } = this._ui.layouts[l];
@@ -1388,7 +1444,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           child === applyTo ||
           (applyTo instanceof ElementCollection && applyTo.includes(child))) {
 
-          layoutItems[l] = layoutItems[l] ? layoutItems[l].concat([child]) : [child];
+          layoutItems[l] = layoutItems[l] ? layoutItems[l]!.concat([child]) : [child];
           break;
         }
       }

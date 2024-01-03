@@ -393,7 +393,9 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         left: layout.area.left + '%',
         top: layout.area.top + '%',
         width: layout.area.width + '%',
-        height: layout.area.height + '%'
+        height: layout.area.height + '%',
+        // backgroundSize: `${(layout.grid?.offsetColumn.x ?? 100) / layout.area.width * 100}% ${(layout.grid?.offsetRow.y ?? 100) / layout.area.height * 100}%`,
+        // backgroundPosition: `calc(${(layout.grid?.anchor.x ?? 0) / layout.area.width * 10000}% - 1px) calc(${(layout.grid?.anchor.y ?? 0) / layout.area.height * 10000}% - 1px)`
       }}>
         <span>{layout.showBoundingBox}</span>
       </div>
