@@ -219,6 +219,19 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       ...updateSelections(s.game!, s.position!, move)
     };
 
+    if (s.placement && !state.boardJSON) {
+      // guarantee update board if not done already
+      state = {
+        ...state,
+        ...updateBoard(s.game, s.position!)
+      }
+    }
+
+    if (!pendingMove) {
+      state.renderedState = {...s.previousRenderedState.elements} as typeof state.renderedState;
+      state.previousRenderedState = { sequence: Math.floor(s.game.sequence), elements: {} };
+    }
+
     if (!s.placement && s.game.sequence > Math.floor(s.game.sequence)) {
       state.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
       state.renderedState = {};
