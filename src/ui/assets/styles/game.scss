@@ -108,7 +108,13 @@ html, body { height: 100% }
       .dragging {
         z-index: 100;
         pointer-events: none;
-        filter: drop-shadow(.2em .2em 1em #0008) drop-shadow(.5em .5em 2em #0008);
+        filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008);
+      }
+
+      .placing {
+        z-index: 100;
+        filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008);
+        cursor: pointer;
       }
 
       .droppable {

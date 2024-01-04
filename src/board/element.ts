@@ -815,6 +815,21 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     }
   }
 
+  cloneInto(into: GameElement<P, B>) {
+    let attrs = this.attributeList();
+
+    const clone = into.createElement(this.constructor as ElementClass<GameElement>, this.name, attrs);
+    if (into._t.order === 'stacking') {
+      into._t.children.unshift(clone);
+    } else {
+      into._t.children.push(clone);
+    }
+    clone._t.parent = into;
+    clone._t.order = this._t.order;
+    for (const child of this._t.children) child.cloneInto(clone);
+    return clone;
+  }
+
   /**
    * UI
    */
@@ -1003,6 +1018,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
     for (const child of this._t.children) child._ui.computedStyle = undefined;
     // TODO invalidate on children mutate
+  }
+
+  applicableLayout(element: GameElement<P, B>) {
+    return this.getLayoutItems().findIndex(l => l?.includes(element));
   }
 
   /**

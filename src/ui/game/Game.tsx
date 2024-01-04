@@ -14,8 +14,8 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
+  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, placement, setZoom, boardJSON] =
+    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.placement, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
@@ -60,6 +60,10 @@ export default () => {
     );
     setSelected(newSelected);
   }, [selected, setSelected, selectMove, submitMove]);
+
+  const onSelectPlacement = useCallback(({ column, row }: { column: number, row: number }) => {
+    if (pendingMoves) submitMove(pendingMoves[0], {__placement__: [column, row]});
+  }, [pendingMoves, submitMove]);
 
   const {style, name, moves} = useMemo(() => {
     // find the best layout for the current moves, going in this order:
@@ -242,12 +246,13 @@ export default () => {
     >
       <audio ref={clickAudio} src={click} id="click"/>
       <div id="background"/>
-      <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
+      <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement || placement ? "in-drag-movement" : ""}>
         <Element
           element={game.board}
           json={boardJSON[0]}
           selected={selected}
           onSelectElement={onSelectElement}
+          onSelectPlacement={onSelectPlacement}
         />
       </div>
 

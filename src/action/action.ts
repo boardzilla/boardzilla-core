@@ -641,16 +641,17 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }) {
     const { prompt, confirm, validate } = options || {};
     if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only place one piece");
-    this._addSelection(new Selection<P>(
+    const positionSelection = this._addSelection(new Selection<P>(
       '__placement__', { prompt, confirm, validation: validate, selectPlaceOnBoard: true }
     ));
+    positionSelection.clientContext = { placement: { piece, into } };
     this.moves.push((args: A & {__placement__: [number, number]}) => {
       const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece;
       const selectedInto = into instanceof GameElement ? into : args[into] as GameElement;
       selectedPiece.putInto(selectedInto, { placement: { column: args['__placement__'][0], row: args['__placement__'][1] } });
     });
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
-    if (pieceSelection) pieceSelection.clientContext = { dragInto: into, placement: true };
+    if (pieceSelection) pieceSelection.clientContext = { dragInto: into };
     return this as unknown as Action<P, A & {__placement__: [number, number]}>;
   }
 }

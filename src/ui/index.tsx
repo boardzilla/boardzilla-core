@@ -90,6 +90,12 @@ type GameStore = {
   dropSelections: UIMove[];
   currentDrop?: GameElement;
   setCurrentDrop: (el?: GameElement) => void;
+  placement?: { // placing a piece inside a grid as the current selection
+    piece: GameElement;
+    into: GameElement;
+    layout: number;
+  };
+  selectPlacement: (placement: {column: number, row: number}) => void;
   zoomable?: GameElement;
   setZoomable: (el?: GameElement) => void;
   zoomElement?: GameElement;
@@ -194,12 +200,30 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
         if (!args || !(sel.name in args)) delete move!.args[sel.name];
       }
     }
-    const update = updateSelections(s.game!, s.position!, move);
-    if (s.game.sequence > Math.floor(s.game.sequence)) {
-      update.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
-      update.renderedState = {};
+    let state: Partial<GameStore> = {};
+
+    if (s.placement) {
+      const into = s.placement.into;
+      const index = into._t.children.indexOf(s.placement.piece);
+      if (index !== undefined && index > -1) {
+        into!._t.children.splice(index, 1);
+      }
+      state = {
+        placement: undefined,
+        ...updateBoard(s.game, s.position!)
+      }
     }
-    return update;
+
+    state = {
+      ...state,
+      ...updateSelections(s.game!, s.position!, move)
+    };
+
+    if (s.game.sequence > Math.floor(s.game.sequence)) {
+      state.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
+      state.renderedState = {};
+    }
+    return state;
   }),
   moves: [],
   clearMoves: () => set({ moves: [] }),
@@ -243,6 +267,12 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setCurrentDrop: currentDrop => set(() => {
     return { currentDrop };
   }),
+  selectPlacement: ({ column, row }) => set(s => {
+    if (!s.placement) return {};
+    s.placement.piece.column = column;
+    s.placement.piece.row = row;
+    return updateBoard(s.game, s.position!);
+  }),
   setZoomable: zoomable => set({ zoomable }),
   setZoom: zoom => set(s => {
     return {
@@ -272,8 +302,33 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   let moves = pendingMoves?.moves;
 
   if (moves?.length === 1 && moves[0].selections.length === 1) {
-    // the only selection is skippable - skip and confirm or autoplay if possible
+    const selection = moves[0].selections[0];
+    if (selection.type === 'place') {
+      let piece = selection.clientContext.placement.piece as string | GameElement;
+      if (typeof piece === 'string') piece = move!.args[piece] as GameElement;
+      const into = selection.clientContext.placement.into as GameElement;
+      const clone = piece.cloneInto(into);
+      const layout = into.applicableLayout(clone);
+      if (layout >= 0) {
+        state = {
+          ...state,
+          ...updateBoard(game, position),
+          placement: {
+            piece: clone,
+            into,
+            layout
+          }
+        };
+      } else {
+        move = undefined;
+        into._t.children.splice(into._t.children.indexOf(clone), 1);
+        console.error('placement was not possible as destination had no grid for placement');
+        return state;
+      }
+    }
+
     const skipIf = moves[0].selections[0].skipIf;
+    // the only selection is skippable - skip and confirm or autoplay if possible
     if (skipIf === true || skipIf === 'always' || (moves[0].selections.length === 1 && (skipIf === 'only-one' || skipIf === false))) {
       const arg = moves[0].selections[0].isForced();
       if (arg !== undefined) {

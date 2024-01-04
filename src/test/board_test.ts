@@ -171,6 +171,17 @@ describe('Board', () => {
     expect(board.atID(8)).to.equal(piece3);
   });
 
+  it('clones', () => {
+    const map = board.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const england = map.create(Space, 'england', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = piece1.cloneInto(england);
+    expect(piece1.player).to.equal(piece2.player);
+    expect(piece1.name).to.equal(piece2.name);
+    expect(england._t.children).to.include(piece2);
+  });
+
   describe("Element subclasses", () => {
     class Card extends Piece<Player> {
       suit: string;
