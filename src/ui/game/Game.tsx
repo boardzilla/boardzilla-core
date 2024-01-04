@@ -246,7 +246,7 @@ export default () => {
     >
       <audio ref={clickAudio} src={click} id="click"/>
       <div id="background"/>
-      <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement || placement ? "in-drag-movement" : ""}>
+      <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         <Element
           element={game.board}
           json={boardJSON[0]}

@@ -99,7 +99,14 @@ export type ElementUI<T extends GameElement> = {
   computedStyle?: Box,
   computedLayouts?: {
     area: Box,
-    grid?: { anchor: Vector, offsetColumn: Vector, offsetRow: Vector },
+    grid?: {
+      anchor: Vector,
+      origin: { column: number, row: number },
+      columns: number,
+      rows: number,
+      offsetColumn: Vector,
+      offsetRow: Vector
+    },
     showBoundingBox?: string,
     children: GameElement[],
     drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
@@ -737,6 +744,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     return this._t.children.find(c => c._t.id === id) || this._t.children.find(c => c.atID(id))?.atID(id)
   }
 
+  atPosition({ column, row }: { column: number, row: number }) {
+    return this._t.children.find(c => c.row === row && c.column === column);
+  }
+
   /**
    * Whether this element has the given element in its parent hierarchy
    * @category Structure
@@ -1269,6 +1280,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         if (!children.length) {
           this._ui.computedLayouts[l].grid = {
             anchor: { x: 0, y: 0 },
+            origin,
+            rows,
+            columns,
             offsetColumn: offsetColumn ?? { x: size.width + cellGap!.x, y: 0 },
             offsetRow: offsetRow ?? { x: 0, y: size.height + cellGap!.y }
           }
@@ -1380,6 +1394,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
         this._ui.computedLayouts[l].grid = {
           anchor: startingOffset,
+          origin,
+          rows,
+          columns,
           offsetColumn: offsetColumn ?? { x: size.width + cellGap!.x, y: 0 },
           offsetRow: offsetRow ?? { x: 0, y: size.height + cellGap!.y }
         }

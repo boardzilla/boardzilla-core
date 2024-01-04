@@ -182,8 +182,20 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
     const {area, grid} = layout;
     if (!grid || !area) return;
     const pointer = {
-      column: Math.ceil(((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x),
-      row: Math.ceil(((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y),
+      column: Math.max(
+        grid.origin.column,
+        Math.min(
+          grid.origin.column + grid.columns - 1,
+          Math.ceil(((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x)
+        )
+      ),
+      row: Math.max(
+        grid.origin.row,
+        Math.min(
+          grid.origin.row + grid.rows - 1,
+          Math.ceil(((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y)
+        )
+      )
     };
 
     if (placement.piece.row!== pointer.row || placement.piece.column !== pointer.column) {

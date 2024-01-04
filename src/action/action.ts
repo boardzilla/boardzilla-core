@@ -634,7 +634,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return this;
   }
 
-  choosePlace(piece: keyof A | Piece, into: GameElement, options?: {
+  placePiece(piece: keyof A | Piece, into: GameElement, options?: {
     prompt?: string | ((args: A) => string),
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A) => string | boolean | undefined),

@@ -313,7 +313,7 @@ describe('Actions', () => {
 
     it('places', () => {
       const boardAction = action({
-      }).chooseOnBoard('piece', board.all(Piece)).choosePlace('piece', board.first('space-2')!);
+      }).chooseOnBoard('piece', board.all(Piece)).placePiece('piece', board.first('space-2')!);
       boardAction._process(player, {piece: board.first('piece-1')!, "__placement__": [3, 2]});
       expect(board.first('space-1')!.all(Piece).length).to.equal(1);
       expect(board.first('space-2')!.all(Piece).length).to.equal(1);

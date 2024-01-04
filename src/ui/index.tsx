@@ -5,7 +5,7 @@ import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
 import Game from '../game.js'
 import { serializeArg } from '../action/utils.js';
-import { Board, Die, GameElement } from '../board/index.js'
+import { Board, Die, GameElement, Piece } from '../board/index.js'
 import DieComponent from './game/components/Die.js'
 import Player from '../player/player.js'
 
@@ -82,7 +82,7 @@ type GameStore = {
   setSelected: (s: GameElement[]) => void;
   automove?: number;
   renderedState: Record<string, {key: string, style?: Box}>;
-  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, movedTo?: string, old?: Record<string, any>}> };
+  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, movedTo?: string }> };
   setBoardSize: () => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
@@ -91,7 +91,13 @@ type GameStore = {
   currentDrop?: GameElement;
   setCurrentDrop: (el?: GameElement) => void;
   placement?: { // placing a piece inside a grid as the current selection
-    piece: GameElement;
+    piece: Piece;
+    old: {
+      parent: GameElement;
+      position: number;
+      row?: number;
+      column?: number;
+    }
     into: GameElement;
     layout: number;
   };
@@ -203,15 +209,9 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     let state: Partial<GameStore> = {};
 
     if (s.placement) {
-      const into = s.placement.into;
-      const index = into._t.children.indexOf(s.placement.piece);
-      if (index !== undefined && index > -1) {
-        into!._t.children.splice(index, 1);
-      }
-      state = {
-        placement: undefined,
-        ...updateBoard(s.game, s.position!)
-      }
+      // restore state so we can process the move over again
+      restorePlacedPiece(s.placement.piece, s.placement.old);
+      state = { placement: undefined  };
     }
 
     state = {
@@ -219,7 +219,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       ...updateSelections(s.game!, s.position!, move)
     };
 
-    if (s.game.sequence > Math.floor(s.game.sequence)) {
+    if (!s.placement && s.game.sequence > Math.floor(s.game.sequence)) {
       state.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
       state.renderedState = {};
     }
@@ -269,9 +269,12 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   }),
   selectPlacement: ({ column, row }) => set(s => {
     if (!s.placement) return {};
-    s.placement.piece.column = column;
-    s.placement.piece.row = row;
-    return updateBoard(s.game, s.position!);
+    if (!s.placement.piece.container()!.atPosition({ column, row })) {
+      s.placement.piece.column = column;
+      s.placement.piece.row = row;
+      return updateBoard(s.game, s.position!);
+    }
+    return {};
   }),
   setZoomable: zoomable => set({ zoomable }),
   setZoom: zoom => set(s => {
@@ -304,24 +307,33 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   if (moves?.length === 1 && moves[0].selections.length === 1) {
     const selection = moves[0].selections[0];
     if (selection.type === 'place') {
-      let piece = selection.clientContext.placement.piece as string | GameElement;
-      if (typeof piece === 'string') piece = move!.args[piece] as GameElement;
+      let piece = selection.clientContext.placement.piece as string | Piece;
+      if (typeof piece === 'string') piece = moves[0].args[piece] as Piece;
+      const old = {
+        parent: piece.container()!,
+        position: piece.container()!._t.children.indexOf(piece),
+        row: piece.row,
+        column: piece.column,
+      }
       const into = selection.clientContext.placement.into as GameElement;
-      const clone = piece.cloneInto(into);
-      const layout = into.applicableLayout(clone);
+      game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
+      piece.putInto(into);
+      const layout = into.applicableLayout(piece);
       if (layout >= 0) {
         state = {
           ...state,
           ...updateBoard(game, position),
           placement: {
-            piece: clone,
+            piece,
+            old,
             into,
             layout
           }
         };
       } else {
+        console.error('could not find layout restoring piece');
         move = undefined;
-        into._t.children.splice(into._t.children.indexOf(clone), 1);
+        restorePlacedPiece(piece, old);
         console.error('placement was not possible as destination had no grid for placement');
         return state;
       }
@@ -390,7 +402,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
             state.error = game.processMove({ player, ...move });
 
             if (state.error) {
-              console.error(state.error);
+              throw Error(state.error);
             } else {
               game.play();
               game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
@@ -494,6 +506,23 @@ const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?:
   });
 
   return ({ boardJSON: json || game.board.allJSON() })
+}
+
+const restorePlacedPiece = (
+  piece: Piece, old: {
+    parent: GameElement;
+    position: number;
+    row?: number;
+    column?: number;
+  }
+) => {
+  piece.putInto(old.parent, {
+    position: old.position,
+    placement: old.row !== undefined && old.column !== undefined ? {
+      row: old.row,
+      column: old.column
+    } : undefined
+  });
 }
 
 export type SetupComponentProps = {
