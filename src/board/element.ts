@@ -1286,7 +1286,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
             offsetColumn: offsetColumn ?? { x: size.width + cellGap!.x, y: 0 },
             offsetRow: offsetRow ?? { x: 0, y: size.height + cellGap!.y }
           }
-          return;
+          continue;
         }
 
         if (haphazardly) {
