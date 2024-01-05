@@ -5,6 +5,9 @@ import spies from 'chai-spies';
 
 import { action, Action } from '../action/index.js';
 import Player from '../player/player.js';
+import { Board } from '../index.js';
+import Space from '../board/space.js';
+import Piece from '../board/piece.js';
 
 chai.use(spies);
 const { expect } = chai;
@@ -277,6 +280,46 @@ describe('Actions', () => {
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');
       expect(moves![0].selections[0].choices).to.deep.equal(['oil']);
+    });
+  });
+
+  describe('board moves', () => {
+    let board: Board;
+    beforeEach(() => {
+      board = new Board({ classRegistry: [Space, Piece] });
+      const space1 = board.create(Space, 'space-1');
+      board.create(Space, 'space-2');
+      space1.create(Piece, 'piece-1');
+      space1.create(Piece, 'piece-2');
+    });
+
+    it('chooseOnBoard', () => {
+      const boardAction = action({
+      }).chooseOnBoard('piece', board.all(Piece));
+      const moves = boardAction._getPendingMoves({});
+      expect(moves?.length).to.equal(1);
+      expect(moves![0].selections.length).to.equal(1);
+      expect(moves![0].selections[0].type).to.equal('board');
+      expect(moves![0].selections[0].boardChoices).to.deep.equal(board.all(Piece));
+    });
+
+    it('moves', () => {
+      const boardAction = action({
+      }).chooseOnBoard('piece', board.all(Piece)).move('piece', board.first('space-2')!);
+      boardAction._process(player, {piece: board.first('piece-1')!});
+      expect(board.first('space-1')!.all(Piece).length).to.equal(1);
+      expect(board.first('space-2')!.all(Piece).length).to.equal(1);
+    });
+
+    it('places', () => {
+      const boardAction = action({
+      }).chooseOnBoard('piece', board.all(Piece)).placePiece('piece', board.first('space-2')!);
+      boardAction._process(player, {piece: board.first('piece-1')!, "__placement__": [3, 2]});
+      expect(board.first('space-1')!.all(Piece).length).to.equal(1);
+      expect(board.first('space-2')!.all(Piece).length).to.equal(1);
+      const piece = board.first('piece-1')!;
+      expect(piece.row).to.equal(2);
+      expect(piece.column).to.equal(3);
     });
   });
 });

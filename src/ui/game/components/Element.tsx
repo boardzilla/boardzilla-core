@@ -19,15 +19,16 @@ import type { DraggableData, DraggableEvent } from 'react-draggable';
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
+const Element = ({element, json, selected, onSelectElement, onSelectPlacement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
   selected: GameElement<Player>[],
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
+  onSelectPlacement: ({ column, row }: { column: number, row: number }) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, isMobile, boardJSON] =
-    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.isMobile, s.boardJSON]);
+  const [previousRenderedState, renderedState, boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, selectPlacement, isMobile, boardJSON] =
+    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.selectPlacement, s.isMobile, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
   const wrapper = useRef<HTMLDivElement>(null);
@@ -41,6 +42,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   const selectable = !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
   const draggable = !!selections?.dragMoves?.length; // ???
   const droppable = dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
+  const placing = useMemo(() => element === placement?.piece, [element, placement])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const relativeTransform = useMemo(() => element.relativeTransformToBoard(), [element, element._ui.computedStyle]);
@@ -70,8 +72,12 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
 
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
-    onSelectElement(selections.clickMoves, element);
-  }, [element, onSelectElement, selections]);
+    if (placing) {
+      onSelectPlacement({column: element.column!, row: element.row!});
+    } else {
+      onSelectElement(selections.clickMoves, element);
+    }
+  }, [element, onSelectElement, selections, placing, onSelectPlacement]);
 
   const handleDragStart = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
@@ -168,6 +174,36 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     }
   }, [element, branch, wrapper, relativeTransform, previousRenderedState, moveTransform, doneMoving, dragElement, dragOffset]);
 
+  const handlePlacement = useCallback((event: React.MouseEvent) => {
+    const rect = wrapper.current?.getBoundingClientRect();
+    if (!rect || !placement) return;
+    const layout = placement.layout;
+    if (!layout) return;
+    const {area, grid} = layout;
+    if (!grid || !area) return;
+    const pointer = {
+      column: Math.max(
+        grid.origin.column,
+        Math.min(
+          grid.origin.column + grid.columns - 1,
+          Math.ceil(((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x)
+        )
+      ),
+      row: Math.max(
+        grid.origin.row,
+        Math.min(
+          grid.origin.row + grid.rows - 1,
+          Math.ceil(((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y)
+        )
+      )
+    };
+
+    if (placement.piece.row!== pointer.row || placement.piece.column !== pointer.column) {
+      selectPlacement(pointer);
+    }
+
+  }, [placement, selectPlacement])
+
   let style = useMemo(() => {
     let styleBuilder: React.CSSProperties = {};
     const { computedStyle } = element._ui;
@@ -229,78 +265,64 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
     }
   }, [element]);
 
-  let contents: React.JSX.Element[] | React.JSX.Element = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
     //throw Error('JSON does not match board');
     return null;
   }
 
-  // find all drawered children and take them out of the normal stack and assign them to their drawers
-  let drawers: GameElement['_ui']['computedLayouts'] = [];
-  let drawerAssignments = new Map<GameElement, number>();
-  let drawerContent: React.JSX.Element[][] = [];
-  if (element._ui.computedLayouts) {
-    drawers = element._ui.computedLayouts.filter(layout => layout.drawer)
-    for (let l = 0; l !== drawers.length; l++) {
-      for (const child of drawers[l].children) {
-        drawerAssignments.set(child, l);
+  let contents: React.JSX.Element[] | React.JSX.Element = [];
+  for (let l = 0; l !== (element._ui.computedLayouts?.length ?? 0); l++) {
+    const layout = element._ui.computedLayouts![l]
+    const layoutContents: React.JSX.Element[] = [];
+    for (const child of layout.children) {
+      const childJSON = json.children?.[element._t.children.indexOf(child)];
+      if (childJSON) {
+        const childBranch = child.branch();
+        const key = 'isSpace' in child ? childBranch : (
+          renderedState[childBranch]?.key ?? (child._t.was && previousRenderedState.elements[child._t.was]?.key) ?? uuid()
+        );
+        renderedState[childBranch] ??= { key };
+
+        layoutContents.push(
+          <Element
+            key={key}
+            element={child}
+            json={childJSON}
+            selected={selected}
+            onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
+            onSelectElement={onSelectElement}
+            onSelectPlacement={onSelectPlacement}
+          />
+        );
       }
     }
-  }
+    if (layout.drawer) {
+      const drawer = layout.drawer!;
+      const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
+      const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab ?? openContent;
 
-  for (let i = 0; i !== element._t.children.length; i++) {
-    const child = element._t.order === 'stacking' ? element._t.children[element._t.children.length - i - 1] : element._t.children[i];
-    const childJSON = element._t.order === 'stacking' ? json.children![json.children!.length - i - 1] : json.children![i];
-    if (!child._ui.computedStyle || child._ui.appearance.render === false) continue;
-
-    let container = contents;
-    if (drawerAssignments.has(child)) {
-      container = drawerContent[drawerAssignments.get(child)!] ??= [];
+      contents.push(
+        <Drawer
+          key={l}
+          area={layout.area}
+          absoluteAspectRatio={absoluteTransform.width / absoluteTransform.height}
+          closeDirection={drawer.closeDirection}
+          openIf={drawer.openIf}
+          closeIf={drawer.closeIf}
+        >
+          <Drawer.Open>
+            {openContent}
+          </Drawer.Open>
+          <Drawer.Closed>
+            {closedContent}
+          </Drawer.Closed>
+          {layoutContents}
+        </Drawer>
+      );
+    } else {
+      if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
     }
-
-    const childBranch = child.branch();
-    const key = 'isSpace' in child ? childBranch : (
-      renderedState[childBranch]?.key ?? (child._t.was && previousRenderedState.elements[child._t.was]?.key) ?? uuid()
-    );
-    renderedState[childBranch] ??= { key };
-
-    container.push(
-      <Element
-        key={key}
-        element={child}
-        json={childJSON}
-        selected={selected}
-        onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
-        onSelectElement={onSelectElement}
-      />
-    );
-  }
-
-  for (let d = 0; d !== drawers.length; d++) {
-    const layout = drawers[d];
-    const drawer = layout.drawer!;
-    const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
-    const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab ?? openContent;
-
-    contents.push(
-      <Drawer
-        key={d}
-        area={layout.area}
-        absoluteAspectRatio={absoluteTransform.width / absoluteTransform.height}
-        closeDirection={drawer.closeDirection}
-        openIf={drawer.openIf}
-        closeIf={drawer.closeIf}
-      >
-        <Drawer.Open>
-          {openContent}
-        </Drawer.Open>
-        <Drawer.Closed>
-          {closedContent}
-        </Drawer.Closed>
-        {drawerContent[d]}
-      </Drawer>
-    );
   }
 
   if (element._ui.appearance.connections) {
@@ -393,7 +415,9 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
         left: layout.area.left + '%',
         top: layout.area.top + '%',
         width: layout.area.width + '%',
-        height: layout.area.height + '%'
+        height: layout.area.height + '%',
+        // backgroundSize: `${(layout.grid?.offsetColumn.x ?? 100) / layout.area.width * 100}% ${(layout.grid?.offsetRow.y ?? 100) / layout.area.height * 100}%`,
+        // backgroundPosition: `calc(${(layout.grid?.anchor.x ?? 0) / layout.area.width * 10000}% - 1px) calc(${(layout.grid?.anchor.y ?? 0) / layout.area.height * 10000}% - 1px)`
       }}>
         <span>{layout.showBoundingBox}</span>
       </div>
@@ -414,9 +438,10 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
           clickable, selectable, droppable,
         }
       )}
-      onClick={clickable ? onClick : undefined}
+      onClick={clickable || placing ? onClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onMouseMove={placement?.into === element ? handlePlacement : undefined}
       {...attrs}
     >
       {boundingBoxes}
@@ -429,7 +454,7 @@ const Element = ({element, json, selected, onSelectElement, onMouseLeave}: {
   contents = (
     <div
       ref={wrapper}
-      className={classNames("transform-wrapper", { dragging })}
+      className={classNames("transform-wrapper", { dragging, placing })}
       style={{ ...style }}
       data-tooltip-id={branch}
       data-tooltip-delay-show={500}

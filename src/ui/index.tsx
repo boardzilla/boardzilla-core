@@ -5,7 +5,7 @@ import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
 import Game from '../game.js'
 import { serializeArg } from '../action/utils.js';
-import { Board, Die, GameElement } from '../board/index.js'
+import { Board, Die, GameElement, Piece } from '../board/index.js'
 import DieComponent from './game/components/Die.js'
 import Player from '../player/player.js'
 
@@ -82,7 +82,7 @@ type GameStore = {
   setSelected: (s: GameElement[]) => void;
   automove?: number;
   renderedState: Record<string, {key: string, style?: Box}>;
-  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, movedTo?: string, old?: Record<string, any>}> };
+  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, movedTo?: string }> };
   setBoardSize: () => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
@@ -90,6 +90,18 @@ type GameStore = {
   dropSelections: UIMove[];
   currentDrop?: GameElement;
   setCurrentDrop: (el?: GameElement) => void;
+  placement?: { // placing a piece inside a grid as the current selection
+    piece: Piece;
+    old: {
+      parent: GameElement;
+      position: number;
+      row?: number;
+      column?: number;
+    }
+    into: GameElement;
+    layout: Exclude<GameElement['_ui']['computedLayouts'], undefined>[number];
+  };
+  selectPlacement: (placement: {column: number, row: number}) => void;
   zoomable?: GameElement;
   setZoomable: (el?: GameElement) => void;
   zoomElement?: GameElement;
@@ -194,12 +206,37 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
         if (!args || !(sel.name in args)) delete move!.args[sel.name];
       }
     }
-    const update = updateSelections(s.game!, s.position!, move);
-    if (s.game.sequence > Math.floor(s.game.sequence)) {
-      update.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
-      update.renderedState = {};
+    let state: Partial<GameStore> = {};
+
+    if (s.placement) {
+      // restore state so we can process the move over again
+      restorePlacedPiece(s.placement.piece, s.placement.old);
+      state = { placement: undefined  };
     }
-    return update;
+
+    state = {
+      ...state,
+      ...updateSelections(s.game!, s.position!, move)
+    };
+
+    if (s.placement && !state.boardJSON) {
+      // guarantee update board if not done already
+      state = {
+        ...state,
+        ...updateBoard(s.game, s.position!)
+      }
+    }
+
+    if (!pendingMove) {
+      state.renderedState = {...s.previousRenderedState.elements} as typeof state.renderedState;
+      state.previousRenderedState = { sequence: Math.floor(s.game.sequence), elements: {} };
+    }
+
+    if (!s.placement && s.game.sequence > Math.floor(s.game.sequence)) {
+      state.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
+      state.renderedState = {};
+    }
+    return state;
   }),
   moves: [],
   clearMoves: () => set({ moves: [] }),
@@ -243,6 +280,15 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setCurrentDrop: currentDrop => set(() => {
     return { currentDrop };
   }),
+  selectPlacement: ({ column, row }) => set(s => {
+    if (!s.placement) return {};
+    if (!s.placement.piece.container()!.atPosition({ column, row })) {
+      s.placement.piece.column = column;
+      s.placement.piece.row = row;
+      return updateBoard(s.game, s.position!);
+    }
+    return {};
+  }),
   setZoomable: zoomable => set({ zoomable }),
   setZoom: zoom => set(s => {
     return {
@@ -272,8 +318,38 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
   let moves = pendingMoves?.moves;
 
   if (moves?.length === 1 && moves[0].selections.length === 1) {
-    // the only selection is skippable - skip and confirm or autoplay if possible
+    const selection = moves[0].selections[0];
+    if (selection.type === 'place') {
+      let piece = selection.clientContext.placement.piece as string | Piece;
+      if (typeof piece === 'string') piece = moves[0].args[piece] as Piece;
+      const old = {
+        parent: piece.container()!,
+        position: piece.container()!._t.children.indexOf(piece),
+        row: piece.row,
+        column: piece.column,
+      }
+      const into = selection.clientContext.placement.into as GameElement;
+      game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
+      piece.putInto(into);
+      const layout = into._ui.computedLayouts?.[into.getLayoutItems().findIndex(l => l?.includes(piece as Piece))];
+      if (layout) {
+        state = {
+          ...state,
+          ...updateBoard(game, position),
+          placement: {
+            piece,
+            old,
+            into,
+            layout
+          }
+        };
+      } else {
+        throw Error(`Tried to place ${piece.name} into ${into.name} but no layout found for this piece`);
+      }
+    }
+
     const skipIf = moves[0].selections[0].skipIf;
+    // the only selection is skippable - skip and confirm or autoplay if possible
     if (skipIf === true || skipIf === 'always' || (moves[0].selections.length === 1 && (skipIf === 'only-one' || skipIf === false))) {
       const arg = moves[0].selections[0].isForced();
       if (arg !== undefined) {
@@ -335,7 +411,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
             state.error = game.processMove({ player, ...move });
 
             if (state.error) {
-              console.error(state.error);
+              throw Error(state.error);
             } else {
               game.play();
               game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
@@ -439,6 +515,23 @@ const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?:
   });
 
   return ({ boardJSON: json || game.board.allJSON() })
+}
+
+const restorePlacedPiece = (
+  piece: Piece, old: {
+    parent: GameElement;
+    position: number;
+    row?: number;
+    column?: number;
+  }
+) => {
+  piece.putInto(old.parent, {
+    position: old.position,
+    placement: old.row !== undefined && old.column !== undefined ? {
+      row: old.row,
+      column: old.column
+    } : undefined
+  });
 }
 
 export type SetupComponentProps = {

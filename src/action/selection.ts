@@ -45,6 +45,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
 } & ({
   skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   selectOnBoard: BoardSelection<P, GameElement<P>>;
+  selectPlaceOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
@@ -52,6 +53,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
 } | {
   skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   selectOnBoard?: never;
+  selectPlaceOnBoard?: never;
   selectFromChoices: ChoiceSelection<P>;
   selectNumber?: never;
   enterText?: never;
@@ -59,22 +61,32 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
 } | {
   skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   selectOnBoard?: never;
+  selectPlaceOnBoard?: never;
   selectFromChoices?: never;
   selectNumber: NumberSelection<P>;
   enterText?: never;
   value?: never;
 } | {
   selectOnBoard?: never;
+  selectPlaceOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText: TextSelection<P>;
   value?: never;
 } | {
   selectOnBoard?: never;
+  selectPlaceOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
   value: ButtonSelection<P>;
+} | {
+  selectOnBoard?: never;
+  selectPlaceOnBoard: true;
+  selectFromChoices?: never;
+  selectNumber?: never;
+  enterText?: never;
+  value?: never;
 });
 
 // any lambdas have been resolved to actual values
@@ -96,7 +108,7 @@ export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 
  * @internal
  */
 export default class Selection<P extends Player> {
-  type: 'board' | 'choices' | 'text' | 'number' | 'button';
+  type: 'board' | 'choices' | 'text' | 'number' | 'button' | 'place';
   name: string;
   prompt?: string | ((args: Record<string, Argument<P>>) => string);
   confirm?: [string, Record<string, Argument<P>> | ((args: Record<string, Argument<P>>) => Record<string, Argument<P>>) | undefined]
@@ -141,6 +153,8 @@ export default class Selection<P extends Player> {
         this.type = 'text';
         this.regexp = s.enterText.regexp;
         this.initial = s.enterText.initial;
+      } else if (s.selectPlaceOnBoard) {
+        this.type = 'place';
       } else {
         this.type = 'button';
         this.value = s.value;
@@ -216,7 +230,7 @@ export default class Selection<P extends Player> {
 
   isUnbounded(this: ResolvedSelection<P>): boolean {
     if (this.type === 'number') return this.max === undefined || this.max - (this.min ?? 1) > 100;
-    return this.type === 'text' || this.type === 'button';
+    return this.type === 'text' || this.type === 'button' || this.type === 'place';
   }
 
   isResolved(): this is ResolvedSelection<P> {
