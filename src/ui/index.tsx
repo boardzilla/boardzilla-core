@@ -344,11 +344,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
           }
         };
       } else {
-        console.error('could not find layout restoring piece');
-        move = undefined;
-        restorePlacedPiece(piece, old);
-        console.error('placement was not possible as destination had no grid for placement');
-        return state;
+        throw Error(`Tried to place ${piece.name} into ${into.name} but no layout found for this piece`);
       }
     }
 
