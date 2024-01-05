@@ -82,7 +82,7 @@ export type ElementUI<T extends GameElement> = {
   }[],
   appearance: {
     className?: string,
-    render?: ((el: T) => React.ReactNode) | false,
+    render?: ((el: T) => JSX.Element) | false,
     aspectRatio?: number,
     zoomable?: boolean | ((el: T) => boolean),
     effects?: { attributes: ElementAttributes<T>, className: string }[],

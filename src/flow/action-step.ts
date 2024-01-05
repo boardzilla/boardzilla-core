@@ -19,7 +19,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   position: ActionStepPosition<P>;
   actions: {name: string, do?: FlowDefinition<P>}[];
   type: FlowBranchNode<P>['type'] = "action";
-  prompt?: string; // needed if multiple board actions
+  prompt?: string | ((args: Record<string, any>) => string); // needed if multiple board actions
   skipIf: 'always' | 'never' | 'only-one';
 
   constructor({ name, player, players, actions, prompt, skipIf }: {
@@ -27,7 +27,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     players?: P[] | ((args: Record<string, any>) => P[]),
     player?: P | ((args: Record<string, any>) => P),
     actions: (string | {name: string, do?: FlowDefinition<P>})[],
-    prompt?: string,
+    prompt?: string | ((args: Record<string, any>) => string),
     skipIf?: 'always' | 'never' | 'only-one';
   }) {
     super({ name });
@@ -72,7 +72,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (!('player' in this.position)) {
       if (!player || !this.position.players || this.position.players.includes(player.position)) {
         return {
-          prompt: this.prompt,
+          prompt: typeof this.prompt === 'function' ? this.prompt(this.flowStepArgs()) : this.prompt,
           step: this.name,
           actions: this.actions.map(action => ({name: action.name})),
           skipIf: this.skipIf,

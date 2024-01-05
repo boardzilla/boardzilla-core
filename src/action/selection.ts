@@ -247,6 +247,10 @@ export default class Selection<P extends Player> {
     return this.min !== undefined || this.max !== undefined;
   }
 
+  isBoardChoice() {
+    return this.type === 'board' || this.type ==='place';
+  }
+
   resolve(args: Record<string, Argument<P>>): ResolvedSelection<P> {
     const resolved = new Selection(this.name, this) as ResolvedSelection<P>;
     if (typeof this.choices !== 'function' && this.choices?.length === 1) resolved.isNonChoice = true;

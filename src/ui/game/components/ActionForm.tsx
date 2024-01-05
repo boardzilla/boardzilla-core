@@ -8,10 +8,11 @@ import type { UIMove } from '../../index.js';
 import type { Argument } from '../../../action/action.js';
 import type { ResolvedSelection } from '../../../action/selection.js';
 
-const ActionForm = ({ move, stepName, onSubmit }: {
+const ActionForm = ({ move, stepName, onSubmit, children }: {
   move: UIMove,
   stepName: string,
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
+  children?: React.ReactNode,
 }) => {
   const [selected] = gameStore(s => [s.selected]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
@@ -19,7 +20,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
   const initial = useCallback(() => {
     const args: Record<string, Argument<Player> | undefined> = {...move.args};
     for (const s of move.selections) {
-      if (s.name !== '__action__' && s.name !== '__confirm__' && s.type !== 'board') args[s.name] = s.initial;
+      if (s.name !== '__action__' && s.name !== '__confirm__' && !s.isBoardChoice()) args[s.name] = s.initial;
     }
     return args;
   }, [move]);
@@ -108,7 +109,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       onSubmit={e => onSubmitForm(e)}
       className={`action ${move.name}`}
     >
-      {/** move.prompt && move.selections.some(s => s.type !== 'board') && <span className="prompt">{move.prompt}</span> */}
+      {children && <span className="prompt">{children}</span>}
 
       {move.selections.filter(s => s.name !== '__confirm__').map((s: ResolvedSelection<Player>) => (
         <Selection
