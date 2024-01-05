@@ -32,13 +32,13 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlay
 
   const seatPlayer = (position: number, userID: string) => {
     const user = users.find(u => u.id === userID);
-    const unseats = players.filter(p => p.playerDetails?.position === position);
+    const unseats = players.filter(p => p.id === userID && p.playerDetails?.position !== position || p.id !== userID && p.playerDetails?.position === position);
+    const usedColors = players.filter(p => p.id !== userID && p.playerDetails?.position !== position).map(p => p.playerDetails?.color);
+    const color = colors.find(c => !usedColors.includes(c))!;
+
     const operations: UpdatePlayersMessage['operations'] = unseats.map(u => (
       {type: 'unseat', userID: u.id} as UnseatOperation
     ));
-    const usedColors = players.filter(p => p.playerDetails?.position).map(p => p.playerDetails?.color);
-    const color = colors.find(c => !usedColors.includes(c))!;
-
     if (userID === "reserve") {
       operations.push({
         type: "reserve",
@@ -105,9 +105,7 @@ const Seating = ({ users, players, maxPlayers, onUpdatePlayers, onUpdateSelfPlay
               >
                 <option key="" value="">&lt; open seat &gt;</option>
                 <option key="reserve" value="reserve">&lt; reserve seat &gt;</option>
-                {users.filter(u => (
-                  player?.id === u.id || !players.find(player => player.id === u.id)
-                )).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
               <img className="avatar" draggable="false" src={player?.avatar}/>
               {player && (host || player.id === userID) && (
