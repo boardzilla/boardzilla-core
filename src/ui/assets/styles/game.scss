@@ -212,6 +212,9 @@ html, body { height: 100% }
           border: .1rem solid #0008;
           border-top-width: 0;
           background: #fffc;
+          html.dark & {
+            background: #000e;
+          }
         }
       }
     }
