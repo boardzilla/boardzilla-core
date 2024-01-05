@@ -99,7 +99,7 @@ type GameStore = {
       column?: number;
     }
     into: GameElement;
-    layout: number;
+    layout: Exclude<GameElement['_ui']['computedLayouts'], undefined>[number];
   };
   selectPlacement: (placement: {column: number, row: number}) => void;
   zoomable?: GameElement;
@@ -331,8 +331,8 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       const into = selection.clientContext.placement.into as GameElement;
       game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
       piece.putInto(into);
-      const layout = into.applicableLayout(piece);
-      if (layout >= 0) {
+      const layout = into._ui.computedLayouts?.[into.getLayoutItems().findIndex(l => l?.includes(piece as Piece))];
+      if (layout) {
         state = {
           ...state,
           ...updateBoard(game, position),

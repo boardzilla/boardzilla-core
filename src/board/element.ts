@@ -1031,10 +1031,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     // TODO invalidate on children mutate
   }
 
-  applicableLayout(element: GameElement<P, B>) {
-    return this.getLayoutItems().findIndex(l => l?.includes(element));
-  }
-
   /**
    * recalc all elements computedStyle
    * @category UI
@@ -1318,9 +1314,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         const largestCellSize = cellSizeForArea(minRows, minColumns, area, cellGap, offsetColumn, offsetRow);
         if (maxOverlap !== undefined) {
           const largestCellSize2 = cellSizeForArea(rows, columns, area,
-            { x: Math.min(100 - maxOverlap, cellGap?.x ?? 100), y: Math.min(maxOverlap, cellGap?.y ?? 100) },
-            { x: Math.min(100 - maxOverlap, offsetColumn?.x ?? 100), y: Math.min(maxOverlap, offsetColumn?.y ?? 100) },
-            { x: Math.min(100 - maxOverlap, offsetRow?.x ?? 100), y: Math.min(maxOverlap, offsetRow?.y ?? 100) }
+            cellGap ? { x: Math.min(-maxOverlap * size.width / 100, cellGap.x), y: Math.min(-maxOverlap * size.height / 100, cellGap.y) } : undefined,
+            offsetColumn ? { x: Math.min(100 - maxOverlap, offsetColumn.x), y: Math.min(100 - maxOverlap, offsetColumn.y) } : undefined,
+            offsetRow ? { x: Math.min(100 - maxOverlap, offsetRow.x), y: Math.min(100 - maxOverlap, offsetRow.y) } : undefined
           );
           largestCellSize.width = Math.min(largestCellSize.width, largestCellSize2.width);
           largestCellSize.height = Math.min(largestCellSize.height, largestCellSize2.height);
@@ -1472,15 +1468,21 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   getLayoutItems() {
     const layoutItems: (GameElement[] | undefined)[] = [];
     for (const child of this._t.children) {
+      if (child._ui.appearance.render === false) continue;
       for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
         const { applyTo } = this._ui.layouts[l];
 
         if ((typeof applyTo === 'function' && child instanceof applyTo) ||
           (typeof applyTo === 'string' && child.name === applyTo) ||
           child === applyTo ||
-          (applyTo instanceof ElementCollection && applyTo.includes(child))) {
-
-          layoutItems[l] = layoutItems[l] ? layoutItems[l]!.concat([child]) : [child];
+          (applyTo instanceof ElementCollection && applyTo.includes(child))
+        ) {
+          layoutItems[l] ??= [];
+          if (this._t.order === 'stacking') {
+            layoutItems[l]!.unshift(child);
+          } else {
+            layoutItems[l]!.push(child);
+          }
           break;
         }
       }

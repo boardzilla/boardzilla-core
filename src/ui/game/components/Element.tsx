@@ -177,7 +177,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
   const handlePlacement = useCallback((event: React.MouseEvent) => {
     const rect = wrapper.current?.getBoundingClientRect();
     if (!rect || !placement) return;
-    const layout = element._ui.computedLayouts?.[placement.layout];
+    const layout = placement.layout;
     if (!layout) return;
     const {area, grid} = layout;
     if (!grid || !area) return;
@@ -202,7 +202,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
       selectPlacement(pointer);
     }
 
-  }, [placement, selectPlacement, element._ui.computedLayouts])
+  }, [placement, selectPlacement])
 
   let style = useMemo(() => {
     let styleBuilder: React.CSSProperties = {};
@@ -265,79 +265,64 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
     }
   }, [element]);
 
-  let contents: React.JSX.Element[] | React.JSX.Element = [];
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
     //throw Error('JSON does not match board');
     return null;
   }
 
-  // find all drawered children and take them out of the normal stack and assign them to their drawers
-  let drawers: GameElement['_ui']['computedLayouts'] = [];
-  let drawerAssignments = new Map<GameElement, number>();
-  let drawerContent: React.JSX.Element[][] = [];
-  if (element._ui.computedLayouts) {
-    drawers = element._ui.computedLayouts.filter(layout => layout.drawer)
-    for (let l = 0; l !== drawers.length; l++) {
-      for (const child of drawers[l].children) {
-        drawerAssignments.set(child, l);
+  let contents: React.JSX.Element[] | React.JSX.Element = [];
+  for (let l = 0; l !== (element._ui.computedLayouts?.length ?? 0); l++) {
+    const layout = element._ui.computedLayouts![l]
+    const layoutContents: React.JSX.Element[] = [];
+    for (const child of layout.children) {
+      const childJSON = json.children?.[element._t.children.indexOf(child)];
+      if (childJSON) {
+        const childBranch = child.branch();
+        const key = 'isSpace' in child ? childBranch : (
+          renderedState[childBranch]?.key ?? (child._t.was && previousRenderedState.elements[child._t.was]?.key) ?? uuid()
+        );
+        renderedState[childBranch] ??= { key };
+
+        layoutContents.push(
+          <Element
+            key={key}
+            element={child}
+            json={childJSON}
+            selected={selected}
+            onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
+            onSelectElement={onSelectElement}
+            onSelectPlacement={onSelectPlacement}
+          />
+        );
       }
     }
-  }
+    if (layout.drawer) {
+      const drawer = layout.drawer!;
+      const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
+      const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab ?? openContent;
 
-  for (let i = 0; i !== element._t.children.length; i++) {
-    const child = element._t.order === 'stacking' ? element._t.children[element._t.children.length - i - 1] : element._t.children[i];
-    const childJSON = element._t.order === 'stacking' ? json.children![json.children!.length - i - 1] : json.children![i];
-    if (!child._ui.computedStyle || child._ui.appearance.render === false) continue;
-
-    let container = contents;
-    if (drawerAssignments.has(child)) {
-      container = drawerContent[drawerAssignments.get(child)!] ??= [];
+      contents.push(
+        <Drawer
+          key={l}
+          area={layout.area}
+          absoluteAspectRatio={absoluteTransform.width / absoluteTransform.height}
+          closeDirection={drawer.closeDirection}
+          openIf={drawer.openIf}
+          closeIf={drawer.closeIf}
+        >
+          <Drawer.Open>
+            {openContent}
+          </Drawer.Open>
+          <Drawer.Closed>
+            {closedContent}
+          </Drawer.Closed>
+          {layoutContents}
+        </Drawer>
+      );
+    } else {
+      contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
     }
-
-    const childBranch = child.branch();
-    const key = 'isSpace' in child ? childBranch : (
-      renderedState[childBranch]?.key ?? (child._t.was && previousRenderedState.elements[child._t.was]?.key) ?? uuid()
-    );
-    renderedState[childBranch] ??= { key };
-
-    container.push(
-      <Element
-        key={key}
-        element={child}
-        json={childJSON}
-        selected={selected}
-        onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
-        onSelectElement={onSelectElement}
-        onSelectPlacement={onSelectPlacement}
-      />
-    );
-  }
-
-  for (let d = 0; d !== drawers.length; d++) {
-    const layout = drawers[d];
-    const drawer = layout.drawer!;
-    const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
-    const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab ?? openContent;
-
-    contents.push(
-      <Drawer
-        key={d}
-        area={layout.area}
-        absoluteAspectRatio={absoluteTransform.width / absoluteTransform.height}
-        closeDirection={drawer.closeDirection}
-        openIf={drawer.openIf}
-        closeIf={drawer.closeIf}
-      >
-        <Drawer.Open>
-          {openContent}
-        </Drawer.Open>
-        <Drawer.Closed>
-          {closedContent}
-        </Drawer.Closed>
-        {drawerContent[d]}
-      </Drawer>
-    );
   }
 
   if (element._ui.appearance.connections) {
