@@ -60,7 +60,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
             </div>
           </div>
         )}
-        <input type="button" className="start" disabled={(players?.length || 0) < minPlayers} value={(players?.length || 0) < minPlayers ? "Waiting for enough players" : "Start Game"} onClick={onStart}/>
+        {host ? <input type="button" className="start" disabled={(players?.length || 0) < minPlayers} value={(players?.length || 0) < minPlayers ? "Waiting for enough players" : "Start Game"} onClick={onStart}/> : <div className="heading"><h3>Waiting for host to start game...</h3></div>}
       </div>
     </div>
   );
