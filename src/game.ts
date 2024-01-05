@@ -237,7 +237,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   action<A extends Record<string, Argument<P>> = NonNullable<unknown>>(definition: {
     prompt?: string,
     condition?: Action<P, A>['condition'],
-  }) {
+  } = {}) {
     return action<P, A>(definition);
   }
 

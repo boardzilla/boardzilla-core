@@ -321,7 +321,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
         </Drawer>
       );
     } else {
-      contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
+      if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
     }
   }
 
