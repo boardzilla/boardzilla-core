@@ -140,9 +140,9 @@ describe('Game', () => {
       { type: 'action', position: null }
     ]);
     game.board.fromJSON([ { className: 'TestBoard', tokens: 9 } ]);
-    game.players.setCurrent([2]);
+    game.players.setCurrent(2);
     do {
-      game.processMove({ name: 'takeOne', args: {}, player: game.players.current()[0] });
+      game.processMove({ name: 'takeOne', args: {}, player: game.players.current()! });
       game.play();
     } while (game.phase === 'started');
     expect(game.winner.length).to.equal(1);

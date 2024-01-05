@@ -40,9 +40,18 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   }
 
   /**
-   * Returns the array of players that may currently act.
+   * Returns the player that may currently act. It is an error to call current
+   * when multiple players can act
    */
-  current(): P[] {
+  current(): P | undefined {
+    if (this.currentPosition.length > 1) throw Error(`Using players.current when ${this.currentPosition.length} players may act`);
+    return this.atPosition(this.currentPosition[0] ?? -1);
+  }
+
+  /**
+   * Returns the array of all players that may currently act.
+   */
+  allCurrent(): P[] {
     return this.currentPosition.map(p => this.atPosition(p)!);
   }
 
@@ -78,7 +87,6 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     if (!(players instanceof Array)) players = [players] as number[] | P[];
     players = players.map(p => typeof p === 'number' ? p : p.position) as number[];
     this.currentPosition = players;
-    return this.current();
   }
 
   /**

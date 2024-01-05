@@ -15,7 +15,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
   const [game, position, prompt, step, selected, move] = gameStore(s => [s.game, s.position, s.prompt, s.step, s.selected, s.move]);
 
   const boardPrompt = useMemo(() => {
-    if (name === 'step:out-of-turn') return `${game.players.current().map(p => p.name).join(' ,')} is taking their turn`;
+    if (name === 'step:out-of-turn') return `${game.players.allCurrent().map(p => p.name).join(' ,')} is taking their turn`;
     if (prompt) return prompt;
 
     // all prompts from all board moves, using the most specific selection that applies
