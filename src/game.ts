@@ -325,7 +325,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
           args
         });
       }
-      console.debug(`Move by player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => k +': ' + v.toString()).join(', ')}}) ${typeof errorOrFollowups === 'string' ? '❌ ' + errorOrFollowups : ( errorOrFollowups ? errorOrFollowups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => k +': ' + v.toString()).join(', ')}})`) : '✅')}`);
+      console.debug(`Received move from player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => `${k}: ${v}`).join(', ')}}) ${typeof errorOrFollowups === 'string' ? '❌ ' + errorOrFollowups : ( errorOrFollowups ? errorOrFollowups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}})`) : '✅')}`);
       if (typeof errorOrFollowups === 'string') return errorOrFollowups;
       // successful move
     });

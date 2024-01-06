@@ -9,6 +9,7 @@ import {default as EveryPlayer} from './every-player.js';
 
 import type { Player } from '../player/index.js';
 import type { Serializable } from '../action/utils.js';
+import { FlowStep } from './flow.js';
 export { Do, FlowControl } from './enums.js';
 
 /**
@@ -86,7 +87,7 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
  *
  * @category Flow
  */
-export const loop = <P extends Player>(block: ConstructorParameters<typeof WhileLoop<P>>[0]['do']) => new WhileLoop<P>({do: block, while: () => true});
+export const loop = <P extends Player>(...block: FlowStep<P>[]) => new WhileLoop<P>({do: block, while: () => true});
 
 /**
  * Create a loop that sets a value and continues until that value meets some

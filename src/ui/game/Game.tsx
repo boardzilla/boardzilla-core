@@ -220,12 +220,11 @@ export default () => {
     (pendingMoves?.map(m => (
       `\n⮕ ${typeof m === 'string' ? m :
         `${m.name}({${
-          Object.entries(m.args || {}).map(([k, v]) => k + ': ' + v.toString()).join(', ')
+          Object.entries(m.args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')
         }}) ? ${m.selections?.length ? m.selections[0].toString() : 'no choices'}`
       }`
     )).join('') || ' none')
   );
-  //if (move) console.debug('Move in progress:' + `${move.name}({${Object.entries(move.args || {}).map(([k, v]) => k + ': ' + v.toString()).join(', ')}})`);
 
   return (
     <div

@@ -195,10 +195,11 @@ export default class Action<P extends Player, A extends Record<string, Argument<
 
       error = selection.error(args);
       if (error) {
-        console.error('invalid arg', selection.name, args[selection.name], error);
+        console.error(`Invalid choice for ${selection.name}. Got "${args[selection.name]}" ${error}`);
         break;
       }
     }
+    if (error) return error;
 
     const pendingMoves = this._getPendingMoves(args);
     if (!pendingMoves) {

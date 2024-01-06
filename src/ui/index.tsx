@@ -392,7 +392,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
         console.debug(
           `${autoSubmit ? 'Autoplay' : 'Submitting'} valid move from player #${position}:\n` +
-            `⮕ ${move.name}({${Object.entries(move.args).map(([k, v]) => k + ': ' + v.toString()).join(', ')}})`
+            `⮕ ${move.name}({${Object.entries(move.args).map(([k, v]) => `${k}: ${v}`).join(', ')}})`
         );
         //moveCallbacks.push((error: string) => console.error(`move ${moves} failed: ${error}`));
         const message: MoveMessage = {
@@ -428,7 +428,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
             console.error(
               `Game attempted to complete move but was unable to process:\n` +
                 `⮕ ${move!.name}({${Object.entries(move!.args).map(
-                  ([k, v]) => k + ': ' + v.toString()
+                  ([k, v]) => `${k}: ${v}`
                 ).join(', ')}})\n`
             );
             console.error(e.message);

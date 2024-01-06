@@ -64,8 +64,6 @@ export type GameInterface<P extends Player> = {
 
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
-  if (globalThis.window) globalThis.console.debug = () => {};
-
   return {
     initialState: (state: SetupState<Player>): GameUpdate<Player> => {
       const game = setup(state);
