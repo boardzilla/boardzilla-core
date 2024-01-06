@@ -504,7 +504,7 @@ html, body { height: 100% }
     max-width: 800px;
     margin: 0 auto 5rem;
     .heading {
-      h1, h2 {
+      h1, h2, h3 {
         text-align: center;
         margin: .3em 0 .5em;
       }
@@ -563,17 +563,23 @@ html, body { height: 100% }
             border-radius: 50%;
           }
 
-          .pencil {
+          .rename, .palette {
             color: white;
             position: absolute;
             font-size: 2em;
-            top: .5em;
-            right: .65em;
             transition: transform .2s;
             &:hover {
               cursor: pointer;
               transform: scale(1.4);
             }
+          }
+          .rename {
+            right: .65em;
+            top: .5em;
+          }
+          .palette {
+            right: 1.6em;
+            top: .43em;
           }
 
           .github-picker {
@@ -581,7 +587,7 @@ html, body { height: 100% }
             position: absolute !important;
             z-index: 1;
             text-align: left;
-            left: 88%;
+            left: 75%;
             width: 142px !important;
             display: block !important;
             > span {
