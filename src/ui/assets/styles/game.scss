@@ -567,7 +567,6 @@ html, body { height: 100% }
             color: white;
             position: absolute;
             font-size: 2em;
-            top: .5em;
             transition: transform .2s;
             &:hover {
               cursor: pointer;
@@ -576,9 +575,11 @@ html, body { height: 100% }
           }
           .rename {
             right: .65em;
+            top: .5em;
           }
           .palette {
             right: 1.6em;
+            top: .43em;
           }
 
           .github-picker {
@@ -586,7 +587,7 @@ html, body { height: 100% }
             position: absolute !important;
             z-index: 1;
             text-align: left;
-            left: 88%;
+            left: 75%;
             width: 142px !important;
             display: block !important;
             > span {
