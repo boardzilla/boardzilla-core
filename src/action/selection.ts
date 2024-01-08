@@ -122,7 +122,6 @@ export default class Selection<P extends Player> {
   initial?: Argument<P> | ((args: Record<string, Argument<P>>) => Argument<P>);
   regexp?: RegExp;
   value?: Argument<P>;
-  isNonChoice: boolean = false;
 
   constructor(name: string, s: SelectionDefinition<P> | Selection<P>) {
     this.name = name;
@@ -253,8 +252,6 @@ export default class Selection<P extends Player> {
 
   resolve(args: Record<string, Argument<P>>): ResolvedSelection<P> {
     const resolved = new Selection(this.name, this) as ResolvedSelection<P>;
-    if (typeof this.choices !== 'function' && this.choices?.length === 1) resolved.isNonChoice = true;
-    if (typeof this.boardChoices !== 'function' && this.boardChoices?.length === 1) resolved.isNonChoice = true;
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.prompt === 'function') resolved.prompt = this.prompt(args);
     if (typeof this.min === 'function') resolved.min = this.min(args)

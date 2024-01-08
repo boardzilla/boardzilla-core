@@ -109,7 +109,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
       onSubmit={e => onSubmitForm(e)}
       className={`action ${move.name}`}
     >
-      {children && <span className="prompt">{children}</span>}
+      {children && <div className="prompt">{children}</div>}
 
       {move.selections.filter(s => s.name !== '__confirm__').map((s: ResolvedSelection<Player>) => (
         <Selection

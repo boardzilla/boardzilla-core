@@ -82,7 +82,7 @@ export type ElementUI<T extends GameElement> = {
   }[],
   appearance: {
     className?: string,
-    render?: ((el: T) => JSX.Element) | false,
+    render?: ((el: T) => JSX.Element | null) | false,
     aspectRatio?: number,
     zoomable?: boolean | ((el: T) => boolean),
     effects?: { attributes: ElementAttributes<T>, className: string }[],
@@ -491,8 +491,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * which it's placed.
    * @category Structure
    */
-  get owner() {
-    return this.player !== undefined ? this.player : this._t.parent?.player;
+  get owner(): P | undefined {
+    return this.player !== undefined ? this.player : this._t.parent?.owner;
   }
 
   /**
@@ -1006,12 +1006,12 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
     if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
     if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
-    if (!size) {
-      if (scaling === 'none' && aspectRatio) throw Error("Layout `scaling` must be 'fit' or 'fill' for `aspectRatio` and no `size`");
-      if (!scaling) attributes.scaling = 'fit';
+    if (!size && scaling === 'none') {
+      console.warn("Layout `scaling` as 'none' has no meaning without `size` and will instead default to 'fit'");
+      attributes = { ...attributes, scaling: 'fit' };
     }
     if (!margin && !area) attributes.margin = 0;
-    this._ui.layouts.push({ applyTo, attributes: Object.assign({ scaling: 'fit', alignment: 'center', direction: 'square' }, attributes) });
+    this._ui.layouts.push({ applyTo, attributes: { scaling: 'fit', alignment: 'center', direction: 'square', ...attributes} });
 
     this._ui.layouts.sort((a, b) => {
       let aVal = 0, bVal = 0;

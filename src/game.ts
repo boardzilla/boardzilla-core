@@ -66,6 +66,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   intermediateUpdates: GameState<P>[][] = [];
   godMode = false;
   winner: P[] = [];
+  followups: FollowUp<P>[] = [];
 
   constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
     this.board = new boardClass({ game: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})
@@ -261,6 +262,10 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     });
   }
 
+  followUp(action: FollowUp<P>) {
+    this.followups.push(action);
+  }
+
   /** @internal */
   godModeActions(): Record<string, Action<P, any>> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
@@ -313,21 +318,20 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   /** @internal */
   processMove({ player, name, args }: Move<P>): string | undefined {
     if (this.phase === 'finished') return 'Game is finished';
-    let errorOrFollowups: string | undefined | FollowUp<P>[];
+    let error: string | undefined;
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[name]) {
         const godModeAction = this.godModeActions()[name];
-        errorOrFollowups = godModeAction._process(player, args);
+        error = godModeAction._process(player, args);
       } else {
-        errorOrFollowups = this.flow.processMove({
+        error = this.flow.processMove({
           name,
           player: player.position,
           args
         });
       }
-      console.debug(`Received move from player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => `${k}: ${v}`).join(', ')}}) ${typeof errorOrFollowups === 'string' ? '❌ ' + errorOrFollowups : ( errorOrFollowups ? errorOrFollowups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}})`) : '✅')}`);
-      if (typeof errorOrFollowups === 'string') return errorOrFollowups;
-      // successful move
+      console.debug(`Received move from player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => `${k}: ${v}`).join(', ')}}) ${error ? '❌ ' + error : ( this.followups ? this.followups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}})`) : '✅')}`);
+      return error;
     });
   }
 

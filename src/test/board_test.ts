@@ -1,5 +1,6 @@
 import chai from 'chai';
 import spies from 'chai-spies';
+import random from 'random-seed';
 
 import {
   Board,
@@ -39,7 +40,7 @@ describe('Board', () => {
   beforeEach(() => {
     board = new Board({
       // @ts-ignore
-      game: { players, addDelay: () => {} },
+      game: { players, addDelay: () => {}, random: random.create('a').random },
       classRegistry: [Space, Piece, GameElement]
     });
     board._ctx.game.board = board;
@@ -465,6 +466,16 @@ describe('Board', () => {
       expect(board.all(Card).max('pip')).to.equal(3);
       expect(board.all(Card).min('suit')).to.equal('C');
       expect(board.all(Card).max('suit')).to.equal('H');
+    });
+
+    it("shuffles", () => {
+      const deck = board.create(Space, 'deck');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2C', { suit: 'C', pip: 2 });
+      deck.create(Card, '3D', { suit: 'D', pip: 3 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.shuffle();
+      expect(deck.first(Card)!.name).to.not.equal('AH');
     });
 
     it("isVisibleTo", () => {

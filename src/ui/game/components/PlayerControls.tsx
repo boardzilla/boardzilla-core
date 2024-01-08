@@ -16,7 +16,6 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
 
   const boardPrompt = useMemo(() => {
     if (name === 'step:out-of-turn') return `${game.players.allCurrent().map(p => p.name).join(' ,')} is taking their turn`;
-    if (prompt) return prompt;
 
     // all prompts from all board moves, using the most specific selection that applies
     let hasNonBoardMoves = false;
@@ -32,12 +31,15 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
     }
 
     // if only one, use that, otherwise use the step prompt
-    if (new Set(prompts).size > 1) console.error(`Multiple action prompts apply (${moves.map(m => m.name).join(', ')}). Add a step prompt ${step ? `on "${step}"` : 'here'} to clarify.`)
-    if (prompts.length === 0 && moves.length && !hasNonBoardMoves) {
+    if (new Set(prompts).size > 1) {
+      if (!prompt) console.error(`Multiple action prompts apply (${moves.map(m => m.name).join(', ')}). Add a step prompt ${step ? `on "${step}"` : 'here'} to clarify.`)
+      return prompt;
+    }
+    if (prompts.length > 0) return prompts[0];
+    if (moves.length && !hasNonBoardMoves) {
       console.error(`No prompts defined for board actions actions (${moves.map(m => m.name).join(', ')}). Add an action prompt or step prompt here.`);
       return '__missing__';
     }
-    return prompts[0];
   }, [moves, game.players, name, step, prompt]);
 
   //const boardID = useMemo(() => boardPrompt ? moves.find(m => m.selections.find(s => s.prompt === boardPrompt))?.action : '', [moves, boardPrompt]);

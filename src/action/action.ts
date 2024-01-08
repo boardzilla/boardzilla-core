@@ -55,7 +55,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   /** @internal */
   selections: Selection<P>[] = [];
   /** @internal */
-  moves: ((args: Record<string, Argument<P>>) => void | FollowUp<P>)[] = [];
+  moves: ((args: Record<string, Argument<P>>) => any)[] = [];
   /** @internal */
   condition?: ((args: A) => boolean) | boolean;
   /** @internal */
@@ -149,17 +149,16 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       if (!possibleOptions.length) return undefined;
       if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
 
-      // return the next selection(s) if skipIf and no completed move, or if there's a single, skippable choice and the next choice is a real choice
+      // return the next selection(s) if skipIf, provided it exists for all possible choices
+      // special case: do not skip "apparent" choices in group even if they are ultimately forced, in order to best present the limited options
       if (pendingMoves.length && (
         ((selection.skipIf === 'always' || selection.skipIf === true) && !hasCompleteMove) ||
-          selection.skipIf === 'only-one' && possibleOptions.length === 1 &&
-            (pendingMoves.length !== 1 || pendingMoves[0].selections.length !== 1 || !pendingMoves[0].selections[0].isNonChoice))
-      ) {
+          selection.skipIf === 'only-one' && possibleOptions.length === 1 && (!selection.clientContext?.combineWith || selection.options().length <= 1)
+      )) {
         return pendingMoves;
       }
     }
 
-    // return board or final choice for a selection prompt, UI may choose to autoplay
     return [move];
   }
 
@@ -184,7 +183,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * process this action with supplied args. returns error if any
    * @internal
    */
-  _process(player: P, args: Record<string, Argument<P>>): string | undefined | FollowUp<P>[] {
+  _process(player: P, args: Record<string, Argument<P>>): string | undefined {
     // truncate invalid args - is this needed?
     let error: string | undefined = undefined;
     for (const selection of this.selections) {
@@ -215,13 +214,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       this.game.message(message.message, {...args, player, ...messageArgs});
     }
 
-    const followups: FollowUp<P>[] = [];
-    for (const move of this.moves) {
-      const followup = move(args);
-      if (followup) followups.push(followup);
-    }
-
-    if (followups.length) return followups;
+    for (const move of this.moves) move(args);
   }
 
   _addSelection(selection: Selection<P>) {

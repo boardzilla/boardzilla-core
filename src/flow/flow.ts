@@ -1,6 +1,6 @@
 import { Player } from '../index.js';
 import { Board } from '../board/index.js';
-import { Do, FlowControl } from './enums.js';
+import { LoopInterruptControl, loopInterrupt, FlowControl } from './enums.js';
 
 import type Game from '../game.js';
 import type { WhileLoopPosition } from './while-loop.js';
@@ -12,7 +12,7 @@ import { Argument, FollowUp } from '../action/action.js';
 import ActionStep from './action-step.js';
 
 export type FlowArguments = Record<string, any>;
-export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => Do | void) | Do;
+export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => any);
 
 /**
  * A FlowDefinition is provided to the game and to all flow function to provide
@@ -204,27 +204,26 @@ export default class Flow<P extends Player> {
 
   /**
    * Advance flow one step and return FlowControl.complete if complete,
-   * FlowControl.ok if can continue, Do to interupted the current
+   * FlowControl.ok if can continue, Do to interrupted the current
    * loop. Returns undefined if now waiting for player input. override
    * for self-contained flows that do not have subflows.
    */
-  playOneStep(): Do | FlowControl | undefined {
+  playOneStep(): LoopInterruptControl | FlowControl | undefined {
     const step = this.step;
-    let result: Do | FlowControl | undefined = FlowControl.complete;
+    let result: LoopInterruptControl | FlowControl | undefined = FlowControl.complete;
     if (step instanceof Function) {
-      const stepResult = step(this.flowStepArgs());
-      result = Do.break === stepResult || Do.continue === stepResult || Do.repeat === stepResult ? stepResult : FlowControl.complete;
-    } else if (typeof step === 'string') {
-      result = step;
+      loopInterrupt[0] = undefined;
+      step(this.flowStepArgs());
+      result = loopInterrupt[0] ?? FlowControl.complete;
     } else if (step instanceof Flow) {
       if ('awaitingAction' in step && (step as ActionStep<P>).awaitingAction()) return; // awaiting action
       result = step.playOneStep();
     }
     if (result === FlowControl.ok || !result) return result;
     if (result !== FlowControl.complete) {
-      if ('advance' in this && typeof this.advance === 'function' && result === Do.continue) return this.advance();
-      if ('repeat' in this && typeof this.repeat === 'function' && result === Do.repeat) return this.repeat();
-      if ('exit' in this && typeof this.exit === 'function' && result === Do.break) return this.exit();
+      if ('advance' in this && typeof this.advance === 'function' && result === LoopInterruptControl.continue) return this.advance();
+      if ('repeat' in this && typeof this.repeat === 'function' && result === LoopInterruptControl.repeat) return this.repeat();
+      if ('exit' in this && typeof this.exit === 'function' && result === LoopInterruptControl.break) return this.exit();
       return result;
     }
 
@@ -251,7 +250,7 @@ export default class Flow<P extends Player> {
       if (step) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
     } while (step === FlowControl.ok && this.game.phase !== 'finished')
     //console.debug("Game Flow:\n" + this.stacktrace());
-    if (step === Do.continue || step === Do.repeat || step === Do.break) throw Error("Cannot skip/repeat/break when not in a loop");
+    if (step === LoopInterruptControl.continue || step === LoopInterruptControl.repeat || step === LoopInterruptControl.break) throw Error("Cannot skip/repeat/break when not in a loop");
     if (step === FlowControl.complete) this.game.finish();
   }
 

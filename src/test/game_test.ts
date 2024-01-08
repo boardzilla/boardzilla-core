@@ -288,6 +288,13 @@ describe('Game', () => {
     it('max', () => {
       expect(game.players.max('color')).to.equal('yellow')
     });
+
+    it('shuffles', () => {
+      const player = game.players[0];
+      game.setRandomSeed('a');
+      game.players.shuffle();
+      expect(game.players[0]).to.not.equal(player);
+    });
   });
 
   describe('action for multiple players', () => {
@@ -468,9 +475,9 @@ describe('Game', () => {
         }).do(() => {
           board.tokens --;
           player.tokens ++;
-          if (board.tokens < 10) return {
+          if (board.tokens < 10) game.followUp({
             name: 'declare'
-          }
+          });
         }),
         declare: () => game.action({
           prompt: 'declare',

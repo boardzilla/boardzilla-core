@@ -3,10 +3,10 @@
  *
  * @category Flow
  */
-export enum Do {
+export const Do = {
   /**
    * Return Do.repeat from anywhere inside a looping flow ({@link whileLoop},
-   * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow,
+   * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interrupt the flow,
    * skip the rest of the current loop iteration and repeat the current loop
    * with the same value.
    *
@@ -21,11 +21,11 @@ export enum Do {
    *
    * @category Flow
    */
-  repeat = "__REPEAT__",
+  repeat: () => loopInterrupt[0] = LoopInterruptControl.repeat,
 
   /**
    * Return Do.continue from anywhere inside a looping flow ({@link whileLoop},
-   * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow,
+   * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interrupt the flow,
    * skip the rest of the current loop iteration and repeat the loop with the
    * next value. This acts like Javascript's `continue`.
    *
@@ -44,11 +44,11 @@ export enum Do {
    *
    * @category Flow
    */
-  continue = "__CONTINUE__",
+  continue: () => loopInterrupt[0] = LoopInterruptControl.continue,
 
   /**
    * Return Do.break from anywhere inside a looping flow ({@link whileLoop},
-   * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interupt the flow,
+   * {@link forLoop}, {@link forEach}, {@link eachPlayer}) to interrupt the flow,
    * skip the rest of the current loop iteration and exit this loop. This acts
    * like Javascript's `break`.
    *
@@ -63,6 +63,13 @@ export enum Do {
    *
    * @category Flow
    */
+  break: () => loopInterrupt[0] = LoopInterruptControl.break,
+}
+
+/** internal */
+export enum LoopInterruptControl {
+  repeat = "__REPEAT__",
+  continue = "__CONTINUE__",
   break = "__BREAK__",
 }
 
@@ -71,6 +78,9 @@ export enum FlowControl {
   ok = "__OK__",
   complete = "__COMPLETE__"
 }
+
+/** internal */
+export const loopInterrupt: [LoopInterruptControl?] = [];
 
 /**
  * Several flow methods accept an argument of this type. This is an object

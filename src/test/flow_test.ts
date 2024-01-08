@@ -55,6 +55,7 @@ describe('Flow', () => {
     ]});
     const game = {
       flow: testFlow,
+      followups: [],
       players: {
         currentPosition: [1],
         atPosition: () => ({position: 1}),
@@ -411,7 +412,7 @@ describe('Loop', () => {
 
 describe('Loop short-circuiting', () => {
   it('can repeat', () => {
-    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.repeat : undefined);
+    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.repeat() : undefined);
     const stepSpy2 = chai.spy((_: string, x:number) => {x});
     const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
       ({ loop }) => stepSpy2('start', loop),
@@ -442,7 +443,7 @@ describe('Loop short-circuiting', () => {
   });
 
   it('can skip', () => {
-    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.continue : undefined);
+    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.continue() : undefined);
     const stepSpy2 = chai.spy((_: string, x:number) => {x});
     const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
       ({ loop }) => stepSpy2('start', loop),
@@ -473,7 +474,7 @@ describe('Loop short-circuiting', () => {
   });
 
   it('can break', () => {
-    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.break : undefined);
+    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.break() : undefined);
     const stepSpy2 = chai.spy((_: string, x:number) => {x});
     const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
       ({ loop }) => stepSpy2('start', loop),

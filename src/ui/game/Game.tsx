@@ -91,9 +91,10 @@ export default () => {
       }
     }
 
-    if (!layout && move) {
+    // anchor to last element in arg list
+    if (!layout && move && !pendingMoves?.[0].selections[0].isBoardChoice()) {
       const element = Object.entries(move.args).reverse().find(([name, el]) => (
-        game.board._ui.stepLayouts["action:" + name]?.noAnchor?.includes(name) && el instanceof GameElement
+        !game.board._ui.stepLayouts["action:" + move.name]?.noAnchor?.includes(name) && el instanceof GameElement
       ));
       if (element && (element[1] as GameElement)._ui?.computedStyle) {
         layout = { element: element[1] as GameElement, position: 'beside', gap: 2 };

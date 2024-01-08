@@ -27,8 +27,8 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
   isSpace() { return true; }
 
   /** internal */
-  createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
-    const el = super.createElement(className, name, attrs);
+  create<T extends GameElement>(className: ElementClass<T>, name: string, attributes?: ElementAttributes<T>): T {
+    const el = super.create(className, name, attributes);
     this.triggerEvent("enter", el);
     return el;
   }

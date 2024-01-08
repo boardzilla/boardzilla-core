@@ -102,19 +102,20 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     const player = game.players.atPosition(move.player);
     if (!player) return `No such player position: ${move.player}`;
     const gameAction = game.getAction(move.name, player);
-    const errorOrFollowups = gameAction._process(player, move.args);
-    if (typeof errorOrFollowups === 'string') {
+    game.followups.splice(0, game.followups.length);
+    const error = gameAction._process(player, move.args);
+    if (error) {
       // failed with a selection required
-      return errorOrFollowups;
-    } else if (errorOrFollowups && errorOrFollowups.length) {
+      return error;
+    } else if (game.followups.length > 0) {
       // validate that this is a proper action list
-      if (errorOrFollowups.some(f => !game.actions[f.name])) {
-        throw Error(`Action ${move.name} must return an error string or followup actions. Instead it returned: ${errorOrFollowups}`);
+      if (game.followups.some(f => !game.actions[f.name])) {
+        throw Error(`Action ${move.name} followup is not a valid action`);
       }
       if ('followups' in this.position && this.position.followups?.length) {
         this.setPosition({ ...this.position, followups: this.position.followups.slice(1) });
       } else {
-        this.setPosition({...move, followups: errorOrFollowups});
+        this.setPosition({...move, followups: [...game.followups]});
       }
     } else {
       // succeeded

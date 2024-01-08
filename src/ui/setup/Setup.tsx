@@ -43,6 +43,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
         <div className="heading">
           <h1>Game Setup</h1>
           {host && <p>Select the open seats to seat yourself and your players at the table. Use the invite link above to get other players to join. They will be in the lobby until seated.</p>}
+          {!host && <h3>Waiting for host to start game...</h3>}
         </div>
         <Seating
           users={users}
@@ -60,7 +61,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
             </div>
           </div>
         )}
-        {host ? <input type="button" className="start" disabled={(players?.length || 0) < minPlayers} value={(players?.length || 0) < minPlayers ? "Waiting for enough players" : "Start Game"} onClick={onStart}/> : <div className="heading"><h3>Waiting for host to start game...</h3></div>}
+        {host && <input type="button" className="start" disabled={(players?.length || 0) < minPlayers} value={(players?.length || 0) < minPlayers ? "Waiting for enough players" : "Start Game"} onClick={onStart}/>}
       </div>
     </div>
   );
