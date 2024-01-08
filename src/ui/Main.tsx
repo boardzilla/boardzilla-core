@@ -24,6 +24,12 @@ type UsersEvent = {
   users: User[];
 };
 
+type UserOnlineEvent = {
+  type: "userOnline";
+  id: string;
+  online: boolean;
+};
+
 export type GameSettings = Record<string, any>
 
 // an update to the setup state
@@ -126,7 +132,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, setError, updateState] = gameStore(s => [s.game, s.setError, s.updateState]);
+  const [game, setError, updateState, setUserOnline] = gameStore(s => [s.game, s.setError, s.updateState, s.setUserOnline]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
@@ -144,6 +150,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
 
   const listener = useCallback((event: MessageEvent<
     UsersEvent |
+    UserOnlineEvent |
     SettingsUpdateEvent |
     GameUpdateEvent |
     GameFinishedEvent |
@@ -156,6 +163,9 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       break;
     case 'users':
       setUsers(data.users);
+      break;
+    case 'userOnline':
+      setUserOnline(data.id, data.online)
       break;
     case 'gameUpdate':
     case 'gameFinished':
@@ -181,7 +191,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, [queue, game, catchError, moveCallbacks, updateState]);
+  }, [setUserOnline, moveCallbacks, game.sequence, queue, updateState, catchError]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
