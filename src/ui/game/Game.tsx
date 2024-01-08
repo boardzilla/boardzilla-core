@@ -14,8 +14,8 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, placement, setZoom, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.placement, s.setZoom, s.boardJSON]);
+  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
+    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
