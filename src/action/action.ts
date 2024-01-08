@@ -248,7 +248,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *   );
    * })
    */
-  do(move: (args: A) => void | FollowUp<P>): Action<P, A> {
+  do(move: (args: A) => any): Action<P, A> {
     this.moves.push(move);
     return this;
   }
