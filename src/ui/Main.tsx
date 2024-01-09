@@ -191,7 +191,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, [setUserOnline, moveCallbacks, game.sequence, queue, updateState, catchError]);
+  }, [setUserOnline, moveCallbacks, game, queue, updateState, catchError]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
