@@ -33,6 +33,9 @@ export {
   textSetting,
   choiceSetting
 } from './ui/setup/components/settingComponents.js';
+export {
+  PlayerInfo,
+} from './ui/game/components/PlayerInfo.js';
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
@@ -74,7 +77,7 @@ declare global {
    - or an array containing more than one of the above
  * @param options.actions - A function that provides an object defining all the actions in your game. The function accepts 3 arguments:
    - an instance of the `boardClass` above
-   - the {@link action} function used to define each action. 
+   - the {@link action} function used to define each action.
    - the player taking the action, an instance of `playerClass` above
  Each key is a unique action name and the value is the result of calling {@link action}.
  * @param options.breakpoints - A function that determines which layout breakpoint to use. The function accepts the aspect ratio of the current player's viewable area and returns the name of the breakpoint.
