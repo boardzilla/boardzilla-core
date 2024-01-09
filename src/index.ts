@@ -40,20 +40,21 @@ export {
 import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
 
-export const createBoardClasses = <P extends Player<P, B>, B extends Board<P, B>>() => {
-  return {
-    GameElement: GameElement<P, B>,
-    Space: Space<P, B>,
-    Piece: Piece<P, B>,
-    Die: Die<P, B>
-  };
-};
-
+export const createBoardClasses = <P extends Player<P, B>, B extends Board<P, B>>() => ({
+  GameElement: GameElement<P, B>,
+  Space: Space<P, B>,
+  Piece: Piece<P, B>,
+  Die: Die<P, B>
+});
 
 export type SetupFunction<P extends Player<P, B> = any, B extends Board<P, B> = any> = (
   state: SetupState<P> | GameState<P>,
   options?: {trackMovement?: boolean}
 ) => Game<P, B>
+
+declare global {
+  var $: Record<string, Space>; // eslint-disable-line no-var
+}
 
 /**
  * Create your game
@@ -105,6 +106,7 @@ export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
       rseed = String(Math.random());
     }
   }
+  globalThis.$ = game.board._ctx.namedSpaces;
   game.setRandomSeed('sequence' in state ? String(state.sequence) + '-' + rseed : rseed);
   game.setSettings(state.settings);
   game.players.fromJSON(state.players);

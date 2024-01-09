@@ -153,24 +153,28 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
         dragOffset.x = undefined;
         dragOffset.y = undefined;
       }
-      // move to 'old' position without animating
-      wrapper.current!.style.transition = 'none';
-      wrapper.current!.style.transform = transformToNew;
-      wrapper.current!.classList.add('animating');
-      setTimeout(() => {
-        // move to 'new' by removing transform and animate
-        wrapper.current!.style.removeProperty('transition');
-        wrapper.current!.style.removeProperty('transform');
-      }, 10);
+      const transform = wrapper.current;
+      if (transform) {
+        // move to 'old' position without animating
+        transform.style.transition = 'none';
+        transform.style.transform = transformToNew;
+        transform.classList.add('animating');
+        setTimeout(() => {
+          // move to 'new' by removing transform and animate
+          transform.style.removeProperty('transition');
+          transform.style.removeProperty('transform');
+        }, 0);
 
-      const cancel = (e: TransitionEvent) => {
-        if (e.propertyName === 'transform' && e.target === wrapper.current) {
-          doneMoving(relativeTransform);
-          wrapper.current!.classList.remove('animating');
-          wrapper.current!.removeEventListener('transitionend', cancel);
-        }
-      };
-      wrapper.current?.addEventListener('transitionend', cancel);
+        const cancel = (e: TransitionEvent) => {
+          if (e.propertyName === 'transform' && e.target === wrapper.current) {
+            doneMoving(relativeTransform);
+            transform.classList.remove('animating');
+            transform.removeEventListener('transitionend', cancel);
+          }
+        };
+        transform.addEventListener('transitionend', cancel);
+        return () => transform.removeEventListener('transitionend', cancel);
+      }
     }
   }, [element, branch, wrapper, relativeTransform, previousRenderedState, moveTransform, doneMoving, dragElement, dragOffset]);
 
@@ -276,6 +280,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
     const layout = element._ui.computedLayouts![l]
     const layoutContents: React.JSX.Element[] = [];
     for (const child of layout.children) {
+      if (!child._ui.computedStyle || child._ui.appearance.render === false) continue;
       const childJSON = json.children?.[element._t.children.indexOf(child)];
       if (childJSON) {
         const childBranch = child.branch();

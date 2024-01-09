@@ -10,13 +10,24 @@ import {
 import { Action, Selection } from './action/index.js';
 import { Player, PlayerCollection } from './player/index.js';
 import Flow from './flow/flow.js';
+import {
+  playerActions,
+  loop,
+  whileLoop,
+  forEach,
+  forLoop,
+  eachPlayer,
+  everyPlayer,
+  ifElse,
+  switchCase
+} from './flow/index.js';
 
 import random from 'random-seed';
 
 import type { ElementClass } from './board/element.js';
 import type { FlowStep } from './flow/flow.js';
 import type { PlayerState, GameUpdate, GameState } from './interface.js';
-import type { SerializedArg } from './action/utils.js';
+import type { Serializable, SerializedArg } from './action/utils.js';
 import type { Argument, FollowUp } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
 
@@ -67,6 +78,27 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   godMode = false;
   winner: P[] = [];
   followups: FollowUp<P>[] = [];
+  flowCommands: {
+    playerActions: typeof playerActions<P>,
+    loop: typeof loop<P>,
+    whileLoop: typeof whileLoop<P>,
+    forEach: typeof forEach<P, Serializable<P>>,
+    forLoop: typeof forLoop<P>,
+    eachPlayer: typeof eachPlayer<P>,
+    everyPlayer: typeof everyPlayer<P>,
+    ifElse: typeof ifElse<P>,
+    switchCase: typeof switchCase<P, Serializable<P>>,
+  } = {
+    playerActions,
+    loop,
+    whileLoop,
+    forEach,
+    forLoop,
+    eachPlayer,
+    everyPlayer,
+    ifElse,
+    switchCase,
+  };
 
   constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
     this.board = new boardClass({ game: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})

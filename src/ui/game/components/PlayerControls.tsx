@@ -36,6 +36,7 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
       return prompt;
     }
     if (prompts.length > 0) return prompts[0];
+    if (prompt) return prompt;
     if (moves.length && !hasNonBoardMoves) {
       console.error(`No prompts defined for board actions actions (${moves.map(m => m.name).join(', ')}). Add an action prompt or step prompt here.`);
       return '__missing__';

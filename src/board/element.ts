@@ -38,6 +38,8 @@ export type ElementAttributes<T extends GameElement> =
 export type ElementContext<P extends Player<P, B> = any, B extends Board<P, B> = any> = {
   game: Game<P, B>;
   top: GameElement<P, B>;
+  namedSpaces: Record<string, Space<P, B>>
+  uniqueNames: Record<string, boolean>
   removed: GameElement<P, B>;
   sequence: number;
   player?: P;
@@ -193,6 +195,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       this._ctx.top = this;
       this._ctx.sequence = 0;
     }
+    if (!this._ctx.namedSpaces) {
+      this._ctx.uniqueNames = {};
+      this._ctx.namedSpaces = {};
+    }
 
     this.game = this._ctx.game as Game<P, B>;
 
@@ -210,7 +216,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /** @internal */
   toString() {
-    return this.name || this.constructor.name;
+    return this.name || this.constructor.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
   }
 
   /**
@@ -636,6 +642,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     } else {
       this._t.children.push(el);
     }
+    if ('isSpace' in el && name) {
+      if (name in this._ctx.uniqueNames) { // no longer unique
+        delete this._ctx.namedSpaces[name];
+        this._ctx.uniqueNames[name] = false
+      } else {
+        this._ctx.namedSpaces[name] = el as unknown as Space<P, B>;
+        this._ctx.uniqueNames[name] = true;
+      }
+    }
     return el;
   }
 
@@ -692,7 +707,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
     if (!this._ctx.classRegistry.includes(className)) {
       const classNameBasedOnName = this._ctx.classRegistry.find(c => c.name === className.name) as ElementClass<T>;
-      if (!classNameBasedOnName) throw Error(`No class found ${className.name}. Declare any classes in \`game.defineBoard\``);
+      if (!classNameBasedOnName) throw Error(`No class found ${className.name}. Declare any classes in \`board.registerClasses\``);
       className = classNameBasedOnName;
     }
     const el = new className(this._ctx);

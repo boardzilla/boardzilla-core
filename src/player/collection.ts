@@ -109,6 +109,14 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   }
 
   /**
+   * Return the player next to this player at the table.
+   * @param step - 1 = one step to the left, -1 = one step to the right, etc
+   */
+  seatedNext(player: P, steps = 1) {
+    return this.atPosition((player.position + steps) % this.length + 1)!;
+  }
+
+  /**
    * Returns the turn order of the given player, starting with 0. This is
    * distinct from {@link Player#position}. Turn order can be altered during a
    * game, whereas table position cannot.

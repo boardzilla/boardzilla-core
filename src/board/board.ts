@@ -52,8 +52,10 @@ export type BoardSize = {
 /** @category Board */
 export default class Board<P extends Player<P, B> = any, B extends Board<P, B> = any> extends Space<P, B> {
   pile: GameElement<P>;
+  space: typeof Space<P>
   constructor(ctx: Partial<ElementContext<P, B>>) {
     super({ ...ctx, trackMovement: false });
+    this.space = Space<P>;
     this.board = this as unknown as B; // ???
     this._ctx.removed = this.createElement(Space<P, B>, 'removed'),
     this.pile = this._ctx.removed;
