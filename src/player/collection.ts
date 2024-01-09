@@ -113,7 +113,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
    * @param step - 1 = one step to the left, -1 = one step to the right, etc
    */
   seatedNext(player: P, steps = 1) {
-    return this.atPosition((player.position + steps) % this.length + 1)!;
+    return this.atPosition((player.position + steps - 1) % this.length + 1)!;
   }
 
   /**

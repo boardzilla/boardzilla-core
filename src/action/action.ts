@@ -60,6 +60,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   condition?: ((args: A) => boolean) | boolean;
   /** @internal */
   messages: {message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
+  order: ('move' | 'message')[] = [];
 
   game: Game;
 
@@ -209,12 +210,17 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       return error || 'incomplete action';
     }
 
-    for (const message of this.messages) {
-      const messageArgs = ((typeof message.args === 'function') ? message.args(args as A) : message.args);
-      this.game.message(message.message, {...args, player, ...messageArgs});
+    let moveIndex = 0;
+    let messageIndex = 0;
+    for (const seq of this.order) {
+      if (seq === 'move') {
+        this.moves[moveIndex++](args);
+      } else {
+        const message = this.messages[messageIndex++];
+        const messageArgs = ((typeof message.args === 'function') ? message.args(args as A) : message.args);
+        this.game.message(message.message, {...args, player, ...messageArgs});
+      }
     }
-
-    for (const move of this.moves) move(args);
   }
 
   _addSelection(selection: Selection<P>) {
@@ -250,6 +256,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   do(move: (args: A) => any): Action<P, A> {
     this.moves.push(move);
+    this.order.push('move');
     return this;
   }
 
@@ -280,6 +287,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   message(message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
     this.messages.push({message, args});
+    this.order.push('message');
     return this;
   }
 
@@ -621,6 +629,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       const selectedInto = into instanceof GameElement ? into : args[into] as GameElement;
       selectedPiece.putInto(selectedInto);
     });
+    this.order.push('move');
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     const intoSelection = typeof into === 'string' ? this.selections.find(s => s.name === into) : undefined;
     if (pieceSelection) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
@@ -644,6 +653,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       const selectedInto = into instanceof GameElement ? into : args[into] as GameElement;
       selectedPiece.putInto(selectedInto, { placement: { column: args['__placement__'][0], row: args['__placement__'][1] } });
     });
+    this.order.push('move');
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     if (pieceSelection) pieceSelection.clientContext = { dragInto: into };
     return this as unknown as Action<P, A & {__placement__: [number, number]}>;
