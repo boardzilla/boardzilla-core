@@ -106,6 +106,8 @@ type GameStore = {
   setZoomable: (el?: GameElement) => void;
   zoomElement?: GameElement;
   setZoom: (zoom: boolean) => void;
+  userOnline: Map<string, boolean>
+  setUserOnline: (id: string, online: boolean) => void
 }
 
 export const gameStore = createWithEqualityFn<GameStore>()(set => ({
@@ -295,6 +297,14 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       zoomElement: zoom ? s.zoomable : undefined
     }
   }),
+  setUserOnline: (id: string, online: boolean) => {
+    set(s => {
+      const userOnline = new Map(s.userOnline)
+      userOnline.set(id, online)
+      return { userOnline }
+    })
+  },
+  userOnline: new Map(),
 }), shallow);
 
 // refresh move and selections

@@ -7,6 +7,7 @@ import type { ElementFinder, default as ElementCollection } from '../board/eleme
 import type Game from '../game.js';
 
 export default class Player<P extends Player<P, B> = any, B extends Board<P, B> = any> {
+  id: string;
   name: string;
   color: string;
   avatar: string;
