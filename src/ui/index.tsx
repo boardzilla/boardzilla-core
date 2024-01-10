@@ -19,6 +19,7 @@ import type { SetupFunction } from '../index.js'
 import type { BoardSize } from '../board/board.js';
 import type { GameState } from '../interface.js';
 import type { ResolvedSelection } from '../action/selection.js';
+export { ProfileBadge } from './game/components/ProfileBadge.js';
 
 // this feels like the makings of a class
 export type UIMove = PendingMove<Player> & {

@@ -26,16 +26,13 @@ export {
 export { createInteface } from './interface.js';
 export { times, range, shuffleArray } from './utils.js';
 export { Player };
-export { render } from './ui/index.js';
+export { render, ProfileBadge } from './ui/index.js';
 export {
   toggleSetting,
   numberSetting,
   textSetting,
   choiceSetting
 } from './ui/setup/components/settingComponents.js';
-export {
-  PlayerMat,
-} from './ui/game/components/PlayerMat.js';
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
