@@ -23,6 +23,7 @@ describe('Board', () => {
   const players = new PlayerCollection<Player>;
   players.className = Player;
   players.addPlayer({
+    id: 'joe',
     name: 'Joe',
     position: 1,
     color: 'red',
@@ -30,6 +31,7 @@ describe('Board', () => {
     host: true
   });
   players.addPlayer({
+    id: 'jane',
     name: 'Jane',
     position: 2,
     color: 'green',
