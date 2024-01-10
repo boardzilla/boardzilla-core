@@ -34,8 +34,8 @@ export {
   choiceSetting
 } from './ui/setup/components/settingComponents.js';
 export {
-  PlayerInfo,
-} from './ui/game/components/PlayerInfo.js';
+  PlayerMat,
+} from './ui/game/components/PlayerMat.js';
 
 // starter function to create a new game instance
 // this is called from UI on first update and server on each call
