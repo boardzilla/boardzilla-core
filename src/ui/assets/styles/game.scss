@@ -759,8 +759,8 @@ html, body { height: 100% }
 
       &.offline:before {
         content: "";
-        background-color: black;
-        outline-color: grey;
+        background-color: grey;
+        outline-color: black;
         z-index: 10;
         display: block;
         position: absolute;
@@ -783,6 +783,7 @@ html, body { height: 100% }
       white-space: nowrap;
       font-size: 12pt;
       text-overflow: ellipsis;
+      color: white;
     }
 }
 
