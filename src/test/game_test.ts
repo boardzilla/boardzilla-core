@@ -19,10 +19,10 @@ const { expect } = chai;
 
 describe('Game', () => {
   const players = [
-    { name: 'Joe', color: 'red', position: 1, tokens: 0, avatar: '', host: true, },
-    { name: 'Jane', color: 'green', position: 2, tokens: 0, avatar: '', host: false, },
-    { name: 'Jag', color: 'yellow', position: 3, tokens: 0, avatar: '', host: false, },
-    { name: 'Jin', color: 'purple', position: 4, tokens: 0, avatar: '', host: false, },
+    { id: 'joe', name: 'Joe', color: 'red', position: 1, tokens: 0, avatar: '', host: true, },
+    { id: 'jane', name: 'Jane', color: 'green', position: 2, tokens: 0, avatar: '', host: false, },
+    { id: 'jag', name: 'Jag', color: 'yellow', position: 3, tokens: 0, avatar: '', host: false, },
+    { id: 'jin', name: 'Jin', color: 'purple', position: 4, tokens: 0, avatar: '', host: false, },
   ];
 
   class TestPlayer extends Player<TestPlayer, TestBoard> {
