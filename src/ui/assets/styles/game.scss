@@ -9,10 +9,10 @@
   100% { opacity: 0; filter: blur(10em); }
 }
 
-@keyframes pulse {
-  0% { opacity: 1; filter: drop-shadow(0 0 .2em #fff8) }
-  40% { opacity: 1; filter: drop-shadow(0 0 .2em #fff8) }
-  90% { opacity: .7; filter: drop-shadow(0 0 0 #fff8) }
+@keyframes pulse-player-name {
+  0% { opacity: 1; filter: drop-shadow(0 0 .4em #fff) }
+  40% { opacity: 1; filter: drop-shadow(0 0 .4em #fff) }
+  90% { opacity: .7; filter: drop-shadow(0 0 0 #fff) }
 }
 
 html, body { height: 100% }
@@ -734,6 +734,8 @@ html, body { height: 100% }
 
       img {
         position: absolute;
+        top: 0;
+        left: 0;
         height: 100%;
         border-radius: 50%;
         outline-color: #333;
@@ -789,15 +791,16 @@ html, body { height: 100% }
     .player-name {
       flex: 1;
       overflow: hidden;
+      text-align: left;
       white-space: nowrap;
-      font-size: 50%;
+      font-size: 35%;
       text-overflow: ellipsis;
       color: white;
-      margin: 0.25em 0 0 0.1em;
+      margin: 0.44em 0 0 0.1em;
     }
 
     &.current .player-name {
-      animation: pulse 1.5s infinite;
+      animation: pulse-player-name 2s infinite;
     }
   }
 
