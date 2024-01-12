@@ -62,7 +62,7 @@ type GameStore = {
   setFinished: (finished: boolean) => void;
   isMobile: boolean;
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with game.sequence
-  updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}) => void;
+  updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}, readOnly?: boolean) => void;
   position?: number; // this player
   setPosition: (p: number) => void;
   move?: {name: string, args: Record<string, Argument<Player>>}; // move in progress, this is the LCD of pendingMoves, but is kept here as well for convenience
@@ -125,7 +125,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setFinished: finished => set({ finished }),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
   boardJSON: [],
-  updateState: update => set(s => {
+  updateState: (update, readOnly=false) => set(s => {
     let { game } = s;
     const position = s.position || update.position;
     let previousRenderedState = s.previousRenderedState;
@@ -171,7 +171,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       ...updateBoard(game, position, update.state.board),
     };
 
-    const readOnly = update.type === 'gameFinished' || 'readOnly' in update && update.readOnly;
+    readOnly = readOnly || update.type === 'gameFinished';
 
     // may override board with new information from playing forward from the new state
     if (!readOnly) state = {
@@ -417,7 +417,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
 
         if (autoSubmit) {
           // no need to run locally, just queue the submit and remove any moves from being presented
-          // not using game queue because updates must come in before this if revealed information alters our forced move
+          // not using game queue because updates must come in *before* this if revealed information alters our forced move
           state.automove = window.setTimeout(() => window.top!.postMessage(message, "*"), 500); // speed
         } else {
           // run the move locally and submit in parallel

@@ -43,7 +43,6 @@ export type GameUpdateEvent = {
   state: GameState<Player> | GameState<Player>[];
   position: number;
   currentPlayers: number[];
-  readOnly?: boolean;
 }
 
 export type GameFinishedEvent = {
@@ -171,9 +170,11 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     case 'gameFinished':
       {
         if (data.state instanceof Array) {
+          const states = data.state;
           let delay = data.state[0].sequence === game.sequence + 1;
-          for (const state of data.state) {
-            queue.schedule(() => updateState({...data, state}), delay);
+          for (let i = 0; i !== states.length; i++) {
+            const state = states[i];
+            queue.schedule(() => updateState({...data, state}, i !== states.length - 1), delay);
             delay = true;
           }
         } else {
