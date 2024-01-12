@@ -1,4 +1,5 @@
 import { deserializeArg } from './action/utils.js';
+import random from 'random-seed';
 
 import type { ElementJSON } from './board/element.js';
 import type Board from './board/board.js';
@@ -10,12 +11,13 @@ import type { SerializedArg } from './action/utils.js';
 
 export type SetupState<P extends Player> = {
   players: (PlayerAttributes<P> & Record<string, any>)[],
-  settings: Record<string, any>
+  settings: Record<string, any>,
+  rseed: string,
 }
 
 export type GameState<P extends Player> = {
   players: PlayerAttributes<P>[],
-  settings: Record<string, any>
+  settings: Record<string, any>,
   position: FlowBranchJSON[],
   board: ElementJSON[],
   sequence: number,
@@ -62,11 +64,29 @@ export type GameInterface<P extends Player> = {
   ) => GameState<P>
 }
 
+function advanceRseed(rseed?: string) {
+  if (!rseed) {
+    rseed = String(Math.random());
+  } else {
+    rseed = String(random.create(rseed).random());
+  }
+
+  return rseed;
+}
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   if (globalThis.window) globalThis.console.debug = () => {};
   return {
     initialState: (state: SetupState<Player>): GameUpdate<Player> => {
+      if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev
+        let fixedRseed = sessionStorage.getItem('rseed') as string;
+        if (!fixedRseed) {
+          fixedRseed = String(Math.random());
+          sessionStorage.setItem('rseed', fixedRseed);
+        }
+        state.rseed = fixedRseed;
+      }
+      if (!state.rseed) state.rseed = advanceRseed(); // set the seed first because createGame may call random()
       const game = setup(state);
       if (game.phase !== 'finished') game.play();
       return game.getUpdate();
@@ -82,6 +102,13 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board._ctx.game;
+      const rseed = advanceRseed(cachedGame?.rseed || previousState.state.rseed);
+      if (cachedGame) {
+        cachedGame.setRandomSeed(rseed);
+      } else {
+        previousState.state.rseed = rseed;
+      }
+
       const game = cachedGame || setup(previousState.state, {trackMovement: true});
       game.players.setCurrent(previousState.currentPlayers),
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');

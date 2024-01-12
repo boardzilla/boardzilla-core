@@ -1066,7 +1066,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       const { attributes } = this._ui.layouts[l];
       let children = layoutItems[l];
 
-      const { slots, direction, gap, scaling, alignment, limit, maxOverlap } = attributes;
+      const { slots, direction, gap, scaling, alignment, maxOverlap } = attributes;
       let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
       const area = this.getArea(attributes);
 
@@ -1085,7 +1085,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
       if (!children?.length && minRows === 1 && minColumns === 1) continue;
       children ??= [];
-      if (limit) children = children.slice(0, limit);
 
       if (!slots) {
         const cells: [number, number][] = [];
@@ -1485,13 +1484,14 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     for (const child of this._t.children) {
       if (child._ui.appearance.render === false) continue;
       for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
-        const { applyTo } = this._ui.layouts[l];
+        const { applyTo, attributes } = this._ui.layouts[l];
 
         if ((typeof applyTo === 'function' && child instanceof applyTo) ||
           (typeof applyTo === 'string' && child.name === applyTo) ||
           child === applyTo ||
           (applyTo instanceof ElementCollection && applyTo.includes(child))
         ) {
+          if (attributes.limit !== undefined && attributes.limit <= (layoutItems[l]?.length ?? 0)) break;
           layoutItems[l] ??= [];
           if (this._t.order === 'stacking') {
             layoutItems[l]!.unshift(child);

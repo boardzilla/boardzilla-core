@@ -14,8 +14,8 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
+  const [game, finished, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
+    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
@@ -242,7 +242,7 @@ export default () => {
         }
       )}
       style={{ ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio }}
-      onClick={() => game.phase === 'finished' && setVictoryMessageDismissed(true)}
+      onClick={() => finished && setVictoryMessageDismissed(true)}
     >
       <audio ref={clickAudio} src={click} id="click"/>
       <div id="background"/>
@@ -256,15 +256,15 @@ export default () => {
         />
       </div>
 
-      {game.phase !== 'finished' && <PlayerControls
+      <PlayerControls
         name={name}
         style={style}
         moves={moves}
         onSubmit={submitMove}
-      />}
+      />
 
       {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
-      {game.phase === 'finished' && !victoryMessageDismissed && (
+      {finished && !victoryMessageDismissed && (
         <div className="game-finished">
           Game finished
           {game.winner.length > 0 && (
@@ -272,6 +272,8 @@ export default () => {
               {game.winner.map(p => p.name).join(', ')} win{game.winner.length === 1 && 's'}!
             </div>
           )}
+          {game.winner.length === 0 && game.players.length > 1 && <div>Tie game</div>}
+          {game.winner.length === 0 && game.players.length === 1 && <div style={{color: "#800"}}>You lose</div>}
         </div>
       )}
     </div>

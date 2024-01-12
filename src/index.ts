@@ -10,18 +10,7 @@ import {
 
 export { Board, union } from './board/index.js';
 
-export {
-  playerActions,
-  loop,
-  whileLoop,
-  forLoop,
-  forEach,
-  switchCase,
-  ifElse,
-  eachPlayer,
-  everyPlayer,
-  Do
-} from './flow/index.js';
+export { Do } from './flow/index.js';
 
 export { createInteface } from './interface.js';
 export { times, range, shuffleArray } from './utils.js';
@@ -92,22 +81,11 @@ export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
 ): Game<P, B> => {
   //console.time('setup');
   const game = new Game<P, B>(playerClass, boardClass);
-  let rseed = '';
-  if (state && 'rseed' in state) {
-    rseed = state.rseed;
-  } else {
-    if (globalThis.window?.sessionStorage) { // web context, use a fixed seed for dev
-      rseed = sessionStorage.getItem('rseed') as string;
-      if (!rseed) {
-        rseed = String(Math.random());
-        sessionStorage.setItem('rseed', rseed);
-      }
-    } else {
-      rseed = String(Math.random());
-    }
-  }
+  const inSetup = !('board' in state);
+
   globalThis.$ = game.board._ctx.namedSpaces;
-  game.setRandomSeed('sequence' in state ? String(state.sequence) + '-' + rseed : rseed);
+
+  game.setRandomSeed(state.rseed);
   game.setSettings(state.settings);
   game.players.fromJSON(state.players);
 
@@ -118,7 +96,7 @@ export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
   // lock game from receiving any more setup
   game.start();
 
-  if ('board' in state) {
+  if (!inSetup) {
     if (options?.trackMovement) game.trackMovement();
     game.sequence = state.sequence;
     game.board.fromJSON(state.board);

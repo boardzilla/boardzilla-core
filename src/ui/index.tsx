@@ -58,6 +58,8 @@ type GameStore = {
   setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
   game: Game<Player, Board<Player>>;
   setGame: (game: Game<Player, Board<Player>>) => void;
+  finished: boolean;
+  setFinished: (finished: boolean) => void;
   isMobile: boolean;
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with game.sequence
   updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}) => void;
@@ -119,6 +121,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   setSetup: setup => set({ setup }),
   game: new Game(Player, Board),
   setGame: (game: Game<Player, Board<Player>>) => set({ game }),
+  finished: false,
+  setFinished: finished => set({ finished }),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
   boardJSON: [],
   updateState: update => set(s => {
@@ -158,7 +162,6 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     if (update.type === 'gameFinished') {
       game.players.setCurrent([]);
       game.winner = update.winners.map(p => game.players.atPosition(p)!);
-      game.phase = 'finished';
     }
     console.debug(`Game update for player #${position}. Current flow:\n ${game.flow.stacktrace()}`);
 
@@ -168,7 +171,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       ...updateBoard(game, position, update.state.board),
     };
 
-    const readOnly = game.phase === 'finished' || 'readOnly' in update && update.readOnly;
+    const readOnly = update.type === 'gameFinished' || 'readOnly' in update && update.readOnly;
 
     // may override board with new information from playing forward from the new state
     if (!readOnly) state = {

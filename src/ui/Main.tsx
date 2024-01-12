@@ -132,7 +132,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, setError, updateState, setUserOnline] = gameStore(s => [s.game, s.setError, s.updateState, s.setUserOnline]);
+  const [game, setFinished, setError, updateState, setUserOnline] = gameStore(s => [s.game, s.setFinished, s.setError, s.updateState, s.setUserOnline]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
@@ -180,6 +180,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
           let delay = data.state.sequence === game.sequence + 1;
           queue.schedule(() => updateState(data as typeof data & {state: typeof data.state}), delay); // TS needs help here...
         }
+        if (data.type === 'gameFinished') queue.schedule(() => setFinished(true), true);
       }
       break;
     case 'messageProcessed':
@@ -191,7 +192,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, [setUserOnline, moveCallbacks, game, queue, updateState, catchError]);
+  }, [setUserOnline, setFinished, moveCallbacks, game, queue, updateState, catchError]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)

@@ -43,6 +43,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
   const draggable = !!selections?.dragMoves?.length; // ???
   const droppable = dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
   const placing = useMemo(() => element === placement?.piece, [element, placement])
+  const isVisible = useMemo(() => element.isVisible(), [element, boardJSON])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const relativeTransform = useMemo(() => element.relativeTransformToBoard(), [element, element._ui.computedStyle]);
@@ -163,7 +164,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
           // move to 'new' by removing transform and animate
           transform.style.removeProperty('transition');
           transform.style.removeProperty('transform');
-        }, 0);
+        }, 10);
 
         const cancel = (e: TransitionEvent) => {
           if (e.propertyName === 'transform' && e.target === wrapper.current) {
@@ -173,7 +174,6 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
           }
         };
         transform.addEventListener('transitionend', cancel);
-        return () => transform.removeEventListener('transitionend', cancel);
       }
     }
   }, [element, branch, wrapper, relativeTransform, previousRenderedState, moveTransform, doneMoving, dragElement, dragOffset]);
@@ -406,7 +406,9 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
   }
 
   const attrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
-    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) && typeof val !== 'function' && typeof val !== 'object'
+    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) &&
+      typeof val !== 'function' && typeof val !== 'object' &&
+      (isVisible || (element.constructor as typeof GameElement).visibleAttributes?.includes(key)) // should this be scrubbed during json hydration?
   )).map(([key, val]) => (
     [`data-${key.toLowerCase()}`, serialize(val)]
   ))));
