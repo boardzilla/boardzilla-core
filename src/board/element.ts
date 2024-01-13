@@ -799,7 +799,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
     if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name or we'll leak information
     if (this._t.order) json.order = this._t.order;
-    json.was = this._t.was;
+    if (this._t.was) json.was = this._t.was;
     // do not expose hidden deck shuffles
     if (seenBy && this._t.was && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) json.was = this.branch();
     if (this._t.children.length) json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));

@@ -5,14 +5,17 @@ import Game from '../game.js'
 
 import {
   Player,
+  Board,
+  createBoardClasses,
+} from '../index.js';
+
+import {
+  loop,
   playerActions,
   whileLoop,
   eachPlayer,
   everyPlayer,
-  Board,
-  createBoardClasses,
-  loop
-} from '../index.js';
+} from '../flow/index.js';
 
 chai.use(spies);
 const { expect } = chai;

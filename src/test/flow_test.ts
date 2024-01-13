@@ -9,7 +9,7 @@ import {
   forEach,
   switchCase,
   ifElse,
-} from '../index.js';
+} from '../flow/index.js';
 
 import {
   Do,
