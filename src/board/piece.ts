@@ -32,9 +32,7 @@ export default class Piece<P extends Player<P, B> = any, B extends Board<P, B> =
     if (options?.fromBottom !== undefined) pos = to._t.children.length - options.fromBottom;
     const previousParent = this._t.parent;
     const position = this._t.parent!._t.children.indexOf(this);
-    if (this._ctx.trackMovement && !this.hasSameParent()) {
-      this.game.addDelay();
-    }
+    if (this.hasChangedParent()) this.game.addDelay();
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);

@@ -75,7 +75,6 @@ function advanceRseed(rseed?: string) {
 }
 
 export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
-  if (globalThis.window) globalThis.console.debug = () => {};
   return {
     initialState: (state: SetupState<Player>): GameUpdate<Player> => {
       if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev

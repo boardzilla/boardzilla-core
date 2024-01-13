@@ -216,9 +216,14 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   }
 
   addDelay() {
-    if (!this.board._ctx.trackMovement) return;
-    this.sequence += 1;
-    this.intermediateUpdates.push(this.players.map(p => this.getState(p)));
+    if (this.board._ctx.trackMovement) {
+      this.sequence += 1;
+    } else if (this.intermediateUpdates.length) {
+      return; // even if not tracking, record one intermediate to allow UI to extract proper state to animate towards
+    }
+    this.intermediateUpdates.push(this.players.map(
+      p => this.getState(p) // TODO unnecessary for all players if in context of player
+    ));
     this.board.resetMovementTracking();
   }
 

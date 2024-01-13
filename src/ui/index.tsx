@@ -84,8 +84,8 @@ type GameStore = {
   selected: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   setSelected: (s: GameElement[]) => void;
   automove?: number;
-  renderedState: Record<string, {key: string, style?: Box}>;
-  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, movedTo?: string }> };
+  renderedState: Record<string, {key: string, style?: Box, attrs?: Record<string, any>}>;
+  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, attrs?: Record<string, any>, movedTo?: string }> };
   setBoardSize: () => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
@@ -128,16 +128,19 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   updateState: (update, readOnly=false) => set(s => {
     let { game } = s;
     const position = s.position || update.position;
+    let renderedState = s.renderedState;
     let previousRenderedState = s.previousRenderedState;
     window.clearTimeout(s.automove);
     if (update.state.sequence === s.game.sequence + 1) {
       // demote current state to previous and play over top
+      renderedState = {};
       previousRenderedState = {sequence: s.game.sequence, elements: {...s.renderedState}};
     } else if (update.state.sequence !== s.previousRenderedState.sequence + 1) {
       // old state is invalid
+      renderedState = {};
       previousRenderedState = {sequence: -1, elements: {}};
     }
-    // otherwise reuse previous state, we're overwriting an internal version of the same state
+    // otherwise reuse previous+current state, we're overwriting an internal version of the same state
 
     if (game.phase === 'new' && s.setup) {
       game = s.setup(update.state);
@@ -168,6 +171,7 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     let state: Partial<GameStore> = {
       game,
       position,
+      finished: false,
       ...updateBoard(game, position, update.state.board),
     };
 
@@ -179,8 +183,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
       ...updateSelections(game, position, undefined)
     }
 
-    state.renderedState = {};
     state.previousRenderedState = previousRenderedState;
+    state.renderedState = renderedState;
     s.game.sequence = update.state.sequence;
 
     if (readOnly) {
@@ -234,8 +238,10 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
     }
 
     if (!pendingMove) {
+      // swap for cancellation (basically a revert)
+      const previousRenderedState = {...s.renderedState};
       state.renderedState = {...s.previousRenderedState.elements} as typeof state.renderedState;
-      state.previousRenderedState = { sequence: Math.floor(s.game.sequence), elements: {} };
+      state.previousRenderedState = { sequence: Math.floor(s.game.sequence), elements: previousRenderedState };
     }
 
     if (!s.placement && s.game.sequence > Math.floor(s.game.sequence)) {
@@ -429,12 +435,18 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
             } else {
               game.play();
               game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
+              let json: any = undefined;
+              if (game.intermediateUpdates.length) {
+                json = game.intermediateUpdates[0][0].board
+                game.board.fromJSON(json);
+                game.intermediateUpdates = [];
+              }
               state = {
                 ...state,
-                ...updateBoard(game, position),
+                ...updateBoard(game, position, json),
               }
 
-              window.top!.postMessage(message, "*");
+               window.top!.postMessage(message, "*");
             }
           } catch (e) {
             // first line of defense for bad game logic. cancel all moves and
