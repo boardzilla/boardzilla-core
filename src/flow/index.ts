@@ -10,7 +10,9 @@ import {default as EveryPlayer} from './every-player.js';
 import type { Player } from '../player/index.js';
 import type { Serializable } from '../action/utils.js';
 import { FlowStep } from './flow.js';
-export { Do, FlowControl } from './enums.js';
+import { Do, FlowControl } from './enums.js';
+export { Do, FlowControl };
+export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
 
 /**
  * Stop the flow and wait for a player to act.
@@ -32,16 +34,16 @@ export { Do, FlowControl } from './enums.js';
  * provided, this defaults to the {@link PlayerCollection#current | current
  * player}
  *
- * @param options.expand - If set to true, rather than select the action
- * directly, the player will be prompted to make the first choice in the action.
- * For example, if a `playCard` action was supplied here and the player had to
- * choose a card to play, rather than present the player with an explicit choice
- * to 'play' they would simply be asked to choose a card. Default true.
+ * @param options.skipIf - One of 'always', 'never' or 'only-one' (Default
+ * 'always').
  *
- * @param options.skipIfOnlyOne - If set to true, if there is only valid action
- * to take amongst the choices given, the game will attempt to take the move
- * automatically, prompting the player for any choices that would need to be
- * made to complete this action. Default false.
+ * - only-one: If there is only valid choice in the choices given, the game
+ * will skip this choice, prompting the player for subsequent choices, if any,
+ * or completing the action otherwise.
+ * - always: Rather than present this choice directly, the player will be
+ * prompted with choices from the *next choice* in each action here, essentially
+ * expanding the choices ahead of time to save the player a step.
+ * - never: Always present this choice, even if the choice is forced
  *
  * @category Flow
  */
@@ -52,7 +54,7 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
  * like a standard `while` loop.
  *
  * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If this value is instead one of {@link Do.repeat},
+ * of nested Flow functions. If this value is instead one of {@link Do.break},
  * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
  * the current loop can be interupted.
  *
@@ -73,7 +75,7 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
 export const whileLoop = <P extends Player>(options: ConstructorParameters<typeof WhileLoop<P>>[0]) => new WhileLoop<P>(options);
 
 /**
- * Create a loop that continues until {@link Do.break} is returned
+ * Create a loop that continues until {@link Do.break} is called
  *
  * @param options.do - The part that gets repeated. This can contain any number
  * of nested Flow functions. If this value is instead one of {@link Do.repeat},
@@ -81,9 +83,10 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
  * the current loop can be interupted.
  *
  * @example
- * loop(playerActions({ actions: {
- *   takeOneFromBag: Do.break,
- * )});
+ * loop(playerActions({ actions: [
+ *   'takeOneFromBag',
+ *   { name: 'done': do: Do.break }
+ * ]}));
  *
  * @category Flow
  */
@@ -144,11 +147,12 @@ export const forLoop = <P extends Player, T = Serializable<P>>(options: Construc
  *
  * @example
  * forEach({ name: 'card', collection: deck.all(Card), do: [
- *   ({ card }) => card.showTo(player), // show each card from the deck to player in turn
- *   playerActions({ actions: {
- *     chooseCard: skip,
- *     pass: null
- *   }}),
+ *   // show each card from the deck to player in turn
+ *   ({ card }) => card.showTo(player),
+ *   playerActions({ actions: [
+ *     'chooseCard',
+ *     'pass',
+ *   ]}),
  * ]});
  *
  * @category Flow
@@ -158,7 +162,7 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
 /**
  * Create a loop that iterates over each player. This is the same as {@link
  * forEach} with the additional behaviour of setting the {@link
- * PlayerCollection#current | current player}.
+ * PlayerCollection#current | current player} on each iteration of the loop.
  *
  * @param options.do - The part that gets repeated. This can contain any number
  * of nested Flow functions. If this value is instead one of {@link Do.repeat},
@@ -184,15 +188,9 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  * loop as its only argument.
  *
  * @example
- * eachPlayer({ name: 'biddingPlayer', do: ( // each player in turn has a chance to bid
- *   playerActions({ actions: {
- *     bid: ({ player }) => {
- *       // player has bid
- *       return skip();
- *     },
- *     pass: null
- *   }}),
- * ]});
+ * eachPlayer({ name: 'biddingPlayer', do: // each player in turn has a chance to bid
+ *   playerActions({ actions: [ 'bid', 'pass' ] })
+ * });
  *
  * @category Flow
  */
@@ -229,8 +227,10 @@ export const ifElse = <P extends Player>(options: ConstructorParameters<typeof I
  *
  * @param options.cases - An array of conditions that will test whether they
  * meet the conditions based on the evaluated `switch` and execute their `do`
- * block. Only the first one that qualifies will run. This can contain any
- * number of nested Flow functions.
+ * block. The case block can contain an `eq` which will test for equality with a
+ * provided value, or `test` which will test the value using a provided function
+ * that must return a boolean. Only the first one that meets the condition will
+ * run. The `do` can contain any number of nested Flow functions.
  *
  * @param options.default - If no case qualifies, a `default` case can be
  * provided.
@@ -273,13 +273,8 @@ export const switchCase = <P extends Player, T extends Serializable<P>>(options:
  * specified, this will be all players.
  *
  * @example
- * everyPlayer({ name: 'pass-cards', do: ( // each player selects a card from hand or passes
- *   playerActions({ actions: {
- *     selectCard: ({ player }) => {
- *       return skip();
- *     },
- *     pass: null
- *   }}),
+ * everyPlayer({ name: 'passCardPlayer', do: ( // each player selects a card from hand or passes
+ *   playerActions({ actions: [ 'selectCard', 'pass' ]}),
  * ]});
  *
  * @category Flow

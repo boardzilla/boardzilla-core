@@ -23,17 +23,14 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
     exit: ElementEventHandler<GameElement>[],
   } = { enter: [], exit: [] };
 
-  /** internal */
   isSpace() { return true; }
 
-  /** internal */
   create<T extends GameElement>(className: ElementClass<T>, name: string, attributes?: ElementAttributes<T>): T {
     const el = super.create(className, name, attributes);
     this.triggerEvent("enter", el);
     return el;
   }
 
-  /** internal */
   addEventHandler<T extends GameElement>(type: keyof Space['_eventHandlers'], handler: ElementEventHandler<T>) {
     this._eventHandlers[type].push(handler);
   }
@@ -54,11 +51,22 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
     this.addEventHandler<T>("enter", { callback, type });
   }
 
+  /**
+   * Attach a callback to this space for every element that is moved out of this
+   * space.
+   * @category Structure
+   *
+   * @param type - the class of element that will trigger this callback
+   * @param callback - Callback will be called each time an element exits, with
+   * the exiting element as the only argument.
+   *
+   * @example
+   * deck.onExit(Card, card => card.showToAll()) // cards drawn from the deck are automatically turned face up
+   */
   onExit<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void) {
     this.addEventHandler<T>("exit", { callback, type });
   }
 
-  /** internal */
   triggerEvent(event: keyof Space['_eventHandlers'], element: GameElement) {
     for (const handler of this._eventHandlers[event]) {
       if (event === 'enter' && !(element instanceof handler.type)) continue;
@@ -69,7 +77,9 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
 
   /**
    * Make this space adjacent with another space for the purposes of adjacency
-   * and path-finding functions.
+   * and path-finding functions. Using `connectTo` on a space creates a custom
+   * graph of adjacency for the container of this space that overrides the
+   * standard adjacency based on the built-in row/column placement.
    * @category Structure
    *
    * @param space - {@link Space} to connect to
@@ -87,15 +97,6 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
     if (!graph.hasNode(space._t.id)) graph.addNode(space._t.id, {space});
     graph.addEdge(this._t.id, space._t.id, {distance});
     return this;
-  }
-
-  /**
-   * If this space is adjacent to another space
-   * @category Structure
-   */
-  adjacentTo(space: Space<P, B>) {
-    if (!this._t.parent?._t.graph) return false;
-    return this._t.parent!._t.graph.areNeighbors(this._t.id, space._t.id);
   }
 
   /**
@@ -167,7 +168,6 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
     return c;
   }
 
-  /** internal */
   _otherFinder<T extends GameElement>(finders: ElementFinder<T>[]): ElementFinder<GameElement> {
     let otherFinder: ElementFinder<GameElement> = el => el !== (this as GameElement);
     for (const finder of finders) {

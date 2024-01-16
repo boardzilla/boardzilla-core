@@ -3,7 +3,7 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import { action, Action } from '../action/index.js';
+import { Action } from '../action/index.js';
 import Player from '../player/player.js';
 import { Board } from '../index.js';
 import Space from '../board/space.js';
@@ -17,7 +17,7 @@ describe('Actions', () => {
   let testAction: Action<any>;
   const actionSpy = chai.spy(({ n, m }: { n: number, m: number }) => {[n, m]});
   beforeEach(() => {
-    testAction = action({
+    testAction = new Action({
       prompt: 'add some counters',
     }).chooseNumber('n', {
       prompt: 'how many?',
@@ -55,7 +55,7 @@ describe('Actions', () => {
 
   describe('nextSelections', () => {
     it('skipIf', () => {
-      const testAction = action({ prompt: 'pick an even number' })
+      const testAction = new Action({ prompt: 'pick an even number' })
         .chooseFrom('a', [1, 2])
         .chooseFrom('b', [3, 4], {skipIf: ({ a }) => a === 1 })
         .chooseFrom('c', [5, 6])
@@ -68,7 +68,7 @@ describe('Actions', () => {
     });
 
     it('skipIf last', () => {
-      const testAction = action({ prompt: 'pick an even number' })
+      const testAction = new Action({ prompt: 'pick an even number' })
         .chooseFrom('a', [1, 2] )
         .chooseFrom('b', [5, 6])
         .chooseFrom('c', [3, 4], { skipIf: ({ a }) => a === 1 })
@@ -81,23 +81,23 @@ describe('Actions', () => {
     let options: number[];
 
     it('tests choices', () => {
-      const testAction1 = action({ prompt: 'pick an even number' }).chooseFrom('n', []);
+      const testAction1 = new Action({ prompt: 'pick an even number' }).chooseFrom('n', []);
       expect(testAction1._getPendingMoves({})).to.be.undefined;
 
-      const testAction2 = action({ prompt: 'pick an even number' }).chooseFrom('n', [1]);
+      const testAction2 = new Action({ prompt: 'pick an even number' }).chooseFrom('n', [1]);
       expect(testAction2._getPendingMoves({})?.length).to.equal(1);
     });
 
     it('tests bounds', () => {
-      const testAction1 = action({ prompt: 'pick an even number' }).chooseNumber('n', { min: -1, max: 0 });
+      const testAction1 = new Action({ prompt: 'pick an even number' }).chooseNumber('n', { min: -1, max: 0 });
       expect(testAction1._getPendingMoves({})?.length).to.equal(1);
 
-      const testAction2 = action({ prompt: 'pick an even number' }).chooseNumber('n', { min: 0, max: -1 });
+      const testAction2 = new Action({ prompt: 'pick an even number' }).chooseNumber('n', { min: 0, max: -1 });
       expect(testAction2._getPendingMoves({})).to.be.undefined;
     });
 
     it('resolves selection to determine viability', () => {
-      const testAction1 = action({ prompt: 'pick an even number' })
+      const testAction1 = new Action({ prompt: 'pick an even number' })
         .chooseFrom('n', () => options.filter(n => n % 2 === 0))
 
       options = [1,2];
@@ -107,7 +107,7 @@ describe('Actions', () => {
     });
 
     it('resolves selection deeply to determine viability', () => {
-      const testAction1 = action({ prompt: 'pick an even number' })
+      const testAction1 = new Action({ prompt: 'pick an even number' })
         .chooseFrom('n', () => options.filter(n => n % 2 === 0))
         .chooseNumber('m', {
           min: ({ n }) => n,
@@ -121,7 +121,7 @@ describe('Actions', () => {
     });
 
     it('does not fully resolve unbounded args', () => {
-      const testAction1 = action({ prompt: 'pick an even number' })
+      const testAction1 = new Action({ prompt: 'pick an even number' })
         .chooseNumber('n', { min: 1 })
         .chooseNumber('m', {
           min: ({ n }) => n * 10,
@@ -132,7 +132,7 @@ describe('Actions', () => {
     });
 
     it('combines', () => {
-      testAction = action({ prompt: 'purchase' })
+      testAction = new Action({ prompt: 'purchase' })
         .enterText('taunt', { prompt: 'taunt' })
         .chooseGroup({
           lumber: ['number'],
@@ -160,7 +160,7 @@ describe('Actions', () => {
     });
 
     it('combines and skips', () => {
-      testAction = action({ prompt: 'purchase' })
+      testAction = new Action({ prompt: 'purchase' })
         .chooseGroup({
           lumber: ['number', {min: 0, max: 3}],
           steel: ['number', {min: 0, max: 0}],
@@ -189,7 +189,7 @@ describe('Actions', () => {
     });
 
     it('combines forced', () => {
-      testAction = action({ prompt: 'purchase' })
+      testAction = new Action({ prompt: 'purchase' })
         .chooseNumber('lumber', {min: 0, max: 3})
         .chooseNumber('steel', {min: 0, max: 0})
         .chooseNumber('meat', {min: 0, max: 3})
@@ -218,7 +218,7 @@ describe('Actions', () => {
   describe('getPendingMoves with skip strategies', () => {
     let testAction: Action<any, {r: string, n: number}>;
     beforeEach(() => {
-      testAction = action({ prompt: 'p' })
+      testAction = new Action({ prompt: 'p' })
         .chooseFrom('r', ['oil', 'garbage'])
         .chooseNumber('n', {
         max: ({ r }) => r === 'oil' ? 3 : 1
@@ -294,7 +294,7 @@ describe('Actions', () => {
     });
 
     it('chooseOnBoard', () => {
-      const boardAction = action({
+      const boardAction = new Action({
       }).chooseOnBoard('piece', board.all(Piece));
       const moves = boardAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
@@ -304,7 +304,7 @@ describe('Actions', () => {
     });
 
     it('moves', () => {
-      const boardAction = action({
+      const boardAction = new Action({
       }).chooseOnBoard('piece', board.all(Piece)).move('piece', board.first('space-2')!);
       boardAction._process(player, {piece: board.first('piece-1')!});
       expect(board.first('space-1')!.all(Piece).length).to.equal(1);
@@ -312,7 +312,7 @@ describe('Actions', () => {
     });
 
     it('places', () => {
-      const boardAction = action({
+      const boardAction = new Action({
       }).chooseOnBoard('piece', board.all(Piece)).placePiece('piece', board.first('space-2')!);
       boardAction._process(player, {piece: board.first('piece-1')!, "__placement__": [3, 2]});
       expect(board.first('space-1')!.all(Piece).length).to.equal(1);

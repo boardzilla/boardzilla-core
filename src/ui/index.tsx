@@ -20,6 +20,18 @@ import type { BoardSize } from '../board/board.js';
 import type { GameState } from '../interface.js';
 import type { ResolvedSelection } from '../action/selection.js';
 export { ProfileBadge } from './game/components/ProfileBadge.js';
+import {
+  toggleSetting,
+  numberSetting,
+  textSetting,
+  choiceSetting
+} from './setup/components/settingComponents.js';
+export {
+  toggleSetting,
+  numberSetting,
+  textSetting,
+  choiceSetting
+};
 
 // this feels like the makings of a class
 export type UIMove = PendingMove<Player> & {
@@ -567,11 +579,38 @@ export type SetupComponentProps = {
   updateKey: (key: string, value: any) => void,
 }
 
-export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, { settings, boardSizes, layout }: {
+/**
+ * The core function called to customize the game's UI.
+ *
+ * @param {Object} options
+ * @param options.settings - Define your game's settings that the host can
+ * customize.  This is an object consisting of custom settings. The key is a
+ * name for this setting that can be used in {@link Game#setting} to retrieve
+ * the setting's value for this game. The object is the result of calling one of
+ * the setting functions {@link toggleSetting}, {@link numberSetting}, {@link
+ * textSetting} or {@link choiceSetting}.
+ *
+ * @param options.boardSizes - A function that determines what board size to use
+ * based on the player's device and viewport. The function will take the
+ * following arguments:
+ * - screenX: The player's view port width
+ * - screenY: The player's view port height
+ * - mobile: true if using a mobile device
+ * The function should return a string indicating the layout to use, this will
+ * be cached and sent to the `layout` function.
+ *
+ * @param options.layout - A function for declaring all UI customization in the
+ * game. Typically this will include calls to {@link GameElement#layout}, {@link
+ * GameElement#appearance}, {@link Board#layoutStep} and {@link
+ * Board#layoutAction}.
+ * @category UI
+ */
+export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, options: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize,
   layout?: (board: B, player: P, boardSize: string) => void
 }): void => {
+  const { settings, boardSizes, layout } = options;
   const state = gameStore.getState();
   const setupGame: SetupFunction = (state) => {
     const game = setup(state);

@@ -11,11 +11,61 @@ import type {
 } from './element.js';
 import type Player from '../player/player.js';
 
+/**
+ * Type for layout of player controls
+ * @category UI
+ */
 export type ActionLayout = {
+  /**
+   * The element to which the controls will anchor themselves
+   */
   element: GameElement,
+  /**
+   * Width of the controls as a percentage of the anchor element
+   */
   width?: number,
+  /**
+   * Height of the controls as a percentage of the anchor element
+   */
   height?: number,
+  /**
+   * Boardzilla will automatically anchor the controls to {@link GameElement}'s
+   * selected as part of the action. Include the name of the selection here to
+   * prevent that behaviour.
+   */
   noAnchor?: string[],
+  /**
+   * Position of the controls
+   * - inset: Inside the element
+   * - beside: To the left or right of the element
+   * - stack: Above or below the element
+   */
+  position?: 'inset' | 'beside' | 'stack'
+  /**
+   * Distance from the left edge of the anchor element as a percentage of the
+   * element's width
+   */
+  left?: number,
+  /**
+   * Distance from the right edge of the anchor element as a percentage of the
+   * element's width
+   */
+  right?: number,
+  /**
+   * Distance from the top edge of the anchor element as a percentage of the
+   * element's height
+   */
+  top?: number,
+  /**
+   * Distance from the bottom edge of the anchor element as a percentage of the
+   * element's height
+   */
+  bottom?: number,
+  /**
+   * For `'beside'` or `'stack'`, `gap` is the distance between the controls and
+   * the element as a percentage of the entire board's size.
+   */
+  gap?: number,
 } & (({
   position?: 'inset'
 }) & (({
@@ -49,8 +99,21 @@ export type BoardSize = {
   fixed?: 'landscape' | 'portrait'
 };
 
-/** @category Board */
+/**
+ * Base class for the board. Represents the current state of the game and
+ * contains all game elements (spaces and pieces). All games contain a single
+ * Board class that inherits from this class and on which custom properties and
+ * methods for a specific game can be added.
+ *
+ * @category Board
+ */
 export default class Board<P extends Player<P, B> = any, B extends Board<P, B> = any> extends Space<P, B> {
+  /**
+   * An element containing all game elements that are not currently in
+   * play. When elements are removed from the game, they go here, and can be
+   * retrieved, using
+   * e.g. `board.pile.first('removed-element').putInto('destination-area')`.
+   */
   pile: GameElement<P>;
 
   constructor(ctx: Partial<ElementContext<P, B>>) {
@@ -60,17 +123,12 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     this.pile = this._ctx.removed;
   }
 
+  /**
+   * This method must be called inside {@link createGame} with all custom Space
+   * and Piece class declared in your game.
+   */
   registerClasses(...classList: ElementClass[]) {
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
-  }
-
-  /**
-   * The setting value created by the host
-   *
-   * @param key - Corresponds to the key in `settings` in your {@link createGame}
-   */
-  gameSetting(key: string) {
-    return this._ctx.game.settings[key];
   }
 
   // also gets removed elements
@@ -148,15 +206,39 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     return super.applyLayouts(force);
   }
 
+  /**
+   * Apply layout rules to a particular step in the flow, controlling where
+   * player prompts and choices appear in relation to the board
+   *
+   * @param step - the name of the step as defined in {@link playerActions}
+   * @param attributes - see {@link ActionLayout}
+   *
+   * @category UI
+   */
   layoutStep(step: string, attributes: ActionLayout) {
     if (step !== 'out-of-turn' && !this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
     this._ui.stepLayouts["step:" + step] = attributes;
   }
 
+  /**
+   * Apply layout rules to a particular action, controlling where player prompts
+   * and choices appear in relation to the board
+   *
+   * @param action - the name of the action as defined in {@link game#defineActions}
+   * @param attributes - see {@link ActionLayout}
+   *
+   * @category UI
+   */
   layoutAction(action: string, attributes: ActionLayout) {
     this._ui.stepLayouts["action:" + action] = attributes;
   }
 
+  /**
+   * Remove all built-in default appearance. If any elements have not been given a
+   * custom appearance, this causes them to be hidden.
+   *
+   * @category UI
+   */
   disableDefaultAppearance() {
     this._ui.disabledDefaultAppearance = true;
   }

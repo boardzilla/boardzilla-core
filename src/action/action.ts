@@ -9,12 +9,39 @@ import { Piece } from '../board/index.js';
 import type { Player } from '../player/index.js';
 import type { default as Game, PendingMove } from '../game.js';
 
+/**
+ * A single argument
+ * @category Actions
+ */
 export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | P;
+
+/**
+ * An argument that can be added to an {@link Action}. Each value is chosen by
+ * player or in some cases passed from a previous action. Arguments can be:
+ * - a number
+ * - a string
+ * - a boolean
+ * - a {@link GameElement}
+ * - a {@link Player}
+ * - an array of one these in the case of a multi-choice selection
+ * @category Actions
+ */
 export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
 
+/**
+ * A follow-up action
+ * @category Actions
+ */
 export type FollowUp<P extends Player> = {
+  // The name of the action, as defined in {@link defineActions}.
   name: string,
+  // The player to take this action, if different than the current player
   player?: P,
+  /**
+   * An object containing arguments to be passed to the follow-up action. This
+   * is useful if there are multiple ways to trigger this follow-up that have
+   * variations.
+   */
   args?: Record<string, Argument<P>>
 }
 
@@ -34,10 +61,12 @@ type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R exte
 }
 
 /**
- * Actions represent discreet moves players can make. Create Actions using the
- * {@link action} function. Actions are evaluated at the time the player has the
- * option to perform the action, so any methods that involve game state will
- * reflect the state at the time the action is performed.
+ * Actions represent discreet moves players can make. These contain the choices
+ * needed to take this action and the results of the action. Create Actions
+ * using the {@link Game#action} function. Actions are evaluated at the time the
+ * player has the option to perform the action, so any expressions that involve
+ * game state will reflect the state at the time the player is performing the
+ * action.
  *
  * @privateRemarks
  * The Action object is responsible for:
@@ -48,23 +77,16 @@ type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R exte
  * @category Actions
  */
 export default class Action<P extends Player, A extends Record<string, Argument<P>> = NonNullable<unknown>> {
-  /** @internal */
   name?: string;
-  /** @internal */
   prompt?: string;
-  /** @internal */
   selections: Selection<P>[] = [];
-  /** @internal */
   moves: ((args: Record<string, Argument<P>>) => any)[] = [];
-  /** @internal */
   condition?: ((args: A) => boolean) | boolean;
-  /** @internal */
   messages: {message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
   order: ('move' | 'message')[] = [];
 
   game: Game;
 
-  /** @internal */
   constructor({ prompt, condition }: {
     prompt?: string,
     condition?: ((args: A) => boolean) | boolean,
@@ -73,7 +95,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     if (condition !== undefined) this.condition = condition;
   }
 
-  /** @internal */
   isPossible(args: A): boolean {
     return typeof this.condition === 'function' ? this.condition(args) : this.condition ?? true;
   }
@@ -84,7 +105,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   // return array of follow-up selections if incomplete
   // skipping/expanding is very complex and this method runs all the rules for what should/must be combined, either as additional selections or as forced args
   // skippable options will still appear in order to present the choices to the user to select that tree. This will be the final selection if no other selection turned skipping off
-  /** @internal */
   _getPendingMoves(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
     const moves = this._getPendingMovesInner(args);
     // resolve any combined selections now with only args up until first choice
@@ -117,7 +137,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return moves;
   }
 
-  /** @internal */
   _getPendingMovesInner(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
     const selection = this._nextSelection(args);
     if (!selection) return [];
@@ -230,27 +249,30 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }
 
   /**
-   * Add behavior to this action. After adding the choices to an action, calling
-   * `do` causes Boardzilla to use the player choices to actually do something
-   * with those choices. Call this method after all the methods for player
-   * choices so that the choices are properly available to the `do` function.
+   * Add behavior to this action to alter game state. After adding the choices
+   * to an action, calling `do` causes Boardzilla to use the player choices to
+   * actually do something with those choices. Call this method after all the
+   * methods for player choices so that the choices are properly available to
+   * the `do` function.
    *
-   * @param move - The action to perform. This function accepts one argument for
-   * each choice added to the action, in the order they were added.
+   * @param move - The action to perform. This function accepts one argument
+   * with key-value pairs for each choice added to the action using the provided
+   * names.
    *
    * @example
-   * action({
-   *   prompt: "Take resources",
+   * player => action({
+   *   prompt: 'Take resources',
    * }).chooseFrom({
-   *   prompt: "Select resource",
-   *   choices: ['lumber', 'steel'],
-   * }).chooseNumber({
-   *   prompt: "Select amount",
-   *   max: 3
-   * }).do((resource, amount) => {
+   *   'resource', ['lumber', 'steel'],
+   *   { prompt: 'Select resource' }
+   * }).chooseNumber(
+   *   'amount', {
+   *     prompt: 'Select amount',
+   *     max: 3
+   * }).do(({ resource, amount }) => {
    *   // the choices are automatically passed in with their proper type
    *   board.firstN(amount, Resource, {resource}).putInto(
-   *     board.first('stockPile', {mine: true})
+   *     player.my('stockPile')
    *   );
    * })
    */
@@ -263,26 +285,32 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   /**
    * Add a message to this action that will be broadcast in the chat. Call this
    * method after all the methods for player choices so that the choices are
-   * properly available to the `message` function.
+   * properly available to the `message` function. However the message should be
+   * called before or after any `do` behaviour depending on whether you want the
+   * message to reflect the game state before or after the move is performs. The
+   * action's `message` and `do` functions can be intermixed in this way to
+   * generate messages at different points int the execution of a move.
    *
    * @param message - The message to send. This can contain interpolated strings
-   * with double braces, i.e. {{player}}. Valid strings are 'player' plus any
-   * choices added to the action. Additional strings can be added in args.
+   * with double braces just as when calling {@link Game#message}
+   * directly. However when using this method, the player performing the action,
+   * plus any choices made in the action are automatically made available.
    *
-   * @param args: If additional strings are needed in the message besides
-   * 'player' and the player choices, these can be specified here. This is a
-   * function that accepts player choices and returns key-value pairs of strings
-   * for interpolation.
+   * @param args - If additional strings are needed in the message besides
+   * 'player' and the player choices, these can be specified here. This can also
+   * be specified as a function that accepts the player choices and returns
+   * key-value pairs of strings for interpolation.
    *
    * @example
    * action({
-   *   prompt: "Say something",
+   *   prompt: 'Say something',
    * }).enterText({
-   *   prompt: "Message",
+   *   'message',
    * }).message(
-   *   "{{player}} said {{message}}" // without args
+   *   '{{player}} said {{message}}' // no args needed
    * ).message(
-   *   `I said, {{player}} said {{loudMessage}}, ({ text }) => { loudMessage: text.toUpperCase() } // with args
+   *   `I said, {{player}} said {{loudMessage}},
+   *   ({ message }) => ({ loudMessage: message.toUpperCase() })
    * )
    */
   message(message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
@@ -295,44 +323,85 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * Add a choice to this action from a list of options. These choices will be
    * displayed as buttons in the UI.
    *
+   * @param name - The name of this choice. This name will be used in all
+   * functions that accept the player's choices
+   *
+   * @param choices - Either an array of choices or an object with a key-value
+   * pair of choices. Use the object style when you want player text to contain
+   * additional logic that you don't want to reference in the game logic,
+   * similiar to `<option value="key">Some text</option>` in HTML. This can also
+   * be a function that returns the choice array/object. This function will
+   * accept arguments for each choice the player has made up to this point in
+   * the action.
+   *
    * @param {Object} options
-   * @param options.choices - Either an array of choices or a object with a
-   * key-value pair of choices. Use the object style when you want player
-   * text to contain additional logic that you don't want to reference in the
-   * game logic, similiar to `<option value="key">Some text</option>` in
-   * HTML. This can also be a function that returns the choice
-   * array/object. This function will accept arguments for each choice the
-   * player has made up to this point in the action.
    * @param options.prompt - Prompt displayed to the user for this choice.
-   * @param options.skipIfOnlyOne - If set to true, if there is only valid
-   * choice in the choices given, the game will skip this choice, prompting the
-   * player for subsequent choices, if any, or completing the action
-   * otherwise. Default true.
-   * @param options.expand - If set to true, rather than present this choice
-   * directly, the player will be prompted with choices from the *next choice*
-   * in the action for each possible choice here, essentially expanding the
-   * choices ahead of time to save the player a step. Default false.
-   * @param options.skipIf - If set to true, this choice will be skipped. Use
-   * this in the rare situations where the choice at the time is meaningless,
-   * e.g. selecting from a set of identical tokens. If you want to skip actions
-   * that have only one choice, simply use `skipIfOnlyOne` instead.
+   * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
+   * function returning a boolean. (Default 'only-one').
+   *
+   * - only-one: If there is only valid choice in the choices given, the game
+   * will skip this choice, prompting the player for subsequent choices, if any,
+   * or completing the action otherwise.
+   * - always: Rather than present this choice directly, the player will be
+   * prompted with choices from the *next choice* in the action for each
+   * possible choice here, essentially expanding the choices ahead of time to
+   * save the player a step. This option only has relevance if there are
+   * subsequent choices in the action.
+   * - never: Always present this choice, even if the choice is forced
+   * - function: A function that accepts all player choices up to this point
+   * and returns a boolean. If returning true, this choice will be skipped.
+   * This form is useful in the rare situations where the choice at the time may
+   * be meaningless, e.g. selecting from a set of identical tokens. In this case
+   * the game will make the choice for the player using the first viable option.
+   *
+   * @param options.validate - A function that takes an object of key-value
+   * pairs for all player choices and returns a boolean. If false, the game will
+   * not allow the player to submit this choice. If a string is returned, this
+   * will display as the reason for disallowing these selections.
+   *
+   * @param options.confirm - A confirmation message that the player will always
+   * see before commiting this choice. This can be useful to present additional
+   * information about the consequences of this choice, or simply to force the
+   * player to hit a button with a clear message. This can be a simple string,
+   * or a 2-celled array in the same form as {@link message} with a string
+   * message and a set of key-value pairs for string interpolation, optionally
+   * being a function that takes an object of key-value pairs for all player
+   * choices, and returns the interpolation object.
    *
    * @example
    * action({
-   *   prompt: "Take resources",
-   * }).chooseFrom({
-   *   prompt: "Select resource",
-   *   choices: ['lumber', 'steel', 'oil'],
-   * }).chooseFrom({
-   *   // A follow-up choice that doesn't apply to "oil"
-   *   skipIf: resource => resource === 'oil'
+   *   prompt: 'Choose color',
+   * }).chooseFrom(
+   *   'color', ['white', 'blue', 'red'],
+   * ).do(
+   *   ({ color }) => ... color will be equal to the player-selected color ...
+   * )
+   *
+   * // a more complex example:
+   * action({
+   *   prompt: 'Take resources',
+   * }).chooseFrom(
+   *   'resource', ['lumber', 'steel', 'oil'],
+   *   { prompt: 'Select resource' }
+   * ).chooseFrom(
    *   // Use the functional style to include the resource choice in the text
    *   // Also use object style to have the value simply be "high" or "low"
-   *   choices: resource => ({
+   *   'grade', resource => ({
    *     high: `High grade ${resource}`,
    *     low: `Low grade ${resource}`
    *   }),
-   * })
+   *   {
+   *     // A follow-up choice that doesn't apply to "oil"
+   *     skipIf: ({ resource }) => resource === 'oil',
+   *     // Add an 'are you sure?' message
+   *     confirm: ['Buy {{grade}} grade {{resource}}?', ({ grade }) = ({ grade: grade.toUpperCase() })]
+   *   }
+   * ).do (
+   *   ({ resource, grade }) => {
+   *     // resource will equal 'lumber', 'steel' or 'oil'
+   *     // grade will equal 'high' or 'low'
+   *   }
+   * )
    */
   chooseFrom<N extends string, T extends SingleArgument<P>>(
     name: N,
@@ -353,19 +422,26 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * Prompt the user for text entry. Use this in games where players submit
    * text, like word-guessing games.
    *
+   * @param name - The name of this text input. This name will be used in all
+   * functions that accept the player's choices
+   *
    * @param {Object} options
    * @param options.initial - Default text that can appear initially before a
    * user types.
    * @param options.prompt - Prompt displayed to the user for entering this
    * text.
-   * @param options.regexp - If supplied, text must match this regexp to be
-   * valid.
+   *
+   * @param options.validate - A function that takes an object of key-value
+   * pairs for all player choices and returns a boolean. If false, the game will
+   * not allow the player to submit this text. If a string is returned, this
+   * will display as the reason for disallowing this text.
    *
    * @example
    * action({
-   *   prompt: "Guess a word",
+   *   prompt: 'Guess a word',
    * }).enterText({
-   *   prompt: "Your guess",
+   *   'guess',
+   *   { prompt: 'Your guess', }
    * }).message(
    *   guess => `{{player}} guessed ${guess}`
    * })
@@ -382,37 +458,11 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }
 
   /**
-   * Add a confirmtation step to this action. This can be useful if you want to
-   * present additional information to the player related to the consequences of
-   * their choice, like a cost incurred. Or this can simply be used to force the
-   * user to click an additional button on a particular important choice.
-   *
-   * @param prompt - Button text for the confirmation step. This can be a
-   * function returning the text which accepts each choice the player has made
-   * up till now as an argument.
-   *
-   * @example
-   * action({
-   *   prompt: "Buy resources",
-   * }).chooseNumber({
-   *   prompt: "Amount",
-   *   max: Math.floor(player.coins / 5)
-   * }).confirm(
-   *   amount => `Spend ${amount * 5} coins`
-   * }).do(amount => {
-   *   player.resource += amount;
-   *   player.coins -= amount * 5;
-   * });
-   */
-  // may get rid of:
-  // confirm(prompt: string | ((args: A) => string)): Action<P, A> {
-  //   this._addSelection(new Selection<P>('__confirm__', { prompt, skipIfOnlyOne: false, value: true }));
-  //   return this;
-  // }
-
-  /**
-   * Add a numerical selection to this action. This will be presented with a
+   * Add a numerical choice for this action. This will be presented with a
    * number picker.
+   *
+   * @param name - The name of this choice. This name will be used in all
+   * functions that accept the player's choices
    *
    * @param {Object} options
    *
@@ -425,30 +475,48 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *
    * @param options.initial - Initial value to display in the picker
    *
-   * @param options.skipIfOnlyOne - If set to true, if there is only valid
-   * number selectable, the game will skip this choice, prompting the
-   * player for subsequent choices, if any, or completing the action
-   * otherwise. Default true.
+   * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
+   * function returning a boolean. (Default 'only-one').
    *
-   * @param options.expand - If set to true, rather than present this choice
-   * directly, the player will be prompted with choices from the *next choice*
-   * in the action for each number selectable, essentially expanding the
-   * choices ahead of time to save the player a step. Default false.
-   * @param options.skipIf - If set to true, this choice will be skipped. You
-   * may use this if you determine at the time that the choice is meaningless,
-   * e.g. selecting from a set of identical tokens. If you want to skip actions
-   * that have only one choice, simply use `skipIfOnlyOne` instead.
+   * - only-one: If there is only valid choice in the choices given, the game
+   * will skip this choice, prompting the player for subsequent choices, if any,
+   * or completing the action otherwise.
+   * - always: Rather than present this choice directly, the player will be
+   * prompted with choices from the *next choice* in the action for each
+   * possible choice here, essentially expanding the choices ahead of time to
+   * save the player a step. This option only has relevance if there are
+   * subsequent choices in the action.
+   * - never: Always present this choice, even if the choice is forced
+   * - function: A function that accepts all player choices up to this point
+   * and returns a boolean. If returning true, this choice will be skipped.
+   * This form is useful in the rare situations where the choice at the time may
+   * be meaningless, e.g. selecting from a set of identical tokens. In this case
+   * the game will make the choice for the player using the first viable option.
+   *
+   * @param options.validate - A function that takes an object of key-value
+   * pairs for all player choices and returns a boolean. If false, the game will
+   * not allow the player to submit this choice. If a string is returned, this
+   * will display as the reason for disallowing these selections.
+   *
+   * @param options.confirm - A confirmation message that the player will always
+   * see before commiting this choice. This can be useful to present additional
+   * information about the consequences of this choice, or simply to force the
+   * player to hit a button with a clear message. This can be a simple string,
+   * or a 2-celled array in the same form as {@link message} with a string
+   * message and a set of key-value pairs for string interpolation, optionally
+   * being a function that takes an object of key-value pairs for all player
+   * choices, and returns the interpolation object.
    *
    * @example
-   * action({
-   *   prompt: "Buy resources",
-   * }).chooseNumber({
-   *   prompt: "Amount",
-   *   min: 5,
-   *   max: 10 // select from 5 - 10
-   * }).do(amount => {
-   *   player.resource += amount;
-   * });
+   * player => action({
+   *   prompt: 'Buy resources',
+   * }).chooseNumber(
+   *   'amount', {
+   *     min: 5,
+   *     max: 10 // select from 5 - 10
+   * }).do(
+   *   ({ amount }) => player.resource += amount
+   * );
    */
   chooseNumber<N extends string>(name: N, options: {
     min?: number | ((args: A) => number),
@@ -471,27 +539,15 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *
    * @param {Object} options
 
-   * @param options.choices - Elements that may be chosen. This can either be an
-   * array of elements or a function returning an array, if the choices depend
-   * on previous choices. If using a function, it will accept arguments for each
+   * @param name - The name of this choice. This name will be used in all
+   * functions that accept the player's choices
+
+   * @param choices - Elements that may be chosen. This can either be an array
+   * of elements or a function returning an array, if the choices depend on
+   * previous choices. If using a function, it will accept arguments for each
    * choice the player has made up to this point in the action.
    *
    * @param options.prompt - Prompt displayed to the user for this choice.
-   *
-   * @param options.skipIfOnlyOne - If set to true, if there is only valid
-   * choice in the choices given, the game will skip this choice, prompting the
-   * player for subsequent choices, if any, or completing the action
-   * otherwise. Default true.
-   *
-   * @param options.expand - If set to true, rather than present this choice
-   * directly, the player will be prompted with choices from the *next choice*
-   * in the action for each possible choice here, essentially expanding the
-   * choices ahead of time to save the player a step. Default false.
-   *
-   * @param options.skipIf - If set to true, this choice will be skipped. You
-   * may use this if you determine at the time that the choice is meaningless,
-   * e.g. selecting from a set of identical tokens. If you want to skip actions
-   * that have only one choice, simply use `skipIfOnlyOne` instead.
    *
    * @param options.number - If supplied, the choice is for a *set* of exactly
    * `number` elements. For example, if the player is being asked to pass 3
@@ -501,23 +557,58 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @param options.min - If supplied, the choice is for a *set* of
    * elements and the minimum required is `min`.
    *
-   * @param options.min - If supplied, the choice is for a *set* of
+   * @param options.max - If supplied, the choice is for a *set* of
    * elements and the maximum allowed is `max`.
    *
+   * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
+   * function returning a boolean. (Default 'only-one').
+   *
+   * - only-one: If there is only valid choice in the choices given, the game
+   * will skip this choice, prompting the player for subsequent choices, if any,
+   * or completing the action otherwise.
+   * - always: Rather than present this choice directly, the player will be
+   * prompted with choices from the *next choice* in the action for each
+   * possible choice here, essentially expanding the choices ahead of time to
+   * save the player a step. This option only has relevance if there are
+   * subsequent choices in the action.
+   * - never: Always present this choice, even if the choice is forced
+   * - function: A function that accepts all player choices up to this point
+   * and returns a boolean. If returning true, this choice will be skipped.
+   * This form is useful in the rare situations where the choice at the time may
+   * be meaningless, e.g. selecting from a set of identical tokens. In this case
+   * the game will make the choice for the player using the first viable option.
+   *
+   * @param options.validate - A function that takes an object of key-value
+   * pairs for all player choices and returns a boolean. If false, the game will
+   * not allow the player to submit this choice. If a string is returned, this
+   * will display as the reason for disallowing these selections.
+   *
+   * @param options.confirm - A confirmation message that the player will always
+   * see before commiting this choice. This can be useful to present additional
+   * information about the consequences of this choice, or simply to force the
+   * player to hit a button with a clear message. This can be a simple string,
+   * or a 2-celled array in the same form as {@link message} with a string
+   * message and a set of key-value pairs for string interpolation, optionally
+   * being a function that takes an object of key-value pairs for all player
+   * choices up to this point, including this one, and returns the interpolation
+   * object.
+   *
    * @example
-   * action({
-   *   prompt: "Mulligan",
-   * }).chooseOnBoard({
-   *   // select 1-3 cards from hand
-   *   prompt: "Mulligan 1-3 cards",
-   *   choices: board.all(Card, {mine: true}),
-   *   min: 1,
-   *   max: 3
-   * }).do(cards => {
-   *   // `cards` is an ElementCollection of the cards selected
-   *   cards.putInto(board.first('discard'));
-   *   board.first('deck').firstN(cards.length, Card).putInto(board.first('hand', {mine: true}));
-   * })
+   * player => action({
+   *   prompt: 'Mulligan',
+   * }).chooseOnBoard(
+   *   'cards', player.allMy(Card), {
+   *     prompt: 'Mulligan 1-3 cards',
+   *     // select 1-3 cards from hand
+   *     min: 1,
+   *     max: 3
+   * ).do(
+   *   ({ cards }) => {
+   *     // `cards` is an ElementCollection of the cards selected
+   *     cards.putInto($.discard);
+   *     $.deck.firstN(cards.length, Card).putInto(player.my('hand')!);
+   *   }
+   * )
    */
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
@@ -596,6 +687,42 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return this.chooseOnBoard(name, choices as Parameters<this['chooseOnBoard']>[1], options as Parameters<this['chooseOnBoard']>[2]);
   }
 
+  /**
+   * Create a multi-selection choice. These selections will be presented all at
+   * once as a form.
+   *
+   * @param choices - An object containing the selections. This is a set of
+   * key-value pairs where each key is the name of the selection and each value
+   * is an array of options where the first array element is a string indicating
+   * the type of choice ('number', 'select', 'board', 'text') and subsequent
+   * elements contain the options for the appropriate choice function
+   * (`chooseNumber`, `chooseFrom`, `chooseOnBoard` or `enterText`).
+   *
+   * @param options.validate - A function that takes an object of key-value
+   * pairs for all player choices and returns a boolean. If false, the game will
+   * not allow the player to submit these choices. If a string is returned, this
+   * will display as the reason for disallowing these selections.
+   *
+   * @param options.confirm - A confirmation message that the player will always
+   * see before commiting this choice. This can be useful to present additional
+   * information about the consequences of this choice, or simply to force the
+   * player to hit a button with a clear message. This can be a simple string,
+   * or a 2-celled array in the same form as {@link message} with a string
+   * message and a set of key-value pairs for string interpolation, optionally
+   * being a function that takes an object of key-value pairs for all player
+   * choices, and returns the interpolation object.
+   *
+   * @example
+   * action({
+   *   prompt: 'purchase'
+   * }).chooseGroup({
+   *   lumber: ['number', { min: 2 }],
+   *   steel: ['number', { min: 2 }]
+   * }, {
+   *   // may not purchase more than 10 total resource
+   *   validate: ({ lumber, steel }) => lumber + steel <= 10
+   * });
+   */
   chooseGroup<R extends Group<P>>(
     choices: R,
     options?: {
@@ -623,6 +750,24 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return this as unknown as Action<P, ExpandGroup<P, A, R>>;
   }
 
+  /**
+   * Indicates that this action does a move with the selected elements. This is
+   * almost the equivalent of calling Action#do and adding a putInto command,
+   * except that the game will also permit the UI to allow a mouse drag for the
+   * move.
+   *
+   * @param piece - A {@link Piece} to move or the name of the piece selection in this action
+   * @param into - A {@link GameElement} to move into or the name of the
+   * destination selection in this action.
+   *
+   * player => action({
+   *   prompt: 'Discard a card from hand'
+   * }).chooseOnBoard(
+   *   'card', player.my(Card)
+   * ).move(
+   *   'card', $.discard
+   * )
+   */
   move(piece: keyof A | Piece, into: keyof A | GameElement) {
     this.moves.push((args: A) => {
       const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece;
@@ -637,6 +782,41 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return this;
   }
 
+  /**
+   * Add a placement selection to this action. This will be presented as a piece
+   * that players can move into the desired location, snapping to the grid of
+   * the destination as the player moves.
+   *
+   * @param piece - A {@link Piece} to move or the name of the piece selection in this action
+   * @param into - A {@link GameElement} to move into
+   *
+   * @param options.validate - A function that takes an object of key-value
+   * pairs for all player choices and returns a boolean. The position selected
+   * will be available under the special choice name "__placement__". If false,
+   * the game will not allow the player to submit these choices. If a string is
+   * returned, this will display as the reason for disallowing these selections.
+   *
+   * @param options.confirm - A confirmation message that the player will always
+   * see before commiting this choice. This can be useful to present additional
+   * information about the consequences of this choice, or simply to force the
+   * player to hit a button with a clear message. This can be a simple string,
+   * or a 2-celled array in the same form as {@link message} with a string
+   * message and a set of key-value pairs for string interpolation, optionally
+   * being a function that takes an object of key-value pairs for all player
+   * choices, and returns the interpolation object.
+   *
+   * player => action({
+   *   prompt: 'Place your tile'
+   * }).chooseOnBoard(
+   *   'tile', player.my(Tile)
+   * ).placePiece(
+   *   'tile', $.map, {
+   *     confirm: ({ __position__ }) => [
+   *       'Place tile into row {{row}} and column {{column}}?',
+   *       __position__
+   *     ]
+   * })
+   */
   placePiece(piece: keyof A | Piece, into: GameElement, options?: {
     prompt?: string | ((args: A) => string),
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A) => Record<string, Argument<P>>) | undefined]

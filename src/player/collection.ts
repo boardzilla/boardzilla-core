@@ -3,16 +3,15 @@ import Player from './player.js';
 import { shuffleArray } from '../utils.js';
 
 import type { default as Game, PlayerAttributes } from '../game.js';
-import type { Board } from '../board/index.js';
-
-type Sorter<T> = keyof {[K in keyof T]: T[K] extends number | string ? never: K} | ((e: T) => number | string)
+import type { Board, Sorter } from '../board/index.js';
 
 /**
  * An Array-like collection of the game's players, mainly used in {@link
- * board#players}. The array is automatically created when the game begins and
+ * Game#players}. The array is automatically created when the game begins and
  * can be used to determine or alter play order. The order of the array is the
- * order of play, i.e. board.players[1] takes their turn right after
- * board.players[0].
+ * order of play, i.e. `game.players[1]` takes their turn right after
+ * `game.players[0]`.
+ * @category Core
  */
 export default class PlayerCollection<P extends Player> extends Array<P> {
   /**
@@ -20,6 +19,9 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
    */
   currentPosition: number[];
   className: {new(...a: any[]): P};
+  /**
+   * A reference to the {@link Game} class
+   */
   game: Game<P, Board<P>>
 
   addPlayer(attrs: PlayerAttributes<P>) {
@@ -110,7 +112,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
 
   /**
    * Return the player next to this player at the table.
-   * @param step - 1 = one step to the left, -1 = one step to the right, etc
+   * @param steps - 1 = one step to the left, -1 = one step to the right, etc
    */
   seatedNext(player: P, steps = 1) {
     return this.atPosition((player.position + steps - 1) % this.length + 1)!;
@@ -128,6 +130,13 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     return index;
   }
 
+  /**
+   * Sorts the players by some means, changing the turn order.
+   * @param key - A key of function for sorting, or a list of such. See {@link
+   * Sorter}
+   * @param direction - `"asc"` to cause players to be sorted from lowest to
+   * highest, `"desc"` for highest to lower
+   */
   sortBy(key: Sorter<P> | (Sorter<P>)[], direction?: "asc" | "desc") {
     const rank = (p: P, k: Sorter<P>) => typeof k === 'function' ? k(p) : p[k]
     const [up, down] = direction === 'desc' ? [-1, 1] : [1, -1];

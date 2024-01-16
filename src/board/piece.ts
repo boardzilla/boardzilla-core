@@ -5,7 +5,7 @@ import type Board from './board.js'
 import type Player from '../player/player.js';
 
 /**
- * Pieces are game elements that move during play
+ * Pieces are game elements that can move during play
  * @category Board
  */
 export default class Piece<P extends Player<P, B> = any, B extends Board<P, B> = any> extends GameElement<P, B> {
@@ -19,6 +19,8 @@ export default class Piece<P extends Player<P, B> = any, B extends Board<P, B> =
    * @param options.position - Place the piece into a specific numbered position
    * relative to the other elements in this space. Positive numbers count from
    * the beginning. Negative numbers count from the end.
+   * @param options.placement - Place the piece into a specific row and column
+   * of the container's grid.
    * @param options.fromTop - Place the piece into a specific numbered position counting
    * from the first element
    * @param options.fromBottom - Place the piece into a specific numbered position

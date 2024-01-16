@@ -62,25 +62,23 @@
     "ts-node": "^10.8.2",
     "typedoc": "^0.25.2",
     "typedoc-plugin-merge-modules": "^5.1.0",
-    "typedoc-plugin-rename-defaults": "^0.6.7",
     "typescript": "^5.2.0"
   },
   "typedocOptions": {
     "entryPoints": [
-      "game",
-      "game/board",
-      "game/board/types.d.ts",
-      "game/flow",
-      "game/flow/types.d.ts",
-      "game/action",
-      "game/action/types.d.ts",
-      "game/player",
-      "game/player/types.d.ts"
+      "src",
+      "src/game.ts",
+      "src/board",
+      "src/flow",
+      "src/action",
+      "src/player",
+      "src/ui"
     ],
     "plugin": [
       "typedoc-plugin-merge-modules"
     ],
     "excludeInternal": true,
+    "excludeNotDocumented": true,
     "out": "docs",
     "name": "@boardzilla/core"
   }

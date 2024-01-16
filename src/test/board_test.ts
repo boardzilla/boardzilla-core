@@ -244,6 +244,13 @@ describe('Board', () => {
       expect(board.first(Card, {player: undefined})).to.equal(h3);
     }),
 
+    it('has', () => {
+      board.create(Card, 'AH', { suit: 'H', pip: 1, player: players[0] });
+      board.create(Card, '2H', { suit: 'H', pip: 2, player: players[1] });
+      expect(board.has(Card, {pip: 2})).to.equal(true);
+      expect(board.has(Card, {pip: 2, suit: 'C'})).to.equal(false);
+    }),
+
     it('modifies', () => {
       board.create(Card, 'AH', { suit: 'H', pip: 1 });
       board.create(Card, '2H', { suit: 'H', pip: 2 });
@@ -439,18 +446,27 @@ describe('Board', () => {
       players[0].board = board;
       players[1].board = board;
 
+      expect(() => board.all(Card, { mine: true })).to.throw;
+
       board._ctx.player = players[0];
       expect(board.all(Card, { mine: true }).length).to.equal(2);
       expect(board.all(Card, { mine: false }).length).to.equal(1);
       expect(board.all(Card, { owner: players[0] }).length).to.equal(2);
-      expect(players[0].allMy(Card).length).to.equal(2);
       expect(board.last(Card, { mine: true })!.name).to.equal('neutral-card');
       expect(board.first('neutral-card')!.owner).to.equal(players[0]);
+
       board._ctx.player = players[1];
       expect(board.all(Card, { mine: true }).length).to.equal(1);
       expect(board.all(Card, { owner: players[1] }).length).to.equal(1);
-      expect(players[1].allMy(Card).length).to.equal(1);
       expect(board.all(Card, { mine: false }).length).to.equal(2);
+
+      expect(players[0].allMy(Card).length).to.equal(2);
+      expect(players[1].allMy(Card).length).to.equal(1);
+      expect(players[0].has(Card, {pip: 1})).to.equal(true);
+      expect(players[0].has(Card, 'player-2-card')).to.equal(false);
+      expect(players[0].has(Card, {pip: 2})).to.equal(true);
+      expect(players[1].has(Card, {pip: 1})).to.equal(true);
+      expect(players[1].has(Card, {pip: 2})).to.equal(false);
     });
 
     it("sorts", () => {
@@ -681,6 +697,10 @@ describe('Board', () => {
       expect(piece2.adjacencies(Piece).length).to.equal(2);
       expect(piece2.adjacencies(Piece)).includes(piece1);
       expect(piece2.adjacencies(Piece)).includes(piece3);
+
+      expect(piece2.adjacentTo(piece1)).to.equal(true);
+      expect(piece2.adjacentTo(piece3)).to.equal(true);
+      expect(piece1.adjacentTo(piece3)).to.equal(false);
     });
   });
 

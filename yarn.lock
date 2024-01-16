@@ -2034,11 +2034,6 @@ typedoc-plugin-merge-modules@^5.1.0:
   resolved "https://registry.yarnpkg.com/typedoc-plugin-merge-modules/-/typedoc-plugin-merge-modules-5.1.0.tgz#53ac37f4ab40caac8ee23da1e26042d3a103c4a8"
   integrity sha512-jXH27L/wlxFjErgBXleh3opVgjVTXFEuBo68Yfl18S9Oh/IqxK6NV94jlEJ9hl4TXc9Zm2l7Rfk41CEkcCyvFQ==
 
-typedoc-plugin-rename-defaults@^0.6.7:
-  version "0.6.7"
-  resolved "https://registry.yarnpkg.com/typedoc-plugin-rename-defaults/-/typedoc-plugin-rename-defaults-0.6.7.tgz#af8b124e07bb01e4495ab7efe25544ee2ec505a4"
-  integrity sha512-b+j0qQCdE69IUP6ZJgS6zonG59AcaKM8B8zdNlj1jnv6XefDLkIWdFxXfS3KhFOpVzW22pNCfdOCCym9ryS3wA==
-
 typedoc@^0.25.2:
   version "0.25.2"
   resolved "https://registry.yarnpkg.com/typedoc/-/typedoc-0.25.2.tgz#39f525c28b6eb61da54dda4ec6b1500df620bed8"

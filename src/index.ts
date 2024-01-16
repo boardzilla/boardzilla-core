@@ -15,20 +15,25 @@ export { Do } from './flow/index.js';
 export { createInteface } from './interface.js';
 export { times, range, shuffleArray } from './utils.js';
 export { Player };
-export { render, ProfileBadge } from './ui/index.js';
 export {
+  render,
+  ProfileBadge,
   toggleSetting,
   numberSetting,
   textSetting,
   choiceSetting
-} from './ui/setup/components/settingComponents.js';
-
-// starter function to create a new game instance
-// this is called from UI on first update and server on each call
+} from './ui/index.js';
 
 import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
 
+/**
+ * Returns board classes for game with the correct types for board and player.
+ *
+ * @example
+ * const {Space, Piece, Die} = createBoardClasses<MyGamePlayer, MyGameBoard>();
+ * @category Board
+ */
 export const createBoardClasses = <P extends Player<P, B>, B extends Board<P, B>>() => ({
   GameElement: GameElement<P, B>,
   Space: Space<P, B>,
@@ -42,34 +47,35 @@ export type SetupFunction<P extends Player<P, B> = any, B extends Board<P, B> = 
 ) => Game<P, B>
 
 declare global {
+  /**
+   * Global reference to all unique named spaces
+   *
+   * @example
+   * board.create(Space, 'deck');
+   * ...
+   * $.deck // =>  equals the Space just created
+   */
   var $: Record<string, Space>; // eslint-disable-line no-var
 }
 
 /**
  * Create your game
- * @param {Object} options - All the options needed to define your game are listed below.
- * @param options.playerClass - Your player class. This must extend {@link Player}. If you do not need any custom Player attributes or behaviour, simply put {@link Player} here. This becomes the `P` type generic used throughout boardzilla.
- * @param options.boardClass - Your board class. This must extend {@link Board}. If you do not need any custom Board attributes or behaviour, simply put {@link Board} here. This becomes the `B` type generic used here.
- * @param options.elementClasses - An array of all other board classes you declare that will be used in your board. These all must extend {@link Space} or {@link Piece}.
- * @param options.setup - A function that sets up the game. This function accepts a single argument which is an instance of the `boardClass` above. The function should add all the spaces and pieces you need before your game can start.
- * @param options.flow - A function that defines your game's flow. This function accepts a single argument which is an instance of the `boardClass` above. The function should return the result of one of the flow functions:
-   - {@link whileLoop}
-   - {@link forEach}
-   - {@link forLoop}
-   - {@link eachPlayer}
-   - {@link ifElse}
-   - {@link switchCase}
-   - {@link playerActions}
-   - or an array containing more than one of the above
- * @param options.actions - A function that provides an object defining all the actions in your game. The function accepts 3 arguments:
-   - an instance of the `boardClass` above
-   - the {@link action} function used to define each action.
-   - the player taking the action, an instance of `playerClass` above
- Each key is a unique action name and the value is the result of calling {@link action}.
- * @param options.breakpoints - A function that determines which layout breakpoint to use. The function accepts the aspect ratio of the current player's viewable area and returns the name of the breakpoint.
- * @param options.layout - A function that defines all the layout rules for your game. See {@link GameElement#layout}, {@link GameElement#appearance} and {@link Board#layoutStep}. Function accepts two arguments:
-    - an instance of the `boardClass` above
-    - the breakpoint string from your `breakpoints` function, or '_default' if none specified.
+ * @param playerClass - Your player class. This must extend {@link Player}. If
+ * you do not need any custom Player attributes or behaviour, simply put {@link
+ * Player} here. This becomes the `P` type generic used throughout Boardzilla.
+
+ * @param boardClass - Your board class. This must extend {@link Board}. If you
+ * do not need any custom Board attributes or behaviour, simply put {@link
+ * Board} here. This becomes the `B` type generic used throughout Boardzilla.
+
+ * @param options.setup - A function that sets up the game. This function
+ * accepts a single argument which is the instance of {@link Game} for this game. The
+ * function should create all the spaces and pieces you need before your game can
+ * start and will typically call:
+ * - {@link board#registerClasses} to add custom classes for Spaces and Pieces
+ * - {@link board#defineActions} to create the game actions
+ * - {@link board#defineFlow} to define the game's flow
+ * @category Core
  */
 export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
   playerClass: {new(...a: any[]): P},

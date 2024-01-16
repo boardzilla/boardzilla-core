@@ -1,4 +1,3 @@
-import { action } from './action/index.js';
 import { n } from './utils.js';
 import {
   Board,
@@ -63,9 +62,21 @@ export type Message = {
   body: string
 }
 
+/**
+ * Core class for Boardzilla. Each game will create a single instance of this
+ * class which will orchestrate the different parts of the game, the {@link
+ * Board}, the {@link Player}'s, the {@link Action}'s and the {@link Flow}.
+ * @category Core
+ */
 export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = any> {
   flow: Flow<P>;
+  /**
+   * The players in this game. See {@link Player}
+   */
   players: PlayerCollection<P> = new PlayerCollection<P>;
+  /**
+   * The board for this game. See {@link Board}
+   */
   board: B;
   settings: Record<string, any>;
   actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>;
@@ -78,6 +89,9 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   godMode = false;
   winner: P[] = [];
   followups: FollowUp<P>[] = [];
+  /**
+   * The flow commands available for this game. See {@link Flow}
+   */
   flowCommands: {
     playerActions: typeof playerActions<P>,
     loop: typeof loop<P>,
@@ -110,12 +124,33 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   /**
    * configuration functions
    */
+
+  /**
+   * Define your game's flow.
+   * @param flow - Any number of the following:
+   - {@link playerActions}
+   - {@link loop}
+   - {@link whileLoop}
+   - {@link forEach}
+   - {@link forLoop}
+   - {@link eachPlayer}
+   - {@link everyPlayer}
+   - {@link ifElse}
+   - {@link switchCase}
+   */
   defineFlow(...flow: FlowStep<P>[]) {
     if (this.phase !== 'new') throw Error('cannot call defineFlow once started');
     this.flow = new Flow({ do: flow });
     this.flow.game = this;
   }
 
+  /**
+   * Define your game's actions.
+   * @param actions - An object consisting of actions where the key is the name
+   * of the action and value is a function that accepts a player taking the
+   * action and returns the result of calling {@link action} and chaining
+   * choices, results and messages onto the result
+   */
   defineActions(actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>) {
     if (this.phase !== 'new') throw Error('cannot call defineActions once started');
     this.actions = actions;
@@ -123,6 +158,14 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
 
   setSettings(settings: Record<string, any>) {
     this.settings = settings;
+  }
+
+  /**
+   * Retrieve the selected setting value for a setting defined in {@link
+   * render}.
+   */
+  setting(key: string) {
+    return this.settings[key];
   }
 
   setRandomSeed(rseed: string) {
@@ -133,6 +176,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   /**
    * flow functions
    */
+
   start() {
     if (this.phase === 'started') throw Error('cannot call start once started');
     if (!this.players.length) {
@@ -142,6 +186,12 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     this.flow.reset();
   }
 
+  /**
+   * End the game
+   *
+   * @param winner - a player or players that are the winners of the game. In a
+   * solo game if no winner is provided, this is considered a loss.
+   */
   finish(winner?: P | P[]) {
     this.phase = 'finished';
     if (winner) this.winner = winner instanceof Array ? winner : [winner];
@@ -150,6 +200,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   /**
    * state functions
    */
+
   getState(player?: P): GameState<P> {
     return {
       players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub for player
@@ -215,6 +266,10 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     if (track) this.intermediateUpdates = [];
   }
 
+  /**
+   * Add a delay in the animation of the state change at this point for player
+   * as they receive game updates.
+   */
   addDelay() {
     if (this.board._ctx.trackMovement) {
       this.sequence += 1;
@@ -235,31 +290,40 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    * Create an {@link Action}. An action is a single move that a player can
    * take. Some actions require choices, sometimes several, before they can be
    * executed. Some don't have any choices, like if a player can simply
-   * 'pass'. What defines where one actions ends and another begins is how much
+   * 'pass'. What defines where one action ends and another begins is how much
    * you as a player can decide before you "commit". For example, in chess you
    * select a piece to move and then a place to put it. These are a single move,
    * not separate. (Unless playing touch-move, which is rarely done in digital
    * chess.) In hearts, you pass 3 cards to another players. These are a single
    * move, not 3. You can change your mind as you select the cards, rather than
    * have to commit to each one. Similarly, other players do not see any
-   * information about your choices until you actually commit the enture move.
+   * information about your choices until you actually commit the entire move.
    *
    * This function is called for each action in the game `actions` you define in
-   * {@link createGame}. The actions is initially declared with only a name,
+   * {@link defineActions}. These actions are initially declared with an optional
    * prompt and condition. Further information is added to the action by chaining
    * methods that add choices and behaviour. See (@link Action) for more.
+   *
+   * If this action accepts prior arguments besides the ones chosen by the
+   * player during the execution of this action (especially common for {@link
+   * followUp} actions) then a generic can be added for these arguments to help
+   * Typescript type these parameters, e.g.:
+   * `player => action<{ cards: number}>(...)`
    *
    * @param definition.prompt - The prompt that will appear for the player to
    * explain what the action does. Further prompts can be defined for each choice
    * they subsequently make to complete the action.
    *
-   * @param definition.condition - A function returning a boolean that determines
-   * whether the action is currently allowed. Note that the choices you define for
-   * your action will further determine if the action is allowed. E.g. if you have
-   * a play card action and you add a choice for cards in your hand, Boardzilla
-   * will automatically disallow this action if there are no cards in your hand
-   * based on the face that there are no valid choices to complete the action. YOu
-   * do not need to specify a `condition` for these types of limitations.
+   * @param definition.condition - A boolean or a function returning a boolean
+   * that determines whether the action is currently allowed. Note that the
+   * choices you define for your action will further determine if the action is
+   * allowed. E.g. if you have a play card action and you add a choice for cards
+   * in your hand, Boardzilla will automatically disallow this action if there
+   * are no cards in your hand based on the face that there are no valid choices
+   * to complete the action. You do not need to specify a `condition` for these
+   * types of limitations. If using the function form, the function will receive
+   * an object with any arguments passed to this action, e.g. from {@link
+   * followUp}.
    *
    * @example
    * action({
@@ -276,10 +340,9 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     prompt?: string,
     condition?: Action<P, A>['condition'],
   } = {}) {
-    return action<P, A>(definition);
+    return new Action<P, A>(definition);
   }
 
-  /** @internal */
   getAction(name: string, player: P) {
     if (this.godMode) {
       const godModeAction = this.godModeActions()[name];
@@ -299,15 +362,40 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     });
   }
 
+  /**
+   * Queue up a follow-up action while processing an action. If called during
+   * the processing of a game action, the follow-up action given will be added
+   * as a new action immediately following the current one, before the game's
+   * flow can resume normally. This is common for card games where the play of a
+   * certain card may require more actions be taken.
+   *
+   * @param {Object} action - The action added to the follow-up queue.
+   *
+   * @example
+   * defineAction({
+   *   ...
+   *   playCard: player => action()
+   *     .chooseOnBoard('card', cards)
+   *     .do(
+   *       ({ card }) => {
+   *         if (card.damage) {
+   *           // this card allows another action to do damage to another Card
+   *           game.followUp({
+   *             name: 'doDamage',
+   *             args: { amount: card.damage }
+   *           });
+   *         }
+   *       }
+   *     )
+   */
   followUp(action: FollowUp<P>) {
     this.followups.push(action);
   }
 
-  /** @internal */
   godModeActions(): Record<string, Action<P, any>> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
     return {
-      _godMove: action<P>({
+      _godMove: this.action({
         prompt: "Move",
       }).chooseOnBoard(
         'piece', this.board.all(Piece<P, B>),
@@ -316,7 +404,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       ).move(
         'piece', 'into'
       ),
-      _godEdit: action<P>({
+      _godEdit: this.action({
         prompt: "Change",
       })
         .chooseOnBoard('element', this.board.all(GameElement<P, B>))
@@ -342,7 +430,6 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     };
   }
 
-  /** @internal */
   play() {
     if (this.phase === 'finished') return;
     if (this.phase !== 'started') throw Error('cannot call play until started');
@@ -352,7 +439,6 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   // given a player's move (minimum a selected action), attempts to process
   // it. if not, returns next selection for that player, plus any implied partial
   // moves
-  /** @internal */
   processMove({ player, name, args }: Move<P>): string | undefined {
     if (this.phase === 'finished') return 'Game is finished';
     let error: string | undefined;
@@ -448,6 +534,25 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     }
   }
 
+  /**
+   * Add a message that will be broadcast in the chat at the next game update,
+   * based on the current state of the game.
+   *
+   * @param message - The message to send. This can contain interpolated strings
+   * with double braces, i.e. {{player}} that are defined in args. Of course,
+   * strings can be interpolated normally using template literals. However game
+   * objects (e.g. players or pieces) passed in as args will be displayed
+   * specially by Boardzilla.
+   *
+   * @param args - AN object of key-value pairs of strings for interpolation in
+   * the message.
+   *
+   * @example
+   * game.message(
+   *   '{{player}} has a score of {{score}}',
+   *   { player, score: player.score() }
+   * );
+   */
   message(message: string, args?: Record<string, Argument<P>>) {
     this.messages.push({body: n(message, args, true)});
   }
