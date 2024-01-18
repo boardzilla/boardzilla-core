@@ -1,6 +1,6 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.0.61",
+  "version": "0.0.62",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "MIT",
   "scripts": {
@@ -16,15 +16,15 @@
   },
   "type": "module",
   "exports": {
-    ".": "./dist/index.js",
-    "./index.css": "./dist/ui/assets/index.css"
+    ".": "./src/index.ts",
+    "./index.css": "./src/ui/assets/styles/game.scss"
   },
   "files": [
-    "dist/**/*"
+    "src/**/*"
   ],
-  "types": "dist/index.d.ts",
+  "types": "src/index.ts",
   "sideEffects": [
-    "./dist/ui/assets/index.css"
+    "./src/ui/assets/styles/game.scss"
   ],
   "dependencies": {
     "classnames": "^2.3.1",
@@ -61,6 +61,7 @@
     "mocha": "^10.2.0",
     "ts-node": "^10.8.2",
     "typedoc": "^0.25.2",
+    "typedoc-plugin-markdown": "^3.17.1",
     "typedoc-plugin-merge-modules": "^5.1.0",
     "typescript": "^5.2.0"
   },
@@ -75,8 +76,11 @@
       "src/ui"
     ],
     "plugin": [
+      "typedoc-plugin-markdown",
       "typedoc-plugin-merge-modules"
     ],
+    "sort": "source-order",
+    "categorizeByGroup": false,
     "excludeInternal": true,
     "excludeNotDocumented": true,
     "out": "docs",
