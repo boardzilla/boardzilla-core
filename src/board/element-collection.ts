@@ -46,6 +46,7 @@ export type ElementFinder<T extends GameElement = any> = (
 /**
  * Operations that return groups of {@link GameElement| | GameElement's} return
  * this Array-like class.
+ * @noInheritDoc
  * @category Board
  */
 export default class ElementCollection<T extends GameElement = any> extends Array<T> {
@@ -150,7 +151,7 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
   }
 
   /**
-   * As {@link GameElement#firstN}, except finds the first `n` elements within
+   * As {@link GameElement#firstn}, except finds the first `n` elements within
    * this collection and its contained elements recursively that match the
    * arguments provided. See {@link all} for parameter details.
    * @category Queries
@@ -189,7 +190,7 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
   }
 
   /**
-   * As {@link GameElement#lastN}, expect finds the last n elements within this
+   * As {@link GameElement#lastn}, expect finds the last n elements within this
    * collection and its contained elements recursively that match the arguments
    * provided. See {@link all} for parameter details.
    * @category Queries

@@ -10,15 +10,14 @@ import { Action, Selection } from './action/index.js';
 import { Player, PlayerCollection } from './player/index.js';
 import Flow from './flow/flow.js';
 import {
-  playerActions,
-  loop,
-  whileLoop,
-  forEach,
-  forLoop,
-  eachPlayer,
-  everyPlayer,
-  ifElse,
-  switchCase
+  ActionStep,
+  WhileLoop,
+  ForEach,
+  ForLoop,
+  EachPlayer,
+  EveryPlayer,
+  IfElse,
+  SwitchCase,
 } from './flow/index.js';
 
 import random from 'random-seed';
@@ -90,28 +89,18 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   winner: P[] = [];
   followups: FollowUp<P>[] = [];
   /**
-   * The flow commands available for this game. See {@link Flow}
+   * The flow commands available for this game.
    */
-  flowCommands: {
-    playerActions: typeof playerActions<P>,
-    loop: typeof loop<P>,
-    whileLoop: typeof whileLoop<P>,
-    forEach: typeof forEach<P, Serializable<P>>,
-    forLoop: typeof forLoop<P>,
-    eachPlayer: typeof eachPlayer<P>,
-    everyPlayer: typeof everyPlayer<P>,
-    ifElse: typeof ifElse<P>,
-    switchCase: typeof switchCase<P, Serializable<P>>,
-  } = {
-    playerActions,
-    loop,
-    whileLoop,
-    forEach,
-    forLoop,
-    eachPlayer,
-    everyPlayer,
-    ifElse,
-    switchCase,
+  flowCommands = {
+    playerActions: (options: ConstructorParameters<typeof ActionStep<P>>[0]) => new ActionStep<P>(options),
+    loop: (...block: FlowStep<P>[]) => new WhileLoop<P>({do: block, while: () => true}),
+    whileLoop: (options: ConstructorParameters<typeof WhileLoop<P>>[0]) => new WhileLoop<P>(options),
+    forEach: <T extends Serializable<P>>(options: ConstructorParameters<typeof ForEach<P, T>>[0]) => new ForEach<P, T>(options),
+    forLoop: <T = Serializable<P>>(options: ConstructorParameters<typeof ForLoop<P, T>>[0]) => new ForLoop<P, T>(options),
+    eachPlayer: (options: ConstructorParameters<typeof EachPlayer<P>>[0]) => new EachPlayer<P>(options),
+    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => new EveryPlayer<P>(options),
+    ifElse: (options: ConstructorParameters<typeof IfElse<P>>[0]) => new IfElse<P>(options),
+    switchCase: <T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => new SwitchCase<P, T>(options),
   };
 
   constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
@@ -126,17 +115,16 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    */
 
   /**
-   * Define your game's flow.
-   * @param flow - Any number of the following:
-   - {@link playerActions}
-   - {@link loop}
-   - {@link whileLoop}
-   - {@link forEach}
-   - {@link forLoop}
-   - {@link eachPlayer}
-   - {@link everyPlayer}
-   - {@link ifElse}
-   - {@link switchCase}
+   * Define your game's flow. May contain any of the following:
+   * - {@link playerActions}
+   * - {@link loop}
+   * - {@link whileLoop}
+   * - {@link forEach}
+   * - {@link forLoop}
+   * - {@link eachPlayer}
+   * - {@link everyPlayer}
+   * - {@link ifElse}
+   * - {@link switchCase}
    */
   defineFlow(...flow: FlowStep<P>[]) {
     if (this.phase !== 'new') throw Error('cannot call defineFlow once started');
@@ -175,6 +163,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
 
   /**
    * flow functions
+   * @internal
    */
 
   start() {
@@ -199,6 +188,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
 
   /**
    * state functions
+   * @internal
    */
 
   getState(player?: P): GameState<P> {
@@ -302,7 +292,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    * This function is called for each action in the game `actions` you define in
    * {@link defineActions}. These actions are initially declared with an optional
    * prompt and condition. Further information is added to the action by chaining
-   * methods that add choices and behaviour. See (@link Action) for more.
+   * methods that add choices and behaviour. See {@link Action}.
    *
    * If this action accepts prior arguments besides the ones chosen by the
    * player during the execution of this action (especially common for {@link

@@ -33,9 +33,13 @@ export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[]
  * @category Actions
  */
 export type FollowUp<P extends Player> = {
-  // The name of the action, as defined in {@link defineActions}.
+  /**
+   * The name of the action, as defined in {@link defineActions}.
+   */
   name: string,
-  // The player to take this action, if different than the current player
+  /**
+   * The player to take this action, if different than the current player
+   */
   player?: P,
   /**
    * An object containing arguments to be passed to the follow-up action. This
@@ -249,7 +253,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }
 
   /**
-   * Add behavior to this action to alter game state. After adding the choices
+   * Add behaviour to this action to alter game state. After adding the choices
    * to an action, calling `do` causes Boardzilla to use the player choices to
    * actually do something with those choices. Call this method after all the
    * methods for player choices so that the choices are properly available to
@@ -275,6 +279,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *     player.my('stockPile')
    *   );
    * })
+   * @category Behaviour
    */
   do(move: (args: A) => any): Action<P, A> {
     this.moves.push(move);
@@ -312,6 +317,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *   `I said, {{player}} said {{loudMessage}},
    *   ({ message }) => ({ loudMessage: message.toUpperCase() })
    * )
+   * @category Behaviour
    */
   message(message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
     this.messages.push({message, args});
@@ -402,6 +408,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *     // grade will equal 'high' or 'low'
    *   }
    * )
+   * @category Choices
    */
   chooseFrom<N extends string, T extends SingleArgument<P>>(
     name: N,
@@ -445,6 +452,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * }).message(
    *   guess => `{{player}} guessed ${guess}`
    * })
+   * @category Choices
    */
   enterText<N extends string>(name: N, options?: {
     prompt?: string | ((args: A) => string),
@@ -517,6 +525,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * }).do(
    *   ({ amount }) => player.resource += amount
    * );
+   * @category Choices
    */
   chooseNumber<N extends string>(name: N, options: {
     min?: number | ((args: A) => number),
@@ -531,7 +540,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     this._addSelection(new Selection<P>(name, { prompt, confirm, validation: validate, skipIf, selectNumber: { min, max, initial } }));
     return this as unknown as Action<P, A & {[key in N]: number}>;
   }
-
 
   /**
    * Add a choice to this action using the board. Users will click on the board
@@ -609,6 +617,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *     $.deck.firstN(cards.length, Card).putInto(player.my('hand')!);
    *   }
    * )
+   * @category Choices
    */
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
@@ -722,6 +731,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *   // may not purchase more than 10 total resource
    *   validate: ({ lumber, steel }) => lumber + steel <= 10
    * });
+   * @category Choices
    */
   chooseGroup<R extends Group<P>>(
     choices: R,
@@ -767,6 +777,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * ).move(
    *   'card', $.discard
    * )
+   * @category Behaviour
    */
   move(piece: keyof A | Piece, into: keyof A | GameElement) {
     this.moves.push((args: A) => {
@@ -816,6 +827,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *       __position__
    *     ]
    * })
+   * @category Choices
    */
   placePiece(piece: keyof A | Piece, into: GameElement, options?: {
     prompt?: string | ((args: A) => string),

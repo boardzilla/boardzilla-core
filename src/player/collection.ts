@@ -11,6 +11,7 @@ import type { Board, Sorter } from '../board/index.js';
  * can be used to determine or alter play order. The order of the array is the
  * order of play, i.e. `game.players[1]` takes their turn right after
  * `game.players[0]`.
+ * @noInheritDoc
  * @category Core
  */
 export default class PlayerCollection<P extends Player> extends Array<P> {
@@ -154,7 +155,6 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
 
   /**
    * Returns a copy of this collection sorted by some {@link Sorter}.
-   * @category Structure
    */
   sortedBy(key: Sorter<P> | (Sorter<P>)[], direction: "asc" | "desc" = "asc") {
     return (this.slice(0, this.length) as this).sortBy(key, direction);

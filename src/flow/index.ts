@@ -11,17 +11,30 @@ import type { Player } from '../player/index.js';
 import type { Serializable } from '../action/utils.js';
 import { FlowStep } from './flow.js';
 import { Do, FlowControl } from './enums.js';
-export { Do, FlowControl };
+export {
+  ActionStep,
+  WhileLoop,
+  ForLoop,
+  ForEach,
+  EachPlayer,
+  SwitchCase,
+  IfElse,
+  EveryPlayer,
+  Do,
+  FlowControl
+};
+
 export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
 
 /**
  * Stop the flow and wait for a player to act.
  *
- * @param options.actions - An object of possible actions. Each key is an action
- * name defined in the `actions` of {@link createGame}. The value is a further
- * flow defintion for the game to run if this action is taken. This can contain
- * any number of nested Flow functions. If no further action is needed, this can
- * be null.
+ * @param options.actions - An array of possible actions. Each action can be
+ * either a string or on object. If a string, it is the name of the action as
+ * defined in {@link Game#defineActions}. If an object, it consists of keys
+ * `name` and `do` where `name` is the name of the action and `do` is a further
+ * {@link FlowDefintion} for the game to run if this action is taken. This can
+ * contain any number of nested Flow functions.
  *
  * @param options.name - A unique name for this player action. If provided, this
  * can be used for the UI to determine placement of messages for this action in
@@ -53,10 +66,10 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
  * Create a loop that continues until some condition is true. This functions
  * like a standard `while` loop.
  *
- * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If this value is instead one of {@link Do.break},
- * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
- * the current loop can be interupted.
+ * @param options.do - The part that gets repeated. This can contain any type of
+ * {@link FlowDefintion}, a list of functions, or more Flow commands. The
+ * functions {@link Do|Do.repeat}, {@link Do|Do.break} or {@link Do|Do.continue}, can also
+ * be used here to cause the current loop to be interupted.
  *
  * @param options.while - Either a simple boolean value or a condition function
  * that must return true for the loop to continue. If this evaluates to false
@@ -77,10 +90,10 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
 /**
  * Create a loop that continues until {@link Do.break} is called
  *
- * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
- * the current loop can be interupted.
+ * @param options.do - The part that gets repeated. This can contain any type of
+ * {@link FlowDefintion}, a list of functions, or more Flow commands. The
+ * functions {@link Do.break}, {@link Do.break} or {@link Do.continue}, can also
+ * be used here to cause the current loop to be interupted.
  *
  * @example
  * loop(playerActions({ actions: [
@@ -96,10 +109,10 @@ export const loop = <P extends Player>(...block: FlowStep<P>[]) => new WhileLoop
  * Create a loop that sets a value and continues until that value meets some
  * condition. This functions like a standard `for` loop.
  *
- * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
- * the current loop can be interupted.
+ * @param options.do - The part that gets repeated. This can contain any type of
+ * {@link FlowDefintion}, a list of functions, or more Flow commands. The
+ * functions {@link Do.break}, {@link Do.break} or {@link Do.continue}, can also
+ * be used here to cause the current loop to be interupted.
  *
  * @param options.name - The current value of the loop variable will be added to
  * the {@link FlowArguments} under a key with this name.
@@ -133,12 +146,12 @@ export const forLoop = <P extends Player, T = Serializable<P>>(options: Construc
  * Create a loop that iterates over an array. This functions like a standard
  * `Array#forEach` method.
  *
- * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
- * the current loop can be interupted.
+ * @param options.do - The part that gets repeated. This can contain any type of
+ * {@link FlowDefintion}, a list of functions, or more Flow commands. The
+ * functions {@link Do.break}, {@link Do.break} or {@link Do.continue}, can also
+ * be used here to cause the current loop to be interupted.
  *
- * @param options.name - The current value of colleciton will be added to the
+ * @param options.name - The current value of collection will be added to the
  * {@link FlowArguments} under a key with this name.
  *
  * @param options.collection - A collection of values to loop over. This can be
@@ -164,10 +177,11 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  * forEach} with the additional behaviour of setting the {@link
  * PlayerCollection#current | current player} on each iteration of the loop.
  *
- * @param options.do - The part that gets repeated. This can contain any number
- * of nested Flow functions. If this value is instead one of {@link Do.repeat},
- * {@link Do.break} or {@link Do.continue}, or a function that returns one of these,
- * the current loop can be interupted.
+ * @param options.do - The part that gets repeated for each player. This can
+ * contain any type of {@link FlowDefintion}, a list of functions, or more Flow
+ * commands. The functions {@link Do.break}, {@link Do.break} or {@link
+ * Do.continue}, can also be used here to cause the current loop to be
+ * interupted.
  *
  * @param options.name - The current player will be added to the {@link
  * FlowArguments} under a key with this name.
@@ -177,7 +191,7 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  *
  * @param options.nextPlayer - Declare a method to select the next player. If
  * not specified this will follow turn order. See {@link
- * PlayerCollection#sortBy} for more information.
+ * PlayerCollection#sortby} for more information.
  *
  * @param options.turns - If specified, loop through each play this many
  * times. Default is 1.
@@ -200,13 +214,14 @@ export const eachPlayer = <P extends Player>(options: ConstructorParameters<type
  * Provides a branching flow on a condition. This operates like a standard
  * `if... else`
  *
- * @param options.test - Condition to test for true/false. This function accepts all
+ * @param options.if - Condition to test for true/false. This function accepts all
  * {@link FlowArguments}.
  *
  * @param options.do - The part that gets run if the condition is true. This can
- * contain any number of nested Flow functions. If this value is instead one of
- * {@link Do.repeat}, {@link Do.break} or {@link Do.continue}, or a function that
- * returns one of these, the current loop can be interupted.
+ * contain any type of {@link FlowDefintion}, a list of functions, or more Flow
+ * commands. The functions {@link Do.break}, {@link Do.break} or {@link
+ * Do.continue}, can also be used here to cause the current loop to be
+ * interupted.
  *
  * @param options.else - As `do`, but runs if the condition is false. Optional.
  *
@@ -230,7 +245,7 @@ export const ifElse = <P extends Player>(options: ConstructorParameters<typeof I
  * block. The case block can contain an `eq` which will test for equality with a
  * provided value, or `test` which will test the value using a provided function
  * that must return a boolean. Only the first one that meets the condition will
- * run. The `do` can contain any number of nested Flow functions.
+ * run. The `do` can contain any type of {@link FlowDefintion}.
  *
  * @param options.default - If no case qualifies, a `default` case can be
  * provided.
@@ -252,18 +267,17 @@ export const ifElse = <P extends Player>(options: ConstructorParameters<typeof I
  */
 export const switchCase = <P extends Player, T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => new SwitchCase<P, T>(options);
 
-
 /**
  * Create a flow for a set of players that can be done by all players
  * simulataneously in any order. This is similiar to {@link eachPlayer} except
  * that the players can act in any order.
  *
  * @param options.do - The part that each player can perform. This can contain
- * any number of nested Flow functions. Each player will go through the defined
- * flows individually and may be at difference stages. The flow will complete
- * when all players have completed this flow. If this value is instead one of
- * {@link Do.repeat}, {@link Do.break} or {@link Do.continue}, or a function
- * that returns one of these, the current loop can be interupted, *regardless of
+ * any type of {@link FlowDefintion}, a list of functions, or more Flow
+ * commands. Each player will go through the defined flows individually and may
+ * be at difference stages. The flow will complete when all players have
+ * completed this flow. If {@link Do.repeat}, {@link Do.break} or {@link
+ * Do.continue} is called, the current loop can be interupted, *regardless of
  * what the other players have done*.
  *
  * @param options.name - The player acting will be added to the {@link

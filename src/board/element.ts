@@ -96,7 +96,7 @@ export type ElementUI<T extends GameElement> = {
 };
 
 /**
- * List of attributes used to create a new layout in {#link GameElement#layout}.
+ * List of attributes used to create a new layout in {@link GameElement#layout}.
  * @category UI
  */
 export type LayoutAttributes<T extends GameElement> = {
@@ -235,9 +235,24 @@ export type LayoutAttributes<T extends GameElement> = {
    */
   drawer?: {
     closeDirection: 'up' | 'down' | 'left' | 'right',
+    /**
+     * JSX to appear in the tab while open
+     */
     tab: ((el: T) => React.ReactNode) | false,
+    /**
+     * JSX to appear in the tab while closed, if it differs from the open
+     * appearance
+     */
     closedTab?: ((el: T) => React.ReactNode) | false,
+    /**
+     * A function that will be checked at each game state. If it returns true,
+     * the tab will automatically open.
+     */
     openIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
+    /**
+     * A function that will be checked at each game state. If it returns true,
+     * the tab will automatically close.
+     */
     closeIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
   }
 };
@@ -662,14 +677,13 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   }
 
   /**
-   * Whether this element belongs to the "current" player. A player is
-   * considered the current player if this is called in the context of an action
-   * taken by a given player, or if this is called from a given player's view of
-   * the board. It is an error to call this method when not in a player
-   * context. When querying for elements using {@link ElementFinder} such as
-   * {@link all} and {@link first}, {@link mine} is available as a search key
-   * that accepts a value of true/false
-   * @category Queries
+   * Whether this element belongs to the player viewing the board. A player is
+   * considered to be currently viewing the board if this is called in the
+   * context of an action taken by a given player. It is an error to call this
+   * method when not in the context of a player action. When querying for
+   * elements using {@link ElementFinder} such as {@link all} and {@link first},
+   * {@link mine} is available as a search key that accepts a value of
+   * true/false @category Queries
    */
   get mine() {
     if (!this._ctx.player) return false; // throw?
@@ -923,7 +937,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /**
    * Returns the element at row and column within this element
-   * @category Querying
+   * @category Queries
    */
   atPosition({ column, row }: { column: number, row: number }) {
     return this._t.children.find(c => c.row === row && c.column === column);
@@ -968,7 +982,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     if (this._t.was) json.was = this._t.was;
     // do not expose hidden deck shuffles
     if (seenBy && this._t.was && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) json.was = this.branch();
-    if (this._t.children.length) json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
+    if (this._t.children.length && (!seenBy || this.isVisibleTo(seenBy))) {
+      json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
+    }
     return json;
   }
 
@@ -1025,6 +1041,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /**
    * UI
+   * @internal
    */
 
   _ui: ElementUI<this> = {

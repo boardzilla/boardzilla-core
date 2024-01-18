@@ -534,6 +534,22 @@ describe('Board', () => {
       expect(card3.suit).to.equal(undefined);
     });
 
+    it("hides spaces", () => {
+      const hand = board.create(Space, 'hand', { player: players[0] });
+      hand.create(Card, 'AH', { suit: 'H', pip: 1 });
+      hand.showOnlyTo(1);
+
+      expect(hand.toJSON(1)).to.deep.equal(
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, _visible: { default: false, except: [1] }, children: [
+          {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
+        ]}
+      );
+
+      expect(hand.toJSON(2)).to.deep.equal(
+        { className: 'Space', _id: 2, _visible: { default: false, except: [1] } }
+      );
+    });
+
     it("listens to add events", () => {
       const eventSpy = chai.spy();
       board.onEnter(Card, eventSpy);

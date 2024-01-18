@@ -10,11 +10,15 @@ import type Player from '../player/player.js';
 export default class Die<P extends Player<P, B> = any, B extends Board<P, B> = any> extends Piece<P, B> {
   sides: number = 6;
 
-  // Currently shown face
+  /**
+   * Currently shown face
+   */
   current: number = 1;
   flip = false;
 
-  // Randomly choose a new face, causing the roll animation
+  /**
+   * Randomly choose a new face, causing the roll animation
+   */
   roll() {
     this.current = Math.ceil((this._ctx.game?.random || Math.random)() * this.sides);
     this.flip = !this.flip;

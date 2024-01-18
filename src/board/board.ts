@@ -113,6 +113,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
    * play. When elements are removed from the game, they go here, and can be
    * retrieved, using
    * e.g. `board.pile.first('removed-element').putInto('destination-area')`.
+   * @category Structure
    */
   pile: GameElement<P>;
 
@@ -126,6 +127,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
   /**
    * This method must be called inside {@link createGame} with all custom Space
    * and Piece class declared in your game.
+   * @category Structure
    */
   registerClasses(...classList: ElementClass[]) {
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
