@@ -487,7 +487,6 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       for (const action of actions) {
         if (action.name === '__pass__') {
           possibleActions.push('__pass__');
-          console.log('__pass__', action);
           pendingMoves.push({
             name: '__pass__',
             args: {},
