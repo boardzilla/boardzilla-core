@@ -87,7 +87,7 @@ export type ElementUI<T extends GameElement> = {
       columns: number,
       rows: number,
       offsetColumn: Vector,
-      offsetRow: Vector
+      offsetRow: Vector,
     },
     showBoundingBox?: string,
     children: GameElement[],
@@ -178,11 +178,11 @@ export type LayoutAttributes<T extends GameElement> = {
    * one will be 90° to the one specified. Like `gap`, if `scaling` is set to
    * `fill`, these offsets may squish to fill space.
    */
-  offsetColumn?: Vector,
+  offsetColumn?: Vector | number,
   /**
    * As `offsetColumn`
    */
-  offsetRow?: Vector,
+  offsetRow?: Vector | number,
   /**
    * Specifies the direction in which elements placed here should fill up the
    * rows and columns of the layout. Rows or columns will increase to their
@@ -1171,7 +1171,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       let children = layoutItems[l];
 
       const { slots, direction, gap, scaling, alignment, maxOverlap } = attributes;
-      let { size, aspectRatio, offsetColumn, offsetRow, haphazardly } = attributes;
+      let { size, aspectRatio, haphazardly } = attributes;
       const area = this.getArea(attributes);
 
       let cellBoxes = slots || [];
@@ -1346,8 +1346,12 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
         // calculate offset or gap
         let cellGap: Vector | undefined = undefined;
+        let offsetRow: Vector | undefined = undefined;
+        let offsetColumn: Vector | undefined = undefined;
 
-        if (offsetColumn || offsetRow) {
+        if (attributes.offsetColumn || attributes.offsetRow) {
+          offsetColumn = typeof attributes.offsetColumn === 'number' ? {x: attributes.offsetColumn, y: 0} : attributes.offsetColumn;
+          offsetRow = typeof attributes.offsetRow === 'number' ? {x: 0, y: attributes.offsetRow} : attributes.offsetRow;
           if (!offsetRow) offsetRow = { x: -offsetColumn!.y, y: offsetColumn!.x };
           if (!offsetColumn) offsetColumn = { x: offsetRow!.y, y: -offsetRow!.x };
         } else {

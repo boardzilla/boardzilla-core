@@ -8,6 +8,13 @@ type ProfileBadgeProps = {
   player: Player
 }
 
+/**
+ * Component for rendering a Player's name and avatar in their color. Also
+ * capture online status and displays (as `className` `"online"`) and flashes
+ * when the player is the current player (`className` `"current"`).
+ *
+ * @category UI
+ */
 export function ProfileBadge({player}: ProfileBadgeProps) {
   const [userOnline] = gameStore(s => [s.userOnline, s.boardJSON]);
   const online = userOnline.has(player.id)
