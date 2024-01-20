@@ -113,7 +113,7 @@ describe('Game', () => {
       { type: "action", position: {players: undefined} }
     ]);
     const step = game.flow.actionNeeded();
-    expect(step?.actions).to.deep.equal([{ name: 'addSome' }, { name: 'spend' }]);
+    expect(step?.actions).to.deep.equal([{ name: 'addSome', args: undefined, prompt: undefined }, { name: 'spend', args: undefined, prompt: undefined }]);
   });
 
   it('messages', () => {
@@ -308,6 +308,7 @@ describe('Game', () => {
       game.defineActions({
         takeOne: player => game.action({
           prompt: 'take one counter',
+          condition: board.tokens > 0
         }).do(() => {
           board.tokens --;
           player.tokens ++;
@@ -339,6 +340,68 @@ describe('Game', () => {
       game.processMove({ name: 'takeOne', args: {}, player: game.players[3] });
       game.play();
       expect(game.phase).to.equal('finished');
+    });
+
+    it('prompt in actionStep', () => {
+      game.defineFlow(
+        () => { board.tokens = 1 },
+        eachPlayer({
+          name: 'player',
+          do: playerActions({
+            players: game.players,
+            actions: [{name: 'takeOne', prompt: 'take one!'}]
+          })
+        }),
+      );
+      game.start();
+      game.play();
+      expect(game.getPendingMoves(game.players[0])?.moves[0].selections[0].prompt).to.equal('take one!');
+    });
+
+    it('args in actionStep', () => {
+      game.defineFlow(
+        () => { board.tokens = 1 },
+        eachPlayer({
+          name: 'player',
+          do: playerActions({
+            players: game.players,
+            actions: [{name: 'declare', args: {d: 'hi'}}]
+          })
+        }),
+      );
+      game.start();
+      game.play();
+      expect(game.getPendingMoves(game.players[0])?.moves[0].selections[0].type).to.equal('button');
+    });
+
+    it('optional actions', () => {
+      game.defineFlow(
+        () => { board.tokens = 1 },
+        eachPlayer({
+          name: 'player',
+          do: playerActions({
+            players: game.players,
+            optional: 'Pass',
+            actions: ['takeOne']
+          })
+        }),
+      );
+      game.start();
+      game.play();
+      expect(game.getPendingMoves(game.players[0])?.moves.length).to.equal(2);
+      const move1 = game.processMove({ player: game.players[0], name: '__pass__', args: {} });
+      expect(move1).to.be.undefined;
+      game.play();
+
+      expect(game.players.currentPosition).to.deep.equal([2])
+      const move2 = game.processMove({ player: game.players[1], name: 'takeOne', args: {} });
+      expect(move2).to.be.undefined;
+      game.play();
+
+      expect(game.players.currentPosition).to.deep.equal([3]);
+      expect(game.getPendingMoves(game.players[2])?.moves.length).to.equal(1);
+      const move3 = game.processMove({ player: game.players[2], name: 'takeOne', args: {} });
+      expect(move3).not.to.be.undefined;
     });
 
     it('action for every player', () => {

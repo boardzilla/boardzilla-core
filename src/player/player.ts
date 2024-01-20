@@ -14,12 +14,37 @@ import type Game from '../game.js';
  * @category Core
  */
 export default class Player<P extends Player<P, B> = any, B extends Board<P, B> = any> {
+  /**
+   * A player's unique user id
+   */
   id: string;
+
+  /**
+   * A player's chosen name
+   */
   name: string;
+
+  /**
+   * String hex code of the player's chosen color
+   */
   color: string;
+
+  /**
+   * String URL of the avatar image for this player
+   */
   avatar: string;
+
+  /**
+   * Whether this player is the gane's host
+   */
   host: boolean;
-  position: number; // table position, as opposed to turn order
+
+  /**
+   * A player's seating position at the table. This is distinct from turn order,
+   * which is the order of `game.players`. Turn order can be altered during a
+   * game, whereas `position` cannot.
+   */
+  position: number;
   settings?: any;
   board: B
   game: Game<P, B>

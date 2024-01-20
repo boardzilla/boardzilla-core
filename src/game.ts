@@ -26,7 +26,7 @@ import type { ElementClass } from './board/element.js';
 import type { FlowStep } from './flow/flow.js';
 import type { PlayerState, GameUpdate, GameState } from './interface.js';
 import type { Serializable, SerializedArg } from './action/utils.js';
-import type { Argument, FollowUp } from './action/action.js';
+import type { Argument, ActionStub } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
 
 // find all non-method non-internal attr's
@@ -87,7 +87,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   intermediateUpdates: GameState<P>[][] = [];
   godMode = false;
   winner: P[] = [];
-  followups: FollowUp<P>[] = [];
+  followups: ActionStub<P>[] = [];
   /**
    * The flow commands available for this game.
    */
@@ -378,7 +378,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    *       }
    *     )
    */
-  followUp(action: FollowUp<P>) {
+  followUp(action: ActionStub<P>) {
     this.followups.push(action);
   }
 
@@ -448,16 +448,8 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     });
   }
 
-  allowedActions(player: P): {step?: string, prompt?: string, skipIf: 'always' | 'never' | 'only-one', actions: {
-    name: string,
-    player?: P,
-    args?: Record<string, Argument<P>>
-  }[]} {
-    const allowedActions: {
-      name: string,
-      player?: P,
-      args?: Record<string, Argument<P>>
-    }[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
+  allowedActions(player: P): {step?: string, prompt?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub<P>[]} {
+    const allowedActions: ActionStub<P>[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
       actions: allowedActions,
       skipIf: 'always',
@@ -467,7 +459,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     if (actionStep) {
       const actions = allowedActions.concat(
         actionStep.actions?.filter(
-          a => this.getAction(a.name, player).isPossible(a.args)
+          a => a.name === '__pass__' || this.getAction(a.name, player).isPossible(a.args)
         ).map(a => ({ ...a, player })) || []
       )
       //if (actions.length === 0) check any other current players, if no action possible, warn and skip somehow
@@ -493,25 +485,37 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       let possibleActions: string[] = [];
       let pendingMoves: PendingMove<P>[] = [];
       for (const action of actions) {
-        const playerAction = this.getAction(action.name, player);
-        const args = action.args || {}
-        let submoves = playerAction._getPendingMoves(args);
-        if (submoves !== undefined) {
-          possibleActions.push(action.name);
-          // no sub-selections to show so just create a prompt selection of this action
-          if (skipIf === 'always' && submoves.length === 0) {
-            submoves = [{
-              name: action.name,
-              prompt,
-              args,
-              selections: [
-                new Selection<P>('__action__', { prompt: playerAction.prompt, value: action.name }).resolve({})
-              ]
-            }];
-          }
-          pendingMoves = pendingMoves.concat(submoves);
+        if (action.name === '__pass__') {
+          possibleActions.push('__pass__');
+          console.log('__pass__', action);
+          pendingMoves.push({
+            name: '__pass__',
+            args: {},
+            selections: [
+              new Selection<P>('__action__', { prompt: action.prompt, value: '__pass__' }).resolve({})
+            ]
+          });
         } else {
-          console.debug(`Action ${action.name} not allowed because no valid selections exist`);
+          const playerAction = this.getAction(action.name, player)
+          const args = action.args || {}
+          let submoves = playerAction._getPendingMoves(args);
+          if (submoves !== undefined) {
+            possibleActions.push(action.name);
+            // no sub-selections to show so just create a prompt selection of this action
+            if (skipIf === 'always' && submoves.length === 0) {
+              submoves = [{
+                name: action.name,
+                prompt,
+                args,
+                selections: [
+                  new Selection<P>('__action__', { prompt: action.prompt ?? playerAction.prompt, value: action.name }).resolve({})
+                ]
+              }];
+            }
+            pendingMoves = pendingMoves.concat(submoves);
+          } else {
+            console.debug(`Action ${action.name} not allowed because no valid selections exist`);
+          }
         }
       }
 
@@ -519,6 +523,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       return { step, prompt, moves: pendingMoves};
 
     } else {
+      if (name === '__pass__') return { step, prompt, moves: [] };
       const moves = this.getAction(name, player)?._getPendingMoves(args || {});
       if (moves) return { step, prompt, moves };
     }

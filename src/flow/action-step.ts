@@ -3,13 +3,13 @@ import { deserialize, deserializeObject, serialize, serializeObject } from '../a
 
 import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
-import type { Argument, FollowUp } from '../action/action.js';
+import type { Argument, ActionStub } from '../action/action.js';
 
 export type ActionStepPosition<P extends Player> = { // turn taken by `player`
   player: number,
   name: string,
   args: Record<string, Argument<P>>,
-  followups?: FollowUp<P>[]
+  followups?: ActionStub<P>[]
 } | { // waiting for `players`
   players: number[]
 };
@@ -17,21 +17,34 @@ export type ActionStepPosition<P extends Player> = { // turn taken by `player`
 export default class ActionStep<P extends Player> extends Flow<P> {
   players?: P | P[] | ((args: Record<string, any>) => P | P[]); // if restricted to a particular player list. otherwise uses current player
   position: ActionStepPosition<P>;
-  actions: {name: string, do?: FlowDefinition<P>}[];
+  actions: {
+    name: string,
+    prompt?: string | ((args: Record<string, any>) => string),
+    args?: Record<string, Argument<P>>,
+    do?: FlowDefinition<P>
+  }[];
   type: FlowBranchNode<P>['type'] = "action";
+  optional?: string | ((args: Record<string, any>) => string);
   prompt?: string | ((args: Record<string, any>) => string); // needed if multiple board actions
   skipIf: 'always' | 'never' | 'only-one';
 
-  constructor({ name, player, players, actions, prompt, skipIf }: {
+  constructor({ name, player, players, actions, prompt, optional, skipIf }: {
     name?: string,
     players?: P[] | ((args: Record<string, any>) => P[]),
     player?: P | ((args: Record<string, any>) => P),
-    actions: (string | {name: string, do?: FlowDefinition<P>})[],
+    actions: (string | {
+      name: string,
+      prompt?: string | ((args: Record<string, any>) => string),
+      args?: Record<string, Argument<P>>,
+      do?: FlowDefinition<P>
+    })[],
     prompt?: string | ((args: Record<string, any>) => string),
-    skipIf?: 'always' | 'never' | 'only-one';
+    optional?: string | ((args: Record<string, any>) => string),
+    skipIf?: 'always' | 'never' | 'only-one',
   }) {
     super({ name });
     this.actions = actions.map(a => typeof a === 'string' ? {name: a} : a);
+    if (optional) this.actions.push({name: '__pass__', prompt: typeof optional === 'function' ? optional(this.flowStepArgs()) : optional});
     this.prompt = prompt;
     this.skipIf = skipIf ?? 'always';
     this.players = players ?? player;
@@ -68,13 +81,22 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     );
   }
 
-  actionNeeded(player: Player) {
+  actionNeeded(player: Player): {
+    step?: string,
+    prompt?: string,
+    actions: ActionStub<P>[],
+    skipIf: 'always' | 'never' | 'only-one';
+  } | undefined {
     if (!('player' in this.position)) {
       if (!player || !this.position.players || this.position.players.includes(player.position)) {
         return {
           prompt: typeof this.prompt === 'function' ? this.prompt(this.flowStepArgs()) : this.prompt,
           step: this.name,
-          actions: this.actions.map(action => ({name: action.name})),
+          actions: this.actions.map(action => ({
+            name: action.name,
+            prompt: typeof action.prompt === 'function' ? action.prompt(this.flowStepArgs()) : action.prompt,
+            args: action.args,
+          })),
           skipIf: this.skipIf,
         }
       }
@@ -101,6 +123,12 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
     const player = game.players.atPosition(move.player);
     if (!player) return `No such player position: ${move.player}`;
+
+    if (move.name === '__pass__') {
+      this.setPosition(move);
+      return;
+    }
+
     const gameAction = game.getAction(move.name, player);
     game.followups.splice(0, game.followups.length);
     const error = gameAction._process(player, move.args);

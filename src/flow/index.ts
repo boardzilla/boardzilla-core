@@ -41,11 +41,16 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  * {@link Board#layoutStep}.
  *
  * @param options.prompt - A prompting message for the player taking the action
- * to decide between their choices.
+ * to decide between their choices. May be a string or a function accepting
+ * {@link FlowArguments}
  *
  * @param options.player - Which player can perform this action. If not
  * provided, this defaults to the {@link PlayerCollection#current | current
  * player}
+ *
+ * @param options.optional - If a string is passed, this becomes a prompt
+ * players can use to 'pass' this step, performing no action and letting the
+ * flow proceed. May be a string or a function accepting {@link FlowArguments}
  *
  * @param options.skipIf - One of 'always', 'never' or 'only-one' (Default
  * 'always').
@@ -98,7 +103,7 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
  * @example
  * loop(playerActions({ actions: [
  *   'takeOneFromBag',
- *   { name: 'done': do: Do.break }
+ *   { name: 'done', do: Do.break }
  * ]}));
  *
  * @category Flow
@@ -156,10 +161,11 @@ export const forLoop = <P extends Player, T = Serializable<P>>(options: Construc
  *
  * @param options.collection - A collection of values to loop over. This can be
  * declared as an array or as a method that accept the {@link FlowArguments}
- * used up to this point in the flow and return the collection Array.
+ * used up to this point in the flow and return the collection Array. This
+ * expression is evaluated *only once* at the start of the loop.
  *
  * @example
- * forEach({ name: 'card', collection: deck.all(Card), do: [
+ * forEach({ name: 'card', collection: () => deck.all(Card), do: [
  *   // show each card from the deck to player in turn
  *   ({ card }) => card.showTo(player),
  *   playerActions({ actions: [

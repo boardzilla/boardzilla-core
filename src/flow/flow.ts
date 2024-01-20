@@ -8,7 +8,7 @@ import type { ForLoopPosition } from './for-loop.js';
 import type { ForEachPosition } from './for-each.js';
 import type { SwitchCasePostion } from './switch-case.js';
 import type { ActionStepPosition } from './action-step.js';
-import { Argument, FollowUp } from '../action/action.js';
+import { Argument, ActionStub } from '../action/action.js';
 import ActionStep from './action-step.js';
 
 /**
@@ -135,7 +135,7 @@ export default class Flow<P extends Player> {
             player: number,
             name: string,
             args: Record<string, Argument<P>>,
-            followups?: FollowUp<P>[]
+            followups?: ActionStub<P>[]
           };
           args[position!.name] = position!.args;
         }
@@ -207,7 +207,7 @@ export default class Flow<P extends Player> {
   actionNeeded(player?: Player): {
     step?: string,
     prompt?: string,
-    actions: FollowUp<P>[],
+    actions: ActionStub<P>[],
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
     return this.currentProcessor()?.actionNeeded(player);

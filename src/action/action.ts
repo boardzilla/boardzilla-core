@@ -32,7 +32,7 @@ export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[]
  * A follow-up action
  * @category Actions
  */
-export type FollowUp<P extends Player> = {
+export type ActionStub<P extends Player> = {
   /**
    * The name of the action, as defined in {@link defineActions}.
    */
@@ -41,6 +41,11 @@ export type FollowUp<P extends Player> = {
    * The player to take this action, if different than the current player
    */
   player?: P,
+  /**
+   * Action prompt. If specified, overrides the action.prompt in {@link
+   * defineActions}.
+   */
+  prompt?: string,
   /**
    * An object containing arguments to be passed to the follow-up action. This
    * is useful if there are multiple ways to trigger this follow-up that have
@@ -210,6 +215,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   _process(player: P, args: Record<string, Argument<P>>): string | undefined {
     // truncate invalid args - is this needed?
     let error: string | undefined = undefined;
+    if (!this.isPossible(args as A)) return `${this.name} action not possible`;
     for (const selection of this.selections) {
       if (args[selection.name] === undefined) {
         const arg = selection.resolve(args).isForced()
@@ -728,7 +734,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *   lumber: ['number', { min: 2 }],
    *   steel: ['number', { min: 2 }]
    * }, {
-   *   // may not purchase more than 10 total resource
+   *   // may not purchase more than 10 total resources
    *   validate: ({ lumber, steel }) => lumber + steel <= 10
    * });
    * @category Choices
