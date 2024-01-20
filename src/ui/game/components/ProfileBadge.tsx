@@ -4,10 +4,6 @@ import { Player } from '../../../index.js';
 import { gameStore } from '../../index.js';
 import classNames from 'classnames';
 
-type ProfileBadgeProps = {
-  player: Player
-}
-
 /**
  * Component for rendering a Player's name and avatar in their color. Also
  * capture online status and displays (as `className` `"online"`) and flashes
@@ -15,7 +11,7 @@ type ProfileBadgeProps = {
  *
  * @category UI
  */
-export function ProfileBadge({player}: ProfileBadgeProps) {
+export function ProfileBadge({player}: {player: Player}) {
   const [userOnline] = gameStore(s => [s.userOnline, s.boardJSON]);
   const online = userOnline.has(player.id)
   return (

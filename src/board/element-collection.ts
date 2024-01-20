@@ -1,10 +1,11 @@
-import {Piece, GameElement} from './index.js'
+import {GameElement} from './index.js'
 
 import type {
   ElementClass,
   ElementUI,
   ElementAttributes
 } from './element.js';
+import type Piece from './piece.js';
 
 /**
  * Either the name of a property of the object that can be lexically sorted, or
@@ -476,8 +477,8 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
    */
   remove() {
     for (const el of this) {
-      if (!(el instanceof Piece)) throw Error('cannot move Space');
-      el.remove();
+      if ('isSpace' in el) throw Error('cannot move Space');
+      (el as unknown as Piece).remove();
     }
   }
 
@@ -488,8 +489,8 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
   putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
     if (this.some(el => el.hasChangedParent())) to.game.addDelay();
     for (const el of this) {
-      if (!(el instanceof Piece)) throw Error('cannot move Space');
-      el.putInto(to, options);
+      if ('isSpace' in el) throw Error('cannot move Space');
+      (el as unknown as Piece).putInto(to, options);
     }
   }
 
