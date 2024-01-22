@@ -45,7 +45,7 @@ export type ElementFinder<T extends GameElement = any> = (
 );
 
 /**
- * Operations that return groups of {@link GameElement| | GameElement's} return
+ * Operations that return groups of {@link GameElement}'s return
  * this Array-like class.
  * @noInheritDoc
  * @category Board
