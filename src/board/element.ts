@@ -108,9 +108,10 @@ export type LayoutAttributes<T extends GameElement> = {
    */
  margin?: number | { top: number, bottom: number, left: number, right: number },
   /**
-   * A box defining the layout's bounds within this element. Unless `scaling` is
-   * `"none"`, no elements will ever overflow this area. If unspecified, the
-   * entire area is used, i.e. `{ left: 0, top: 0, width: 100, height: 100 }`
+   * A box defining the layout's bounds within this element. Unless `size` is
+   * set too large, no elements will ever overflow this area. If unspecified,
+   * the entire area is used, i.e. `{ left: 0, top: 0, width: 100, height: 100
+   * }`
    */
   area?: Box,
   /**
@@ -118,7 +119,7 @@ export type LayoutAttributes<T extends GameElement> = {
    * number is provided, this is fixed. If min/max values are provided, the
    * layout will allot at least `min` and up to `max` as needed. If `min` is
    * omitted, a minimum of 1 is implied. If `max` is omitted, as many are used
-   * as needed. Default is `{min: 1, max: Infinity}`.
+   * as needed. Default is no limits on either.
    */
   rows?: number | {min: number, max?: number} | {min?: number, max: number},
   /**
@@ -132,11 +133,9 @@ export type LayoutAttributes<T extends GameElement> = {
    */
   slots?: Box[],
   /**
-   * Size alloted for each element placed in this layout. Unless `scaling` is
-   * `"none"`, a `size` provided here will be used only to define an aspect
-   * ratio but may scale up or down to fit as needed. As such, when using any
-   * `scaling` other than `"none"`, providing an `aspectRatio` instead is
-   * sufficient.
+   * Size alloted for each element placed in this layout. Overrides `scaling`
+   * and all defined aspect ratios for these elements, fixing the size for each
+   * element at the specified size.
    */
   size?: { width: number, height: number },
   /**
@@ -148,14 +147,12 @@ export type LayoutAttributes<T extends GameElement> = {
   aspectRatio?: number, // w / h
   /**
    * Scaling strategy for the elements placed in this layout.
-   * - *none*: Elements use the `size` value and do not scale. If no `size` is
-   *    provided, this behaves like `fit` (default)
    * - *fit*: Elements scale up or down to fit within the area alloted without
    *    squshing
    * - *fill*: Elements scale up or down to completely fill the area, squishing
    *    themselves together as needed along one dimension.
    */
-  scaling: 'fit' | 'fill' | 'none'
+  scaling?: 'fit' | 'fill'
   /**
    * If provided, this places a gap between elements. If scaling is 'fill', this
    * is considered a maximum but may shrink or even become negative in order to
@@ -1119,35 +1116,16 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     applyTo: typeof this._ui.layouts[number]['applyTo'],
     attributes: Partial<LayoutAttributes<T>>
   ) {
-    const {slots, area, size, aspectRatio, scaling, gap, margin, offsetColumn, offsetRow} = attributes
+    let {slots, area, size, aspectRatio, scaling, gap, margin, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
     if (slots && (area || margin || scaling || gap || margin || offsetColumn || offsetRow)) console.warn('Layout has `slots` which overrides supplied grid parameters');
     if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
     if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
+    if (size && scaling) console.warn('Both `size` and `scaling` supplied in layout. `scaling` is ignored');
+    if (!size && !scaling) scaling = 'fit';
     if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
-    if (!size && scaling === 'none') {
-      console.warn("Layout `scaling` as 'none' has no meaning without `size` and will instead default to 'fit'");
-      attributes = { ...attributes, scaling: 'fit' };
-    }
     if (!margin && !area) attributes.margin = 0;
-    this._ui.layouts.push({ applyTo, attributes: { scaling: 'fit', alignment: 'center', direction: 'square', ...attributes} });
-
-    this._ui.layouts.sort((a, b) => {
-      let aVal = 0, bVal = 0;
-      if (a.applyTo instanceof GameElement) aVal = 3
-      if (b.applyTo instanceof GameElement) bVal = 3
-      if (typeof a.applyTo === 'string') aVal = 2
-      if (typeof b.applyTo === 'string') bVal = 2
-      if (a.applyTo instanceof Array) aVal = 1
-      if (b.applyTo instanceof Array) bVal = 1
-      if (aVal !== 0 || bVal !== 0) return aVal - bVal;
-      const ac = a.applyTo as ElementClass;
-      const bc = b.applyTo as ElementClass;
-      return ac.prototype instanceof bc ? 1 : (bc.prototype instanceof ac ? -1 : 0);
-    });
-
-    for (const child of this._t.children) child._ui.computedStyle = undefined;
-    // TODO invalidate on children mutate
+    this._ui.layouts.push({ applyTo, attributes: { alignment: 'center', direction: 'square', ...attributes} });
   }
 
   /**
@@ -1155,13 +1133,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @category UI
    * @internal
    */
-  applyLayouts(force=false) {
+  applyLayouts() {
     if (this._ui.appearance.render === false) return;
-
-    if (!this._ui.computedStyle) {
-      force = true;
-      this._ui.computedStyle = { left: 0, top: 0, width: 100, height: 100 };
-    }
 
     const layoutItems = this.getLayoutItems();
     const absoluteTransform = this.absoluteTransform();
@@ -1236,10 +1209,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
               )
             );
             rows = Math.max(minRows,
-              Math.min(
-                maxRows,
+              Math.min(maxRows,
                 Math.ceil(children.length / minColumns),
-                Math.ceil(children.length / columns))
+                Math.ceil(children.length / columns)
+              )
             );
           } else {
             if (rows * columns < children.length) {
@@ -1422,46 +1395,47 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
         let scale: Vector = {x: 1, y: 1};
 
-        if (scaling === 'fill') {
-          // match the dimension furthest, spilling one dimesion out of bounds
-          const s = Math.max(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
-          scale = {x: s, y: s};
-        } else if (scaling === 'fit' && attributes.size) { // if size was not given, size was already calculated as 'fit'
-          // match the closest dimension, pushing one dimesion inside
-          const s = Math.min(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
-          scale = {x: s, y: s};
-        }
+        if (scaling) {
+          if (scaling === 'fill') {
+            // match the dimension furthest, spilling one dimesion out of bounds
+            const s = Math.max(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
+            scale = {x: s, y: s};
+          } else if (scaling === 'fit' && attributes.size) { // if size was not given, size was already calculated as 'fit'
+            // match the closest dimension, pushing one dimesion inside
+            const s = Math.min(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
+            scale = {x: s, y: s};
+          }
 
-        // reduce scale if necessary to keep size below amount needed for min rows/cols
-        const largestCellSize = cellSizeForArea(minRows, minColumns, area, cellGap, offsetColumn, offsetRow);
-        if (maxOverlap !== undefined) {
-          const largestCellSize2 = cellSizeForArea(rows, columns, area,
-            cellGap ? { x: Math.min(-maxOverlap * size.width / 100, cellGap.x), y: Math.min(-maxOverlap * size.height / 100, cellGap.y) } : undefined,
-            offsetColumn ? { x: Math.min(100 - maxOverlap, offsetColumn.x), y: Math.min(100 - maxOverlap, offsetColumn.y) } : undefined,
-            offsetRow ? { x: Math.min(100 - maxOverlap, offsetRow.x), y: Math.min(100 - maxOverlap, offsetRow.y) } : undefined
-          );
-          largestCellSize.width = Math.min(largestCellSize.width, largestCellSize2.width);
-          largestCellSize.height = Math.min(largestCellSize.height, largestCellSize2.height);
-        }
+          // reduce scale if necessary to keep size below amount needed for min rows/cols
+          const largestCellSize = cellSizeForArea(minRows, minColumns, area, cellGap, offsetColumn, offsetRow);
+          if (maxOverlap !== undefined) {
+            const largestCellSize2 = cellSizeForArea(rows, columns, area, undefined,
+              { x: Math.min(100 - maxOverlap, offsetColumn?.x ?? 100), y: Math.min(100 - maxOverlap, offsetColumn?.y ?? 0) },
+              { x: Math.min(100 - maxOverlap, offsetRow?.x ?? 0), y: Math.min(100 - maxOverlap, offsetRow?.y ?? 100) }
+            );
+            largestCellSize.width = Math.min(largestCellSize.width, largestCellSize2.width);
+            largestCellSize.height = Math.min(largestCellSize.height, largestCellSize2.height);
+          }
 
-        if (size.width * scale.x > largestCellSize.width) {
-          const reduction = largestCellSize.width / size.width / scale.x;
-          scale.x *= reduction;
-          scale.y *= reduction;
-        }
-        if (size.height * scale.y > largestCellSize.height) {
-          const reduction = largestCellSize.height / size.height / scale.y;
-          scale.x *= reduction;
-          scale.y *= reduction;
-        }
+          if (size.width * scale.x > largestCellSize.width) {
+            const reduction = largestCellSize.width / size.width / scale.x;
+            scale.x *= reduction;
+            scale.y *= reduction;
+          }
+          if (size.height * scale.y > largestCellSize.height) {
+            const reduction = largestCellSize.height / size.height / scale.y;
+            scale.x *= reduction;
+            scale.y *= reduction;
+          }
 
-        //console.log('pre-scale', largestCellSize, area, size, totalAreaNeeded, alignOffset, scale);
+          //console.log('pre-scale', largestCellSize, area, size, totalAreaNeeded, alignOffset, scale);
 
-        size.width *= scale.x;
-        size.height *= scale.y;
+          size.width *= scale.x;
+          size.height *= scale.y;
+        }
 
         if (!cellGap) { // non-othogonal grid
-          if (scaling === 'fill') {
+          if (scaling !== 'fit') {
             // reduce offset along dimension needed to squish
             if (area.width * scale.x / totalAreaNeeded.width > area.height * scale.y / totalAreaNeeded.height) {
               const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
@@ -1502,7 +1476,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         }
 
         //console.log('size, area after fit/fill adj', size, area, scale, cellGap)
-        for (let c = 0; c !== children.length; c++) {
+        for (let c = 0; c < children.length && c < cells.length; c++) {
           let [column, row] = cells[c];
           column -= origin.column - 1;
           row -= origin.row - 1;
@@ -1581,17 +1555,33 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         }
         child._ui.computedStyle = { width, height, left, top };
 
-        child.applyLayouts(force);
+        child.applyLayouts();
       }
     }
   }
 
   getLayoutItems() {
     const layoutItems: (GameElement[] | undefined)[] = [];
+
+    const layouts = [...this._ui.layouts].sort((a, b) => {
+      let aVal = 0, bVal = 0;
+      if (a.applyTo instanceof GameElement) aVal = 3
+      if (b.applyTo instanceof GameElement) bVal = 3
+      if (typeof a.applyTo === 'string') aVal = 2
+      if (typeof b.applyTo === 'string') bVal = 2
+      if (a.applyTo instanceof Array) aVal = 1
+      if (b.applyTo instanceof Array) bVal = 1
+      if (aVal !== 0 || bVal !== 0) return aVal - bVal;
+      const ac = a.applyTo as ElementClass;
+      const bc = b.applyTo as ElementClass;
+      return ac.prototype instanceof bc ? 1 : (bc.prototype instanceof ac ? -1 : 0);
+    }).reverse();
+
     for (const child of this._t.children) {
       if (child._ui.appearance.render === false) continue;
-      for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
-        const { applyTo, attributes } = this._ui.layouts[l];
+      for (const layout of layouts) {
+        const { applyTo, attributes } = layout;
+        const l = this._ui.layouts.indexOf(layout);
 
         if ((typeof applyTo === 'function' && child instanceof applyTo) ||
           (typeof applyTo === 'string' && child.name === applyTo) ||

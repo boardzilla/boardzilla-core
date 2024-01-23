@@ -822,7 +822,7 @@ describe('Board', () => {
 
     it('aligns', () => {
       board.layout(GameElement, {
-        size: { width: 20, height: 25 },
+        aspectRatio: 4 / 5,
         scaling: 'fit',
         alignment: 'right',
       });
@@ -836,7 +836,7 @@ describe('Board', () => {
 
     it('aligns vertical', () => {
       board.layout(GameElement, {
-        size: { width: 25, height: 20 },
+        aspectRatio: 5 / 4,
         scaling: 'fit',
         alignment: 'bottom right',
       });
@@ -850,7 +850,7 @@ describe('Board', () => {
 
     it('sizes to fit', () => {
       board.layout(GameElement, {
-        size: { width: 20, height: 25 },
+        aspectRatio: 4 / 5,
         scaling: 'fit'
       });
       const spaces = board.createMany(3, Space, 'space');
@@ -862,7 +862,7 @@ describe('Board', () => {
 
     it('sizes to fill', () => {
       board.layout(GameElement, {
-        size: { width: 20, height: 25 },
+        aspectRatio: 4 / 5,
         scaling: 'fill'
       });
       const spaces = board.createMany(3, Space, 'space');
@@ -875,7 +875,6 @@ describe('Board', () => {
     it('retains sizes', () => {
       board.layout(GameElement, {
         size: { width: 20, height: 25 },
-        scaling: 'none'
       });
       const spaces = board.createMany(3, Space, 'space');
       board.applyLayouts();
@@ -1015,26 +1014,30 @@ describe('Board', () => {
 
     it('specificity', () => {
       class Country extends Space<Player> { }
+      board = new Board({ classRegistry: [Space, Piece, GameElement, Country] });
+
       const spaces = board.createMany(4, Space, 'space');
       const space = board.create(Space, 'special');
+      const france = board.create(Country, 'france');
+      const special = board.create(Country, 'special');
+      const el = board.create(GameElement, 'whatev');
 
-      board = new Board({ classRegistry: [Space, Piece, GameElement, Country] });
-      board.layout(spaces[2], { direction: 'btt-rtl' });
-      board.layout('special', { direction: 'ttb-rtl' });
-      board.layout(spaces.slice(0, 2), { direction: 'ttb' });
-      board.layout(Country, { direction: 'rtl' });
-      board.layout(Space, { direction: 'btt' });
-      board.layout(GameElement, { direction: 'ltr-btt' });
+      board.layout(spaces[2], { direction: 'btt-rtl', showBoundingBox: '1' });
+      board.layout('special', { direction: 'ttb-rtl', showBoundingBox: '2' });
+      board.layout(spaces.slice(0, 2), { direction: 'ttb', showBoundingBox: '3' });
+      board.layout(Country, { direction: 'rtl', showBoundingBox: '4' });
+      board.layout(Space, { direction: 'btt', showBoundingBox: '5' });
+      board.layout(GameElement, { direction: 'ltr-btt', showBoundingBox: '6' });
 
-      expect(board._ui.layouts.map(l => l.attributes?.direction)).to.deep.equal([
-        'square',
-        'ltr-btt',
-        'btt',
-        'rtl',
-        'ttb',
-        'ttb-rtl',
-        'btt-rtl'
-      ])
+      board.applyLayouts();
+
+      expect(board._ui.computedLayouts?.[6].children).to.include(el); // by GameElement
+      expect(board._ui.computedLayouts?.[5].children).contains(spaces[3]); // by Space
+      expect(board._ui.computedLayouts?.[4].children).contains(france); // by more specific class
+      expect(board._ui.computedLayouts?.[3].children).contains(spaces[0]); // by single ref
+      expect(board._ui.computedLayouts?.[2].children).contains(space); // by name
+      expect(board._ui.computedLayouts?.[2].children).contains(special); // by name
+      expect(board._ui.computedLayouts?.[1].children).contains(spaces[2]); // by array ref
     });
 
     it('can place', () => {

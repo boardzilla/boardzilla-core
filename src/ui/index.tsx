@@ -545,7 +545,7 @@ const getBoardSelections = (moves: UIMove[], move?: {name: string, args: Record<
 const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?: ElementJSON[]) => {
   // rerun layouts. probably optimize TODO
   game.contextualizeBoardToPlayer(game.players.atPosition(position));
-  game.board.applyLayouts(true, board => {
+  game.board.applyLayouts(board => {
     board.all(Die).appearance({
       render: DieComponent,
       aspectRatio: 1,
