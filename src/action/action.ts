@@ -34,7 +34,7 @@ export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[]
  */
 export type ActionStub<P extends Player> = {
   /**
-   * The name of the action, as defined in {@link defineActions}.
+   * The name of the action, as defined in `{@link Game#defineactions}`.
    */
   name: string,
   /**
@@ -42,8 +42,8 @@ export type ActionStub<P extends Player> = {
    */
   player?: P,
   /**
-   * Action prompt. If specified, overrides the action.prompt in {@link
-   * defineActions}.
+   * Action prompt. If specified, overrides the `action.prompt` in `{@link
+   * Game#defineactions}`.
    */
   prompt?: string,
   /**

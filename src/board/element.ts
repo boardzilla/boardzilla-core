@@ -1136,6 +1136,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   applyLayouts() {
     if (this._ui.appearance.render === false) return;
 
+    this._ui.computedStyle ??= { left: 0, top: 0, width: 100, height: 100 };
+
     const layoutItems = this.getLayoutItems();
     const absoluteTransform = this.absoluteTransform();
 
