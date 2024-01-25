@@ -264,7 +264,7 @@ export default () => {
       />
 
       {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
-      {!finished && !victoryMessageDismissed && (
+      {finished && !victoryMessageDismissed && (
         <div className="game-finished">
           Game finished
           {game.winner.length > 0 && (
