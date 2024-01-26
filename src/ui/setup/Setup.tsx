@@ -39,7 +39,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
   return (
     <div id="setup">
       <div id="background"/>
-      <div id="setup" className={host ? '' : 'disabled'}>
+      <div className={host ? '' : 'disabled'}>
         <div className="heading">
           <h1>Game Setup</h1>
           {host && <p>Select the open seats to seat yourself and your players at the table. Use the invite link above to get other players to join. They will be in the lobby until seated.</p>}
