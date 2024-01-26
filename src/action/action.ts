@@ -224,6 +224,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
 
       error = selection.error(args);
       if (error) {
+        debugger
+        // console.error(selection.boardChoices.indexOf(args[selection.name]), selection.boardChoices[0].board, args[selection.name].board, args[selection.name].branch(), selection.boardChoices.map(s => s.branch()));
         console.error(`Invalid choice for ${selection.name}. Got "${args[selection.name]}" ${error}`);
         break;
       }

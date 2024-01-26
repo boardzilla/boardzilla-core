@@ -69,7 +69,6 @@ type GameStore = {
   setup?: SetupFunction<Player, Board<Player>>;
   setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
   game: Game<Player, Board<Player>>;
-  setGame: (game: Game<Player, Board<Player>>) => void;
   finished: boolean;
   setFinished: (finished: boolean) => void;
   isMobile: boolean;
@@ -125,14 +124,13 @@ type GameStore = {
   setUserOnline: (id: string, online: boolean) => void
 }
 
-export const gameStore = createWithEqualityFn<GameStore>()(set => ({
+export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
   host: false,
   setHost: host => set({ host }),
   userID: '',
   setUserID: userID => set({ userID }),
   setSetup: setup => set({ setup }),
   game: new Game(Player, Board),
-  setGame: (game: Game<Player, Board<Player>>) => set({ game }),
   finished: false,
   setFinished: finished => set({ finished }),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
@@ -328,6 +326,8 @@ export const gameStore = createWithEqualityFn<GameStore>()(set => ({
   },
   userOnline: new Map(),
 }), shallow);
+
+export const gameStore = createGameStore();
 
 // refresh move and selections
 const updateSelections = (game: Game<Player, Board<Player>>, position: number, move?: UIMove): Partial<GameStore> => {
@@ -612,7 +612,7 @@ export const render = <P extends Player, B extends Board>(setup: SetupFunction<P
 }): void => {
   const { settings, boardSizes, layout } = options;
   const state = gameStore.getState();
-  const setupGame: SetupFunction = (state) => {
+  const setupGame: SetupFunction = state => {
     const game = setup(state);
     game.board._ui.boardSizes = boardSizes;
     game.board._ui.setupLayout = layout;

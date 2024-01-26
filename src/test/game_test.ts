@@ -268,6 +268,7 @@ describe('Game', () => {
   describe('players', () => {
     it('sortedBy', () => {
       expect(game.players.sortedBy('color')[0].color).to.equal('green')
+      expect(game.players.sortedBy('color', 'desc')[0].color).to.equal('yellow')
       expect(game.players[0].color).to.equal('red')
     });
 

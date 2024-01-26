@@ -24,6 +24,8 @@ export {
   choiceSetting
 } from './ui/index.js';
 
+export { test as default } from './ui/test.js';
+
 import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
 
