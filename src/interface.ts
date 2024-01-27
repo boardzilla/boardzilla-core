@@ -97,7 +97,7 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
         data: SerializedMove | SerializedMove[]
       },
     ): GameUpdate<Player> => {
-      console.time('processMove');
+      //console.time('processMove');
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.serverBoard && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.serverBoard._ctx.game;
@@ -112,7 +112,7 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
       const game = cachedGame || setup(previousState.state, {trackMovement: true});
       game.players.setCurrent(previousState.currentPlayers);
       const player = game.players.atPosition(move.position)!;
-      console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
+      //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       game.messages = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
 
@@ -126,22 +126,20 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
         if (error) {
           throw Error(`Unable to process move: ${error}`);
         }
-        console.timeLog('processMove', 'process');
+        //console.timeLog('processMove', 'process');
         if (game.phase !== 'finished') game.play();
-        console.timeLog('processMove', 'play');
+        //console.timeLog('processMove', 'play');
         if (game.phase === 'finished') break;
       }
 
-      //game.getPendingMoves(player);
-
       const update = game.getUpdate();
-      console.timeLog('processMove', 'update');
+      //console.timeLog('processMove', 'update');
 
       // @ts-ignore
       if (globalThis.window) window.serverBoard = game.board;
       // @ts-ignore
       if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
-      console.timeEnd('processMove');
+      //console.timeEnd('processMove');
       return update;
     },
     getPlayerState: (state: GameState<Player>, position: number): GameState<Player> => {
