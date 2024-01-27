@@ -121,6 +121,9 @@ export class TestRunner<P extends Player, B extends Board> {
 
   move(position: number, name: string, args: Record<string, Argument<P>>) {
     if (!this.server.state) throw Error("Must call TestRunner#start first");
+    console.log("this.currentPosition", this.currentPosition)
+    if (this.server.state!.game.phase === 'finished') throw Error("Cannot take a move on a finished game");
+    if (!this.server.state!.game.currentPlayers.includes(position)) throw Error("This player cannot take a move");
     const player = this.players[position - 1];
     const state = player.store.getState();
     globalThis.$ = state.game.board._ctx.namedSpaces;
