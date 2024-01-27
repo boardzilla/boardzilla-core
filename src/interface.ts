@@ -104,6 +104,7 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
       const rseed = advanceRseed(cachedGame?.rseed || previousState.state.rseed);
       if (cachedGame) {
         cachedGame.setRandomSeed(rseed);
+        globalThis.$ = cachedGame.board._ctx.namedSpaces;
       } else {
         previousState.state.rseed = rseed;
       }
