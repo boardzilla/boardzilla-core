@@ -12,6 +12,46 @@ import { GameInterface, GameUpdate, createInterface } from './interface.js';
 import { Argument } from './action/action.js';
 import { PlayerAttributes } from './game.js';
 
+class TestRunnerPlayer<P extends Player, B extends Board> {
+  runner: TestRunner<P, B>
+  store: ReturnType<typeof createGameStore>
+  player: PlayerAttributes<Player>
+  game: Game
+  board: Board
+  position: number
+
+  constructor(runner: TestRunner<P, B>, position: number, store: ReturnType<typeof createGameStore>, player: PlayerAttributes<Player>, game: Game, board: Board) {
+    this.runner = runner
+    this.position = position
+    this.store = store
+    this.player = player
+    this.game = game
+    this.board = board
+  }
+
+  move(name: string, args: Record<string, Argument<P>>) {
+    if (!this.runner.server.state) throw Error("Must call TestRunner#start first");
+    if (this.runner.server.state!.game.phase === 'finished') throw Error("Cannot take a move on a finished game");
+    if (!this.runner.server.state!.game.currentPlayers.includes(this.position)) throw Error("This player cannot take a move");
+    const state = this.store.getState();
+    globalThis.$ = state.game.board._ctx.namedSpaces;
+    this.runner.currentPosition = this.position;
+    state.selectMove({
+      name,
+      args,
+      selections: [],
+      requireExplicitSubmit: false
+    })
+    this.runner.updatePlayers();
+  }
+
+  actions() {
+    const pendingMoves = this.game.getPendingMoves(this.runner.server.game().players[this.position - 1]);
+    if (!pendingMoves) return [];
+    return pendingMoves.moves.map(m => m.name);
+  }
+}
+
 export class TestRunner<P extends Player, B extends Board> {
   server: {
     interface: GameInterface<Player>;
@@ -21,12 +61,7 @@ export class TestRunner<P extends Player, B extends Board> {
 
   currentPosition: number = 1;
 
-  players: {
-    store: ReturnType<typeof createGameStore>,
-    player: PlayerAttributes<Player>
-    game: Game,
-    board: Board,
-  }[]
+  players: TestRunnerPlayer<P, B>[]
 
   constructor(private setup: SetupFunction) {
     const iface = createInterface(setup)
@@ -67,7 +102,7 @@ export class TestRunner<P extends Player, B extends Board> {
   start({players, settings}: {
     players: number,
     settings: Record<string, any>
-  }) {
+  }): TestRunnerPlayer<P, B>[] {
     const playerAttrs = times(players, p => ({
       id: String(p),
       name: String(p),
@@ -83,20 +118,14 @@ export class TestRunner<P extends Player, B extends Board> {
       rseed: 'test-rseed'
     }, 'test-rseed');
 
-    this.players = playerAttrs.map(p => {
+    this.players = playerAttrs.map((p, i) => {
       const store = createGameStore()
       const {setSetup, game} = store.getState();
       setSetup(this.setup);
-
-      return {
-        player: p,
-        store,
-        game,
-        board: game.board
-      };
+      return new TestRunnerPlayer(this, i+1, store, p, game, game.board)
     });
-
     this.updatePlayers(); // initial
+    return this.players
   }
 
   updatePlayers() {
@@ -117,29 +146,5 @@ export class TestRunner<P extends Player, B extends Board> {
         player.board = game.board;
       }
     }
-  }
-
-  move(position: number, name: string, args: Record<string, Argument<P>>) {
-    if (!this.server.state) throw Error("Must call TestRunner#start first");
-    console.log("this.currentPosition", this.currentPosition)
-    if (this.server.state!.game.phase === 'finished') throw Error("Cannot take a move on a finished game");
-    if (!this.server.state!.game.currentPlayers.includes(position)) throw Error("This player cannot take a move");
-    const player = this.players[position - 1];
-    const state = player.store.getState();
-    globalThis.$ = state.game.board._ctx.namedSpaces;
-    this.currentPosition = position;
-    state.selectMove({
-      name,
-      args,
-      selections: [],
-      requireExplicitSubmit: false
-    })
-    this.updatePlayers();
-  }
-
-  availableActions(position: number) {
-    const pendingMoves = this.players[position - 1].game.getPendingMoves(this.server.game().players[position - 1]);
-    if (!pendingMoves) return [];
-    return pendingMoves.moves.map(m => m.name);
   }
 }
