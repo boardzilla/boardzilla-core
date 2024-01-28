@@ -12,6 +12,12 @@ import { GameInterface, GameUpdate, createInterface } from './interface.js';
 import { Argument } from './action/action.js';
 import { PlayerAttributes } from './game.js';
 
+declare global {
+  interface Window {
+    serverBoard?: Board;
+  }
+}
+
 class TestRunnerPlayer<P extends Player, B extends Board> {
   runner: TestRunner<P, B>
   store: ReturnType<typeof createGameStore>
@@ -46,7 +52,7 @@ class TestRunnerPlayer<P extends Player, B extends Board> {
   }
 
   actions() {
-    const pendingMoves = this.game.getPendingMoves(this.runner.server.game().players[this.position - 1]);
+    const pendingMoves = this.game.getPendingMoves(this.runner.server.game.players[this.position - 1]);
     if (!pendingMoves) return [];
     return pendingMoves.moves.map(m => m.name);
   }
@@ -56,7 +62,8 @@ export class TestRunner<P extends Player, B extends Board> {
   server: {
     interface: GameInterface<Player>;
     state?: GameUpdate<Player>;
-    game: () => Game<P, B>;
+    game: Game<P, B>;
+    board: B
   };
 
   currentPosition: number = 1;
@@ -68,24 +75,12 @@ export class TestRunner<P extends Player, B extends Board> {
 
     this.server = {
       interface: iface,
-      game: () => {
-        if (!this.server.state) throw Error("Must call TestRunner#start first");
-        const game = setup(this.server.state.game.state);
-        if (this.server.state.game.phase === 'finished') {
-          game.phase = 'finished';
-          game.players.setCurrent([]);
-          game.winner = this.server.state.game.winners.map(p => game.players.atPosition(p)!);
-        }
-        return game;
-      }
-    };
+    } as typeof this['server'];
 
-    // @ts-ignore
     globalThis.window = {
       clearTimeout: () => {},
-      // @ts-ignore
       top: {
-        postMessage: ({ data }) => {
+        postMessage: ({ data }: { data: any }) => {
           if (this.server.state!.game.phase === 'finished') throw Error(`Game already finished. Cannot process move ${data.move}`);
           this.server.state = this.server.interface.processMove(
             this.server.state!.game,
@@ -94,9 +89,10 @@ export class TestRunner<P extends Player, B extends Board> {
               data
             }
           );
+          this.getCurrentGame();
         }
       }
-    };
+    } as unknown as typeof globalThis.window;
   }
 
   start({players, settings}: {
@@ -118,6 +114,7 @@ export class TestRunner<P extends Player, B extends Board> {
       rseed: 'test-rseed'
     }, 'test-rseed');
 
+    this.getCurrentGame();
     this.players = playerAttrs.map((p, i) => {
       const store = createGameStore()
       const {setSetup, game} = store.getState();
@@ -126,6 +123,11 @@ export class TestRunner<P extends Player, B extends Board> {
     });
     this.updatePlayers(); // initial
     return this.players
+  }
+
+  getCurrentGame() {
+    this.server.game = globalThis.window.serverBoard?.game as Game<P, B>;
+    this.server.board = this.server.game.board;
   }
 
   updatePlayers() {

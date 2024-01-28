@@ -74,6 +74,13 @@ function advanceRseed(rseed?: string) {
   return rseed;
 }
 
+function cacheGameOnWindow(game: Game, update: GameUpdate<Player>) {
+  // @ts-ignore
+  if (globalThis.window) window.serverBoard = game.board;
+  // @ts-ignore
+  if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
+}
+
 export const createInterface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {
     initialState: (state: SetupState<Player>): GameUpdate<Player> => {
@@ -88,7 +95,9 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
       if (!state.rseed) state.rseed = advanceRseed(); // set the seed first because createGame may call random()
       const game = setup(state);
       if (game.phase !== 'finished') game.play();
-      return game.getUpdate();
+      const update = game.getUpdate();
+      cacheGameOnWindow(game, update);
+      return update;
     },
     processMove: (
       previousState: GameStartedState<Player>,
@@ -134,11 +143,7 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
 
       const update = game.getUpdate();
       //console.timeLog('processMove', 'update');
-
-      // @ts-ignore
-      if (globalThis.window) window.serverBoard = game.board;
-      // @ts-ignore
-      if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
+      cacheGameOnWindow(game, update);
       //console.timeEnd('processMove');
       return update;
     },
