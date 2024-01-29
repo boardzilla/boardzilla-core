@@ -16,7 +16,7 @@
   },
   "type": "module",
   "exports": {
-    ".": "./dist/index.ts",
+    ".": "./dist/index.js",
     "./index.css": "./dist/ui/assets/index.css"
   },
   "files": [
