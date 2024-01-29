@@ -74,7 +74,14 @@ function advanceRseed(rseed?: string) {
   return rseed;
 }
 
-export const createInteface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
+function cacheGameOnWindow(game: Game, update: GameUpdate<Player>) {
+  // @ts-ignore
+  if (globalThis.window) window.serverBoard = game.board;
+  // @ts-ignore
+  if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
+}
+
+export const createInterface = (setup: SetupFunction<Player, Board<Player>>): GameInterface<Player> => {
   return {
     initialState: (state: SetupState<Player>): GameUpdate<Player> => {
       if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev
@@ -88,7 +95,9 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       if (!state.rseed) state.rseed = advanceRseed(); // set the seed first because createGame may call random()
       const game = setup(state);
       if (game.phase !== 'finished') game.play();
-      return game.getUpdate();
+      const update = game.getUpdate();
+      cacheGameOnWindow(game, update);
+      return update;
     },
     processMove: (
       previousState: GameStartedState<Player>,
@@ -100,16 +109,18 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       //console.time('processMove');
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
-      if (globalThis.window && window.board && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.board._ctx.game;
+      if (globalThis.window && window.serverBoard && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.serverBoard._ctx.game;
       const rseed = advanceRseed(cachedGame?.rseed || previousState.state.rseed);
       if (cachedGame) {
         cachedGame.setRandomSeed(rseed);
+        globalThis.$ = cachedGame.board._ctx.namedSpaces;
       } else {
         previousState.state.rseed = rseed;
       }
 
       const game = cachedGame || setup(previousState.state, {trackMovement: true});
-      game.players.setCurrent(previousState.currentPlayers),
+      game.players.setCurrent(previousState.currentPlayers);
+      const player = game.players.atPosition(move.position)!;
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       game.messages = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
@@ -117,7 +128,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
       let error = undefined;
       for (let i = 0; i !== move.data.length; i++) {
         error = game.processMove({
-          player: game.players.atPosition(move.position)!,
+          player,
           name: move.data[i].name,
           args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, game)]))
         });
@@ -132,11 +143,7 @@ export const createInteface = (setup: SetupFunction<Player, Board<Player>>): Gam
 
       const update = game.getUpdate();
       //console.timeLog('processMove', 'update');
-
-      // @ts-ignore
-      if (globalThis.window) window.board = game.board;
-      // @ts-ignore
-      if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
+      cacheGameOnWindow(game, update);
       //console.timeEnd('processMove');
       return update;
     },

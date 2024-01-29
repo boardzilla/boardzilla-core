@@ -12,7 +12,7 @@ export { Board, union } from './board/index.js';
 
 export { Do } from './flow/index.js';
 
-export { createInteface } from './interface.js';
+export { createInterface } from './interface.js';
 export { times, range, shuffleArray } from './utils.js';
 export { Player };
 export {
@@ -23,6 +23,8 @@ export {
   textSetting,
   choiceSetting
 } from './ui/index.js';
+
+export { TestRunner } from './test-runner.js';
 
 import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
