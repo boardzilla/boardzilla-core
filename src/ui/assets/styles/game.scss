@@ -789,6 +789,10 @@ html, body { height: 100% }
       }
     }
 
+    &.current {
+      border: .03em solid white;
+    }
+
     .player-name {
       flex: 1;
       overflow: hidden;

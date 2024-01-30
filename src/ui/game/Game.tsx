@@ -104,6 +104,7 @@ export default () => {
 
     if (!layout && pendingMoves?.length) {
       const moves = pendingMoves.filter(m => move || m.name.slice(0, 4) !== '_god'); // no display for these normally
+
       if (moves.length === 1) {
         // skip non-board moves if board elements already selected (cant this be more specific? just moves that could apply?)
         if (!selected.length || moves[0].selections.some(s => s.type !== 'board')) {
@@ -131,17 +132,17 @@ export default () => {
 
       if (layout.position === 'beside' || layout.position === 'stack') {
         if (box.left > 100 - box.left - box.width) {
-          style.right = `calc(${100 - box.left - (layout.position === 'beside' ? 0 : box.width)}% + ${layout.position === 'beside' ? layout.gap : 0}vw)`;
+          style.right = `clamp(0%, calc(${100 - box.left - (layout.position === 'beside' ? 0 : box.width)}% + ${layout.position === 'beside' ? layout.gap : 0}vw), 100%)`;
           style.left = undefined;
         } else {
-          style.left = `calc(${box.left + (layout.position === 'beside' ? box.width : 0)}% + ${layout.position === 'beside' ? layout.gap : 0}vw)`;
+          style.left = `clamp(0%, calc(${box.left + (layout.position === 'beside' ? box.width : 0)}% + ${layout.position === 'beside' ? layout.gap : 0}vw), 100%)`;
         }
 
         if (box.top > 100 - box.top - box.height) {
-          style.bottom = `calc(${100 - box.top - (layout.position === 'beside' ? box.height : 0)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw)`;
+          style.bottom = `clamp(0%, calc(${100 - box.top - (layout.position === 'beside' ? box.height : 0)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw), 100%)`;
           style.top = undefined;
         } else {
-          style.top = `calc(${box.top + (layout.position === 'beside' ? 0: box.height)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw)`;
+          style.top = `clamp(0%, calc(${box.top + (layout.position === 'beside' ? 0: box.height)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw), 100%)`;
         }
       } else {
         // inset

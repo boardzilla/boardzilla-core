@@ -85,6 +85,10 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   random: () => number;
   messages: Message[] = [];
   intermediateUpdates: GameState<P>[][] = [];
+  /**
+   * If true, allows any piece to be moved or modified in any way. Used only
+   * during development.
+   */
   godMode = false;
   winner: P[] = [];
   followups: ActionStub<P>[] = [];
@@ -481,6 +485,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIf } = allowedActions;
+
     if (!name) {
       let possibleActions: string[] = [];
       let pendingMoves: PendingMove<P>[] = [];
