@@ -32,7 +32,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   const allArgs = useMemo(() => {
     const args2 = {...move.args, ...args};
     for (const s of move.selections) {
-      if (s.type === 'board') {
+      if (s.type === 'board' && selected.every(el => s.boardChoices?.includes(el))) {
         args2[s.name] = s.isMulti() ? selected : selected[0];
         break
       }
