@@ -109,7 +109,7 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
       //console.time('processMove');
       let cachedGame: Game<Player, Board<Player>> | undefined = undefined;
       // @ts-ignore
-      if (globalThis.window && window.serverBoard && window.lastGame > new Date() - 10 && window.json === JSON.stringify(previousState)) cachedGame = window.serverBoard._ctx.game;
+      if (globalThis.window && window.serverBoard && window.lastGame > new Date() - 20 && window.json === JSON.stringify(previousState)) cachedGame = window.serverBoard._ctx.game;
       const rseed = advanceRseed(cachedGame?.rseed || previousState.state.rseed);
       if (cachedGame) {
         cachedGame.setRandomSeed(rseed);
@@ -121,6 +121,7 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
       const game = cachedGame || setup(previousState.state, {trackMovement: true});
       game.players.setCurrent(previousState.currentPlayers);
       const player = game.players.atPosition(move.position)!;
+      // @ts-ignore
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       game.messages = [];
       if (!(move.data instanceof Array)) move.data = [move.data];

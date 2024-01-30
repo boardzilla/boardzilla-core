@@ -3,6 +3,7 @@ import { gameStore } from '../index.js';
 
 import Element from './components/Element.js';
 import PlayerControls from './components/PlayerControls.js';
+import InfoOverlay from './components/InfoOverlay.js';
 import { click } from '../assets/index.js';
 import { GameElement } from '../../board/index.js'
 import classnames from 'classnames';
@@ -14,10 +15,11 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, finished, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, setZoom, boardJSON] =
-    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.setZoom, s.boardJSON]);
+  const [game, finished, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, setInfoElement, dragElement, setDragElement, setCurrentDrop, boardJSON] =
+    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.setInfoElement, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
+  const [infoMode, setInfoMode] = useState(false);
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
 
   if (!position) return null;
@@ -188,19 +190,17 @@ export default () => {
   useEffect(() => {
     const keydownHandler = (e: KeyboardEvent) => {
       if (e.repeat) return;
-      if (e.key === 'z') setZoom(true);
-      if (e.code === 'Escape') submitMove();
-    };
-    const keyupHandler = (e: KeyboardEvent) => {
-      if (e.key === 'z') setZoom(false);
+      if (e.code === 'Escape') {
+        if (infoMode) {
+          setInfoElement();
+        } else {
+          submitMove();
+        }
+      }
     };
     window.addEventListener('keydown', keydownHandler);
-    window.addEventListener('keyup', keyupHandler);
-    return () => {
-      window.removeEventListener('keyup', keyupHandler);
-      window.removeEventListener('keyup', keydownHandler);
-    }
-  }, [setZoom, submitMove]);
+    return () => window.removeEventListener('keydown', keydownHandler);
+  }, [submitMove, infoMode, setInfoElement]);
 
   useEffect(() => {
     window.addEventListener('resize', setBoardSize);
@@ -252,19 +252,21 @@ export default () => {
           element={game.board}
           json={boardJSON[0]}
           selected={selected}
+          infoMode={infoMode}
           onSelectElement={onSelectElement}
           onSelectPlacement={onSelectPlacement}
         />
       </div>
 
-      <PlayerControls
+      {!infoMode && <PlayerControls
         name={name}
         style={style}
         moves={moves}
         onSubmit={submitMove}
-      />
+      />}
 
-      {game.godMode && <div className="god-mode-enabled">God mode enabled</div>}
+      {game.godMode && !infoMode && <div className="god-mode-enabled">God mode enabled</div>}
+
       {finished && !victoryMessageDismissed && (
         <div className="game-finished">
           Game finished
@@ -277,6 +279,7 @@ export default () => {
           {game.winner.length === 0 && game.players.length === 1 && <div style={{color: "#800"}}>You lose</div>}
         </div>
       )}
+      <InfoOverlay infoMode={infoMode} setInfoMode={setInfoMode}/>
     </div>
   );
 }

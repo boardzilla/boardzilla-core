@@ -116,10 +116,8 @@ type GameStore = {
     layout: Exclude<GameElement['_ui']['computedLayouts'], undefined>[number];
   };
   selectPlacement: (placement: {column: number, row: number}) => void;
-  zoomable?: GameElement;
-  setZoomable: (el?: GameElement) => void;
-  zoomElement?: GameElement;
-  setZoom: (zoom: boolean) => void;
+  infoElement?: {info: JSX.Element | boolean, element: GameElement };
+  setInfoElement: (el?: {info: JSX.Element | boolean, element: GameElement }) => void;
   userOnline: Map<string, boolean>
   setUserOnline: (id: string, online: boolean) => void
 }
@@ -311,12 +309,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
     }
     return {};
   }),
-  setZoomable: zoomable => set({ zoomable }),
-  setZoom: zoom => set(s => {
-    return {
-      zoomElement: zoom ? s.zoomable : undefined
-    }
-  }),
+  setInfoElement: infoElement => set({ infoElement }),
   setUserOnline: (id: string, online: boolean) => {
     set(s => {
       const userOnline = new Map(s.userOnline)

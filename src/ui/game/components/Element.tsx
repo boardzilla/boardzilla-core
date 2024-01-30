@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../index.js';
-import { Tooltip } from 'react-tooltip';
 import uuid from 'uuid-random';
 import Drawer from './Drawer.js';
 
@@ -19,29 +18,30 @@ import type { DraggableData, DraggableEvent } from 'react-draggable';
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, selected, onSelectElement, onSelectPlacement, onMouseLeave}: {
+const Element = ({element, json, selected, infoMode, onSelectElement, onSelectPlacement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
   selected: GameElement<Player>[],
+  infoMode: boolean | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onSelectPlacement: ({ column, row }: { column: number, row: number }) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, position, setZoomable, zoomElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, selectPlacement, isMobile, boardJSON] =
-    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setZoomable, s.zoomElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.selectPlacement, s.isMobile, s.boardJSON]);
+  const [previousRenderedState, renderedState, boardSelections, move, position, setInfoElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, selectPlacement, isMobile, boardJSON] =
+    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setInfoElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.selectPlacement, s.isMobile, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
   const wrapper = useRef<HTMLDivElement | null>(null);
   const domElement = useRef<HTMLDivElement>(null);
   const branch = useMemo(() => element.branch(), [element, boardJSON]);
   const selections = boardSelections[branch];
-  const isSelected = selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element));
+  const isSelected = !infoMode && (selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
-  const clickable = !dragElement && selections?.clickMoves.length;
-  const selectable = !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
-  const draggable = !!selections?.dragMoves?.length; // ???
-  const droppable = dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
+  const clickable = !infoMode && !dragElement && selections?.clickMoves.length;
+  const selectable = !infoMode && !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
+  const draggable = !infoMode && !!selections?.dragMoves?.length; // ???
+  const droppable = !infoMode && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
   const placing = useMemo(() => element === placement?.piece, [element, placement])
   const isVisible = useMemo(() => element.isVisible(), [element, boardJSON])
 
@@ -74,7 +74,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
   const attrs = previousRender?.attrs ?? newAttrs;
 
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style) {
+    if (!previousRender?.style || infoMode) {
       //console.log('already moved', !!previousRender, previousRender?.movedTo, branch);
       return;
     }
@@ -85,7 +85,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
       translateX: (previousRender.style.left - newPosition.left) / newPosition.width * 100,
       translateY: (previousRender.style.top - newPosition.top) / newPosition.height * 100,
     };
-  }, [relativeTransform, previousRender]);
+  }, [relativeTransform, previousRender, infoMode]);
 
 
   useEffect(() => {
@@ -180,16 +180,14 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
 
   const handleMouseEnter = useCallback(() => {
     if (droppable) setCurrentDrop(element);
-    if (element._ui.appearance.zoomable) setZoomable(element)
-  }, [droppable, element, setCurrentDrop, setZoomable]);
+  }, [droppable, element, setCurrentDrop]);
 
   const handleMouseLeave = useCallback(() => {
     if (droppable) {
       setCurrentDrop(undefined);
       if (onMouseLeave) onMouseLeave();
     }
-    if (element._ui.appearance.zoomable) setZoomable(undefined);
-  }, [droppable, element, setCurrentDrop, setZoomable, onMouseLeave]);
+  }, [droppable, setCurrentDrop, onMouseLeave]);
 
   const handlePlacement = useCallback((event: React.MouseEvent) => {
     const rect = wrapper.current?.getBoundingClientRect();
@@ -222,6 +220,13 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
   }, [placement, selectPlacement])
 
   let style = useMemo(() => {
+    if (infoMode === 'zoom') return {
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: '100%'
+    }
+
     let styleBuilder: React.CSSProperties = {};
     const { computedStyle } = element._ui;
 
@@ -251,27 +256,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
     return styleBuilder;
-  }, [element, dragging, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
-
-  useEffect(() => {
-    if (zoomElement !== element && wrapper.current?.getAttribute('data-zoomed')) {
-      // no longer zoomed - go back to normal size
-      wrapper.current.removeAttribute('data-zoomed');
-      wrapper.current.style.transform = '';
-      wrapper.current.style.zIndex = '';
-      wrapper.current.style.transform = 'transform .6s, top .6s, left .6s, width .6s, height .6s';
-    }
-    if (zoomElement === element && wrapper.current && !wrapper.current?.style.transform) {
-      // this is zoomed, calculate zoom transform
-      const scale = Math.max(1, Math.min(80 / relativeTransform.height, 80 / relativeTransform.width));
-      const left = (50 - scale * relativeTransform.width / 2 - relativeTransform.left) * 100 / relativeTransform.width;
-      const top = (50 - scale * relativeTransform.height / 2 - relativeTransform.top) * 100 / relativeTransform.height;
-      wrapper.current.style.transition = `none`;
-      wrapper.current.style.transform = `translate(${left}%, ${top}%) scale(${scale}) `;
-      wrapper.current.style.zIndex = '300';
-      wrapper.current.setAttribute('data-zoomed', '1');
-    }
-  }, [element, zoomElement, relativeTransform]);
+  }, [element, dragging, infoMode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
 
   useEffect(() => {
     if (element._ui.appearance.effects) {
@@ -297,6 +282,12 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
       return () => observer.disconnect();
     }
   }, [element]);
+
+  const info = useMemo(() => {
+    if (infoMode) {
+      return typeof element._ui.appearance.info === 'function' ? element._ui.appearance.info(element) : element._ui.appearance.info;
+    }
+  }, [infoMode, element]);
 
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
@@ -324,6 +315,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
             element={child}
             json={childJSON}
             selected={selected}
+            infoMode={infoMode === true}
             onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
             onSelectElement={onSelectElement}
             onSelectPlacement={onSelectPlacement}
@@ -460,7 +452,7 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
         element._ui.appearance.className,
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
-          selected: isSelected,
+          selected: isSelected && !infoMode,
           clickable, selectable, droppable,
         }
       )}
@@ -470,8 +462,8 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
       onMouseMove={placement?.into === element ? handlePlacement : undefined}
       {...attrs}
     >
-      {boundingBoxes}
       {appearance(element)}
+      {boundingBoxes}
       {contents}
     </div>
   );
@@ -480,12 +472,11 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
   contents = (
     <div
       ref={wrapper}
-      className={classNames("transform-wrapper", { dragging, placing })}
+      className={classNames("transform-wrapper", { dragging, placing, 'has-info': !!info })}
       style={{ ...style }}
-      data-tooltip-id={branch}
-      data-tooltip-delay-show={500}
     >
       {contents}
+      {!!info && <div className="info-hotspot" onClick={() => setInfoElement({ info, element })}/>}
     </div>
   );
 
@@ -499,18 +490,6 @@ const Element = ({element, json, selected, onSelectElement, onSelectPlacement, o
       >
         {contents}
       </DraggableCore>
-    );
-  }
-
-  if (element._ui.appearance.tooltip) {
-    const tooltip = element._ui.appearance.tooltip(element);
-    if (tooltip) contents = (
-      <>
-        {contents}
-        <Tooltip id={branch} className='tooltip' disableStyleInjection={true}>
-          {tooltip}
-        </Tooltip>
-      </>
     );
   }
 

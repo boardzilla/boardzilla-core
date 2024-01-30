@@ -66,9 +66,8 @@ export type ElementUI<T extends GameElement> = {
     className?: string,
     render?: ((el: T) => JSX.Element | null) | false,
     aspectRatio?: number,
-    zoomable?: boolean | ((el: T) => boolean),
     effects?: { attributes: ElementAttributes<T>, className: string }[],
-    tooltip?: ((el: T) => React.ReactNode) | false,
+    info?: ((el: T) => JSX.Element | null | boolean) | boolean,
     connections?: {
       thickness?: number,
       style?: 'solid' | 'double',
@@ -1650,6 +1649,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * value is a ratio of width over height. All layouts defined in {@link
    * layout} will respect this aspect ratio.
    *
+   * @param appearance.info - Return JSX for more info on this element. If
+   * returning true, an info modal will be available for this element but with
+   * only the rendered element and no text
+   *
    * @param appearance.connections - If the elements immediately within this
    * element are connected using {@link Space#connectTo}, this makes those
    * connections visible as connecting lines. Providing a `label` will place a
@@ -1657,9 +1660,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * distance of the connection specified in {@link Space#connectTo} and using
    * the retured JSX. If `labelScale` is provided, the label is scaled by this
    * amount.
-   *
-   * @param appearance.zoomable - Sets the element to be zoomable to full screen
-   * using Boardzilla's zoom feature.
    *
    * @param appearance.effects - Provides a CSS class that will be applied to
    * this element if its attributes change to match the provided ones.

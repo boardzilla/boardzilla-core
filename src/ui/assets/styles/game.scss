@@ -33,7 +33,6 @@ html, body { height: 100% }
     }
   }
 
-
   body {
     color: #002;
     margin: 0;
@@ -67,144 +66,157 @@ html, body { height: 100% }
     left: calc(50vw - .5 * min(100vw, 100vh * var(--aspect-ratio)));
     width: min(100vw, 100vh * var(--aspect-ratio));
     height: min(100vw / var(--aspect-ratio), 100vh);
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+
     #play-area {
       position: relative;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
+    }
 
-      * {
-        box-sizing: border-box;
+    * {
+      box-sizing: border-box;
+    }
+
+    img {
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+
+    .Space {
+      > * {
+        visibility: visible;
+        &.bz-default {
+          width: 100%;
+          height: 100%;
+          background: #ccc;
+        }
+      }
+    }
+
+    .Piece {
+      visibility: visible;
+      > * {
+        width: 100%;
+        height: 100%;
+        &.bz-default {
+          background: #ccf;
+          border: .1em solid white;
+          padding: .1em;
+          overflow: hidden;
+        }
+      }
+    }
+
+    .info-hotspot {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      cursor: help;
+      visibility: visible;
+      z-index: 200;
+      filter: none;
+    }
+
+    .droppable {
+      visibility: visible;
+      > .bz-default {
+        border: .1em solid red;
+      }
+    }
+
+    .transform-wrapper {
+      position: absolute;
+      transform-origin: top left;
+      transition: transform .6s, top .6s, left .6s, width .6s, height .6s;
+      visibility: hidden;
+      &.has-info {
+        z-index: 200;
+        > *:not(.info-hotspot) {
+          pointer-events: none;
+        }
       }
 
-      img {
-        -webkit-user-drag: none;
+      > div {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+      }
+
+      &.animating {
+        z-index: 100;
         pointer-events: none;
       }
 
-      .Space {
-        > * {
-          visibility: visible;
-          &.bz-default {
-            width: 100%;
-            height: 100%;
-            background: #ccc;
-          }
-        }
+      &.dragging {
+        z-index: 100;
+        pointer-events: none;
+        filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008);
       }
 
-      .Piece {
-        visibility: visible;
-        > * {
-          width: 100%;
-          height: 100%;
-          &.bz-default {
-            background: #ccf;
-            border: .1em solid white;
-            padding: .1em;
-            overflow: hidden;
-          }
-        }
-      }
-
-      [data-zoomed] {
-        z-index: 110;
-      }
-
-      .droppable {
-        visibility: visible;
-        > .bz-default {
-          border: .1em solid red;
-        }
-      }
-
-      .transform-wrapper {
-        position: absolute;
-        transform-origin: top left;
-        transition: transform .6s, top .6s, left .6s, width .6s, height .6s;
-        visibility: hidden;
-
-        > div {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-        }
-
-        &.animating {
-          z-index: 100;
-          pointer-events: none;
-        }
-
-        &.dragging {
-          z-index: 100;
-          pointer-events: none;
-          filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008);
-        }
-
-        &.placing {
-          z-index: 100;
-          filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008);
-          cursor: pointer;
-          &:not(.animating) {
-            transition: none;
-          }
-        }
-      }
-
-      .layout-wrapper {
-        visibility: hidden;
-        width: 100%;
-        height: 100%;
-        left: 0;
-        top: 0;
-        position: absolute;
-      }
-
-      &.in-drag-movement {
-        .transform-wrapper {
+      &.placing {
+        z-index: 100;
+        filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008);
+        cursor: pointer;
+        &:not(.animating) {
           transition: none;
         }
       }
+    }
 
-      .clickable {
-        cursor: pointer;
+    .layout-wrapper {
+      visibility: hidden;
+      width: 100%;
+      height: 100%;
+      left: 0;
+      top: 0;
+      position: absolute;
+    }
+
+    &.in-drag-movement {
+      .transform-wrapper {
+        transition: none;
       }
+    }
 
-      .selectable {
-        > .bz-default {
-          border: .1em solid yellow;
-          &:hover {
-            border: .1em solid red;
-          }
-        }
-      }
+    .clickable {
+      cursor: pointer;
+    }
 
-      .Piece.selected {
-        > .bz-default {
-          transform: scale(1.2);
-        }
-      }
-
-      .Space.selected {
-        > .bz-default {
+    .selectable {
+      > .bz-default {
+        border: .1em solid yellow;
+        &:hover {
           border: .1em solid red;
         }
       }
+    }
 
-      .bz-show-grid {
+    .Piece.selected {
+      > .bz-default {
+        transform: scale(1.2);
+      }
+    }
+
+    .Space.selected {
+      > .bz-default {
+        border: .1em solid red;
+      }
+    }
+
+    .bz-show-grid {
+      position: absolute;
+      border: 1px dashed white;
+      pointer-events: none;
+      /* background-image: linear-gradient(to right, #f009 1px, transparent 1px), linear-gradient(to bottom, #f009 1px, transparent 1px); */
+      > span {
         position: absolute;
-        border: 1px dashed white;
-        pointer-events: none;
-        /* background-image: linear-gradient(to right, #f009 1px, transparent 1px), linear-gradient(to bottom, #f009 1px, transparent 1px); */
-        > span {
-          position: absolute;
-          font-size: .5rem;
-          background: white;
-          color: black;
-          padding: 2px;
-          top: 0;
-          left: 0;
-        }
+        font-size: .5rem;
+        background: white;
+        color: black;
+        padding: 2px;
+        top: 0;
+        left: 0;
       }
     }
 
@@ -702,21 +714,6 @@ html, body { height: 100% }
     }
   }
 
-  .tooltip {
-    z-index: 160;
-    width: 25vw;
-    font-size: .4rem;
-    [data-zoomed] + & {
-      max-height: 20vh;
-      max-width: 80vw;
-    }
-    max-height: 90vh;
-    max-width: 90vw;
-    #game.mobile & {
-      font-size: .8rem;
-    }
-  }
-
   .profile-badge {
     display: flex;
     flex-direction: row;
@@ -809,8 +806,125 @@ html, body { height: 100% }
     }
   }
 
+  #info-toggle {
+    position: fixed;
+    top: .3rem;
+    left: .3rem;
+    height: 1rem;
+    width: 1rem;
+    z-index: 200;
+    cursor: pointer;
 
-  /* react-tooltip/dist/react-tooltip.min.css */
-  :root{--rt-color-white:#fff;--rt-color-dark:#222;--rt-color-success:#8dc572;--rt-color-error:#be6464;--rt-color-warning:#f0ad4e;--rt-color-info:#337ab7;--rt-opacity:0.9;--rt-transition-show-delay:0.15s;--rt-transition-closing-delay:0.15s}.core-styles-module_tooltip__3vRRp{left:0;opacity:0;pointer-events:none;position:absolute;top:0;will-change:opacity}.core-styles-module_fixed__pcSol{position:fixed}.core-styles-module_arrow__cvMwQ{background:inherit;position:absolute}.core-styles-module_noArrow__xock6{display:none}.core-styles-module_clickable__ZuTTB{pointer-events:auto}.core-styles-module_show__Nt9eE{opacity:var(--rt-opacity);transition:opacity var(--rt-transition-show-delay) ease-out}.core-styles-module_closing__sGnxF{opacity:0;transition:opacity var(--rt-transition-closing-delay) ease-in}.styles-module_tooltip__mnnfp{border-radius:3px;font-size:90%;padding:8px 16px;width:max-content}.styles-module_arrow__K0L3T{height:8px;width:8px}[class*=react-tooltip__place-top]>.styles-module_arrow__K0L3T{transform:rotate(45deg)}[class*=react-tooltip__place-right]>.styles-module_arrow__K0L3T{transform:rotate(135deg)}[class*=react-tooltip__place-bottom]>.styles-module_arrow__K0L3T{transform:rotate(225deg)}[class*=react-tooltip__place-left]>.styles-module_arrow__K0L3T{transform:rotate(315deg)}.styles-module_dark__xNqje{background:var(--rt-color-dark);color:var(--rt-color-white)}.styles-module_light__Z6W-X{background-color:var(--rt-color-white);color:var(--rt-color-dark)}.styles-module_success__A2AKt{background-color:var(--rt-color-success);color:var(--rt-color-white)}.styles-module_warning__SCK0X{background-color:var(--rt-color-warning);color:var(--rt-color-white)}.styles-module_error__JvumD{background-color:var(--rt-color-error);color:var(--rt-color-white)}.styles-module_info__BWdHW{background-color:var(--rt-color-info);color:var(--rt-color-white)}
+    svg {
+      height: 100%;
+      width: 100%;
+      fill: white;
+    }
+  }
 
+  #info-overlay {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    z-index: 199;
+    left: 0;
+    top: 0;
+    background: #444c;
+  }
+
+  #info-container {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    z-index: 210;
+    left: 0;
+    top: 0;
+    visibility: hidden;
+
+    #info-drawer {
+      font-family: 'DM Sans Variable';
+      position: absolute;
+      left: 0.3rem;
+      top: 0.3rem;
+      width: clamp(20%, 10rem, 100%);
+      background: white;
+      border-radius: 0.3rem;
+      transition: width 0.2s, height 0.2s;
+      overflow: hidden;
+      visibility: visible;
+      z-index: 200;
+      box-shadow: 0.2rem 0.2rem .5rem #0008;
+
+      &.collapsed {
+        width: 2.4rem;
+        .header {
+          border-radius: 0.3rem;
+        }
+      }
+
+      .header {
+        width: 100%;
+        height: 1.4rem;
+        background: #ccc;
+        border-radius: 0.3rem 0.3rem 0 0;
+        padding: .1rem 0.25rem;
+        box-sizing: border-box;
+        display: flex;
+
+        .title {
+          flex: 0;
+        }
+
+        .controls {
+          flex: 1;
+          text-align: right;
+        }
+
+        svg {
+          height: .8rem;
+          cursor: pointer;
+          &:hover {
+            transform: scale(1.2);
+          }
+        }
+      }
+
+      .contents {
+        font-size: 65%;
+        padding: .1rem 0.25rem;
+        width: 9.5rem;
+      }
+    }
+
+    #info-modal {
+      position: absolute;
+      width: 80%;
+      background: white;
+      top: 4rem;
+      left: 10%;
+      visibility: visible;
+      filter: none;
+      z-index: 210;
+      padding: .5rem;
+      box-shadow: 0.2rem 0.2rem .5rem #0008;
+
+      .element-zoom {
+        display: inline-block;
+        float: right;
+        margin: 0 0 1rem 1rem;
+        position: relative;
+        pointer-events: none;
+        .Piece, .Space {
+          transform: none !important;
+        }
+      }
+
+      .info-text {
+        font-size: 80%;
+        p, h1, h2, h3, h4 {
+          margin-top: 0;
+        }
+      }
+    }
+  }
 }
