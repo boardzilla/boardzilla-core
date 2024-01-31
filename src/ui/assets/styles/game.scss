@@ -72,6 +72,11 @@ html, body { height: 100% }
 
     #play-area {
       position: relative;
+      &.in-drag-movement {
+        .transform-wrapper {
+          transition: none;
+        }
+      }
     }
 
     * {
@@ -171,12 +176,6 @@ html, body { height: 100% }
       left: 0;
       top: 0;
       position: absolute;
-    }
-
-    &.in-drag-movement {
-      .transform-wrapper {
-        transition: none;
-      }
     }
 
     .clickable {
