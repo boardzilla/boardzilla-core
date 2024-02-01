@@ -166,18 +166,20 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout>;
     previousStyles: Record<any, Box>;
+    infoModals: {title: string, modal: (board: B) => JSX.Element}[];
   } = {
     boardSize: {name: '_default', aspectRatio: 1},
     layouts: [],
     appearance: {},
     stepLayouts: {},
     previousStyles: {},
+    infoModals: [],
   };
 
   // restore default layout rules before running setupLayout
   resetUI() {
     super.resetUI();
-    this._ui.stepLayouts = { 'step:out-of-turn': { element: this, top: 0, left: 0 } };
+    this._ui.stepLayouts = {};
     this._ui.previousStyles ||= {};
   }
 
@@ -218,7 +220,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
    * @category UI
    */
   layoutStep(step: string, attributes: ActionLayout) {
-    if (step !== 'out-of-turn' && !this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
+    if (!this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
     this._ui.stepLayouts["step:" + step] = attributes;
   }
 

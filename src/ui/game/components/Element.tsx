@@ -18,17 +18,16 @@ import type { DraggableData, DraggableEvent } from 'react-draggable';
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, selected, infoMode, onSelectElement, onSelectPlacement, onMouseLeave}: {
+const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
-  selected: GameElement<Player>[],
   infoMode: boolean | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onSelectPlacement: ({ column, row }: { column: number, row: number }) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, position, setInfoElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, selectPlacement, isMobile, boardJSON] =
-    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.position, s.setInfoElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.selectPlacement, s.isMobile, s.boardJSON]);
+  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, selectPlacement, isMobile, boardJSON] =
+    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.selectPlacement, s.isMobile, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
   const wrapper = useRef<HTMLDivElement | null>(null);
@@ -314,7 +313,6 @@ const Element = ({element, json, selected, infoMode, onSelectElement, onSelectPl
             key={key}
             element={child}
             json={childJSON}
-            selected={selected}
             infoMode={infoMode === true}
             onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
             onSelectElement={onSelectElement}

@@ -26,9 +26,10 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   type: FlowBranchNode<P>['type'] = "action";
   optional?: string | ((args: Record<string, any>) => string);
   prompt?: string | ((args: Record<string, any>) => string); // needed if multiple board actions
+  description?: string;
   skipIf: 'always' | 'never' | 'only-one';
 
-  constructor({ name, player, players, actions, prompt, optional, skipIf }: {
+  constructor({ name, player, players, actions, prompt, description, optional, skipIf }: {
     name?: string,
     players?: P[] | ((args: Record<string, any>) => P[]),
     player?: P | ((args: Record<string, any>) => P),
@@ -39,6 +40,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       do?: FlowDefinition<P>
     })[],
     prompt?: string | ((args: Record<string, any>) => string),
+    description?: string,
     optional?: string | ((args: Record<string, any>) => string),
     skipIf?: 'always' | 'never' | 'only-one',
   }) {
@@ -46,6 +48,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     this.actions = actions.map(a => typeof a === 'string' ? {name: a} : a);
     if (optional) this.actions.push({name: '__pass__', prompt: typeof optional === 'function' ? optional(this.flowStepArgs()) : optional});
     this.prompt = prompt;
+    this.description = description;
     this.skipIf = skipIf ?? 'always';
     this.players = players ?? player;
   }
@@ -84,6 +87,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   actionNeeded(player: Player): {
     step?: string,
     prompt?: string,
+    description?: string,
     actions: ActionStub<P>[],
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
@@ -91,6 +95,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       if (!player || !this.position.players || this.position.players.includes(player.position)) {
         return {
           prompt: typeof this.prompt === 'function' ? this.prompt(this.flowStepArgs()) : this.prompt,
+          description: this.description,
           step: this.name,
           actions: this.actions.map(action => ({
             name: action.name,
@@ -103,6 +108,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     } else if (this.position.followups?.length && (!player || this.position.followups[0].player === undefined || this.position.followups[0].player === player)) {
       return {
         step: this.name,
+        description: this.position.followups[0].description,
         actions: [this.position.followups[0]],
         skipIf: this.skipIf, // not sure what goes here
       }

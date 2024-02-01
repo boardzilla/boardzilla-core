@@ -22,6 +22,7 @@ export type GameState<P extends Player> = {
   board: ElementJSON[],
   sequence: number,
   rseed: string,
+  messages: Message[],
 }
 
 type GameStartedState<P extends Player> = {

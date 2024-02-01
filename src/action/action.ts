@@ -47,6 +47,13 @@ export type ActionStub<P extends Player> = {
    */
   prompt?: string,
   /**
+   * Description of taking the action from a 3rd person perspective, e.g. "is
+   * choosing a card". The string will be automatically prefixed with the player
+   * name taking the action. If specified, will be used to convey to non-acting
+   * players what actions are happening.
+   */
+  description?: string,
+  /**
    * An object containing arguments to be passed to the follow-up action. This
    * is useful if there are multiple ways to trigger this follow-up that have
    * variations.
@@ -88,6 +95,7 @@ type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R exte
 export default class Action<P extends Player, A extends Record<string, Argument<P>> = NonNullable<unknown>> {
   name?: string;
   prompt?: string;
+  description?: string;
   selections: Selection<P>[] = [];
   moves: ((args: Record<string, Argument<P>>) => any)[] = [];
   condition?: ((args: A) => boolean) | boolean;
@@ -96,12 +104,14 @@ export default class Action<P extends Player, A extends Record<string, Argument<
 
   game: Game;
 
-  constructor({ prompt, condition }: {
+  constructor({ prompt, description, condition }: {
     prompt?: string,
+    description?: string,
     condition?: ((args: A) => boolean) | boolean,
   }) {
     this.prompt = prompt;
-    if (condition !== undefined) this.condition = condition;
+    this.description = description;
+    this.condition = condition;
   }
 
   isPossible(args: A): boolean {
@@ -153,6 +163,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     const move = {
       name: this.name!,
       prompt: this.prompt,
+      description: this.description,
       args,
       selections: [selection]
     };

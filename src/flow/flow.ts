@@ -207,6 +207,7 @@ export default class Flow<P extends Player> {
   actionNeeded(player?: Player): {
     step?: string,
     prompt?: string,
+    description?: string,
     actions: ActionStub<P>[],
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {

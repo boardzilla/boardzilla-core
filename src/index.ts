@@ -107,6 +107,7 @@ export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
   if (!inSetup) {
     if (options?.trackMovement) game.trackMovement();
     game.sequence = state.sequence;
+    game.messages = state.messages;
     game.board.fromJSON(state.board);
     game.flow.setBranchFromJSON(state.position);
   }

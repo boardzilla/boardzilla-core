@@ -15,8 +15,8 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, finished, position, pendingMoves, move, step, selectMove, boardSelections, selected, setSelected, setBoardSize, setInfoElement, dragElement, setDragElement, setCurrentDrop, boardJSON] =
-    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.setInfoElement, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
+  const [game, finished, position, pendingMoves, move, step, otherPlayerAction, selectMove, boardSelections, selected, setSelected, setBoardSize, setInfoElement, dragElement, setDragElement, setCurrentDrop, boardJSON] =
+    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.setInfoElement, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [infoMode, setInfoMode] = useState(false);
@@ -72,7 +72,6 @@ export default () => {
     // - the last selected, visible game element as part of the current move(s) that hasn't been disabled via layoutAction.noAnchor
     // - a supplied layoutAction for the only current move
     // - a supplied layoutStep belonging to the step to which the current move(s) belong
-    // - if no moves available, but another player can move, out-of-turn
     let layout: ActionLayout | undefined = undefined;
     let name: string = '';
     let moves = pendingMoves || [];
@@ -119,13 +118,16 @@ export default () => {
       }
     }
 
-    if (!layout && pendingMoves?.length && step) {
-      name = 'step:' + step;
-      layout = game.board._ui.stepLayouts[name];
+    if (!layout && otherPlayerAction) {
+      const actionLayout = game.board._ui.stepLayouts["action:" + otherPlayerAction];
+      if (actionLayout?.element?._ui?.computedStyle) {
+        layout = actionLayout;
+        name = 'action:' + otherPlayerAction;
+      }
     }
 
-    if (!layout && game.players.currentPosition.length > 0 && !game.players.currentPosition.includes(position)) {
-      name = 'step:out-of-turn';
+    if (!layout && step) {
+      name = 'step:' + step;
       layout = game.board._ui.stepLayouts[name];
     }
 
@@ -161,14 +163,14 @@ export default () => {
         }
       }
 
-      if (layout.width !== undefined) style.width = (layout.width * box.width / 100) + '%';
-      if (layout.height !== undefined) style.height = (layout.height * box.height / 100) + '%';
+      if (layout.width !== undefined) style.maxWidth = (layout.width * box.width / 100) + '%';
+      if (layout.height !== undefined) style.maxHeight = (layout.height * box.height / 100) + '%';
     } else {
       style = {left: 0, top: 0};
     }
 
     return {style, name, moves};
-  }, [selected, pendingMoves, boardSelections, move, position, disambiguateElement, step, game.players.currentPosition, game.board._ui.stepLayouts]);
+  }, [selected, pendingMoves, boardSelections, move, disambiguateElement, otherPlayerAction, step, game.board._ui.stepLayouts]);
 
   const domRef = useCallback((node: HTMLDivElement) => {
     if (!node) return;
@@ -191,16 +193,12 @@ export default () => {
     const keydownHandler = (e: KeyboardEvent) => {
       if (e.repeat) return;
       if (e.code === 'Escape') {
-        if (infoMode) {
-          setInfoElement();
-        } else {
-          submitMove();
-        }
+        if (!infoMode) submitMove();
       }
     };
     window.addEventListener('keydown', keydownHandler);
     return () => window.removeEventListener('keydown', keydownHandler);
-  }, [submitMove, infoMode, setInfoElement]);
+  }, [submitMove, infoMode]);
 
   useEffect(() => {
     window.addEventListener('resize', setBoardSize);
@@ -251,7 +249,6 @@ export default () => {
         <Element
           element={game.board}
           json={boardJSON[0]}
-          selected={selected}
           infoMode={infoMode}
           onSelectElement={onSelectElement}
           onSelectPlacement={onSelectPlacement}

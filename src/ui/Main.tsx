@@ -172,6 +172,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
         if (data.state instanceof Array) {
           const states = data.state;
           let delay = data.state[0].sequence === game.sequence + 1;
+
           for (let i = 0; i !== states.length; i++) {
             const state = states[i];
             queue.schedule(() => updateState({...data, state}, i !== states.length - 1), delay);

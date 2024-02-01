@@ -12,11 +12,9 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
   moves: UIMove[],
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
 }) => {
-  const [game, position, prompt, step, selected, move] = gameStore(s => [s.game, s.position, s.prompt, s.step, s.selected, s.move]);
+  const [position, prompt, actionDescription, step, selected, move] = gameStore(s => [s.position, s.prompt, s.actionDescription, s.step, s.selected, s.move]);
 
   const boardPrompt = useMemo(() => {
-    if (name === 'step:out-of-turn') return `${game.players.allCurrent().map(p => p.name).join(' ,')} is taking their turn`;
-
     // all prompts from all board moves, using the most specific selection that applies
     let hasNonBoardMoves = false;
     const prompts: string[] = [];
@@ -37,11 +35,12 @@ const PlayerControls = ({name, style, moves, onSubmit}: {
     }
     if (prompts.length > 0) return prompts[0];
     if (prompt) return prompt;
+    if (actionDescription && !hasNonBoardMoves) return actionDescription;
     if (moves.length && !hasNonBoardMoves) {
-      console.error(`No prompts defined for board actions actions (${moves.map(m => m.name).join(', ')}). Add an action prompt or step prompt here.`);
+      console.error(`No prompts defined for board actions (${moves.map(m => m.name).join(', ')}). Add an action prompt or step prompt here.`);
       return '__missing__';
     }
-  }, [moves, game.players, name, step, prompt]);
+  }, [moves, step, prompt, actionDescription]);
 
   //const boardID = useMemo(() => boardPrompt ? moves.find(m => m.selections.find(s => s.prompt === boardPrompt))?.action : '', [moves, boardPrompt]);
 

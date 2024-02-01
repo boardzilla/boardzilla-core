@@ -202,6 +202,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       position: this.flow.branchJSON(!!player),
       board: this.board.allJSON(player?.position),
       sequence: this.sequence,
+      messages: this.messages.filter(m => player && (!m.position || m.position === player?.position)),
       rseed: player ? '' : this.rseed,
     }
   }
@@ -332,6 +333,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    */
   action<A extends Record<string, Argument<P>> = NonNullable<unknown>>(definition: {
     prompt?: string,
+    description?: string,
     condition?: Action<P, A>['condition'],
   } = {}) {
     return new Action<P, A>(definition);
@@ -452,28 +454,32 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     });
   }
 
-  allowedActions(player: P): {step?: string, prompt?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub<P>[]} {
-    const allowedActions: ActionStub<P>[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
+  allowedActions(player: P): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub<P>[]} {
+    const actions: ActionStub<P>[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
-      actions: allowedActions,
+      actions,
       skipIf: 'always',
     };
-    const actionStep = this.flow.actionNeeded(player);
 
-    if (actionStep) {
-      const actions = allowedActions.concat(
-        actionStep.actions?.filter(
-          a => a.name === '__pass__' || this.getAction(a.name, player).isPossible(a.args)
-        ).map(a => ({ ...a, player })) || []
-      )
-      //if (actions.length === 0) check any other current players, if no action possible, warn and skip somehow
+    const actionStep = this.flow.actionNeeded(player);
+    if (actionStep?.actions) {
+      for (const allowedAction of actionStep.actions) {
+        if (allowedAction.name === '__pass__') {
+          actions.push(allowedAction);
+        } else {
+          const gameAction = this.getAction(allowedAction.name, player);
+          if (gameAction.isPossible(allowedAction.args)) {
+            actions.push(gameAction);
+          }
+        }
+      }
       return {
-        step: actionStep.step,
-        prompt: actionStep.prompt,
-        skipIf: actionStep.skipIf,
+        ...actionStep,
         actions
       }
     }
+
+    // check any other current players, if no action possible, warn and skip somehow ???
     return {
       skipIf: 'always',
       actions: []
