@@ -92,6 +92,13 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   godMode = false;
   winner: P[] = [];
   followups: ActionStub<P>[] = [];
+
+  flowGuard = (): true => {
+    if (this.phase !== 'new') {
+      throw Error('Cannot call playerActions once game has started. It is likely that this function is in the wrong place and must be called directly in defineFlow as a FlowDefinition');
+    }
+    return true;
+  };
   /**
    * The flow commands available for this game. See:
    * - {@link playerActions}
@@ -104,13 +111,6 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    * - {@link ifElse}
    * - {@link switchCase}
    */
-  flowGuard = () => {
-    if (this.phase !== 'new') {
-      throw Error('Cannot call playerActions once game has started. It is likely that this function is in the wrong place and must be called directly in defineFlow as a FlowDefinition');
-    }
-    return true;
-  };
-
   flowCommands = {
     playerActions: (options: ConstructorParameters<typeof ActionStep<P>>[0]) => this.flowGuard() && new ActionStep<P>(options),
     loop: (...block: FlowStep<P>[]) => this.flowGuard() && new WhileLoop<P>({do: block, while: () => true}),
