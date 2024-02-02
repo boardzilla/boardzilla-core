@@ -31,10 +31,19 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  *
  * @param options.actions - An array of possible actions. Each action can be
  * either a string or on object. If a string, it is the name of the action as
- * defined in {@link Game#defineActions}. If an object, it consists of keys
- * `name` and `do` where `name` is the name of the action and `do` is a further
- * {@link FlowDefintion} for the game to run if this action is taken. This can
- * contain any number of nested Flow functions.
+ * defined in {@link Game#defineActions}. If an object, it consists of the
+ * following keys:
+ * <ul>
+ * <li> `name`: the name of the action
+ * <li> `do`: a further {@link FlowDefintion} for the game to run if this action is
+ *   taken. This can contain any number of nested Flow functions.
+ * <li> `args`: args to pass to the action, or function returning those args. If
+ *   provided this pre-selects arguments to the action that the player does not
+ *   select themselves. Also see {@link game#action} and {@link game#followUp}.
+ * <li> `prompt`: a string prompt, or function returning a string. If provided this
+ *   overrides the prompt defined in the action. This can be useful if the same
+ *   action should prompt differently at different points in the game
+ * </ul>
  *
  * @param options.name - A unique name for this player action. If provided, this
  * can be used for the UI to determine placement of messages for this action in
@@ -44,9 +53,16 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  * to decide between their choices. May be a string or a function accepting
  * {@link FlowArguments}
  *
+ * @param options.description - A description of this step from a 3rd person
+ * perspective, e.g. "choosing a card". The string will be automatically
+ * prefixed with the player name and verb. If specified, will be used to convey
+ * to non-acting players what step is happening.
+ *
  * @param options.player - Which player can perform this action. If not
  * provided, this defaults to the {@link PlayerCollection#current | current
  * player}
+ *
+ * @param options.players - Which players can perform this action, if multiple.
  *
  * @param options.optional - If a string is passed, this becomes a prompt
  * players can use to 'pass' this step, performing no action and letting the
@@ -55,13 +71,15 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  * @param options.skipIf - One of 'always', 'never' or 'only-one' (Default
  * 'always').
  *
- * - only-one: If there is only valid choice in the choices given, the game
+ * <ul>
+ * <li> only-one: If there is only valid choice in the choices given, the game
  * will skip this choice, prompting the player for subsequent choices, if any,
  * or completing the action otherwise.
- * - always: Rather than present this choice directly, the player will be
+ * <li> always: Rather than present this choice directly, the player will be
  * prompted with choices from the *next choice* in each action here, essentially
  * expanding the choices ahead of time to save the player a step.
- * - never: Always present this choice, even if the choice is forced
+ * <li> never: Always present this choice, even if the choice is forced
+ * </ul>
  *
  * @category Flow
  */

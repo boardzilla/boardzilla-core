@@ -372,7 +372,23 @@ describe('Game', () => {
       );
       game.start();
       game.play();
-      expect(game.getPendingMoves(game.players[0])?.moves[0].selections[0].type).to.equal('button');
+      expect(game.getPendingMoves(game.players[0])?.moves[0].args).to.deep.equal({d: 'hi'});
+    });
+
+    it('functional args in actionStep', () => {
+      game.defineFlow(
+        () => { board.tokens = 1 },
+        eachPlayer({
+          name: 'player',
+          do: playerActions({
+            players: game.players,
+            actions: [{name: 'declare', args: ({ player }) => ({d: player.name}) }]
+          })
+        }),
+      );
+      game.start();
+      game.play();
+      expect(game.getPendingMoves(game.players[0])?.moves[0].args).to.deep.equal({d: 'Joe'});
     });
 
     it('optional actions', () => {
