@@ -469,7 +469,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
         } else {
           const gameAction = this.getAction(allowedAction.name, player);
           if (gameAction.isPossible(allowedAction.args)) {
-            actions.push(gameAction);
+            actions.push({ ...allowedAction, player });
           }
         }
       }
