@@ -4,6 +4,7 @@ import { gameStore } from '../index.js';
 import Element from './components/Element.js';
 import PlayerControls from './components/PlayerControls.js';
 import InfoOverlay from './components/InfoOverlay.js';
+import Debug from './components/Debug.js';
 import { click } from '../assets/index.js';
 import { GameElement } from '../../board/index.js'
 import classnames from 'classnames';
@@ -15,11 +16,11 @@ import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
 
 export default () => {
-  const [game, finished, position, pendingMoves, move, step, otherPlayerAction, selectMove, boardSelections, selected, setSelected, setBoardSize, setInfoElement, dragElement, setDragElement, setCurrentDrop, boardJSON] =
-    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.setInfoElement, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
+  const [game, finished, position, pendingMoves, move, step, otherPlayerAction, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, boardJSON] =
+    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
-  const [infoMode, setInfoMode] = useState(false);
+  const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
 
   if (!position) return null;
@@ -193,12 +194,12 @@ export default () => {
     const keydownHandler = (e: KeyboardEvent) => {
       if (e.repeat) return;
       if (e.code === 'Escape') {
-        if (!infoMode) submitMove();
+        if (mode === 'game') submitMove();
       }
     };
     window.addEventListener('keydown', keydownHandler);
     return () => window.removeEventListener('keydown', keydownHandler);
-  }, [submitMove, infoMode]);
+  }, [submitMove, mode]);
 
   useEffect(() => {
     window.addEventListener('resize', setBoardSize);
@@ -246,23 +247,25 @@ export default () => {
       <audio ref={clickAudio} src={click} id="click"/>
       <div id="background"/>
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
-        <Element
-          element={game.board}
-          json={boardJSON[0]}
-          infoMode={infoMode}
-          onSelectElement={onSelectElement}
-          onSelectPlacement={onSelectPlacement}
-        />
+        {mode !== 'debug' && (
+          <Element
+            element={game.board}
+            json={boardJSON[0]}
+            mode={mode}
+            onSelectElement={onSelectElement}
+            onSelectPlacement={onSelectPlacement}
+          />
+        )}
       </div>
 
-      {!infoMode && <PlayerControls
+      {mode === 'game' && <PlayerControls
         name={name}
         style={style}
         moves={moves}
         onSubmit={submitMove}
       />}
 
-      {game.godMode && !infoMode && <div className="god-mode-enabled">God mode enabled</div>}
+      {game.godMode && mode === 'game' && <div className="god-mode-enabled">God mode enabled</div>}
 
       {finished && !victoryMessageDismissed && (
         <div className="game-finished">
@@ -276,7 +279,41 @@ export default () => {
           {game.winner.length === 0 && game.players.length === 1 && <div style={{color: "#800"}}>You lose</div>}
         </div>
       )}
-      <InfoOverlay infoMode={infoMode} setInfoMode={setInfoMode}/>
+
+      {mode !== 'info' && (
+        <div id="corner-controls">
+          <div id="info-toggle">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 112 112" onClick={() => setMode('info')}>
+              <path
+                style={{stroke:'black', fill: 'white', strokeWidth: 8}}
+                d="M 53.102,4 C 25.983,4 4,25.983 4,53.102 c 0,27.119 21.983,49.103 49.102,49.103 27.119,0 49.101,-21.984 49.101,-49.103 C 102.203,25.983 80.221,4 53.102,4 Z"
+              />
+              <path
+                fill="black"
+                d="m 53.102,34.322 c -5.048,0 -9.141,-4.092 -9.141,-9.142 0,-5.049 4.092,-9.141 9.141,-9.141 5.05,0 9.142,4.092 9.142,9.141 -10e-4,5.05 -4.093,9.142 -9.142,9.142 z"
+              />
+              <path
+                fill="black"
+                d="m 61.669,82.139 c 0,4.402 -3.806,7.969 -8.5,7.969 -4.694,0 -8.5,-3.567 -8.5,-7.969 V 45.577 c 0,-4.401 3.806,-7.969 8.5,-7.969 4.694,0 8.5,3.568 8.5,7.969 z"
+              />
+            </svg>
+          </div>
+          <div id="debug-toggle">
+            <svg
+              viewBox="-40 -40 574.04362 578.11265"
+              xmlns="http://www.w3.org/2000/svg"
+              onClick={() => setMode(mode === 'debug' ? 'game' : 'debug')}
+            >
+              <path
+                style={{fill: 'white', stroke: 'black', strokeWidth:80, paintOrder:'stroke markers fill'}}
+                d="m 352.48196,213.31221 c 0,78.32378 -63.49396,141.81774 -141.81774,141.81775 -78.32378,0 -141.817754,-63.49397 -141.817754,-141.81775 10e-7,-78.32378 63.493974,-141.817751 141.817754,-141.817749 78.32378,6e-6 141.81774,63.493969 141.81774,141.817749 z M 490.31895,451.24231 378.93053,344.196 c 29.8,-36.3 42.26947,-82.8 42.26947,-133.4 0,-116.3 -94.3,-210.6 -210.6,-210.6 -116.3,0 -210.6,94.3 -210.6,210.6 0,116.3 94.3,210.6 210.6,210.6 50.8,0 88.51578,-8.22736 124.91578,-38.22736 l 112.27685,111.38842 c 12.9,11.8 32.10737,-6.46106 36.30737,-10.66106 8.4,-8.3 14.61895,-24.35369 6.21895,-32.65369 z"/>
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {mode === 'info' && <InfoOverlay setMode={setMode}/>}
+      {mode === 'debug' && <Debug/>}
     </div>
   );
 }

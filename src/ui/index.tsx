@@ -66,6 +66,8 @@ type GameStore = {
   setHost: (host: boolean) => void,
   userID: string,
   setUserID: (userID: string) => void,
+  dev?: boolean,
+  setDev: (dev?: boolean) => void,
   setup?: SetupFunction<Player, Board<Player>>;
   setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
   game: Game<Player, Board<Player>>;
@@ -129,6 +131,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
   setHost: host => set({ host }),
   userID: '',
   setUserID: userID => set({ userID }),
+  setDev: dev => set({ dev }),
   setSetup: setup => set({ setup }),
   game: new Game(Player, Board),
   finished: false,
@@ -625,8 +628,9 @@ export const render = <P extends Player, B extends Board>(setup: SetupFunction<P
   state.setSetup(setupGame);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
-  const { host, userID, minPlayers, maxPlayers }: { host: boolean, userID: string, minPlayers: number, maxPlayers: number } = boostrap;
+  const { host, userID, minPlayers, maxPlayers, dev }: { host: boolean, userID: string, minPlayers: number, maxPlayers: number, dev?: boolean } = boostrap;
   state.setHost(host);
+  state.setDev(dev);
   state.setUserID(userID);
 
   const root = createRoot(document.getElementById('root')!)

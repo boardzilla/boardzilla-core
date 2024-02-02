@@ -805,19 +805,36 @@ html, body { height: 100% }
     }
   }
 
-  #info-toggle {
+  #corner-controls {
     position: fixed;
-    top: .3rem;
-    left: .3rem;
-    height: 1rem;
-    width: 1rem;
+    top: 1vmin;
+    left: 1vmin;
     z-index: 200;
-    cursor: pointer;
 
-    svg {
-      height: 100%;
-      width: 100%;
-      fill: white;
+    #info-toggle {
+      position: absolute;
+      height: 3vmin;
+      top: 0;
+      left: 0;
+      svg {
+        display: block;
+        height: 100%;
+        fill: white;
+        cursor: pointer;
+      }
+    }
+
+    #debug-toggle {
+      position: absolute;
+      height: 3vmin;
+      top: 0;
+      left: 3.5vmin;
+      svg {
+        display: block;
+        height: 100%;
+        fill: white;
+        cursor: pointer;
+      }
     }
   }
 
@@ -975,6 +992,77 @@ html, body { height: 100% }
         font-size: 80%;
         p, h1, h2, h3, h4 {
           margin-top: 0;
+        }
+      }
+    }
+  }
+
+  #debug-overlay {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    font-size: 16px;
+    z-index: 199;
+    left: 0;
+    top: 0;
+    background: #fffc;
+    font-family: 'DM Sans Variable', sans-serif;
+
+    #flow-debug {
+      overflow: scroll;
+      position: absolute;
+      left: 1em;
+      top: 5vmin;
+      right: 50%;
+      bottom: 0;
+
+      .flow-debug-block {
+        margin: .2em 0 .2em .4em;
+        border-left: .2em solid var(--color);
+
+        &.current {
+          outline: 4px solid #ff0;
+        }
+
+        .header {
+          color: white;
+          background: var(--color);
+          height: 1.5em;
+          > .name {
+            height: 80%;
+            color: var(--color);
+            background: white;
+            display: inline-block;
+            border-radius: 1em;
+            margin-left: .5em;
+            margin-top: .25em;
+            font-size: .75em;
+            padding: .2em .5em;
+          }
+        }
+
+        .do-block {
+          > .name {
+            left: -0.15em;
+            position: relative;
+
+            &::before {
+              content: '► '
+            }
+          }
+        }
+
+        .function {
+          font-family: monospace;
+          font-size: 75%;
+          line-height: 1.2em;
+          padding-left: .4em;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          &.current {
+            background: 4px solid #ff0;
+          }
         }
       }
     }

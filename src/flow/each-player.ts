@@ -65,4 +65,15 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
   toString(): string {
     return `each-player${this.name ? ":" + this.name : ""} (player #${this.position?.value?.position}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
+
+  visualize() {
+    return this.visualizeBlocks({
+      type: 'eachPlayer',
+      blocks: {
+        do: this.block instanceof Array ? this.block : [this.block]
+      },
+      block: 'do',
+      position: this.position?.value,
+    });
+  }
 }

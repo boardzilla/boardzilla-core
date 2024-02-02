@@ -5,10 +5,12 @@ import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
 import type { Player } from '../player/index.js';
 import { Argument } from '../action/action.js';
 
+export type EveryPlayerPosition = {positions: FlowBranchJSON[][], completed: (boolean | undefined)[]};
+
 export default class EveryPlayer<P extends Player> extends Flow<P> {
-  position: FlowBranchJSON[][];
+  position: EveryPlayerPosition;
   players?: P[];
-  value: number;
+  value: number; // player temporarily looking at
   completed: (boolean | undefined)[] = [];
   block: FlowDefinition<P>;
   type: FlowBranchNode<P>['type'] = 'parallel';
@@ -25,7 +27,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
   reset() {
     this.value = -1;
     this.completed = [];
-    this.setPosition([]);
+    this.setPosition({positions: [], completed: []});
   }
 
   // closure wrapper for super's methods that will setPosition temporarily to a
@@ -37,7 +39,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
     if (mutate) {
       const currentPlayer = this.getPlayers()[this.value];
       // capture position from existing player before returning to all player mode
-      if (currentPlayer && this.step instanceof Flow) this.position[this.value] = this.step.branchJSON();
+      if (currentPlayer && this.step instanceof Flow) this.position.positions[this.value] = this.step.branchJSON();
     }
     this.value = -1;
     this.setPosition(this.position);
@@ -53,13 +55,13 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
     if (this.position === undefined && this.sequence === undefined) return []; // probably invalid
     let branch: FlowBranchJSON = {
       type: this.type,
-      position: []
+      position: {positions: [], completed: this.completed}
     };
     if (this.name) branch.name = this.name;
 
     for (let i = 0; i !== this.getPlayers().length; i++) {
       this.withPlayer(i, () => {
-        if (this.step instanceof Flow) branch.position[i] = this.step.branchJSON(forPlayer);
+        if (this.step instanceof Flow) branch.position.positions[i] = this.step.branchJSON(forPlayer);
       });
     }
     return [branch];
@@ -68,6 +70,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
   // add player management and hydration of flow for the correct player
   setPosition(positionJSON: any, sequence?: number) {
     const player = this.getPlayers()[this.value];
+    this.completed = positionJSON.completed;
     if (player) {
       player.setCurrent();
       this.game.contextualizeBoardToPlayer(player);
@@ -80,8 +83,8 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
       this.game.players.setCurrent(players);
     }
     super.setPosition(positionJSON, sequence);
-    if (this.step instanceof Flow && this.position[this.value]) {
-      this.step.setBranchFromJSON(this.position[this.value]);
+    if (this.step instanceof Flow && this.position.positions[this.value]) {
+      this.step.setBranchFromJSON(this.position.positions[this.value]);
     }
   }
 
@@ -140,5 +143,15 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
 
   toString(): string {
     return `every-player${this.name ? ":" + this.name : ""}`;
+  }
+
+  visualize() {
+    return this.visualizeBlocks({
+      type: 'everyPlayer',
+      blocks: {
+        do: this.block instanceof Array ? this.block : [this.block]
+      },
+      block: 'do',
+    });
   }
 }

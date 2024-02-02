@@ -8,8 +8,10 @@ import type { ForLoopPosition } from './for-loop.js';
 import type { ForEachPosition } from './for-each.js';
 import type { SwitchCasePostion } from './switch-case.js';
 import type { ActionStepPosition } from './action-step.js';
+import type { EveryPlayerPosition } from './every-player.js';
 import { Argument, ActionStub } from '../action/action.js';
 import ActionStep from './action-step.js';
+import { Do } from './enums.js';
 
 /**
  * Several flow methods accept an argument of this type. This is an object
@@ -68,7 +70,7 @@ export type FlowBranchNode<P extends Player> = ({
   position: ActionStepPosition<P>
 } | {
   type: 'parallel',
-  position: FlowBranchJSON[][],
+  position: EveryPlayerPosition,
 } | {
   type: 'loop',
   position: WhileLoopPosition | ForLoopPosition<any>
@@ -95,8 +97,19 @@ export type FlowBranchJSON = ({
 }
 
 export type Position<P extends Player> = (
-  ActionStepPosition<P> | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any> | FlowBranchJSON[][]
+  ActionStepPosition<P> | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any> | EveryPlayerPosition
 )
+
+export type FlowVisualization = {
+  type: string,
+  name?: string,
+  blocks: Record<string, (string | FlowVisualization)[] | undefined>,
+  current: {
+    block?: string,
+    position?: any,
+    sequence?: number,
+  }
+}
 
 /** internal */
 export default class Flow<P extends Player> {
@@ -326,5 +339,46 @@ export default class Flow<P extends Player> {
     let string = this.toString();
     if (this.step instanceof Flow) string += '\n' + ' '.repeat(indent) + '↳ ' + this.step.stacktrace(indent + 2);
     return string;
+  }
+
+  visualize() {
+    return this.visualizeBlocks({
+      type: 'flow',
+      blocks: {
+        do: this.block ? (this.block instanceof Array ? this.block : [this.block]) : undefined
+      },
+      block: 'do'
+    });
+  }
+
+  visualizeBlocks({ type, blocks, name, block, position }: {
+    type: string,
+    blocks: Record<string, FlowStep<P>[] | undefined>,
+    name?: string,
+    block?: string,
+    position?: any,
+  }): FlowVisualization {
+    const blockViz = Object.fromEntries(Object.entries(blocks).
+      map(([key, block]) => [
+        key, block?.map(s => {
+          if (s instanceof Flow) return s.visualize();
+          if (s === Do.break) return 'Do.break';
+          if (s === Do.repeat) return 'Do.repeat';
+          if (s === Do.continue) return 'Do.continue';
+          return s.toString()
+        })
+      ])
+    );
+
+    return {
+      type,
+      name: name === undefined ? this.name : name,
+      blocks: blockViz,
+      current: {
+        block,
+        position,
+        sequence: this.sequence
+      }
+    }
   }
 }

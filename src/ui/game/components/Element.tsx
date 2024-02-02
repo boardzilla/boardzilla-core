@@ -18,10 +18,10 @@ import type { DraggableData, DraggableEvent } from 'react-draggable';
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, onMouseLeave}: {
+const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
-  infoMode: boolean | 'zoom'
+  mode: 'game' | 'info' | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onSelectPlacement: ({ column, row }: { column: number, row: number }) => void,
   onMouseLeave?: () => void,
@@ -34,13 +34,13 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
   const domElement = useRef<HTMLDivElement>(null);
   const branch = useMemo(() => element.branch(), [element, boardJSON]);
   const selections = boardSelections[branch];
-  const isSelected = !infoMode && (selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
+  const isSelected = mode === 'game' && (selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
-  const clickable = !infoMode && !dragElement && selections?.clickMoves.length;
-  const selectable = !infoMode && !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
-  const draggable = !infoMode && !!selections?.dragMoves?.length; // ???
-  const droppable = !infoMode && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
+  const clickable = mode === 'game' && !dragElement && selections?.clickMoves.length;
+  const selectable = mode === 'game' && !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
+  const draggable = mode === 'game' && !!selections?.dragMoves?.length; // ???
+  const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
   const placing = useMemo(() => element === placement?.piece, [element, placement])
   const isVisible = useMemo(() => element.isVisible(), [element, boardJSON])
 
@@ -73,7 +73,7 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
   const attrs = previousRender?.attrs ?? newAttrs;
 
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style || infoMode) {
+    if (!previousRender?.style || mode !== 'game') {
       //console.log('already moved', !!previousRender, previousRender?.movedTo, branch);
       return;
     }
@@ -84,7 +84,7 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
       translateX: (previousRender.style.left - newPosition.left) / newPosition.width * 100,
       translateY: (previousRender.style.top - newPosition.top) / newPosition.height * 100,
     };
-  }, [relativeTransform, previousRender, infoMode]);
+  }, [relativeTransform, previousRender, mode]);
 
 
   useEffect(() => {
@@ -103,24 +103,19 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
           }
         }
       }
+      const cancelAnimation = () => {
+        node.classList.remove('animating');
+        node.removeEventListener('transitionend', cancel);
+      }
+      const cancel = (e: TransitionEvent) => {
+        if (e.propertyName === 'transform' && e.target === node) {
+          cancelAnimation();
+        }
+      };
+      node.addEventListener('transitionend', cancel);
+      return () => node.removeEventListener('transitionend', cancel);
     }
   }, [element, newAttrs]);
-
-  useEffect(() => {
-    if (!wrapper.current) return;
-    const node = wrapper.current;
-    const cancelAnimation = () => {
-      node.classList.remove('animating');
-      node.removeEventListener('transitionend', cancel);
-    }
-
-    const cancel = (e: TransitionEvent) => {
-      if (e.propertyName === 'transform' && e.target === node) {
-        cancelAnimation();
-      }
-    };
-    node.addEventListener('transitionend', cancel);
-  }, [element, relativeTransform]);
 
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
@@ -219,7 +214,7 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
   }, [placement, selectPlacement])
 
   let style = useMemo(() => {
-    if (infoMode === 'zoom') return {
+    if (mode === 'zoom') return {
       left: 0,
       top: 0,
       width: '100%',
@@ -255,7 +250,7 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
     return styleBuilder;
-  }, [element, dragging, infoMode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
+  }, [element, dragging, mode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
 
   useEffect(() => {
     if (element._ui.appearance.effects) {
@@ -283,10 +278,10 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
   }, [element]);
 
   const info = useMemo(() => {
-    if (infoMode) {
+    if (mode === 'info') {
       return typeof element._ui.appearance.info === 'function' ? element._ui.appearance.info(element) : element._ui.appearance.info;
     }
-  }, [infoMode, element]);
+  }, [mode, element]);
 
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
@@ -313,7 +308,7 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
             key={key}
             element={child}
             json={childJSON}
-            infoMode={infoMode === true}
+            mode={mode === 'zoom' ? 'game' : mode}
             onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
             onSelectElement={onSelectElement}
             onSelectPlacement={onSelectPlacement}
@@ -450,7 +445,7 @@ const Element = ({element, json, infoMode, onSelectElement, onSelectPlacement, o
         element._ui.appearance.className,
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
-          selected: isSelected && !infoMode,
+          selected: isSelected && mode === 'game',
           clickable, selectable, droppable,
         }
       )}

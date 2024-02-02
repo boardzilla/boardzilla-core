@@ -54,4 +54,15 @@ export default class ForEach<P extends Player, T extends Serializable<P>> extend
   toString(): string {
     return `foreach${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
+
+  visualize() {
+    return this.visualizeBlocks({
+      type: 'forEach',
+      blocks: {
+        do: this.block instanceof Array ? this.block : [this.block]
+      },
+      block: 'do',
+      position: this.position?.value,
+    });
+  }
 }
