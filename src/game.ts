@@ -93,7 +93,16 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   winner: P[] = [];
   followups: ActionStub<P>[] = [];
   /**
-   * The flow commands available for this game.
+   * The flow commands available for this game. See:
+   * - {@link playerActions}
+   * - {@link loop}
+   * - {@link whileLoop}
+   * - {@link forEach}
+   * - {@link forLoop}
+   * - {@link eachPlayer}
+   * - {@link everyPlayer}
+   * - {@link ifElse}
+   * - {@link switchCase}
    */
   flowCommands = {
     playerActions: (options: ConstructorParameters<typeof ActionStep<P>>[0]) => new ActionStep<P>(options),

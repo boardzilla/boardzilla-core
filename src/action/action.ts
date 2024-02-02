@@ -47,9 +47,9 @@ export type ActionStub<P extends Player> = {
    */
   prompt?: string,
   /**
-   * Description of taking the action from a 3rd person perspective, e.g. "is
-   * choosing a card". The string will be automatically prefixed with the player
-   * name taking the action. If specified, will be used to convey to non-acting
+   * Description of taking the action from a 3rd person perspective,
+   * e.g. "choosing a card". The string will be automatically prefixed with the
+   * player name and verb. If specified, will be used to convey to non-acting
    * players what actions are happening.
    */
   description?: string,

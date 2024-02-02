@@ -20,7 +20,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   actions: {
     name: string,
     prompt?: string | ((args: Record<string, any>) => string),
-    args?: Record<string, Argument<P>>,
+    args?: Record<string, Argument<P>> | ((args: Record<string, any>) => Record<string, Argument<P>>),
     do?: FlowDefinition<P>
   }[];
   type: FlowBranchNode<P>['type'] = "action";
@@ -36,7 +36,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     actions: (string | {
       name: string,
       prompt?: string | ((args: Record<string, any>) => string),
-      args?: Record<string, Argument<P>>,
+      args?: Record<string, Argument<P>> | ((args: Record<string, any>) => Record<string, Argument<P>>),
       do?: FlowDefinition<P>
     })[],
     prompt?: string | ((args: Record<string, any>) => string),
@@ -100,7 +100,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
           actions: this.actions.map(action => ({
             name: action.name,
             prompt: typeof action.prompt === 'function' ? action.prompt(this.flowStepArgs()) : action.prompt,
-            args: action.args,
+            args: typeof action.args === 'function' ? action.args(this.flowStepArgs()) : action.args,
           })),
           skipIf: this.skipIf,
         }
