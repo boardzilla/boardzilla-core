@@ -95,16 +95,23 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   /**
    * The flow commands available for this game.
    */
+  flowGuard = () => {
+    if (this.phase !== 'new') {
+      throw Error('Cannot call playerActions once game has started. It is likely that this function is in the wrong place and must be called directly in defineFlow as a FlowDefinition');
+    }
+    return true;
+  };
+
   flowCommands = {
-    playerActions: (options: ConstructorParameters<typeof ActionStep<P>>[0]) => new ActionStep<P>(options),
-    loop: (...block: FlowStep<P>[]) => new WhileLoop<P>({do: block, while: () => true}),
-    whileLoop: (options: ConstructorParameters<typeof WhileLoop<P>>[0]) => new WhileLoop<P>(options),
-    forEach: <T extends Serializable<P>>(options: ConstructorParameters<typeof ForEach<P, T>>[0]) => new ForEach<P, T>(options),
-    forLoop: <T = Serializable<P>>(options: ConstructorParameters<typeof ForLoop<P, T>>[0]) => new ForLoop<P, T>(options),
-    eachPlayer: (options: ConstructorParameters<typeof EachPlayer<P>>[0]) => new EachPlayer<P>(options),
-    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => new EveryPlayer<P>(options),
-    ifElse: (options: ConstructorParameters<typeof IfElse<P>>[0]) => new IfElse<P>(options),
-    switchCase: <T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => new SwitchCase<P, T>(options),
+    playerActions: (options: ConstructorParameters<typeof ActionStep<P>>[0]) => this.flowGuard() && new ActionStep<P>(options),
+    loop: (...block: FlowStep<P>[]) => this.flowGuard() && new WhileLoop<P>({do: block, while: () => true}),
+    whileLoop: (options: ConstructorParameters<typeof WhileLoop<P>>[0]) => this.flowGuard() && new WhileLoop<P>(options),
+    forEach: <T extends Serializable<P>>(options: ConstructorParameters<typeof ForEach<P, T>>[0]) => this.flowGuard() && new ForEach<P, T>(options),
+    forLoop: <T = Serializable<P>>(options: ConstructorParameters<typeof ForLoop<P, T>>[0]) => this.flowGuard() && new ForLoop<P, T>(options),
+    eachPlayer: (options: ConstructorParameters<typeof EachPlayer<P>>[0]) => this.flowGuard() && new EachPlayer<P>(options),
+    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => this.flowGuard() && new EveryPlayer<P>(options),
+    ifElse: (options: ConstructorParameters<typeof IfElse<P>>[0]) => this.flowGuard() && new IfElse<P>(options),
+    switchCase: <T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => this.flowGuard() && new SwitchCase<P, T>(options),
   };
 
   constructor(playerClass: {new(...a: any[]): P}, boardClass: ElementClass<B>, elementClasses: ElementClass[] = []) {

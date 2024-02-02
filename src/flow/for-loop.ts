@@ -34,4 +34,15 @@ export default class ForLoop<P extends Player, T = Serializable<P>> extends Whil
   toString(): string {
     return `loop${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})$`;
   }
+
+  visualize() {
+    return this.visualizeBlocks({
+      type: 'forLoop',
+      blocks: {
+        do: this.block instanceof Array ? this.block : [this.block]
+      },
+      block: 'do',
+      position: this.position?.value,
+    });
+  }
 }

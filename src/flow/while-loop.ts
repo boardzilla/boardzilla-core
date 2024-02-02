@@ -64,4 +64,16 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   toString(): string {
     return `loop${this.name ? ":" + this.name : ""} (loop ${this.position.index === -1 ? 'complete' : '#' + this.position.index}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
+
+  visualize() {
+    const isLoop = this.whileCondition.toString() === '() => true';
+    return this.visualizeBlocks({
+      type: isLoop ? 'loop' : 'whileLoop',
+      blocks: {
+        do: this.block instanceof Array ? this.block : [this.block]
+      },
+      block: 'do',
+      position: this.position ? this.position.index + 1 : undefined,
+    });
+  }
 }

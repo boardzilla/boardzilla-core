@@ -509,11 +509,32 @@ describe('Game', () => {
       );
 
       game.start();
+      game.play();
       let boardState = game.board.allJSON();
       let flowState = game.flow.branchJSON();
+
+      game.phase = 'new';
+      game.defineFlow(
+        () => { board.tokens = 4 },
+        everyPlayer({
+          do: playerActions({
+            name: 'take-1',
+            actions: [
+              {
+                name: 'takeOne',
+                do: playerActions({
+                  name: 'declare',
+                  actions: ['declare']
+                })
+              },
+              'pass'
+            ]
+          })
+        })
+      );
+      game.start();
       game.board.fromJSON(boardState);
       game.flow.setBranchFromJSON(flowState);
-      game.play();
 
       expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
       expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])

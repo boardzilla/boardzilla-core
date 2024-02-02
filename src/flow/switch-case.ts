@@ -8,7 +8,7 @@ import type { Serializable } from '../action/utils.js';
 
 export type SwitchCasePostion<T> = { index?: number, value?: T, default?: boolean }
 
-export type SwitchCaseCases<P extends Player, T> = {eq: T, do: FlowDefinition<P>}[] | {test: (a: T) => boolean, do: FlowDefinition<P>}[];
+export type SwitchCaseCases<P extends Player, T> = ({eq: T, do: FlowDefinition<P>} | {test: (a: T) => boolean, do: FlowDefinition<P>})[];
 
 export default class SwitchCase<P extends Player, T extends Serializable<P>> extends Flow<P> {
   position: SwitchCasePostion<T>;
@@ -74,5 +74,26 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
 
   toString(): string {
     return `switch-case${this.name ? ":" + this.name : ""} (${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
+  }
+
+  visualize() {
+    let block: string | undefined = undefined;
+    if (this.position.default) {
+      block = 'default'
+    } else if (this.position.index !== undefined && this.position.index >= 0) {
+      const c = this.cases[this.position.index];
+      block = String('eq' in c ? c.eq : c.test);
+    }
+
+    return this.visualizeBlocks({
+      type: 'switchCase',
+      blocks: Object.fromEntries(
+        this.cases.map(c => [String('eq' in c ? c.eq : c.test), c.do instanceof Array ? c.do : [c.do]]).concat([
+          this.default ? ['default', (this.default instanceof Array ? this.default : [this.default])] : []
+        ])
+      ) as Record<string, FlowStep<P>[]>,
+      block,
+      position: this.position?.value,
+    });
   }
 }
