@@ -613,7 +613,7 @@ export const render = <P extends Player, B extends Board>(setup: SetupFunction<P
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize,
   layout?: (board: B, player: P, boardSize: string) => void,
-  infoModals: {title: string, modal: (board: B) => JSX.Element}[]
+  infoModals?: {title: string, modal: (board: B) => JSX.Element}[]
 }): void => {
   const { settings, boardSizes, layout, infoModals } = options;
   const state = gameStore.getState();
@@ -621,7 +621,7 @@ export const render = <P extends Player, B extends Board>(setup: SetupFunction<P
     const game = setup(state);
     game.board._ui.boardSizes = boardSizes;
     game.board._ui.setupLayout = layout;
-    game.board._ui.infoModals = infoModals;
+    game.board._ui.infoModals = infoModals ?? [];
     return game;
   }
   // we can anonymize Player class internally

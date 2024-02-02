@@ -9,14 +9,6 @@ import {
   createBoardClasses,
 } from '../index.js';
 
-import {
-  loop,
-  playerActions,
-  whileLoop,
-  eachPlayer,
-  everyPlayer,
-} from '../flow/index.js';
-
 chai.use(spies);
 const { expect } = chai;
 
@@ -51,6 +43,13 @@ describe('Game', () => {
   beforeEach(() => {
     game = new Game(TestPlayer, TestBoard, [ Card ]);
     board = game.board;
+
+    const {
+      playerActions,
+      whileLoop,
+      eachPlayer,
+    } = game.flowCommands
+
     game.defineFlow(
       () => {
         board.tokens = 4;
@@ -60,7 +59,7 @@ describe('Game', () => {
         playerActions({ actions: ['addSome', 'spend']})
       )}),
       whileLoop({ while: () => board.tokens > 0, do: (
-        eachPlayer({ name: 'player', startingPlayer: players[0], do: [
+        eachPlayer({ name: 'player', startingPlayer: game.players[0], do: [
           playerActions({ actions: ['takeOne']}),
           () => {
             if (board.tokens <= 0) game.finish(game.players.withHighest('tokens'))
@@ -328,6 +327,8 @@ describe('Game', () => {
     });
 
     it('accepts move from any', () => {
+      const { playerActions } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 4 },
         playerActions({
@@ -344,6 +345,11 @@ describe('Game', () => {
     });
 
     it('prompt in actionStep', () => {
+      const {
+        playerActions,
+        eachPlayer,
+      } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 1 },
         eachPlayer({
@@ -360,6 +366,11 @@ describe('Game', () => {
     });
 
     it('args in actionStep', () => {
+      const {
+        playerActions,
+        eachPlayer,
+      } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 1 },
         eachPlayer({
@@ -376,6 +387,11 @@ describe('Game', () => {
     });
 
     it('functional args in actionStep', () => {
+      const {
+        playerActions,
+        eachPlayer,
+      } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 1 },
         eachPlayer({
@@ -392,6 +408,11 @@ describe('Game', () => {
     });
 
     it('optional actions', () => {
+      const {
+        playerActions,
+        eachPlayer,
+      } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 1 },
         eachPlayer({
@@ -422,6 +443,11 @@ describe('Game', () => {
     });
 
     it('action for every player', () => {
+      const {
+        playerActions,
+        everyPlayer
+      } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 4 },
         everyPlayer({
@@ -452,6 +478,11 @@ describe('Game', () => {
     });
 
     it('action for every player with followups', () => {
+      const {
+        playerActions,
+        everyPlayer
+      } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 4 },
         everyPlayer({
@@ -505,6 +536,11 @@ describe('Game', () => {
     });
 
     it('survives ser/deser', () => {
+      const {
+        playerActions,
+        everyPlayer
+      } = game.flowCommands
+
       game.defineFlow(
         () => { board.tokens = 4 },
         everyPlayer({
@@ -572,6 +608,11 @@ describe('Game', () => {
     beforeEach(() => {
       game = new Game(TestPlayer, TestBoard, [ Card ]);
       board = game.board;
+      const {
+        loop,
+        eachPlayer,
+        playerActions
+      } = game.flowCommands
 
       game.defineActions({
         takeOne: player => game.action({
@@ -638,6 +679,12 @@ describe('Game', () => {
     });
 
     it('continuous loop for each player', () => {
+      const {
+        whileLoop,
+        playerActions,
+        eachPlayer
+      } = game.flowCommands
+
       game.defineFlow(whileLoop({
         while: () => true,
         do: eachPlayer({
