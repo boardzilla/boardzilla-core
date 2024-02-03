@@ -75,7 +75,6 @@ const InfoOverlay = ({ setMode }: {
                 <h1>Currently</h1>
                 <ul>
                   {game.messages.map((m, i) => {
-                    console.log(m.body)
                     const player = m.body.match(/\[\[\$p\[(\d+)/);
                     let color: string | undefined = undefined;
                     if (player) {
@@ -87,9 +86,11 @@ const InfoOverlay = ({ setMode }: {
                       </li>
                     );
                   })}
-                  <li style={{color: game.players.allCurrent()[0]?.color}}>
-                    <span>{actionDescription}</span>
-                  </li>
+                  {actionDescription && (
+                    <li style={{color: game.players.allCurrent()[0]?.color}}>
+                      <span>{actionDescription}</span>
+                    </li>
+                  )}
                 </ul>
               </div>
               <div className="contents">
