@@ -14,14 +14,15 @@ import type { UIMove } from '../index.js';
 import type { Argument } from '../../action/action.js';
 import type { Player } from '../../player/index.js';
 import type { Box } from '../../board/element.js';
+import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [game, finished, position, pendingMoves, move, step, otherPlayerAction, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, boardJSON] =
-    gameStore(s => [s.game, s.finished, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
+  const [game, position, pendingMoves, move, step, otherPlayerAction, announcementIndex, dismissAnnouncement, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, boardJSON] =
+    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
-  const [victoryMessageDismissed, setVictoryMessageDismissed] = useState(false);
+  const announcement = useMemo(() => game.announcements[announcementIndex], [game.announcements, announcementIndex]);
 
   if (!position) return null;
   const player = game.players.atPosition(position);
@@ -132,6 +133,11 @@ export default () => {
       layout = game.board._ui.stepLayouts[name];
     }
 
+    if (!layout) {
+      name = 'step:*';
+      layout = game.board._ui.stepLayouts[name];
+    }
+
     if (layout) {
       const box: Box = layout.element.relativeTransformToBoard();
 
@@ -153,6 +159,10 @@ export default () => {
         // inset
         if (layout.right !== undefined) {
           style.right = 100 + ((layout.right * box.width / 100) - box.left - box.width) + '%';
+        } else if (layout.center !== undefined) {
+          style.left ??= ((layout.center - 50) * box.width / 100) + box.left + '%';
+          style.right = 100 + ((50 - layout.center) * box.width / 100) - box.left - box.width + '%';
+          style.margin = '0 auto';
         } else {
           style.left ??= ((layout.left ?? 0) * box.width / 100) + box.left + '%';
         }
@@ -242,43 +252,31 @@ export default () => {
         }
       )}
       style={{ ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio }}
-      onClick={() => finished && setVictoryMessageDismissed(true)}
     >
       <audio ref={clickAudio} src={click} id="click"/>
-      <div id="background"/>
+      <div id="background" className="full-page-cover" />
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         {mode !== 'debug' && (
           <Element
             element={game.board}
             json={boardJSON[0]}
-            mode={mode}
+            mode={announcement ? 'info' : mode}
             onSelectElement={onSelectElement}
             onSelectPlacement={onSelectPlacement}
           />
         )}
       </div>
 
-      {mode === 'game' && <PlayerControls
-        name={name}
-        style={style}
-        moves={moves}
-        onSubmit={submitMove}
-      />}
-
-      {game.godMode && mode === 'game' && <div className="god-mode-enabled">God mode enabled</div>}
-
-      {finished && !victoryMessageDismissed && (
-        <div className="game-finished">
-          Game finished
-          {game.winner.length > 0 && (
-            <div style={{color: game.winner.length === 1 ? game.winner[0].color : ''}}>
-              {game.winner.map(p => p.name).join(', ')} win{game.winner.length === 1 && 's'}!
-            </div>
-          )}
-          {game.winner.length === 0 && game.players.length > 1 && <div>Tie game</div>}
-          {game.winner.length === 0 && game.players.length === 1 && <div style={{color: "#800"}}>You lose</div>}
-        </div>
+      {mode === 'game' && !announcement && (moves.length || !game.players.currentPosition.includes(position)) && (
+        <PlayerControls
+          name={name}
+          style={style}
+          moves={moves}
+          onSubmit={submitMove}
+        />
       )}
+
+      {game.godMode && mode === 'game' && !announcement && <div className="god-mode-enabled">God mode enabled</div>}
 
       {mode !== 'info' && (
         <div id="corner-controls">
@@ -312,6 +310,7 @@ export default () => {
         </div>
       )}
 
+      {mode === 'game' && announcement && <AnnouncementOverlay announcement={announcement} onDismiss={dismissAnnouncement}/>}
       {mode === 'info' && <InfoOverlay setMode={setMode}/>}
       {mode === 'debug' && <Debug/>}
     </div>

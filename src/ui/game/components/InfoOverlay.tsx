@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { gameStore } from '../../index.js';
 import Element from './Element.js';
 
@@ -29,26 +29,28 @@ const InfoOverlay = ({ setMode }: {
     };
   }, [infoElement?.element]);
 
+  const close = useCallback(() => {
+    if (infoElement || infoModal !== undefined) {
+      setInfoElement();
+      setInfoModal(undefined);
+    } else {
+      setMode('game');
+    }
+  }, [infoElement, infoModal, setInfoElement, setInfoModal, setMode]);
+
   useEffect(() => {
     const keydownHandler = (e: KeyboardEvent) => {
       if (e.repeat) return;
-      if (e.code === 'Escape') {
-        if (infoElement || infoModal !== undefined) {
-          setInfoElement();
-          setInfoModal(undefined);
-        } else {
-          setMode('game');
-        }
-      }
+      if (e.code === 'Escape') close();
     };
     window.addEventListener('keydown', keydownHandler);
     return () => window.removeEventListener('keydown', keydownHandler);
-  }, [infoElement, setInfoElement, infoModal, setInfoModal, setMode]);
+  }, [close]);
 
   return (
     <>
-      <div id="info-overlay" onClick={() => { setInfoElement(); setInfoModal(undefined) }}/>
-      <div id="info-container">
+      <div id="info-overlay" className="full-page-cover" onClick={close}/>
+      <div id="info-container" className="full-page-cover">
         <div id="info-drawer" className={collapsed ? 'collapsed' : ''}>
           <div className="header">
             <div className="title">
@@ -73,7 +75,6 @@ const InfoOverlay = ({ setMode }: {
                 <h1>Currently</h1>
                 <ul>
                   {game.messages.map((m, i) => {
-                    console.log(m.body)
                     const player = m.body.match(/\[\[\$p\[(\d+)/);
                     let color: string | undefined = undefined;
                     if (player) {
@@ -85,17 +86,21 @@ const InfoOverlay = ({ setMode }: {
                       </li>
                     );
                   })}
-                  <li style={{color: game.players.allCurrent()[0]?.color}}>
-                    <span>{actionDescription}</span>
-                  </li>
+                  {actionDescription && (
+                    <li style={{color: game.players.allCurrent()[0]?.color}}>
+                      <span>{actionDescription}</span>
+                    </li>
+                  )}
                 </ul>
               </div>
               <div className="contents">
                 <h1>More game info</h1>
-                {game.board._ui.infoModals?.map(({ title }, key) => (
-                  <button key={key} className="info-modal-title" onClick={() => { setInfoElement(); setInfoModal(key) }}>
-                    {title}
-                  </button>
+                {game.board._ui.infoModals?.
+                  filter(({ condition }) => !condition || condition(game.board)).
+                  map(({ title }, key) => (
+                    <button key={key} className="info-modal-title" onClick={() => { setInfoElement(); setInfoModal(key) }}>
+                      {title}
+                    </button>
                 ))}
                 <div className="more-info">See more detail by clicking on highlighted items.</div>
               </div>
@@ -104,7 +109,7 @@ const InfoOverlay = ({ setMode }: {
         </div>
 
         {(!!infoElement || infoModal !== undefined) && (
-          <div id="info-modal" className={infoElement ? 'info-element' : ''}>
+          <div id="info-modal" className={`modal-popup ${infoElement ? 'info-element' : ''}`}>
             {infoElement && (
               <>
                 {infoElement.element && (

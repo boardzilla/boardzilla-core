@@ -80,10 +80,14 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   settings: Record<string, any>;
   actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>;
   sequence: number = 0;
+  /**
+   * Current game phase
+   */
   phase: 'new' | 'started' | 'finished' = 'new';
   rseed: string;
   random: () => number;
   messages: Message[] = [];
+  announcements: string[] = [];
   intermediateUpdates: GameState<P>[][] = [];
   /**
    * If true, allows any piece to be moved or modified in any way. Used only
@@ -200,10 +204,13 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    *
    * @param winner - a player or players that are the winners of the game. In a
    * solo game if no winner is provided, this is considered a loss.
+   * @param announcement - an optional announcement from {@link render} to
+   * replace the standard boardzilla announcement.
    */
-  finish(winner?: P | P[]) {
+  finish(winner?: P | P[], announcement?: string) {
     this.phase = 'finished';
     if (winner) this.winner = winner instanceof Array ? winner : [winner];
+    this.announce(announcement ?? '__finish__');
   }
 
   /**
@@ -219,6 +226,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       board: this.board.allJSON(player?.position),
       sequence: this.sequence,
       messages: this.messages.filter(m => player && (!m.position || m.position === player?.position)),
+      announcements: this.announcements,
       rseed: player ? '' : this.rseed,
     }
   }
@@ -485,7 +493,8 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
         } else {
           const gameAction = this.getAction(allowedAction.name, player);
           if (gameAction.isPossible(allowedAction.args)) {
-            actions.push({ ...allowedAction, player });
+            // step action config take priority over action config
+            actions.push({ ...gameAction, ...allowedAction, player });
           }
         }
       }
@@ -528,13 +537,17 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
           if (submoves !== undefined) {
             possibleActions.push(action.name);
             // no sub-selections to show so just create a prompt selection of this action
-            if (skipIf === 'always' && submoves.length === 0) {
+            if (submoves.length === 0) {
               submoves = [{
                 name: action.name,
                 prompt,
                 args,
                 selections: [
-                  new Selection<P>('__action__', { prompt: action.prompt ?? playerAction.prompt, value: action.name }).resolve({})
+                  new Selection<P>('__action__', {
+                    prompt: action.prompt ?? playerAction.prompt,
+                    value: action.name,
+                    skipIf
+                  }).resolve({})
                 ]
               }];
             }
@@ -576,5 +589,9 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    */
   message(message: string, args?: Record<string, Argument<P>>) {
     this.messages.push({body: n(message, args, true)});
+  }
+
+  announce(modal: string) {
+    this.announcements.push(modal);
   }
 }

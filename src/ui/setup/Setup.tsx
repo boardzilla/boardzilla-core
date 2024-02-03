@@ -38,7 +38,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
 
   return (
     <div id="setup">
-      <div id="background"/>
+      <div id="background" className="full-page-cover"/>
       <div className={host ? '' : 'disabled'}>
         <div className="heading">
           <h1>Game Setup</h1>

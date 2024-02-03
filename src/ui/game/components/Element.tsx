@@ -73,7 +73,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
   const attrs = previousRender?.attrs ?? newAttrs;
 
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style || mode !== 'game') {
+    if (!previousRender?.style || mode === 'zoom') {
       //console.log('already moved', !!previousRender, previousRender?.movedTo, branch);
       return;
     }
@@ -92,6 +92,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
     if (node?.style.getPropertyValue('--transformed-to-old')) {
       node?.scrollTop; // force reflow
       // move to 'new' by removing transform and animate
+      if (node.classList.contains('animating')) return;
       node.classList.add('animating');
       node.style.removeProperty('--transformed-to-old');
       node.style.removeProperty('transform');
@@ -113,7 +114,6 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
         }
       };
       node.addEventListener('transitionend', cancel);
-      return () => node.removeEventListener('transitionend', cancel);
     }
   }, [element, newAttrs]);
 
@@ -449,6 +449,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
           clickable, selectable, droppable,
         }
       )}
+      style={element.player ? {['--player-color' as string]: element.player.color} : {}}
       onClick={clickable || placing ? onClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
