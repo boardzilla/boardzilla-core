@@ -407,6 +407,22 @@ describe('Game', () => {
       expect(game.getPendingMoves(game.players[0])?.moves[0].args).to.deep.equal({d: 'Joe'});
     });
 
+    it('skippable initial playerAction', () => {
+      const { playerActions } = game.flowCommands
+
+      game.defineFlow(
+        () => { board.tokens = 1 },
+        playerActions({
+          player: game.players[0],
+          actions: ['takeOne'],
+          skipIf: 'never'
+        })
+      );
+      game.start();
+      game.play();
+      expect(game.getPendingMoves(game.players[0])?.moves[0].selections[0].type).to.equal('button');
+    });
+
     it('optional actions', () => {
       const {
         playerActions,

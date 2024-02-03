@@ -23,6 +23,7 @@ export type GameState<P extends Player> = {
   sequence: number,
   rseed: string,
   messages: Message[],
+  announcements: string[],
 }
 
 type GameStartedState<P extends Player> = {
@@ -119,12 +120,14 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
         previousState.state.rseed = rseed;
       }
 
+      if (cachedGame) cachedGame.trackMovement();
       const game = cachedGame || setup(previousState.state, {trackMovement: true});
       game.players.setCurrent(previousState.currentPlayers);
       const player = game.players.atPosition(move.position)!;
       // @ts-ignore
       //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       game.messages = [];
+      game.announcements = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
 
       let error = undefined;

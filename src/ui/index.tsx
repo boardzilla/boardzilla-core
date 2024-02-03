@@ -87,6 +87,8 @@ type GameStore = {
   step?: string,
   pendingMoves?: UIMove[]; // all pending moves
   otherPlayerAction?: string;
+  announcementIndex: number;
+  dismissAnnouncement: () => void;
   boardSelections: Record<string, {
     clickMoves: UIMove[],
     dragMoves: {
@@ -173,6 +175,8 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
     }
     game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
     game.phase = 'started';
+    game.messages = update.state.messages;
+    game.announcements = update.state.announcements;
     game.winner = [];
 
     if (update.type === 'gameFinished') {
@@ -189,13 +193,14 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
       prompt: undefined,
       actionDescription: undefined,
       otherPlayerAction: undefined,
+      announcementIndex: 0,
       step: undefined,
       boardSelections: {},
       pendingMoves: undefined,
       ...updateBoard(game, position, update.state.board),
     };
 
-    if (game.players.currentPosition.length > 0) {
+    if (!readOnly && game.players.currentPosition.length > 0) {
       const allowedActions = game.allowedActions(game.players.allCurrent()[0]);
       state.step = allowedActions.step;
       let description = allowedActions.description || 'taking their turn';
@@ -208,12 +213,25 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
       state.actionDescription = `${game.players.currentPosition.length > 1 ? 'Players are' : game.players.current() + ' is'} ${description}`;
     }
 
-    readOnly ||= update.type === 'gameFinished' || !game.players.currentPosition.includes(position);
-
     // may override board with new information from playing forward from the new state
-    if (!readOnly) state = {
-      ...state,
-      ...updateSelections(game, position, undefined)
+    if (!readOnly && update.type !== 'gameFinished' && game.players.currentPosition.includes(position)) {
+      state = {
+        ...state,
+        ...updateSelections(game, position, undefined)
+      }
+    }
+
+    if (!readOnly && game.players.currentPosition.length > 0) {
+      const allowedActions = game.allowedActions(game.players.allCurrent()[0]);
+      state.step = allowedActions.step;
+      let description = allowedActions.description || 'taking their turn';
+
+      const actionsWithDescription = allowedActions.actions.filter(a => a.description);
+      if (actionsWithDescription.length === 1) {
+        description = actionsWithDescription[0].description!;
+        if (!game.players.currentPosition.includes(position)) state.otherPlayerAction = actionsWithDescription[0].name;
+      }
+      state.actionDescription = `${game.players.currentPosition.length > 1 ? 'Players are' : game.players.current() + ' is'} ${description}`;
     }
 
     state.previousRenderedState = previousRenderedState;
@@ -274,6 +292,8 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
   setError: error => set({ error }),
   setPosition: position => set({ position }),
   actions: [],
+  announcementIndex: 0,
+  dismissAnnouncement: () => set(s => ({ announcementIndex: s.announcementIndex + 1 })),
   boardSelections: {},
   pendingMoves: [],
   selected: [],
@@ -597,9 +617,11 @@ export type SetupComponentProps = {
  * @param options.boardSizes - A function that determines what board size to use
  * based on the player's device and viewport. The function will take the
  * following arguments:
- * - screenX: The player's view port width
- * - screenY: The player's view port height
- * - mobile: true if using a mobile device
+ * <ul>
+ * <li>screenX: The player's view port width
+ * <li>screenY: The player's view port height
+ * <li>mobile: true if using a mobile device
+ * </ul>
  * The function should return a string indicating the layout to use, this will
  * be cached and sent to the `layout` function.
  *
@@ -607,20 +629,39 @@ export type SetupComponentProps = {
  * game. Typically this will include calls to {@link GameElement#layout}, {@link
  * GameElement#appearance}, {@link Board#layoutStep} and {@link
  * Board#layoutAction}.
+ *
+ * @param options.announcements - A list of announcements. Each is a function
+ * that accepts the {@link Board} object and returns the JSX of the
+ * announcement. These can be called from {@link game#announce} or {@link
+ * game.finish}.
+ *
+ * @param options.infoModals - A list of informational panels that appear in the
+ * info sidebar. Each is an object with:
+ * <ul>
+ * <li>title: The title shown in the sidebar
+ * <li>modal: a function that accepts the {@link Board} object and returns the JSX
+ *   of the modal.
+ * <li>condition: An optional condition function that accepts the {@link Board}
+ *   object and returns as a boolean whether the modal should be currently
+ *   available
+ * </ul>
+ *
  * @category UI
  */
 export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, options: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize,
   layout?: (board: B, player: P, boardSize: string) => void,
+  announcements?: Record<string, (board: B) => JSX.Element>
   infoModals?: {title: string, modal: (board: B) => JSX.Element}[]
 }): void => {
-  const { settings, boardSizes, layout, infoModals } = options;
+  const { settings, boardSizes, layout, announcements, infoModals } = options;
   const state = gameStore.getState();
   const setupGame: SetupFunction = state => {
     const game = setup(state);
     game.board._ui.boardSizes = boardSizes;
     game.board._ui.setupLayout = layout;
+    game.board._ui.announcements = announcements ?? {};
     game.board._ui.infoModals = infoModals ?? [];
     return game;
   }

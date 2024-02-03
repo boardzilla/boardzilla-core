@@ -362,20 +362,22 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
    * function returning a boolean. (Default 'only-one').
    *
-   * - only-one: If there is only valid choice in the choices given, the game
+   * <ul>
+   * <li>only-one: If there is only valid choice in the choices given, the game
    * will skip this choice, prompting the player for subsequent choices, if any,
    * or completing the action otherwise.
-   * - always: Rather than present this choice directly, the player will be
+   * <li>always: Rather than present this choice directly, the player will be
    * prompted with choices from the *next choice* in the action for each
    * possible choice here, essentially expanding the choices ahead of time to
    * save the player a step. This option only has relevance if there are
    * subsequent choices in the action.
-   * - never: Always present this choice, even if the choice is forced
-   * - function: A function that accepts all player choices up to this point
+   * <li>never: Always present this choice, even if the choice is forced
+   * <li>function: A function that accepts all player choices up to this point
    * and returns a boolean. If returning true, this choice will be skipped.
    * This form is useful in the rare situations where the choice at the time may
    * be meaningless, e.g. selecting from a set of identical tokens. In this case
    * the game will make the choice for the player using the first viable option.
+   * </ul>
    *
    * @param options.validate - A function that takes an object of key-value
    * pairs for all player choices and returns a boolean. If false, the game will
@@ -503,20 +505,22 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
    * function returning a boolean. (Default 'only-one').
    *
-   * - only-one: If there is only valid choice in the choices given, the game
+   * <ul>
+   * <li>only-one: If there is only valid choice in the choices given, the game
    * will skip this choice, prompting the player for subsequent choices, if any,
    * or completing the action otherwise.
-   * - always: Rather than present this choice directly, the player will be
+   * <li>always: Rather than present this choice directly, the player will be
    * prompted with choices from the *next choice* in the action for each
    * possible choice here, essentially expanding the choices ahead of time to
    * save the player a step. This option only has relevance if there are
    * subsequent choices in the action.
-   * - never: Always present this choice, even if the choice is forced
-   * - function: A function that accepts all player choices up to this point
+   * <li>never: Always present this choice, even if the choice is forced
+   * <li>function: A function that accepts all player choices up to this point
    * and returns a boolean. If returning true, this choice will be skipped.
    * This form is useful in the rare situations where the choice at the time may
    * be meaningless, e.g. selecting from a set of identical tokens. In this case
    * the game will make the choice for the player using the first viable option.
+   * </ul>
    *
    * @param options.validate - A function that takes an object of key-value
    * pairs for all player choices and returns a boolean. If false, the game will
@@ -588,20 +592,22 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
    * function returning a boolean. (Default 'only-one').
    *
-   * - only-one: If there is only valid choice in the choices given, the game
+   * <ul>
+   * <li>only-one: If there is only valid choice in the choices given, the game
    * will skip this choice, prompting the player for subsequent choices, if any,
    * or completing the action otherwise.
-   * - always: Rather than present this choice directly, the player will be
+   * <li>always: Rather than present this choice directly, the player will be
    * prompted with choices from the *next choice* in the action for each
    * possible choice here, essentially expanding the choices ahead of time to
    * save the player a step. This option only has relevance if there are
    * subsequent choices in the action.
-   * - never: Always present this choice, even if the choice is forced
-   * - function: A function that accepts all player choices up to this point
+   * <li>never: Always present this choice, even if the choice is forced
+   * <li>function: A function that accepts all player choices up to this point
    * and returns a boolean. If returning true, this choice will be skipped.
    * This form is useful in the rare situations where the choice at the time may
    * be meaningless, e.g. selecting from a set of identical tokens. In this case
    * the game will make the choice for the player using the first viable option.
+   * </ul>
    *
    * @param options.validate - A function that takes an object of key-value
    * pairs for all player choices and returns a boolean. If false, the game will

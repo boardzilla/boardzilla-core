@@ -36,9 +36,11 @@ export type ActionLayout = {
   noAnchor?: string[],
   /**
    * Position of the controls
-   * - inset: Inside the element
-   * - beside: To the left or right of the element
-   * - stack: Above or below the element
+   * <ul>
+   * <li>inset: Inside the element
+   * <li>beside: To the left or right of the element
+   * <li>stack: Above or below the element
+   * </ul>
    */
   position?: 'inset' | 'beside' | 'stack'
   /**
@@ -55,6 +57,11 @@ export type ActionLayout = {
    * Distance from the top edge of the anchor element as a percentage of the
    * element's height
    */
+  center?: number,
+  /**
+   * Distance from the left edge of the anchor element to the center of the
+   * controls as a percentage of the element's width
+   */
   top?: number,
   /**
    * Distance from the bottom edge of the anchor element as a percentage of the
@@ -66,32 +73,7 @@ export type ActionLayout = {
    * the element as a percentage of the entire board's size.
    */
   gap?: number,
-} & (({
-  position?: 'inset'
-}) & (({
-  left?: number,
-  right?: never,
-  gap?: never,
-} | {
-  left?: never,
-  right?: number,
-  gap?: never,
-}) & ({
-  top?: number,
-  bottom?: never,
-  gap?: never
-} | {
-  top?: never,
-  bottom?: number,
-  gap?: never
-})) | {
-  position: 'beside' | 'stack'
-  left?: never,
-  right?: never,
-  top?: never,
-  bottom?: never,
-  gap?: number,
-});
+};
 
 export type BoardSize = {
   name: string,
@@ -166,13 +148,19 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     disabledDefaultAppearance?: boolean;
     stepLayouts: Record<string, ActionLayout>;
     previousStyles: Record<any, Box>;
-    infoModals: {title: string, modal: (board: B) => JSX.Element}[];
+    announcements: Record<string, (board: B) => JSX.Element>;
+    infoModals: {
+      title: string,
+      condition?: (board: B) => boolean,
+      modal: (board: B) => JSX.Element
+    }[];
   } = {
     boardSize: {name: '_default', aspectRatio: 1},
     layouts: [],
     appearance: {},
     stepLayouts: {},
     previousStyles: {},
+    announcements: {},
     infoModals: [],
   };
 
@@ -214,13 +202,14 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
    * Apply layout rules to a particular step in the flow, controlling where
    * player prompts and choices appear in relation to the board
    *
-   * @param step - the name of the step as defined in {@link playerActions}
+   * @param step - the name of the step as defined in {@link playerActions} or
+   * "*" to apply to all steps
    * @param attributes - see {@link ActionLayout}
    *
    * @category UI
    */
   layoutStep(step: string, attributes: ActionLayout) {
-    if (!this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
+    if (step !== '*' && !this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
     this._ui.stepLayouts["step:" + step] = attributes;
   }
 

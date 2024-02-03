@@ -47,15 +47,18 @@ html, body { height: 100% }
     }
   }
 
-  #background {
-    background-image: url(../grain.jpg);
-    background-size: cover;
-    filter: brightness(1.3) contrast(0.7);
+  .full-page-cover {
     width: 100vw;
     height: 100vh;
     position: fixed;
     left: 0;
     top: 0;
+  }
+
+  #background {
+    background-image: url(../grain.jpg);
+    background-size: cover;
+    filter: brightness(1.3) contrast(0.7);
     z-index: -10;
   }
 
@@ -490,20 +493,6 @@ html, body { height: 100% }
       z-index: 200;
     }
 
-    .game-finished {
-      position: absolute;
-      text-align: center;
-      top: 50%;
-      left: 50%;
-      transform: translateY(-50%) translateX(-50%);
-      font-size: 1.5rem;
-      padding: 0.5rem;
-      border: .2rem solid #433;
-      background: #dcc;
-      color: #433;
-      z-index: 200;
-    }
-
     &.mobile {
       .player-controls {
         font-size: 1.5rem;
@@ -838,23 +827,37 @@ html, body { height: 100% }
     }
   }
 
+  #announcement-overlay {
+    z-index: 200;
+  }
+
+  .modal-popup {
+    position: absolute;
+    width: max-content;
+    max-width: 80%;
+    background: white;
+    top: 4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    visibility: visible;
+    filter: none;
+    z-index: 210;
+    padding: .5rem;
+    box-shadow: 0.2rem 0.2rem .5rem #0008;
+
+    h1, h2, h3, h4, h5, h6 {
+      text-align: center;
+      margin: .25em 0;
+    }
+  }
+
   #info-overlay {
-    width: 100vw;
-    height: 100vh;
-    position: fixed;
     z-index: 199;
-    left: 0;
-    top: 0;
     background: #444c;
   }
 
   #info-container {
-    width: 100vw;
-    height: 100vh;
-    position: fixed;
     z-index: 210;
-    left: 0;
-    top: 0;
     visibility: hidden;
     color: #002;
 
@@ -933,11 +936,11 @@ html, body { height: 100% }
         }
 
         button {
-          width: 100%;
+          width: 94%;
           padding: 0.2rem 0.4rem;
           font-family: inherit;
           font-size: inherit;
-          margin: 0.1rem;
+          margin: 0.1rem 3%;
           border: none;
           background: #ccc;
           cursor: pointer;
@@ -956,19 +959,6 @@ html, body { height: 100% }
     }
 
     #info-modal {
-      position: absolute;
-      width: max-content;
-      max-width: 80%;
-      background: white;
-      top: 4rem;
-      left: 50%;
-      transform: translateX(-50%);
-      visibility: visible;
-      filter: none;
-      z-index: 210;
-      padding: .5rem;
-      box-shadow: 0.2rem 0.2rem .5rem #0008;
-
       &.info-element {
         min-width: 64%;
       }
@@ -998,13 +988,8 @@ html, body { height: 100% }
   }
 
   #debug-overlay {
-    width: 100vw;
-    height: 100vh;
-    position: fixed;
     font-size: 16px;
     z-index: 199;
-    left: 0;
-    top: 0;
     background: #fffc;
     font-family: 'DM Sans Variable', sans-serif;
 
