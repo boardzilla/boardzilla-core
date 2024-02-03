@@ -200,19 +200,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
       ...updateBoard(game, position, update.state.board),
     };
 
-    if (!readOnly && game.players.currentPosition.length > 0) {
-      const allowedActions = game.allowedActions(game.players.allCurrent()[0]);
-      state.step = allowedActions.step;
-      let description = allowedActions.description || 'taking their turn';
-
-      const actionsWithDescription = allowedActions.actions.filter(a => a.description);
-      if (actionsWithDescription.length === 1) {
-        description = actionsWithDescription[0].description!;
-        if (!game.players.currentPosition.includes(position)) state.otherPlayerAction = actionsWithDescription[0].name;
-      }
-      state.actionDescription = `${game.players.currentPosition.length > 1 ? 'Players are' : game.players.current() + ' is'} ${description}`;
-    }
-
     // may override board with new information from playing forward from the new state
     if (!readOnly && update.type !== 'gameFinished' && game.players.currentPosition.includes(position)) {
       state = {
