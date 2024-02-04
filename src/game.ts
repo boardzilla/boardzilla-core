@@ -591,7 +591,19 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
     this.messages.push({body: n(message, args, true)});
   }
 
-  announce(modal: string) {
-    this.announcements.push(modal);
+  /**
+   * Broadcast a message to all players that interrupts the game and requires
+   * dismissal before actions can be taken.
+   *
+   * @param announcement - The modal name to announce, as provided in {@link render}.
+   *
+   * @example
+   * game.message(
+   *   '{{player}} has a score of {{score}}',
+   *   { player, score: player.score() }
+   * );
+   */
+  announce(announcement: string) {
+    this.announcements.push(announcement);
   }
 }
