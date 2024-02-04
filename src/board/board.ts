@@ -21,11 +21,11 @@ export type ActionLayout = {
    */
   element: GameElement,
   /**
-   * Width of the controls as a percentage of the anchor element
+   * Maximum width of the controls as a percentage of the anchor element
    */
   width?: number,
   /**
-   * Height of the controls as a percentage of the anchor element
+   * Maximum height of the controls as a percentage of the anchor element
    */
   height?: number,
   /**
@@ -199,17 +199,28 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
   }
 
   /**
+   * Apply default layout rules for all the placement of all player prompts and
+   * choices, in relation to the board
+   *
+   * @param attributes - see {@link ActionLayout}
+   *
+   * @category UI
+   */
+  layoutControls(attributes: ActionLayout) {
+    this._ui.stepLayouts["*"] = attributes;
+  }
+
+  /**
    * Apply layout rules to a particular step in the flow, controlling where
    * player prompts and choices appear in relation to the board
    *
-   * @param step - the name of the step as defined in {@link playerActions} or
-   * "*" to apply to all steps
+   * @param step - the name of the step as defined in {@link playerActions}
    * @param attributes - see {@link ActionLayout}
    *
    * @category UI
    */
   layoutStep(step: string, attributes: ActionLayout) {
-    if (step !== '*' && !this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
+    if (!this._ctx.game.flow.getStep(step)) throw Error(`No such step: ${step}`);
     this._ui.stepLayouts["step:" + step] = attributes;
   }
 

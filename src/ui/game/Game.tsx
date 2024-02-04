@@ -134,7 +134,7 @@ export default () => {
     }
 
     if (!layout) {
-      name = 'step:*';
+      name = '*';
       layout = game.board._ui.stepLayouts[name];
     }
 
