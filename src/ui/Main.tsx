@@ -175,6 +175,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
 
           for (let i = 0; i !== states.length; i++) {
             const state = states[i];
+            if (i !== states.length - 1) state.announcements = [];
             queue.schedule(() => updateState({...data, state}, i !== states.length - 1), delay);
             delay = true;
           }
