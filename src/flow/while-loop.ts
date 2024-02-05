@@ -40,7 +40,9 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
 
   advance() {
     if (this.position.index > 10000) throw Error(`Endless loop detected: ${this.name}`);
-    if (this.position.index === -1) return this.exit();
+    if (this.position.index === -1) {
+      return this.exit();
+    }
     const position: typeof this.position = { ...this.position, index: this.position.index + 1 };
     if (this.next && this.position.value !== undefined) position.value = this.next(this.position.value);
     if (!this.whileCondition(position)) return this.exit();

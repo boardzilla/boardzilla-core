@@ -273,9 +273,7 @@ export default class Flow<P extends Player> {
     }
     if (result === FlowControl.ok || !result) return result;
     if (result !== FlowControl.complete) {
-      console.log('?', result.loop, this.name);
       if ('interrupt' in this && typeof this.interrupt === 'function' && (!result.loop || result.loop === this.name)) return this.interrupt(result.signal)
-      console.log('!', result.loop, this.name);
       return result;
     }
 
