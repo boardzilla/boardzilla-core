@@ -73,7 +73,6 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
     this.completed = positionJSON.completed;
     if (player) {
       player.setCurrent();
-      this.game.contextualizeBoardToPlayer(player);
     } else {
       // no longer looking at an individual player. set game state to accept all players
       const players: P[] = [];

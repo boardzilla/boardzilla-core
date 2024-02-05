@@ -40,7 +40,6 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
     super.setPosition(position, sequence, reset);
     if (this.position.value) {
       this.game.players.setCurrent(this.position.value);
-      this.game.contextualizeBoardToPlayer(this.position.value);
     }
   }
 

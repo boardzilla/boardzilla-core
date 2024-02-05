@@ -110,7 +110,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
         step: this.name,
         description: this.position.followups[0].description,
         actions: [this.position.followups[0]],
-        skipIf: this.skipIf, // not sure what goes here
+        skipIf: this.skipIf // TODO separate this from `this`
       }
     }
   }
