@@ -120,7 +120,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
 
   // intercept super.playOneStep so a single branch doesn't signal complete
   // without us checking all branches
-  playOneStep(): LoopInterruptControl | FlowControl | undefined {
+  playOneStep(): {name?: string, signal: LoopInterruptControl} | FlowControl | undefined {
     // step through each player over top of the normal super stepping
     const player = this.getPlayers().findIndex((_, p) => this.completed[p] === undefined);
 

@@ -44,9 +44,16 @@
  * @category Flow
  */
 export const Do = {
-  repeat: () => loopInterrupt[0] = LoopInterruptControl.repeat,
-  continue: () => loopInterrupt[0] = LoopInterruptControl.continue,
-  break: () => loopInterrupt[0] = LoopInterruptControl.break,
+  repeat: (loop?: string | Record<string, string>) => interrupt(LoopInterruptControl.repeat, typeof loop === 'string' ? loop : undefined),
+  continue: (loop?: string | Record<string, string>) => interrupt(LoopInterruptControl.continue, typeof loop === 'string' ? loop : undefined),
+  break: (loop?: string | Record<string, string>) => interrupt(LoopInterruptControl.break, typeof loop === 'string' ? loop : undefined),
+}
+
+/** @internal */
+export const loopInterrupt: {loop?: string, signal: LoopInterruptControl}[] = [];
+
+function interrupt(signal: LoopInterruptControl, loop?: string) {
+  loopInterrupt[0] = {loop, signal};
 }
 
 /** @internal */
@@ -61,6 +68,3 @@ export enum FlowControl {
   ok = "__OK__",
   complete = "__COMPLETE__"
 }
-
-/** @internal */
-export const loopInterrupt: [LoopInterruptControl?] = [];

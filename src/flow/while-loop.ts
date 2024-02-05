@@ -3,6 +3,7 @@ import { FlowControl } from './index.js';
 
 import type { Player } from '../player/index.js';
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
+import { LoopInterruptControl } from './enums.js';
 
 export type WhileLoopPosition = { index: number, value?: any };
 
@@ -39,6 +40,7 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
 
   advance() {
     if (this.position.index > 10000) throw Error(`Endless loop detected: ${this.name}`);
+    if (this.position.index === -1) return this.exit();
     const position: typeof this.position = { ...this.position, index: this.position.index + 1 };
     if (this.next && this.position.value !== undefined) position.value = this.next(this.position.value);
     if (!this.whileCondition(position)) return this.exit();
@@ -55,6 +57,12 @@ export default class WhileLoop<P extends Player> extends Flow<P> {
   exit(): FlowControl.complete {
     this.setPosition({...this.position, index: -1});
     return FlowControl.complete;
+  }
+
+  interrupt(signal: LoopInterruptControl) {
+    if (signal === LoopInterruptControl.continue) return this.advance();
+    if (signal === LoopInterruptControl.repeat) return this.repeat();
+    if (signal === LoopInterruptControl.break) return this.exit();
   }
 
   allSteps() {
