@@ -16,15 +16,15 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./index.css": "./src/ui/assets/styles/game.scss"
+    ".": "./dist/index.js",
+    "./index.css": "./dist/ui/assets/index.css"
   },
   "files": [
-    "src/**/*"
+    "dist/**/*"
   ],
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "sideEffects": [
-    "./src/ui/assets/styles/game.scss"
+    "./dist/ui/assets/index.css"
   ],
   "dependencies": {
     "classnames": "^2.3.1",
