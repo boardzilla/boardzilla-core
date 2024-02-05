@@ -499,6 +499,14 @@ describe('Loop short-circuiting', () => {
     expect(stepSpy2).not.to.have.been.called.with('start', 13);
   });
 
+  it('rejects interrupt with no loop', () => {
+    const badLoop = ifElse({ if: () => true, do: Do.break })
+    // @ts-ignore mock game
+    badLoop.game = {phase: 'started'};
+    badLoop.reset();
+    expect(() => badLoop.play()).to.throw(/Do\.break/);
+  });
+
   it('can continue to a named loop', () => {
     const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.continue('loop') : undefined);
     const stepSpy2 = chai.spy();
