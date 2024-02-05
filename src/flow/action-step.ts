@@ -151,6 +151,9 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       } else {
         this.setPosition({...move, followups: [...game.followups]});
       }
+      if ('followups' in this.position && this.position.followups![0].player) {
+        this.game.players.setCurrent(this.position.followups![0].player);
+      }
     } else {
       // succeeded
       this.setPosition(move);
@@ -167,6 +170,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       if (this.position.followups?.length) {
         json.followups = this.position.followups.map(f => ({
           name: f.name,
+          prompt: f.prompt,
           player: serialize(f.player),
           args: f.args ? serializeObject(f.args, forPlayer) : undefined,
         }));
@@ -183,6 +187,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       args: deserializeObject(position.args ?? {}, this.game) as Record<string, Argument<P>>,
       followups: position.followups?.map((f: any) => ({
         name: f.name,
+        prompt: f.prompt,
         player: deserialize(f.player, this.game),
         args: deserializeObject(f.args ?? {}, this.game) as Record<string, Argument<P>>,
       }))

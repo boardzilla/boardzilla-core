@@ -27,6 +27,14 @@ export type ElementClass<T extends GameElement = any> = {
 }
 
 /**
+ * Either the name of a property of the object that can be lexically sorted, or
+ * a function that will be called with the object to sort and must return a
+ * lexically sortable value.
+ * @category Board
+ */
+type GenericSorter = string | ((e: GameElement) => number | string)
+
+/**
  * The attributes of this class that inherits GameElement, excluding internal
  * ones from the base GameElement
  */
@@ -647,8 +655,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * Sorts the elements directly contained within this element by some {@link Sorter}.
    * @category Structure
    */
-  sortBy<E extends GameElement<P, B>>(key: Sorter<E> | Sorter<E>[], direction?: "asc" | "desc") {
-    return this._t.children.sortBy(key, direction)
+  sortBy(key: GenericSorter | GenericSorter[], direction?: "asc" | "desc") {
+    return this._t.children.sortBy(key as Sorter<GameElement<P, B>> | Sorter<GameElement<P, B>>[], direction)
   }
 
   /**

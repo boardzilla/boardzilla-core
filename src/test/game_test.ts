@@ -637,7 +637,9 @@ describe('Game', () => {
           board.tokens --;
           player.tokens ++;
           if (board.tokens < 10) game.followUp({
-            name: 'declare'
+            player: game.players[1],
+            name: 'declare',
+            prompt: 'follow',
           });
         }),
         declare: () => game.action({
@@ -673,6 +675,23 @@ describe('Game', () => {
       expect(game.allowedActions(game.players[1]).actions[0].name).to.equal('declare');
       expect(game.allowedActions(game.players[1]).actions[0].player).to.equal(game.players[1]);
       expect(game.allowedActions(game.players[0]).actions.length).to.equal(0);
+      expect(game.allowedActions(game.players[1]).actions[0].prompt).to.equal('follow');
+    });
+
+    it('allows followup for other player', () => {
+      game.board.tokens = 12;
+      game.start();
+      game.play();
+
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
+      game.play();
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
+      game.play();
+      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
+      game.play();
+      expect(game.allowedActions(game.players[0]).actions.length).to.equal(0);
+      expect(game.allowedActions(game.players[2]).actions.length).to.equal(0);
+      expect(game.allowedActions(game.players[1]).actions.length).to.equal(1);
     });
   });
 
