@@ -4,6 +4,7 @@ import { deserialize, deserializeObject, serialize, serializeObject } from '../a
 import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
 import type { Argument, ActionStub } from '../action/action.js';
+import { LoopInterruptControl, loopInterrupt } from './enums.js';
 
 export type ActionStepPosition<P extends Player> = { // turn taken by `player`
   player: number,
@@ -141,6 +142,17 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (error) {
       // failed with a selection required
       return error;
+    } else if (loopInterrupt[0]) {
+      const loop = this.currentLoop(loopInterrupt[0].loop);
+      if (!loop) {
+        if (loopInterrupt[0].loop) throw Error(`No loop found "${loopInterrupt[0].loop}" for interrupt`);
+        if (loopInterrupt[0].signal === LoopInterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
+        if (loopInterrupt[0].signal === LoopInterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
+        if (loopInterrupt[0].signal === LoopInterruptControl.break) throw Error("Cannot use Do.break when not in a loop");
+      } else {
+        loop.interrupt(loopInterrupt.shift()!.signal);
+        return;
+      }
     } else if (game.followups.length > 0) {
       // validate that this is a proper action list
       if (game.followups.some(f => !game.actions[f.name])) {

@@ -4,6 +4,7 @@ import spies from 'chai-spies';
 import Flow from '../flow/flow.js';
 import {
   playerActions,
+  loop,
   whileLoop,
   forLoop,
   forEach,
@@ -496,6 +497,148 @@ describe('Loop short-circuiting', () => {
     expect(stepSpy2).to.have.been.called.with('start', 12);
     expect(stepSpy2).not.to.have.been.called.with('end', 12);
     expect(stepSpy2).not.to.have.been.called.with('start', 13);
+  });
+
+  it('rejects interrupt with no loop', () => {
+    const badLoop = ifElse({ if: () => true, do: Do.break })
+    // @ts-ignore mock game
+    badLoop.game = {phase: 'started'};
+    badLoop.reset();
+    expect(() => badLoop.play()).to.throw(/Do\.break/);
+  });
+
+  it('can continue to a named loop', () => {
+    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.continue('loop') : undefined);
+    const stepSpy2 = chai.spy();
+    const stepSpy3 = chai.spy();
+    const shortLoop = forLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 2, do: [
+      stepSpy2,
+      forLoop({ name: 'loop2', initial: 10, next: loop2 => loop2 + 1, while: loop2 => loop2 < 20, do: [
+        ({ loop2 }) => stepSpy1(loop2),
+      ]}),
+      stepSpy3
+    ]});
+    shortLoop.reset();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    expect(shortLoop.flowStepArgs()).to.deep.equal({ loop: 0, loop2: 12 });
+    expect(stepSpy2).to.have.been.called.exactly(1);
+    expect(stepSpy1).to.have.been.called.exactly(2);
+    expect(stepSpy3).to.have.been.called.exactly(0);
+
+    shortLoop.playOneStep(); // continue to outer loop
+    expect(shortLoop.flowStepArgs()).to.deep.equal({ loop: 1 });
+    expect(stepSpy1).to.have.been.called.exactly(3);
+    expect(stepSpy2).to.have.been.called.exactly(1);
+    expect(stepSpy3).to.have.been.called.exactly(0);
+
+    shortLoop.playOneStep();
+    expect(shortLoop.flowStepArgs()).to.deep.equal({ loop: 1, loop2: 10 });
+    expect(stepSpy1).to.have.been.called.exactly(3);
+    expect(stepSpy2).to.have.been.called.exactly(2);
+  });
+
+  it('can break to a named loop', () => {
+    const stepSpy1 = chai.spy((x:number) => x === 12 ? Do.break('loop') : undefined);
+    const stepSpy2 = chai.spy();
+    const stepSpy3 = chai.spy();
+    const stepSpy4 = chai.spy();
+    const shortLoop = loop(
+      forLoop({ name: 'loop', initial: 0, next: loop => loop + 1, while: loop => loop < 2, do: [
+        stepSpy2,
+        forLoop({ name: 'loop2', initial: 10, next: loop2 => loop2 + 1, while: loop2 => loop2 < 20, do: [
+          ({ loop2 }) => stepSpy1(loop2),
+        ]}),
+        stepSpy3
+      ]}),
+      stepSpy4
+    )
+    shortLoop.reset();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    shortLoop.playOneStep();
+    expect(shortLoop.flowStepArgs()).to.deep.equal({ loop: 0, loop2: 12 });
+    expect(stepSpy2).to.have.been.called.exactly(1);
+    expect(stepSpy1).to.have.been.called.exactly(2);
+    expect(stepSpy3).to.have.been.called.exactly(0);
+    expect(stepSpy4).to.have.been.called.exactly(0);
+
+    shortLoop.playOneStep(); // break out of outer loop
+    shortLoop.playOneStep(); // resume at topmost loop
+    expect(shortLoop.flowStepArgs()).to.deep.equal({ loop: 0 });
+    expect(stepSpy2).to.have.been.called.exactly(1);
+    expect(stepSpy1).to.have.been.called.exactly(3);
+    expect(stepSpy3).to.have.been.called.exactly(0);
+    expect(stepSpy4).to.have.been.called.exactly(1);
+
+    shortLoop.playOneStep(); // all loops starting over
+    expect(shortLoop.flowStepArgs()).to.deep.equal({ loop: 0, loop2: 10 });
+    expect(stepSpy2).to.have.been.called.exactly(2);
+
+  });
+
+  it('can repeat out of processMove', () => {
+    const stepSpy2 = chai.spy((_: string, x:number) => {x});
+    const shortLoop = forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
+      playerActions({ actions: ['breakAction'] }),
+      ({ loop }) => {console.log('end', loop); stepSpy2('end', loop)}
+    ]});
+    const game = {
+      flow: shortLoop,
+      followups: [],
+      players: {
+        currentPosition: [1],
+        atPosition: () => ({position: 1}),
+        setCurrent: () => {}
+      },
+      getAction: (a: string) => ({
+        breakAction: { _process: Do.repeat, messages: [] },
+      }[a]),
+    };
+    // @ts-ignore mock game
+    shortLoop.game = game;
+
+    shortLoop.reset();
+    shortLoop.play();
+    shortLoop.processMove({ name: 'breakAction', args: {}, player: 1 });
+    shortLoop.play();
+    expect(stepSpy2).not.to.have.been.called;
+    expect(shortLoop.position.value).to.equal(10);
+  });
+
+  it('can break out of processMove', () => {
+    const stepSpy1 = chai.spy();
+    const stepSpy2 = chai.spy();
+    const shortLoop = new Flow({
+      name: 'main',
+      do: forLoop({ name: 'loop', initial: 10, next: loop => loop + 1, while: loop => loop < 20, do: [
+        playerActions({ actions: ['breakAction'] }),
+        ({ loop }) => {console.log('end', loop); stepSpy1()}
+      ]}),
+    });
+    const game = {
+      flow: shortLoop,
+      finish: stepSpy2,
+      followups: [],
+      players: {
+        currentPosition: [1],
+        atPosition: () => ({position: 1}),
+        setCurrent: () => {}
+      },
+      getAction: (a: string) => ({
+        breakAction: { _process: Do.break, messages: [] },
+      }[a]),
+    };
+    // @ts-ignore mock game
+    shortLoop.game = game;
+
+    shortLoop.reset();
+    shortLoop.play();
+    shortLoop.processMove({ name: 'breakAction', args: {}, player: 1 });
+    shortLoop.play();
+    expect(stepSpy1).not.to.have.been.called;
+    expect(stepSpy2).to.have.been.called;
   });
 });
 

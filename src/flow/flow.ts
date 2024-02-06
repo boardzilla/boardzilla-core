@@ -1,6 +1,7 @@
 import { Player } from '../index.js';
 import { Board } from '../board/index.js';
 import { LoopInterruptControl, loopInterrupt, FlowControl } from './enums.js';
+import { Do } from './enums.js';
 
 import type Game from '../game.js';
 import type { WhileLoopPosition } from './while-loop.js';
@@ -9,9 +10,9 @@ import type { ForEachPosition } from './for-each.js';
 import type { SwitchCasePostion } from './switch-case.js';
 import type { ActionStepPosition } from './action-step.js';
 import type { EveryPlayerPosition } from './every-player.js';
-import { Argument, ActionStub } from '../action/action.js';
-import ActionStep from './action-step.js';
-import { Do } from './enums.js';
+import type { Argument, ActionStub } from '../action/action.js';
+import type ActionStep from './action-step.js';
+import type WhileLoop from './while-loop.js';
 
 /**
  * Several flow methods accept an argument of this type. This is an object
@@ -212,6 +213,11 @@ export default class Flow<P extends Player> {
     this.setPosition(this.fromJSON(positionJSON), sequence, false);
   }
 
+  currentLoop(name?: string): WhileLoop<P> | undefined {
+    if ('interrupt' in this && (!name || name === this.name)) return this as unknown as WhileLoop<P>;
+    return this.parent?.currentLoop();
+  }
+
   currentProcessor(): Flow<P> | undefined {
     if (this.step instanceof Flow) return this.step.currentProcessor();
     if (this.type === 'action' || this.type === 'parallel') return this;
@@ -254,22 +260,20 @@ export default class Flow<P extends Player> {
    * loop. Returns undefined if now waiting for player input. override
    * for self-contained flows that do not have subflows.
    */
-  playOneStep(): LoopInterruptControl | FlowControl | undefined {
+  playOneStep(): {loop?: string, signal: LoopInterruptControl} | FlowControl | undefined {
     const step = this.step;
-    let result: LoopInterruptControl | FlowControl | undefined = FlowControl.complete;
+    let result: {loop?: string, signal: LoopInterruptControl} | FlowControl | undefined = FlowControl.complete;
     if (step instanceof Function) {
-      loopInterrupt[0] = undefined;
-      step(this.flowStepArgs());
-      result = loopInterrupt[0] ?? FlowControl.complete;
+      if (!loopInterrupt[0]) step(this.flowStepArgs());
+      result = FlowControl.complete;
+      if (loopInterrupt[0]) result = loopInterrupt.shift();
     } else if (step instanceof Flow) {
       if ('awaitingAction' in step && (step as ActionStep<P>).awaitingAction()) return; // awaiting action
       result = step.playOneStep();
     }
     if (result === FlowControl.ok || !result) return result;
     if (result !== FlowControl.complete) {
-      if ('advance' in this && typeof this.advance === 'function' && result === LoopInterruptControl.continue) return this.advance();
-      if ('repeat' in this && typeof this.repeat === 'function' && result === LoopInterruptControl.repeat) return this.repeat();
-      if ('exit' in this && typeof this.exit === 'function' && result === LoopInterruptControl.break) return this.exit();
+      if ('interrupt' in this && typeof this.interrupt === 'function' && (!result.loop || result.loop === this.name)) return this.interrupt(result.signal)
       return result;
     }
 
@@ -296,7 +300,11 @@ export default class Flow<P extends Player> {
       if (step) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
     } while (step === FlowControl.ok && this.game.phase !== 'finished')
     //console.debug("Game Flow:\n" + this.stacktrace());
-    if (step === LoopInterruptControl.continue || step === LoopInterruptControl.repeat || step === LoopInterruptControl.break) throw Error("Cannot skip/repeat/break when not in a loop");
+    if (typeof step === 'object') {
+      if (step.signal === LoopInterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
+      if (step.signal === LoopInterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
+      if (step.signal === LoopInterruptControl.break) throw Error("Cannot use Do.break when not in a loop");
+    }
     if (step === FlowControl.complete) this.game.finish();
   }
 
