@@ -131,7 +131,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, setFinished, setError, updateState, setUserOnline] = gameStore(s => [s.game, s.setFinished, s.setError, s.updateState, s.setUserOnline]);
+  const [game, setFinished, setError, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.game, s.setFinished, s.setError, s.updateState, s.setUserOnline, s.announcementIndex]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
@@ -146,6 +146,14 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   }, [setError]);
 
   const queue = useMemo(() => new Queue(1) /* speed */, []);
+
+  useEffect(() => {
+    if (game.announcements[announcementIndex]) {
+      queue.pause();
+    } else if (queue.paused) {
+      setTimeout(() => queue.resume(), 500);
+    }
+  }, [queue, game, announcementIndex])
 
   const listener = useCallback((event: MessageEvent<
     UsersEvent |
@@ -175,7 +183,6 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
 
           for (let i = 0; i !== states.length; i++) {
             const state = states[i];
-            if (i !== states.length - 1) state.announcements = [];
             queue.schedule(() => updateState({...data, state}, i !== states.length - 1), delay);
             delay = true;
           }

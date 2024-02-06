@@ -95,7 +95,7 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
         state.rseed = fixedRseed;
       }
       if (!state.rseed) state.rseed = advanceRseed(); // set the seed first because createGame may call random()
-      const game = setup(state);
+      const game = setup(state, {trackMovement: true});
       if (game.phase !== 'finished') game.play();
       const update = game.getUpdate();
       cacheGameOnWindow(game, update);

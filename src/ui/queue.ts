@@ -2,6 +2,7 @@ class Queue {
   updates: (() => any)[] = [];
   justProcessed: boolean = false; // queue was just processed
   timeout: number;
+  paused = false;
 
   constructor(
     public speed: number = 1
@@ -16,6 +17,7 @@ class Queue {
   }
 
   pump() {
+    if (this.paused) return;
     const update = this.updates.shift();
     if (!update) {
       this.justProcessed = false;
@@ -25,6 +27,16 @@ class Queue {
     clearTimeout(this.timeout);
     this.timeout = window.setTimeout(() => this.pump(), this.speed * 1000);
     update();
+  }
+
+  pause() {
+    this.paused = true;
+  }
+
+  resume() {
+    if (!this.paused) return;
+    this.paused = false;
+    this.pump();
   }
 }
 
