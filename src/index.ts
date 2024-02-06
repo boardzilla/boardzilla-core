@@ -104,8 +104,8 @@ export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
   // lock game from receiving any more setup
   game.start();
 
+  if (options?.trackMovement) game.trackMovement();
   if (!inSetup) {
-    if (options?.trackMovement) game.trackMovement();
     game.sequence = state.sequence;
     game.messages = state.messages;
     game.announcements = state.announcements;

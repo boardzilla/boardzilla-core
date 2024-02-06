@@ -226,7 +226,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
       board: this.board.allJSON(player?.position),
       sequence: this.sequence,
       messages: this.messages.filter(m => player && (!m.position || m.position === player?.position)),
-      announcements: this.announcements,
+      announcements: [...this.announcements],
       rseed: player ? '' : this.rseed,
     }
   }
@@ -281,8 +281,10 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   }
 
   trackMovement(track=true) {
-    this.board._ctx.trackMovement = track;
-    if (track) this.intermediateUpdates = [];
+    if (this.board._ctx.trackMovement !== track) {
+      this.board._ctx.trackMovement = track;
+      if (track) this.intermediateUpdates = [];
+    }
   }
 
   /**
@@ -605,5 +607,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    */
   announce(announcement: string) {
     this.announcements.push(announcement);
+    this.addDelay();
+    this.announcements = [];
   }
 }
