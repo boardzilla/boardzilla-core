@@ -772,14 +772,14 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   }
 
   /**
-   * Returns whether this element is visible to the current player. Can only be
-   * called when in a player context, during an action taken by a player or
-   * while the board is viewed by a given player.
+   * Returns whether this element is visible to all players, or to the current
+   * player if called when in a player context (during an action taken by a
+   * player or while the board is viewed by a given player.)
    * @category Visibility
    */
   isVisible() {
-    if (!this._ctx.player) throw Error('Cannot use isVisible outside of a player context');
-    return this.isVisibleTo(this._ctx.player.position);
+    if (this._ctx.player) return this.isVisibleTo(this._ctx.player.position);
+    return this._visible?.default !== false && (this._visible?.except ?? []).length === 0;
   }
 
   /**

@@ -498,7 +498,9 @@ describe('Board', () => {
 
     it("isVisibleTo", () => {
       const card = board.create(Card, 'AH', { suit: 'H', pip: 1 });
+      expect(card.isVisible()).to.equal(true);
       card.hideFromAll();
+      expect(card.isVisible()).to.equal(false);
       expect(card.isVisibleTo(1)).to.equal(false);
       expect(card.isVisibleTo(2)).to.equal(false);
       card.showTo(1);
