@@ -17,8 +17,8 @@ import type { Box } from '../../board/element.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [game, position, pendingMoves, move, step, otherPlayerAction, announcementIndex, dismissAnnouncement, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, boardJSON] =
-    gameStore(s => [s.game, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
+  const [game, dev, position, pendingMoves, move, step, otherPlayerAction, announcementIndex, dismissAnnouncement, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, boardJSON] =
+    gameStore(s => [s.game, s.dev, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
@@ -254,7 +254,7 @@ export default () => {
       style={{ ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio }}
     >
       <audio ref={clickAudio} src={click} id="click"/>
-      <div id="background" className="full-page-cover" />
+      {mode !== 'debug' && <div id="background" className="full-page-cover" />}
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         {mode !== 'debug' && (
           <Element
@@ -296,23 +296,25 @@ export default () => {
               />
             </svg>
           </div>
-          <div id="debug-toggle">
-            <svg
-              viewBox="-40 -40 574.04362 578.11265"
-              xmlns="http://www.w3.org/2000/svg"
-              onClick={() => setMode(mode === 'debug' ? 'game' : 'debug')}
-            >
-              <path
-                style={{fill: 'white', stroke: 'black', strokeWidth:80, paintOrder:'stroke markers fill'}}
-                d="m 352.48196,213.31221 c 0,78.32378 -63.49396,141.81774 -141.81774,141.81775 -78.32378,0 -141.817754,-63.49397 -141.817754,-141.81775 10e-7,-78.32378 63.493974,-141.817751 141.817754,-141.817749 78.32378,6e-6 141.81774,63.493969 141.81774,141.817749 z M 490.31895,451.24231 378.93053,344.196 c 29.8,-36.3 42.26947,-82.8 42.26947,-133.4 0,-116.3 -94.3,-210.6 -210.6,-210.6 -116.3,0 -210.6,94.3 -210.6,210.6 0,116.3 94.3,210.6 210.6,210.6 50.8,0 88.51578,-8.22736 124.91578,-38.22736 l 112.27685,111.38842 c 12.9,11.8 32.10737,-6.46106 36.30737,-10.66106 8.4,-8.3 14.61895,-24.35369 6.21895,-32.65369 z"/>
-            </svg>
-          </div>
+          {dev && (
+            <div id="debug-toggle">
+              <svg
+                viewBox="-40 -40 574.04362 578.11265"
+                xmlns="http://www.w3.org/2000/svg"
+                onClick={() => setMode(mode === 'debug' ? 'game' : 'debug')}
+              >
+                <path
+                  style={{fill: 'white', stroke: 'black', strokeWidth:80, paintOrder:'stroke markers fill'}}
+                  d="m 352.48196,213.31221 c 0,78.32378 -63.49396,141.81774 -141.81774,141.81775 -78.32378,0 -141.817754,-63.49397 -141.817754,-141.81775 10e-7,-78.32378 63.493974,-141.817751 141.817754,-141.817749 78.32378,6e-6 141.81774,63.493969 141.81774,141.817749 z M 490.31895,451.24231 378.93053,344.196 c 29.8,-36.3 42.26947,-82.8 42.26947,-133.4 0,-116.3 -94.3,-210.6 -210.6,-210.6 -116.3,0 -210.6,94.3 -210.6,210.6 0,116.3 94.3,210.6 210.6,210.6 50.8,0 88.51578,-8.22736 124.91578,-38.22736 l 112.27685,111.38842 c 12.9,11.8 32.10737,-6.46106 36.30737,-10.66106 8.4,-8.3 14.61895,-24.35369 6.21895,-32.65369 z"/>
+              </svg>
+            </div>
+          )}
         </div>
       )}
 
       {mode === 'game' && announcement && <AnnouncementOverlay announcement={announcement} onDismiss={dismissAnnouncement}/>}
       {mode === 'info' && <InfoOverlay setMode={setMode}/>}
-      {mode === 'debug' && <Debug/>}
+      {mode === 'debug' && dev && <Debug/>}
     </div>
   );
 }

@@ -650,7 +650,7 @@ describe('Board', () => {
   });
 
   describe('grids', () => {
-    class Cell extends Space<Player> { }
+    class Cell extends Space<Player> { color: string }
 
     it('creates squares', () => {
       board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
@@ -698,6 +698,15 @@ describe('Board', () => {
 
       const middle = board.first(Cell, {row: 2, column: 2})!;
       expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
+    });
+
+    it('adjacencies', () => {
+      board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
+      board.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
+      for (const cell of board.all(Cell, {row: 2})) cell.color = 'red';
+      const corner = board.first(Cell, {row: 2, column: 2});
+      expect(corner?.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[1, 2], [2, 1], [2, 3], [3, 2]]);
+      expect(corner?.adjacencies(Cell, {color: 'red'}).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [2, 3]]);
     });
   });
 

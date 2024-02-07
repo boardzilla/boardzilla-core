@@ -83,7 +83,7 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
 
   _finder<F extends GameElement>(
     className: ElementClass<F>,
-    options: {limit?: number, order?: 'asc' | 'desc'},
+    options: {limit?: number, order?: 'asc' | 'desc', noRecursive?: boolean},
     ...finders: ElementFinder<F>[]
   ): ElementCollection<F> {
     const coll = new ElementCollection<F>();
@@ -111,10 +111,12 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
           coll.unshift(el as unknown as F);
         }
       }
-      if (options.limit !== undefined) {
-        coll.push(...el._t.children._finder(className, {limit: options.limit - coll.length, order: options.order}, ...finders));
-      } else {
-        coll.push(...el._t.children._finder(className, {}, ...finders));
+      if (!options.noRecursive) {
+        if (options.limit !== undefined) {
+          coll.push(...el._t.children._finder(className, {limit: options.limit - coll.length, order: options.order}, ...finders));
+        } else {
+          coll.push(...el._t.children._finder(className, {}, ...finders));
+        }
       }
     };
 

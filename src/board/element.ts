@@ -597,7 +597,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       return new ElementCollection<Space<P, B>>(...this._t.parent?._t.graph.mapNeighbors(
         this._t.id,
         node => this._t.parent!._t.graph!.getNodeAttribute(node, 'space')
-      ) as Space<P, B>[]).all(classToSearch, ...finders)
+      ) as Space<P, B>[])._finder(classToSearch, { noRecursive: true }, ...finders);
     }
     if (this.row === undefined || this.column === undefined || !this._t.parent) return new ElementCollection<GameElement<P, B>>();
     return this._t.parent._t.children.filter(c => (
@@ -605,7 +605,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         (this.column === c.column && [c.row + 1, c.row - 1].includes(this.row!)) ||
           (this.row === c.row && [c.column + 1, c.column - 1].includes(this.column!))
       )
-    ));
+    ))._finder(classToSearch, { noRecursive: true }, ...finders);
   }
 
   _otherFinder<T extends GameElement>(_finders: ElementFinder<T>[]): ElementFinder<GameElement<P, B>> {
