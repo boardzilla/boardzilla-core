@@ -73,7 +73,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
   const attrs = previousRender?.attrs ?? newAttrs;
 
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style || mode === 'zoom') {
+    if (!previousRender?.style || placing || mode === 'zoom') {
       //console.log('already moved', !!previousRender, previousRender?.movedTo, branch);
       return;
     }
@@ -84,7 +84,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
       translateX: (previousRender.style.left - newPosition.left) / newPosition.width * 100,
       translateY: (previousRender.style.top - newPosition.top) / newPosition.height * 100,
     };
-  }, [relativeTransform, previousRender, mode]);
+  }, [relativeTransform, previousRender, placing, mode]);
 
 
   useEffect(() => {

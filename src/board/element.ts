@@ -1522,6 +1522,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         }
         let left = box.left + (box.width - width) / 2;
         let top = box.top + (box.height - height) / 2;
+
         if (haphazardly) {
           let wiggle = {x: 0, y: 0};
           let overlap = Infinity;

@@ -312,7 +312,12 @@ export default () => {
         </div>
       )}
 
-      {mode === 'game' && announcement && <AnnouncementOverlay announcement={announcement} onDismiss={dismissAnnouncement}/>}
+      {mode === 'game' && announcement && (
+        <AnnouncementOverlay
+          announcement={announcement}
+          onDismiss={dismissAnnouncement}
+        />
+      )}
       {mode === 'info' && <InfoOverlay setMode={setMode}/>}
       {mode === 'debug' && dev && <Debug/>}
     </div>

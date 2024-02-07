@@ -374,17 +374,19 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       const into = selection.clientContext.placement.into as GameElement;
       game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
       piece.putInto(into);
-      const layout = into._ui.computedLayouts?.[into.getLayoutItems().findIndex(l => l?.includes(piece as Piece))];
+      let layout = into._ui.computedLayouts?.[into.getLayoutItems().findIndex(l => l?.includes(piece as Piece))];
       if (layout) {
         state = {
           ...state,
           ...updateBoard(game, position),
-          placement: {
-            piece,
-            old,
-            into,
-            layout
-          }
+        };
+        // get the layout again since the updateBoard re-applied the layout after the piece was put into it
+        layout = into._ui.computedLayouts?.[into.getLayoutItems().findIndex(l => l?.includes(piece as Piece))];
+        state.placement = {
+          piece,
+          old,
+          into,
+          layout: layout!
         };
       } else {
         throw Error(`Tried to place ${piece.name} into ${into.name} but no layout found for this piece`);
