@@ -177,7 +177,7 @@ export default () => {
       if (layout.width !== undefined) style.maxWidth = (layout.width * box.width / 100) + '%';
       if (layout.height !== undefined) style.maxHeight = (layout.height * box.height / 100) + '%';
     } else {
-      style = {left: 0, top: 0};
+      style = {left: 0, bottom: 0};
     }
 
     return {style, name, moves};

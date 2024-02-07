@@ -78,6 +78,19 @@ describe('Board', () => {
     );
   });
 
+  it('destroys pieces', () => {
+    board.create(Piece, 'token', { player: players[1] });
+    board.create(Piece, 'token', { player: players[0] });
+    board.first(Piece)!.destroy();
+    expect(board.allJSON()).to.deep.equals(
+      [
+        { className: 'Board', _id: 0, children: [
+          { className: 'Piece', name: 'token', _id: 3, player: '$p[1]' }
+        ]},
+      ]
+    );
+  });
+
   it('removes pieces', () => {
     board.create(Piece, 'token', { player: players[1] });
     board.create(Piece, 'token', { player: players[0] });
@@ -596,8 +609,8 @@ describe('Board', () => {
       const b = board.create(Space, 'b');
       const c = board.create(Space, 'c');
       a.connectTo(b);
-      expect(a.adjacentTo(b)).to.equal(true);
-      expect(a.adjacentTo(c)).to.equal(false);
+      expect(a.isAdjacentTo(b)).to.equal(true);
+      expect(a.isAdjacentTo(c)).to.equal(false);
       expect(a.others({ adjacent: true }).includes(b)).to.equal(true);
       expect(a.others({ adjacent: true }).includes(c)).to.not.equal(true);
     })
@@ -670,6 +683,22 @@ describe('Board', () => {
       expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
     });
 
+    it('creates squares with diagonals', () => {
+      board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
+      board.createGrid({ rows: 3, columns: 3, diagonalDistance: 1.5 }, Cell, 'cell');
+      expect(board.all(Cell).length).to.equal(9);
+      expect(board.first(Cell)!.row).to.equal(1);
+      expect(board.first(Cell)!.column).to.equal(1);
+      expect(board.last(Cell)!.row).to.equal(3);
+      expect(board.last(Cell)!.column).to.equal(3);
+
+      const corner = board.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
+
+      const knight = board.first(Cell, {row: 3, column: 2})!;
+      expect(corner.distanceTo(knight)).to.equal(2.5);
+    });
+
     it('creates hexes', () => {
       board = new Board({ classRegistry:  [Space, Piece, GameElement, Cell] });
       board.createGrid({ rows: 3, columns: 3, style: 'hex' }, Cell, 'cell');
@@ -706,9 +735,11 @@ describe('Board', () => {
       board = new Board({ classRegistry: [Space, Piece, GameElement, Cell] });
       board.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
       for (const cell of board.all(Cell, {row: 2})) cell.color = 'red';
-      const corner = board.first(Cell, {row: 2, column: 2});
-      expect(corner?.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[1, 2], [2, 1], [2, 3], [3, 2]]);
-      expect(corner?.adjacencies(Cell, {color: 'red'}).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [2, 3]]);
+      const center = board.first(Cell, {row: 2, column: 2})!;
+      expect(center.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[1, 2], [2, 1], [2, 3], [3, 2]]);
+      expect(center.adjacencies(Cell, {color: 'red'}).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [2, 3]]);
+      expect(center.isAdjacentTo(board.first(Cell, {row: 1, column: 2})!)).to.be.true;
+      expect(center.isAdjacentTo(board.first(Cell, {row: 1, column: 1})!)).to.be.false;
     });
   });
 
@@ -725,9 +756,9 @@ describe('Board', () => {
       expect(piece2.adjacencies(Piece)).includes(piece1);
       expect(piece2.adjacencies(Piece)).includes(piece3);
 
-      expect(piece2.adjacentTo(piece1)).to.equal(true);
-      expect(piece2.adjacentTo(piece3)).to.equal(true);
-      expect(piece1.adjacentTo(piece3)).to.equal(false);
+      expect(piece2.isAdjacentTo(piece1)).to.equal(true);
+      expect(piece2.isAdjacentTo(piece3)).to.equal(true);
+      expect(piece1.isAdjacentTo(piece3)).to.equal(false);
     });
   });
 

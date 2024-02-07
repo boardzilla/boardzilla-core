@@ -567,14 +567,19 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * Space#connectTo.
    * @category Structure
    */
-  adjacentTo(element: GameElement<P, B>) {
-    if (this._t.parent?._t.graph) {
-      return this._t.parent!._t.graph.areNeighbors(this._t.id, element._t.id);
+  isAdjacentTo(element: GameElement<P, B>) {
+    if ('isSpace' in this && this._t.parent?._t.graph) {
+      if (this._t.parent!._t.graph.areNeighbors(this._t.id, element._t.id)) return true;
     }
     if (this.row === undefined || this.column === undefined) return false;
     return element.row !== undefined && element.column !== undefined && (
       (this.column === element.column && [element.row + 1, element.row - 1].includes(this.row!)) ||
         (this.row === element.row && [element.column + 1, element.column - 1].includes(this.column!))
+        // this should possibly be Piece#isDiagonal
+        // (diagonally &&
+        //   [element.row + 1, element.row - 1].includes(this.row!) &&
+        //   [element.column + 1, element.column - 1].includes(this.column!)
+        // )
     );
   }
 
@@ -855,31 +860,6 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     return new ElementCollection<T>(...times(n, i => this.create(className, name, typeof attributes === 'function' ? attributes(i) : attributes)));
   }
 
-  createGrid<T extends Space<P>>(
-    {rows, columns, style}: {
-      rows: number,
-      columns: number,
-      style?: 'square' | 'hex' | 'hex-inverse'
-    },
-    className: ElementClass<T>,
-    name: string,
-    attributes?: ElementAttributes<T>
-  ): ElementCollection<T> {
-    const grid = new ElementCollection<T>();
-    times(rows, row =>
-      times(columns, column => {
-        const el = this.create(className, name, {row, column, ...attributes} as ElementAttributes<T>);
-        grid[(row - 1) * columns + column - 1] = el;
-        if (row > 1) el.connectTo(grid[(row - 2) * columns + column - 1]);
-        if (column > 1) el.connectTo(grid[(row - 1) * columns + column - 2]);
-        if (style === 'hex' && row > 1 && column > 1) el.connectTo(grid[(row - 2) * columns + column - 2]);
-        if (style === 'hex-inverse' && row > 1 && column < columns) el.connectTo(grid[(row - 2) * columns + column]);
-        return el;
-      })
-    );
-    return grid;
-  }
-
   /**
    * Base element creation method
    * @internal
@@ -895,6 +875,18 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     el.name = name;
     Object.assign(el, attrs);
     return el;
+  }
+
+  /**
+   * Permanently remove an element. This can only be done while defining the
+   * board, and is usually only useful when creating groups of elements, such as
+   * {@link createMany} or {@link createGrid} where some of the created elements
+   * are not needed.
+   */
+  destroy() {
+    if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be destroy once game has started.');
+    const position = this._t.parent!._t.children.indexOf(this);
+    this._t.parent!._t.children.splice(position, 1);
   }
 
   /**

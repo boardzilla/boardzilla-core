@@ -1,5 +1,6 @@
 import GameElement from './element.js'
 import ElementCollection from './element-collection.js'
+import { times } from '../utils.js';
 
 import graphology from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
@@ -73,6 +74,61 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
       if (event === 'exit' && !(element instanceof handler.type)) continue;
       handler.callback(element);
     }
+  }
+
+  /**
+   * Create a grid of spaces inside this space. These automatically have row and
+   * column applied to them and have adjacencies created on them for the purpose
+   * of all adjacency and distance methods and queries.
+   *
+   * @param gridConfig.rows - the number of rows
+   * @param gridConfig.columns - the number of columns
+   * @param gridConfig.style - the style of grid.
+   * <ul>
+   * <li>`"square"` - checker grid. adjacency counts as up, down, left, right.
+   * <li>`"hex"` - hex grid. adjacency counts in 6 directions with a cell at {0,0} considered adjacent to {1,1}
+   * <li>`"hex-inverse"` - hex grid. adjacency counts in 6 directions with a cell at {1,0} considered adjacent to {0,1}
+   * </ul>
+   * @param gridConfig.diagonalDistance - In the case of a square grid, optionally make diagonal squares adjacent with this distance.
+
+   * @param className - Class to create. This class must be included in the `elementClasses` in {@link createGame}.
+   * @param name - Sets {@link GameElement#name | name}
+   * @param attributes - Sets any attributes of the class that are defined in
+   * your own class that extend {@link Space}, {@link Piece}, or {@link
+   * Board}. Can also include {@link player}.
+   *
+   * @category Structure
+   */
+  createGrid<T extends Space<P>>(
+    gridConfig: {
+      rows: number,
+      columns: number,
+      style?: 'square' | 'hex' | 'hex-inverse',
+      diagonalDistance?: number
+    },
+    className: ElementClass<T>,
+    name: string,
+    attributes?: ElementAttributes<T>
+  ): ElementCollection<T> {
+    const {rows, columns, style, diagonalDistance} = gridConfig;
+    if (diagonalDistance !== undefined && (style ?? 'square') !== 'square') throw Error("Hex grids cannot have diagonals");
+    const grid = new ElementCollection<T>();
+    times(rows, row =>
+      times(columns, column => {
+        const el = this.create(className, name, {row, column, ...attributes} as ElementAttributes<T>);
+        grid[(row - 1) * columns + column - 1] = el;
+        if (row > 1) el.connectTo(grid[(row - 2) * columns + column - 1]);
+        if (column > 1) el.connectTo(grid[(row - 1) * columns + column - 2]);
+        if ((diagonalDistance !== undefined || style === 'hex') && row > 1 && column > 1) {
+          el.connectTo(grid[(row - 2) * columns + column - 2], diagonalDistance);
+        }
+        if ((diagonalDistance !== undefined || style === 'hex-inverse') && row > 1 && column < columns) {
+          el.connectTo(grid[(row - 2) * columns + column], diagonalDistance);
+        }
+        return el;
+      })
+    );
+    return grid;
   }
 
   /**
@@ -174,7 +230,7 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
       if (typeof finder === 'object') {
         if (finder.adjacent !== undefined) {
           const adj = finder.adjacent;
-          otherFinder = (el: Space<P, B>) => this.adjacentTo(el) === adj && el !== (this as GameElement)
+          otherFinder = (el: Space<P, B>) => this.isAdjacentTo(el) === adj && el !== (this as GameElement)
           delete(finder.adjacent);
         }
         if (finder.withinDistance !== undefined) {
