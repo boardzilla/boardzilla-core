@@ -210,7 +210,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
   finish(winner?: P | P[], announcement?: string) {
     this.phase = 'finished';
     if (winner) this.winner = winner instanceof Array ? winner : [winner];
-    this.announce(announcement ?? '__finish__');
+    this.announcements.push(announcement ?? '__finish__');
   }
 
   /**

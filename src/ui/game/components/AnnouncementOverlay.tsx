@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { gameStore } from '../../index.js';
 
 const AnnouncementOverlay = ({ announcement, onDismiss }: {
@@ -6,6 +6,15 @@ const AnnouncementOverlay = ({ announcement, onDismiss }: {
   onDismiss: () => void
 }) => {
   const [game] = gameStore(s => [s.game]);
+  const [delay, setDelay] = useState(false);
+  console.log('announcement', announcement, delay);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDelay(true), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!delay) return;
 
   return (
     <div id="announcement-overlay" className="full-page-cover" onClick={() => onDismiss()}>
