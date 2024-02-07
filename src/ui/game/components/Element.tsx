@@ -30,6 +30,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
     gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.selectPlacement, s.isMobile, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
+  const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
   const wrapper = useRef<HTMLDivElement | null>(null);
   const domElement = useRef<HTMLDivElement>(null);
   const branch = useMemo(() => element.branch(), [element, boardJSON]);
@@ -73,7 +74,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
   const attrs = previousRender?.attrs ?? newAttrs;
 
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style || placing || mode === 'zoom') {
+    if (!previousRender?.style || positioning || mode === 'zoom') {
       //console.log('already moved', !!previousRender, previousRender?.movedTo, branch);
       return;
     }
@@ -84,8 +85,11 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
       translateX: (previousRender.style.left - newPosition.left) / newPosition.width * 100,
       translateY: (previousRender.style.top - newPosition.top) / newPosition.height * 100,
     };
-  }, [relativeTransform, previousRender, placing, mode]);
+  }, [relativeTransform, previousRender, mode, positioning]);
 
+  useEffect(() => {
+    if (placing && moveTransform) setPositioning(true);
+  }, [placing, moveTransform]);
 
   useEffect(() => {
     const node = wrapper.current;
@@ -104,13 +108,10 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
           }
         }
       }
-      const cancelAnimation = () => {
-        node.classList.remove('animating');
-        node.removeEventListener('transitionend', cancel);
-      }
       const cancel = (e: TransitionEvent) => {
         if (e.propertyName === 'transform' && e.target === node) {
-          cancelAnimation();
+          node.classList.remove('animating');
+          node.removeEventListener('transitionend', cancel);
         }
       };
       node.addEventListener('transitionend', cancel);
@@ -207,7 +208,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
       )
     };
 
-    if (placement.piece.row!== pointer.row || placement.piece.column !== pointer.column) {
+    if (placement.piece.row !== pointer.row || placement.piece.column !== pointer.column) {
       selectPlacement(pointer);
     }
 

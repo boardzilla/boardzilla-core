@@ -374,23 +374,23 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       const into = selection.clientContext.placement.into as GameElement;
       game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
       piece.putInto(into);
-      let layout = into._ui.computedLayouts?.[into.getLayoutItems().findIndex(l => l?.includes(piece as Piece))];
-      if (layout) {
-        state = {
-          ...state,
-          ...updateBoard(game, position),
-        };
-        // get the layout again since the updateBoard re-applied the layout after the piece was put into it
-        layout = into._ui.computedLayouts?.[into.getLayoutItems().findIndex(l => l?.includes(piece as Piece))];
-        state.placement = {
-          piece,
-          old,
-          into,
-          layout: layout!
-        };
-      } else {
+      let layoutIndex = into.getLayoutItems().findIndex(l => l?.includes(piece as Piece));
+      if (!into._ui.computedLayouts?.[layoutIndex]) {
         throw Error(`Tried to place ${piece.name} into ${into.name} but no layout found for this piece`);
       }
+
+      state = {
+        ...state,
+        ...updateBoard(game, position),
+      };
+      // get the layout again since the updateBoard re-applied the layout after the piece was put into it
+      const layout = into._ui.computedLayouts![layoutIndex];
+      state.placement = {
+        piece,
+        old,
+        into,
+        layout
+      };
     }
 
     const skipIf = moves[0].selections[0].skipIf;
@@ -471,7 +471,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
                 ...updateBoard(game, position, json),
               }
 
-               window.top!.postMessage(message, "*");
+              window.top!.postMessage(message, "*");
             }
           } catch (e) {
             // first line of defense for bad game logic. cancel all moves and
