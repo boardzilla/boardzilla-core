@@ -132,10 +132,13 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
       if (!['_ctx', '_t', '_ui', '_eventHandlers', 'board', 'game', 'pile'].includes(key) && !(key in rest))
         rest[key] = undefined;
     }
-    Object.assign(this, {...rest});
-    if (children) this.createChildrenFromJSON(children, '0');
-    if (order) this._t.order = order;
+    this.createChildrenFromJSON(children || [], '0');
     this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1), '1');
+    if (order) this._t.order = order;
+
+    Object.assign(this, {...rest});
+    this.assignAttributesFromJSON(children || [], '0');
+    this._ctx.removed.assignAttributesFromJSON(boardJSON.slice(1), '1');
   }
 
   // UI

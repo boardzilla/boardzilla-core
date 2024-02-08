@@ -345,8 +345,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
     }
   }
 
-  if (element._ui.appearance.connections) {
-    if (!element._t.graph) return;
+  if (element._ui.appearance.connections && element._t.graph) {
     let { thickness, style, color, fill, label, labelScale } = element._ui.appearance.connections;
     if (!thickness) thickness = .1;
     if (!style) style = 'solid';

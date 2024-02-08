@@ -155,6 +155,27 @@ describe('Board', () => {
     expect(board.first(Country, 'france')!.general).to.equal(napolean);
   });
 
+  it('handles cyclical serializable attributes', () => {
+    class Country extends Space<Player> {
+      general?: General;
+    }
+    class General extends Piece<Player> {
+      country?: Country;
+    }
+    board._ctx.classRegistry = [Space, Piece, GameElement, Country, General];
+
+    const map = board.create(Space, 'map', {});
+    const france = map.create(Country, 'france');
+    const napolean = france.create(General, 'napolean', { country: france })
+    france.general = napolean;
+    const json = board.allJSON();
+    board.fromJSON(JSON.parse(JSON.stringify(board.allJSON())));
+    expect(board.allJSON()).to.deep.equals(json);
+    expect(board.first(Country, 'france')).to.equal(france);
+    expect(board.first(Country, 'france')!.general?.name).to.equal('napolean');
+    expect(board.first(Country, 'france')!.general?.country).to.equal(france);
+  });
+
   it('understands branches', () => {
     const map = board.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});

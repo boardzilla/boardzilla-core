@@ -28,6 +28,9 @@ export { TestRunner } from './test-runner.js';
 
 import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
+import type Action from './action/action.js';
+
+export type { Space, Piece, Game, Action };
 
 /**
  * Returns board classes for game with the correct types for board and player.

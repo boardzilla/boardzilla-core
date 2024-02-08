@@ -882,6 +882,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * board, and is usually only useful when creating groups of elements, such as
    * {@link createMany} or {@link createGrid} where some of the created elements
    * are not needed.
+   * @category Structure
    */
   destroy() {
     if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be destroy once game has started.');
@@ -991,24 +992,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
-      let { className, children, was, _id, name, order, ...rest } = json;
-      if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
+      let { className, children, was, _id, name, order } = json;
       let child: GameElement | undefined = undefined;
       if (_id !== undefined) { // try to match space, preserve the object and any references. this should also match the .was if it's a sibling
         child = childrenRefs.find(c => c._t.id === _id && c.name === name);
-        if (child) {
-          // reset all on child
-          for (const key of Object.keys(child)) {
-            if (!['_ctx', '_t', '_ui', '_eventHandlers', 'board', 'game', 'name', 'row', 'column'].includes(key) && !(key in rest))
-              rest[key] = undefined;
-          }
-          Object.assign(child, rest);
-        }
       }
       if (!child) {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
         if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
-        child = this.createElement(elementClass, name, rest) as GameElement;
+        child = this.createElement(elementClass, name) as GameElement;
         child._t.setId(_id);
         child._t.parent = this;
         child._t.order = order;
@@ -1017,6 +1009,17 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       if (this._ctx.trackMovement && !('isSpace' in child)) child._t.was = branch + '/' + i;
       this._t.children.push(child);
       child.createChildrenFromJSON(children || [], branch + '/' + i);
+    }
+  }
+
+  assignAttributesFromJSON(childrenJSON: ElementJSON[], branch: string) {
+    for (let i = 0; i !== childrenJSON.length; i++) {
+      const json = childrenJSON[i];
+      let { className: _cn, children, was: _w, _id, name: _n, order: _o, ...rest } = json;
+      if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
+      let child = this._t.children[i];
+      Object.assign(child, rest);
+      child.assignAttributesFromJSON(children || [], branch + '/' + i);
     }
   }
 
@@ -1643,8 +1646,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @param appearance.className - A class name to add to the dom element
    *
    * @param appearance.render - A function that takes this element as its only
-   * argument and returns JSX for the element. See {@link /styling.md} for more
-   * on usage.
+   * argument and returns JSX for the element. See {@link ../ui/appearance} for
+   * more on usage.
    *
    * @param appearance.aspectRatio - The aspect ratio for this element. This
    * value is a ratio of width over height. All layouts defined in {@link
