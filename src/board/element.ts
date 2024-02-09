@@ -948,15 +948,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     return this._t.parent === el || !!this._t.parent?.isDescendantOf(el)
   }
 
-  attributeList() {
-    let attrs: Record<any, any>;
+  attributeList<T extends GameElement<P, B>>(this: T): ElementAttributes<T> {
+    let attrs: Record<string, any>;
     ({ ...attrs } = this);
     for (const attr of ['_t', '_ctx', '_ui', 'board', 'game', 'pile', '_eventHandlers']) delete attrs[attr];
 
     // remove methods
     return Object.fromEntries(Object.entries(attrs).filter(
       ([, value]) => typeof value !== 'function'
-    )) as typeof attrs;
+    )) as ElementAttributes<T>;
   }
 
   /**
@@ -1023,10 +1023,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     }
   }
 
-  cloneInto(into: GameElement<P, B>) {
+  cloneInto<T extends GameElement<P, B>>(this: T, into: GameElement<P, B>) {
     let attrs = this.attributeList();
 
-    const clone = into.createElement(this.constructor as ElementClass<GameElement>, this.name, attrs);
+    const clone = into.createElement(this.constructor as ElementClass<T>, this.name, attrs);
     if (into._t.order === 'stacking') {
       into._t.children.unshift(clone);
     } else {

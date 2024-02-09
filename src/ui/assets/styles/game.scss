@@ -164,7 +164,7 @@ html, body { height: 100% }
 
       &.placing {
         z-index: 100;
-        filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008);
+        filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008) opacity(.6);
         cursor: pointer;
         &:not(.animating) {
           transition: transform .2s, top .2s, left .2s, width .2s, height .2s;

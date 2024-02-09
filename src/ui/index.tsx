@@ -227,6 +227,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
 
     return state;
   }),
+
   // pendingMove we're trying to complete, args are the ones we're committing to
   selectMove: (pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => set(s => {
     let move: UIMove | undefined = undefined;
@@ -243,9 +244,10 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
     let state: Partial<GameStore> = {};
 
     if (s.placement) {
-      // restore state so we can process the move over again
-      restorePlacedPiece(s.placement.piece, s.placement.old);
-      state = { placement: undefined  };
+      // remove temporary placement piece
+      const position = s.placement.into._t.children.indexOf(s.placement.piece);
+      s.placement.into._t.children.splice(position, 1);
+      state = { placement: undefined };
     }
 
     state = {
@@ -268,7 +270,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()(set => ({
       state.previousRenderedState = { sequence: Math.floor(s.game.sequence), elements: previousRenderedState };
     }
 
-    if (!s.placement && s.game.sequence > Math.floor(s.game.sequence)) {
+    if (s.game.sequence > Math.floor(s.game.sequence)) {
       state.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
       state.renderedState = {};
     }
@@ -372,9 +374,8 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
         column: piece.column,
       }
       const into = selection.clientContext.placement.into as GameElement;
-      game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
-      piece.putInto(into);
-      let layoutIndex = into.getLayoutItems().findIndex(l => l?.includes(piece as Piece));
+      const clone = piece.cloneInto(into);
+      let layoutIndex = into.getLayoutItems().findIndex(l => l?.includes(clone as Piece));
       if (!into._ui.computedLayouts?.[layoutIndex]) {
         throw Error(`Tried to place ${piece.name} into ${into.name} but no layout found for this piece`);
       }
@@ -386,7 +387,7 @@ const updateSelections = (game: Game<Player, Board<Player>>, position: number, m
       // get the layout again since the updateBoard re-applied the layout after the piece was put into it
       const layout = into._ui.computedLayouts![layoutIndex];
       state.placement = {
-        piece,
+        piece: clone,
         old,
         into,
         layout
@@ -560,29 +561,12 @@ const updateBoard = (game: Game<Player, Board<Player>>, position: number, json?:
   game.contextualizeBoardToPlayer(game.players.atPosition(position));
   game.board.applyLayouts(board => {
     board.all(Die).appearance({
-      render: DieComponent,
+      render: (die: Die) => React.createElement(DieComponent, { die }),
       aspectRatio: 1,
     });
   });
 
   return ({ boardJSON: json || game.board.allJSON() })
-}
-
-const restorePlacedPiece = (
-  piece: Piece, old: {
-    parent: GameElement;
-    position: number;
-    row?: number;
-    column?: number;
-  }
-) => {
-  piece.putInto(old.parent, {
-    position: old.position,
-    placement: old.row !== undefined && old.column !== undefined ? {
-      row: old.row,
-      column: old.column
-    } : undefined
-  });
 }
 
 export type SetupComponentProps = {

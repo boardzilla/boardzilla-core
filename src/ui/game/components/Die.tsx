@@ -5,7 +5,7 @@ import { times } from '../../../utils.js';
 
 import type Die from '../../../board/die.js';
 
-const DieComponent = (die: Die) => {
+const DieComponent = ({ die }: { die: Die }) => {
   const diceAudio = useRef<HTMLAudioElement>(null);
   const lastFlip = useRef<boolean>();
 
