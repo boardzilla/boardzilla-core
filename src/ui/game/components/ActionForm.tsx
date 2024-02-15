@@ -31,6 +31,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
 
   const allArgs = useMemo(() => {
     const allArgs = {...uncommittedArgs, ...args};
+    // provisionally consider the ambiguous board selection as part of this move for confirmation/validation
     if (disambiguateElement && disambiguateElement.moves.includes(move)) {
       const selection = move.selections[0];
       if (selection.type === 'board') {
