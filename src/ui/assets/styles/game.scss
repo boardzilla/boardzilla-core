@@ -377,7 +377,7 @@ html, body { height: 100% }
             transform: rotate3d(1, 0, 0, 90deg) translateZ(3.1em);
           }
           &[data-face="6"] {
-            transform: rotate3d(1, 0, 0, 180deg) translateZ(3.1em);
+            transform: rotate3d(0, 1, 0, 180deg) translateZ(3.1em);
           }
           &[data-face="1"] .dot:nth-of-type(1) {
             grid-area: five;
