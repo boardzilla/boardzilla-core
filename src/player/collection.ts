@@ -18,7 +18,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   /**
    * An array of table positions that may currently act.
    */
-  currentPosition: number[];
+  currentPosition: number[] = [];
   className: {new(...a: any[]): P};
   /**
    * A reference to the {@link Game} class

@@ -14,13 +14,13 @@ export default class Die<P extends Player<P, B> = any, B extends Board<P, B> = a
    * Currently shown face
    */
   current: number = 1;
-  flip = false;
+  rollSequence: number;
 
   /**
    * Randomly choose a new face, causing the roll animation
    */
   roll() {
     this.current = Math.ceil((this._ctx.game?.random || Math.random)() * this.sides);
-    this.flip = !this.flip;
+    this.rollSequence = this.game.sequence;
   }
 }

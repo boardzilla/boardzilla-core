@@ -1181,6 +1181,20 @@ describe('Board', () => {
       expect(c._ui.computedStyle).to.deep.equal({ left: 25, top: 0, width: 25, height: 25 })
       expect(d._ui.computedStyle).to.deep.equal({ left: 75, top: 0, width: 25, height: 25 })
     });
+
+    it('can place sticky', () => {
+      const a = board.create(Piece, 'a');
+      const b = board.create(Piece, 'b');
+      const c = board.create(Piece, 'c');
+      const d = board.create(Piece, 'd');
+      board.layout(Piece, { sticky: true });
+      board.applyLayouts();
+      a.remove();
+
+      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+    });
   });
 });
 

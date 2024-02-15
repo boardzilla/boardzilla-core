@@ -120,7 +120,10 @@ export const createInterface = (setup: SetupFunction<Player, Board<Player>>): Ga
         previousState.state.rseed = rseed;
       }
 
-      if (cachedGame) cachedGame.trackMovement();
+      if (cachedGame) {
+        cachedGame.trackMovement(false);
+        cachedGame.intermediateUpdates = [];
+      }
       const game = cachedGame || setup(previousState.state, {trackMovement: true});
       game.players.setCurrent(previousState.currentPlayers);
       const player = game.players.atPosition(move.position)!;

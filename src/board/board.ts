@@ -185,8 +185,8 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
   }
 
   applyLayouts(this: B, base?: (b: B) => void) {
+    this.resetUI();
     if (this._ui.setupLayout) {
-      this.resetUI();
       this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
     }
     if (base) base(this);

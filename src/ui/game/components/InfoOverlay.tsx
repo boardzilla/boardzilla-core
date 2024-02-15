@@ -120,7 +120,6 @@ const InfoOverlay = ({ setMode }: {
                         json={infoElement.element.toJSON()}
                         mode='zoom'
                         onSelectElement={() => {}}
-                        onSelectPlacement={() => {}}
                       />
                     </div>
                   </div>

@@ -12,22 +12,21 @@ import {
 import { serialize } from '../../../action/utils.js'
 
 import type { ElementJSON } from '../../../board/element.js';
-import type { UIMove } from '../../index.js';
+import type { UIMove } from '../../lib.js';
 import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 
 const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMouseLeave}: {
+const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   element: GameElement<Player>,
   json: ElementJSON,
   mode: 'game' | 'info' | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
-  onSelectPlacement: ({ column, row }: { column: number, row: number }) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, selectPlacement, isMobile, boardJSON] =
-    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.selectPlacement, s.isMobile, s.boardJSON]);
+  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, boardJSON] =
+    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
@@ -42,13 +41,8 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
   const selectable = mode === 'game' && !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
   const draggable = mode === 'game' && !!selections?.dragMoves?.length; // ???
   const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
-  const placing = useMemo(() => element === placement?.piece, [element, placement])
+  const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
   const isVisible = useMemo(() => element.isVisible(), [element, boardJSON])
-
-  // const wrapperCallback = useCallback((node: HTMLDivElement) => {
-  //   if (!node) return;
-  //   wrapper.current = node
-  // }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const relativeTransform = useMemo(() => element.relativeTransformToBoard(), [element, element._ui.computedStyle]);
@@ -59,7 +53,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
       const previousRender = previousRenderedState.elements[element._t.was!];
       if (previousRender && previousRender.movedTo !== branch) return previousRender;
     }
-  }, [element, branch, previousRenderedState]);
+  }, [element, branch, previousRenderedState, boardJSON]);
 
   const newAttrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
     !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) &&
@@ -121,11 +115,11 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
   const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
     if (placing) {
-      onSelectPlacement({column: element.column!, row: element.row!});
+      selectPlacement({column: element.column!, row: element.row!});
     } else {
       onSelectElement(selections.clickMoves, element);
     }
-  }, [element, onSelectElement, selections, placing, onSelectPlacement]);
+  }, [element, onSelectElement, selections, placing, selectPlacement]);
 
   const handleDragStart = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
@@ -209,10 +203,10 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
     };
 
     if (placement.piece.row !== pointer.row || placement.piece.column !== pointer.column) {
-      selectPlacement(pointer);
+      setPlacement(pointer);
     }
 
-  }, [placement, selectPlacement])
+  }, [placement, setPlacement])
 
   let style = useMemo(() => {
     if (mode === 'zoom') return {
@@ -237,7 +231,6 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
     if (moveTransform) {
       let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
       if (previousRenderedState.elements[element._t.was!]) previousRenderedState.elements[element._t.was!].movedTo = branch;
-      //console.log(`moving ${branch} from ${element._t.was}`, previousRender?.attrs);
       if (dragOffset.element && dragOffset.element === element._t.was) {
         transformToNew = `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + transformToNew;
         dragOffset.element = undefined;
@@ -257,14 +250,15 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
     if (element._ui.appearance.effects) {
       if (!domElement.current) return;
       const callback: MutationCallback = mutations => {
-        for (const {attributes, className} of element._ui.appearance.effects as {attributes: Record<string, any>, className: string}[]) {
+        for (const {attributes, name} of element._ui.appearance.effects as {attributes: Record<string, any>, name: string}[]) {
           if (mutations.some(m => {
             const attr = Object.keys(attributes).find(a => `data-${a.toLowerCase()}` === m.attributeName);
             return attr &&
               m.oldValue !== String(attributes[attr]) &&
               Object.entries(attributes).every(([k, v]) => (m.target as HTMLElement).getAttribute(`data-${k.toLowerCase()}`) === String(v));
           })) {
-            domElement.current?.classList.add(className);
+            domElement.current?.classList.add(name);
+            domElement.current?.setAttribute('data-bz-effect', name);
           }
         }
       };
@@ -312,7 +306,6 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
             mode={mode === 'zoom' ? 'game' : mode}
             onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
             onSelectElement={onSelectElement}
-            onSelectPlacement={onSelectPlacement}
           />
         );
       }
@@ -453,7 +446,7 @@ const Element = ({element, json, mode, onSelectElement, onSelectPlacement, onMou
       onClick={clickable || placing ? onClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onMouseMove={placement?.into === element ? handlePlacement : undefined}
+      onMouseMove={placement?.into === element && !placement.selected ? handlePlacement : undefined}
       {...attrs}
     >
       {appearance(element)}

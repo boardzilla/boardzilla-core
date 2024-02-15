@@ -4,7 +4,7 @@ import { n } from '../../../utils.js';
 import Selection from './Selection.js';
 
 import type { Player } from '../../../player/index.js';
-import type { UIMove } from '../../index.js';
+import type { UIMove } from '../../lib.js';
 import type { Argument } from '../../../action/action.js';
 import type { ResolvedSelection } from '../../../action/selection.js';
 
@@ -14,7 +14,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
   children?: React.ReactNode,
 }) => {
-  const [selected] = gameStore(s => [s.selected]);
+  const [uncommittedArgs, selected] = gameStore(s => [s.uncommittedArgs, s.selected]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const initial = useCallback(() => {
@@ -29,16 +29,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
 
   useEffect(() => setArgs(initial()), [initial, move]);
 
-  const allArgs = useMemo(() => {
-    const args2 = {...move.args, ...args};
-    for (const s of move.selections) {
-      if (s.type === 'board' && selected.every(el => s.boardChoices?.includes(el))) {
-        args2[s.name] = s.isMulti() ? selected : selected[0];
-        break
-      }
-    }
-    return args2;
-  }, [args, move, selected]);
+  const allArgs = useMemo(() => ({...uncommittedArgs, ...args}), [args, uncommittedArgs]);
 
   const submitForm = useCallback((args: Record<string, Argument<Player> | undefined>) => {
     onSubmit(move, args as Record<string, Argument<Player>>);
@@ -87,19 +78,20 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   }, [allArgs, validate, submitForm, move]);
 
   const confirm = useMemo(() => {
+    console.log(move.name, uncommittedArgs)
     if (Object.values(validationErrors(allArgs)).some(e => e)) return undefined;
     if (!move.requireExplicitSubmit) return undefined;
     if (Object.values(allArgs).some(a => a === undefined)) return undefined;
     for (const s of move.selections) {
       if (s.type === 'board' && s.isMulti() && (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity))) return undefined;
     }
-
     let confirm = 'Confirm';
     const args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
     if (move.selections[0]?.confirm) {
       confirm = move.selections[0].confirm[0];
       Object.assign(args, typeof move.selections[0].confirm[1] === 'function' ? move.selections[0].confirm[1](args) : move.selections[0].confirm[1])
     }
+    console.log(move.name, confirm, args, uncommittedArgs)
     return n(confirm, args)
   }, [move, allArgs, selected, validationErrors]);
 
