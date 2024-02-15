@@ -1049,7 +1049,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
-  }
+  };
 
   resetUI() {
     this._ui.layouts = [{

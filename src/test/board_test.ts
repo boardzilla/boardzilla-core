@@ -807,11 +807,6 @@ describe('Board', () => {
     });
 
     it('applies overlaps', () => {
-      board.layout(Piece, {
-        rows: 3,
-        columns: 3,
-        direction: 'ltr'
-      });
       const s1 = board.create(Space, 's1');
       const s2 = board.create(Space, 's2');
       const s3 = board.create(Space, 's3');
@@ -820,7 +815,13 @@ describe('Board', () => {
       const p2 = board.create(Piece, 'p2');
       const p3 = board.create(Piece, 'p3');
       const p4 = board.create(Piece, 'p4');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(Piece, {
+          rows: 3,
+          columns: 3,
+          direction: 'ltr'
+        });
+      });
 
       expect(p1._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100 / 3, height: 100 / 3 })
       expect(p2._ui.computedStyle).to.deep.equal({ left: 100 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
@@ -829,15 +830,16 @@ describe('Board', () => {
     });
 
     it('adds gaps and margins', () => {
-      board.layout(GameElement, {
-        gap: 10,
-        margin: 5
-      });
       const a = board.create(Space, 'a');
       const b = board.create(Space, 'b');
       const c = board.create(Space, 'c');
       const d = board.create(Space, 'd');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          gap: 10,
+          margin: 5
+        });
+      });
       expect(a._ui.computedStyle).to.deep.equal({ left: 5, top: 5, width: 40, height: 40 })
       expect(b._ui.computedStyle).to.deep.equal({ left: 55, top: 5, width: 40, height: 40 })
       expect(c._ui.computedStyle).to.deep.equal({ left: 5, top: 55, width: 40, height: 40 })
@@ -846,15 +848,16 @@ describe('Board', () => {
 
     it('adds gaps and margins absolutely to relative sizes', () => {
       const outer = board.createMany(4, Space, 'outer');
-      outer[3].layout(GameElement, {
-        gap: 4,
-        margin: 2
-      });
       const a = outer[3].create(Space, 'a');
       const b = outer[3].create(Space, 'b');
       const c = outer[3].create(Space, 'c');
       const d = outer[3].create(Space, 'd');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        outer[3].layout(GameElement, {
+          gap: 4,
+          margin: 2
+        });
+      });
       expect(a._ui.computedStyle).to.deep.equal({ left: 4, top: 4, width: 42, height: 42 })
       expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 4, width: 42, height: 42 })
       expect(c._ui.computedStyle).to.deep.equal({ left: 4, top: 54, width: 42, height: 42 })
@@ -863,20 +866,21 @@ describe('Board', () => {
 
     it('areas are relative to parent', () => {
       const outer = board.createMany(3, Space, 'outer');
-      outer[2].layout(GameElement, {
-        gap: 4,
-        area: {
-          left: 10,
-          top: 20,
-          width: 80,
-          height: 60,
-        }
-      });
       const a = outer[2].create(Space, 'a');
       const b = outer[2].create(Space, 'b');
       const c = outer[2].create(Space, 'c');
       const d = outer[2].create(Space, 'd');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        outer[2].layout(GameElement, {
+          gap: 4,
+          area: {
+            left: 10,
+            top: 20,
+            width: 80,
+            height: 60,
+          }
+        });
+      });
       expect(a._ui.computedStyle).to.deep.equal({ left: 10, top: 20, width: 36, height: 26 })
       expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 20, width: 36, height: 26 })
       expect(c._ui.computedStyle).to.deep.equal({ left: 10, top: 54, width: 36, height: 26 })
@@ -884,13 +888,14 @@ describe('Board', () => {
     });
 
     it('aligns', () => {
-      board.layout(GameElement, {
-        aspectRatio: 4 / 5,
-        scaling: 'fit',
-        alignment: 'right',
-      });
       const spaces = board.createMany(3, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          scaling: 'fit',
+          alignment: 'right',
+        });
+      });
 
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 60, top: 0, width: 40, height: 50 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 40, height: 50 })
@@ -898,13 +903,14 @@ describe('Board', () => {
     });
 
     it('aligns vertical', () => {
-      board.layout(GameElement, {
-        aspectRatio: 5 / 4,
-        scaling: 'fit',
-        alignment: 'bottom right',
-      });
       const spaces = board.createMany(3, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 5 / 4,
+          scaling: 'fit',
+          alignment: 'bottom right',
+        });
+      });
 
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 50, top: 60, width: 50, height: 40 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 0, top: 60, width: 50, height: 40 })
@@ -912,128 +918,138 @@ describe('Board', () => {
     });
 
     it('sizes to fit', () => {
-      board.layout(GameElement, {
-        aspectRatio: 4 / 5,
-        scaling: 'fit'
-      });
       const spaces = board.createMany(3, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          scaling: 'fit'
+        });
+      });
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 10, top: 0, width: 40, height: 50 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 40, height: 50 })
       expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 10, top: 50, width: 40, height: 50 })
     });
 
     it('sizes to fill', () => {
-      board.layout(GameElement, {
-        aspectRatio: 4 / 5,
-        scaling: 'fill'
-      });
       const spaces = board.createMany(3, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          scaling: 'fill'
+        });
+      });
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 62.5 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 62.5 })
       expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 37.5, width: 50, height: 62.5 })
     });
 
     it('retains sizes', () => {
-      board.layout(GameElement, {
-        size: { width: 20, height: 25 },
-      });
       const spaces = board.createMany(3, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          size: { width: 20, height: 25 },
+        });
+      });
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 30, top: 25, width: 20, height: 25 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 25, width: 20, height: 25 })
       expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 30, top: 50, width: 20, height: 25 })
     });
 
     it('fits based on aspect ratios', () => {
-      board.layout(GameElement, {
-        aspectRatio: 5 / 4,
-        scaling: 'fit'
-      });
       const spaces = board.createMany(3, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 5 / 4,
+          scaling: 'fit'
+        });
+      });
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 10, width: 50, height: 40 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 10, width: 50, height: 40 })
       expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 40 })
     });
 
     it('fills based on aspect ratios', () => {
-      board.layout(GameElement, {
-        aspectRatio: 5 / 4,
-        scaling: 'fill'
-      });
       const spaces = board.createMany(3, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 5 / 4,
+          scaling: 'fill'
+        });
+      });
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 62.5, height: 50 })
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 37.5, top: 0, width: 62.5, height: 50 })
       expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 62.5, height: 50 })
     });
 
     it('accommodate min row', () => {
-      board.layout(GameElement, {
-        rows: { min: 2 },
-        columns: 1,
-        aspectRatio: 5 / 4,
-        scaling: 'fill'
-      });
       const spaces = board.createMany(10, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          rows: { min: 2 },
+          columns: 1,
+          aspectRatio: 5 / 4,
+          scaling: 'fill'
+        });
+      });
       expect(spaces[0]._ui.computedStyle?.width).to.equal(62.5);
       expect(spaces[0]._ui.computedStyle?.height).to.equal(50);
       expect(spaces[0]._ui.computedStyle?.top).to.be.approximately(0, 0.0001);
     });
 
     it('accommodate min col', () => {
-      board.layout(GameElement, {
-        columns: { min: 2 },
-        rows: 1,
-        aspectRatio: 4 / 5,
-        scaling: 'fill'
-      });
       const spaces = board.createMany(10, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          columns: { min: 2 },
+          rows: 1,
+          aspectRatio: 4 / 5,
+          scaling: 'fill'
+        });
+      });
       expect(spaces[0]._ui.computedStyle?.height).to.equal(62.5);
       expect(spaces[0]._ui.computedStyle?.width).to.equal(50);
       expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
     });
 
     it('accommodate min row with size', () => {
-      board.layout(GameElement, {
-        rows: { min: 2 },
-        columns: 1,
-        size: { width: 5, height: 4 },
-        scaling: 'fill'
-      });
       const spaces = board.createMany(10, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          rows: { min: 2 },
+          columns: 1,
+          size: { width: 5, height: 4 },
+          scaling: 'fill'
+        });
+      });
       expect(spaces[0]._ui.computedStyle?.width).to.equal(62.5);
       expect(spaces[0]._ui.computedStyle?.height).to.equal(50);
       expect(spaces[0]._ui.computedStyle?.top).to.be.approximately(0, 0.0001);
     });
 
     it('accommodate min columns with size', () => {
-      board.layout(GameElement, {
-        columns: { min: 2 },
-        rows: 1,
-        size: { width: 4, height: 5 },
-        scaling: 'fill'
-      });
       const spaces = board.createMany(10, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          columns: { min: 2 },
+          rows: 1,
+          size: { width: 4, height: 5 },
+          scaling: 'fill'
+        });
+      });
       expect(spaces[0]._ui.computedStyle?.height).to.equal(62.5);
       expect(spaces[0]._ui.computedStyle?.width).to.equal(50);
       expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
     });
 
     it('isomorphic', () => {
-      board.layout(GameElement, {
-        aspectRatio: 4 / 5,
-        offsetColumn: {x: 100, y: 100},
-        scaling: 'fit',
-      });
       const spaces = board.createMany(9, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          offsetColumn: {x: 100, y: 100},
+          scaling: 'fit',
+        });
+      });
 
       expect(spaces[0]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 0 });
       expect(spaces[1]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 58, top: 20 });
@@ -1047,14 +1063,15 @@ describe('Board', () => {
     });
 
     it('stacks', () => {
-      board.layout(GameElement, {
-        aspectRatio: 4 / 5,
-        offsetColumn: {x: -5, y: -5},
-        scaling: 'fit',
-        direction: 'ltr'
-      });
       const spaces = board.createMany(9, Space, 'space');
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          offsetColumn: {x: -5, y: -5},
+          scaling: 'fit',
+          direction: 'ltr'
+        });
+      });
 
       expect(spaces[8]!._ui.computedStyle!.top).to.equal(0);
       expect(spaces[0]!._ui.computedStyle!.top + spaces[0]!._ui.computedStyle!.height).to.equal(100);
@@ -1063,11 +1080,12 @@ describe('Board', () => {
     it('align+scale', () => {
       const pieces = board.createMany(6, Piece, 'piece');
 
-      board.layout(Piece, {
-        offsetColumn: {x: 10, y: 10},
-        scaling: 'fit',
+      board.applyLayouts(() => {
+        board.layout(Piece, {
+          offsetColumn: {x: 10, y: 10},
+          scaling: 'fit',
+        });
       });
-      board.applyLayouts();
 
       expect(pieces[0]!._ui.computedStyle!.top).to.equal(0);
       expect(pieces[5]!._ui.computedStyle!.top + pieces[5]!._ui.computedStyle!.height).to.equal(100);
@@ -1085,14 +1103,14 @@ describe('Board', () => {
       const special = board.create(Country, 'special');
       const el = board.create(GameElement, 'whatev');
 
-      board.layout(spaces[2], { direction: 'btt-rtl', showBoundingBox: '1' });
-      board.layout('special', { direction: 'ttb-rtl', showBoundingBox: '2' });
-      board.layout(spaces.slice(0, 2), { direction: 'ttb', showBoundingBox: '3' });
-      board.layout(Country, { direction: 'rtl', showBoundingBox: '4' });
-      board.layout(Space, { direction: 'btt', showBoundingBox: '5' });
-      board.layout(GameElement, { direction: 'ltr-btt', showBoundingBox: '6' });
-
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(spaces[2], { direction: 'btt-rtl', showBoundingBox: '1' });
+        board.layout('special', { direction: 'ttb-rtl', showBoundingBox: '2' });
+        board.layout(spaces.slice(0, 2), { direction: 'ttb', showBoundingBox: '3' });
+        board.layout(Country, { direction: 'rtl', showBoundingBox: '4' });
+        board.layout(Space, { direction: 'btt', showBoundingBox: '5' });
+        board.layout(GameElement, { direction: 'ltr-btt', showBoundingBox: '6' });
+      });
 
       expect(board._ui.computedLayouts?.[6].children).to.include(el); // by GameElement
       expect(board._ui.computedLayouts?.[5].children).contains(spaces[3]); // by Space
@@ -1187,8 +1205,9 @@ describe('Board', () => {
       const b = board.create(Piece, 'b');
       const c = board.create(Piece, 'c');
       const d = board.create(Piece, 'd');
-      board.layout(Piece, { sticky: true });
-      board.applyLayouts();
+      board.applyLayouts(() => {
+        board.layout(Piece, { sticky: true });
+      });
       a.remove();
 
       expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })

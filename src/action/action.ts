@@ -655,7 +655,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     prompt?: string | ((args: A) => string);
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T[]}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: T[]}) => string | boolean | undefined);
-    min: number | ((args: A) => number);
+    min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
     skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
@@ -673,7 +673,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     this._addSelection(new Selection<P>(
       name, { prompt, confirm, validation: validate, skipIf, selectOnBoard: { chooseFrom: choices, min, max, number } }
     ));
-    if (min !== undefined) {
+    if (min !== undefined || max !== undefined || number !== undefined) {
       return this as unknown as Action<P, A & {[key in N]: T[]}>;
     }
     return this as unknown as Action<P, A & {[key in N]: T}>;

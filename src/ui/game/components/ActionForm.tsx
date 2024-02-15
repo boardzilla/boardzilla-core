@@ -14,7 +14,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
   children?: React.ReactNode,
 }) => {
-  const [uncommittedArgs, selected] = gameStore(s => [s.uncommittedArgs, s.selected]);
+  const [uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.uncommittedArgs, s.selected, s.disambiguateElement]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const initial = useCallback(() => {
@@ -29,7 +29,16 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
 
   useEffect(() => setArgs(initial()), [initial, move]);
 
-  const allArgs = useMemo(() => ({...uncommittedArgs, ...args}), [args, uncommittedArgs]);
+  const allArgs = useMemo(() => {
+    const allArgs = {...uncommittedArgs, ...args};
+    if (disambiguateElement && disambiguateElement.moves.includes(move)) {
+      const selection = move.selections[0];
+      if (selection.type === 'board') {
+        allArgs[move.selections[0].name] = selection.isMulti() ? selected : selected[0];
+      }
+    }
+    return allArgs;
+  }, [args, move, selected, uncommittedArgs, disambiguateElement]);
 
   const submitForm = useCallback((args: Record<string, Argument<Player> | undefined>) => {
     onSubmit(move, args as Record<string, Argument<Player>>);
@@ -78,7 +87,6 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   }, [allArgs, validate, submitForm, move]);
 
   const confirm = useMemo(() => {
-    console.log(move.name, uncommittedArgs)
     if (Object.values(validationErrors(allArgs)).some(e => e)) return undefined;
     if (!move.requireExplicitSubmit) return undefined;
     if (Object.values(allArgs).some(a => a === undefined)) return undefined;
@@ -91,7 +99,6 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
       confirm = move.selections[0].confirm[0];
       Object.assign(args, typeof move.selections[0].confirm[1] === 'function' ? move.selections[0].confirm[1](args) : move.selections[0].confirm[1])
     }
-    console.log(move.name, confirm, args, uncommittedArgs)
     return n(confirm, args)
   }, [move, allArgs, selected, validationErrors]);
 
