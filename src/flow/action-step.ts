@@ -225,7 +225,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       block: this.position && 'name' in this.position ? this.position.name : undefined,
       position: this.position && (
         ('player' in this.position ? args : undefined) ??
-          ('players' in this.position ? this.position.players.map(p => this.game.players.atPosition(p)).join(', ') : undefined)
+          ('players' in this.position && this.position.players ? this.position.players.map(p => this.game.players.atPosition(p)).join(', ') : undefined)
       ),
     });
   }

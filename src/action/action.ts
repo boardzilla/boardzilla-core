@@ -331,7 +331,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * }).message(
    *   '{{player}} said {{message}}' // no args needed
    * ).message(
-   *   `I said, {{player}} said {{loudMessage}},
+   *   "I said, {{player}} said {{loudMessage}}",
    *   ({ message }) => ({ loudMessage: message.toUpperCase() })
    * )
    * @category Behaviour
@@ -645,7 +645,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
     prompt?: string | ((args: A) => string);
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
-    validate?: ((args: A & {[key in N]: T | T[]}) => string | boolean | undefined);
+    validate?: ((args: A & {[key in N]: T}) => string | boolean | undefined);
     min?: never;
     max?: never;
     number?: never;

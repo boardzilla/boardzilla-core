@@ -4,7 +4,7 @@ import { n } from '../../../utils.js';
 import Selection from './Selection.js';
 
 import type { Player } from '../../../player/index.js';
-import type { UIMove } from '../../index.js';
+import type { UIMove } from '../../lib.js';
 import type { Argument } from '../../../action/action.js';
 import type { ResolvedSelection } from '../../../action/selection.js';
 
@@ -14,7 +14,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
   children?: React.ReactNode,
 }) => {
-  const [selected] = gameStore(s => [s.selected]);
+  const [uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.uncommittedArgs, s.selected, s.disambiguateElement]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
   const initial = useCallback(() => {
@@ -30,15 +30,16 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   useEffect(() => setArgs(initial()), [initial, move]);
 
   const allArgs = useMemo(() => {
-    const args2 = {...move.args, ...args};
-    for (const s of move.selections) {
-      if (s.type === 'board' && selected.every(el => s.boardChoices?.includes(el))) {
-        args2[s.name] = s.isMulti() ? selected : selected[0];
-        break
+    const allArgs = {...uncommittedArgs, ...args};
+    // provisionally consider the ambiguous board selection as part of this move for confirmation/validation
+    if (disambiguateElement && disambiguateElement.moves.includes(move)) {
+      const selection = move.selections[0];
+      if (selection.type === 'board') {
+        allArgs[move.selections[0].name] = selection.isMulti() ? selected : selected[0];
       }
     }
-    return args2;
-  }, [args, move, selected]);
+    return allArgs;
+  }, [args, move, selected, uncommittedArgs, disambiguateElement]);
 
   const submitForm = useCallback((args: Record<string, Argument<Player> | undefined>) => {
     onSubmit(move, args as Record<string, Argument<Player>>);
@@ -93,7 +94,6 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
     for (const s of move.selections) {
       if (s.type === 'board' && s.isMulti() && (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity))) return undefined;
     }
-
     let confirm = 'Confirm';
     const args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
     if (move.selections[0]?.confirm) {

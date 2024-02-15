@@ -74,7 +74,7 @@ export type ElementUI<T extends GameElement> = {
     className?: string,
     render?: ((el: T) => JSX.Element | null) | false,
     aspectRatio?: number,
-    effects?: { attributes: ElementAttributes<T>, className: string }[],
+    effects?: { attributes: ElementAttributes<T>, name: string }[],
     info?: ((el: T) => JSX.Element | null | boolean) | boolean,
     connections?: {
       thickness?: number,
@@ -279,7 +279,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   /**
    * Player with which this element is identified. This does not affect
    * behaviour but will mark the element as `mine` in queries in the context of
-   * this player.
+   * this player (during an action taken by a player or while the board is
+   * viewed by a given player.).
    * @category Queries
    */
   player?: P;
@@ -688,11 +689,13 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   /**
    * Whether this element belongs to the player viewing the board. A player is
    * considered to be currently viewing the board if this is called in the
-   * context of an action taken by a given player. It is an error to call this
-   * method when not in the context of a player action. When querying for
-   * elements using {@link ElementFinder} such as {@link all} and {@link first},
-   * {@link mine} is available as a search key that accepts a value of
-   * true/false @category Queries
+   * context of an action taken by a given player (during an action taken by a
+   * player or while the board is viewed by a given player.) It is an error to
+   * call this method when not in the context of a player action. When querying
+   * for elements using {@link ElementFinder} such as {@link all} and {@link
+   * first}, {@link mine} is available as a search key that accepts a value of
+   * true/false
+   @category Queries
    */
   get mine() {
     if (!this._ctx.player) return false; // throw?
@@ -1046,7 +1049,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
-  }
+  };
 
   resetUI() {
     this._ui.layouts = [{

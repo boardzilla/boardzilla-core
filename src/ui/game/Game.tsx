@@ -9,18 +9,14 @@ import { click } from '../assets/index.js';
 import { GameElement } from '../../board/index.js'
 import classnames from 'classnames';
 
-import type { ActionLayout } from '../../board/board.js'
-import type { UIMove } from '../index.js';
+import type { UIMove } from '../lib.js';
 import type { Argument } from '../../action/action.js';
 import type { Player } from '../../player/index.js';
-import type { Box } from '../../board/element.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [game, dev, position, pendingMoves, move, step, otherPlayerAction, announcementIndex, dismissAnnouncement, selectMove, boardSelections, selected, setSelected, setBoardSize, dragElement, setDragElement, setCurrentDrop, boardJSON] =
-    gameStore(s => [s.game, s.dev, s.position, s.pendingMoves, s.move, s.step, s.otherPlayerAction, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.boardSelections, s.selected, s.setSelected, s.setBoardSize, s.dragElement, s.setDragElement, s.setCurrentDrop, s.boardJSON]);
+  const [game, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.game, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
-  const [disambiguateElement, setDisambiguateElement] = useState<{ element: GameElement<Player>, moves: UIMove[] }>();
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const announcement = useMemo(() => game.announcements[announcementIndex], [game.announcements, announcementIndex]);
 
@@ -28,160 +24,16 @@ export default () => {
   const player = game.players.atPosition(position);
   if (!player) return null;
 
-  const submitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => {
+  const handleSubmitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => {
     clickAudio.current?.play();
-    setDisambiguateElement(undefined);
-    setSelected([]);
-    setDragElement(undefined);
-    setCurrentDrop(undefined);
+    clearMove();
     selectMove(pendingMove, args);
-  }, [selectMove, setSelected, setDragElement, setCurrentDrop]);
+  }, [clearMove, selectMove]);
 
-  const onSelectElement = useCallback((moves: UIMove[], element: GameElement<Player>) => {
+  const handleSelectElement = useCallback((moves: UIMove[], element: GameElement) => {
     clickAudio.current?.play();
-    setDisambiguateElement(undefined);
-
-    if (moves.length === 0) return;
-    if (moves.length > 1) { // multiple moves are associated with this element (attached by getBoardSelections)
-      setSelected([element]);
-      return setDisambiguateElement({ element, moves });
-    }
-
-    const move = moves[0];
-    const selection = move.selections[0]; // simple one-selection UIMove created by getBoardSelections
-    if (!move.requireExplicitSubmit) {
-      submitMove(move, {[selection.name]: element});
-      return;
-    }
-    selectMove(move);
-
-    const newSelected = selection.isMulti() ? (
-      selected.includes(element) ?
-        selected.filter(s => s !== element) :
-        selected.concat([element])
-    ) : (
-      selected[0] === element ? [] : [element]
-    );
-    setSelected(newSelected);
-  }, [selected, setSelected, selectMove, submitMove]);
-
-  const onSelectPlacement = useCallback(({ column, row }: { column: number, row: number }) => {
-    if (pendingMoves) submitMove(pendingMoves[0], {__placement__: [column, row]});
-  }, [pendingMoves, submitMove]);
-
-  const {style, name, moves} = useMemo(() => {
-    // find the best layout for the current moves, going in this order:
-    // - the last selected, visible game element as part of the current move(s) that hasn't been disabled via layoutAction.noAnchor
-    // - a supplied layoutAction for the only current move
-    // - a supplied layoutStep belonging to the step to which the current move(s) belong
-    let layout: ActionLayout | undefined = undefined;
-    let name: string = '';
-    let moves = pendingMoves || [];
-    let style: CSSProperties = { };
-
-    if (!layout && disambiguateElement?.element) {
-      layout = { element: disambiguateElement.element, position: 'beside', gap: 2 };
-      moves = disambiguateElement.moves;
-      name = 'disambiguate-board-selection';
-    }
-
-    if (!layout && selected.length === 1) {
-      const clickMoves = boardSelections[selected[0].branch()]?.clickMoves;
-      if (clickMoves?.length === 1 && !clickMoves[0].selections[0].isMulti()) {
-        layout = { element: selected[0], position: 'beside', gap: 2 };
-        name = 'action:' + moves[0].name;
-        moves = clickMoves;
-      }
-    }
-
-    // anchor to last element in arg list
-    if (!layout && move && !pendingMoves?.[0].selections[0].isBoardChoice()) {
-      const element = Object.entries(move.args).reverse().find(([name, el]) => (
-        !game.board._ui.stepLayouts["action:" + move.name]?.noAnchor?.includes(name) && el instanceof GameElement
-      ));
-      if (element && (element[1] as GameElement)._ui?.computedStyle) {
-        layout = { element: element[1] as GameElement, position: 'beside', gap: 2 };
-        name = 'action:' + element[0];
-      }
-    }
-
-    if (!layout && pendingMoves?.length) {
-      const moves = pendingMoves.filter(m => move || m.name.slice(0, 4) !== '_god'); // no display for these normally
-
-      if (moves.length === 1) {
-        // skip non-board moves if board elements already selected (cant this be more specific? just moves that could apply?)
-        if (!selected.length || moves[0].selections.some(s => s.type !== 'board')) {
-          const actionLayout = game.board._ui.stepLayouts["action:" + moves[0].name];
-          if (actionLayout?.element?._ui?.computedStyle) {
-            layout = actionLayout;
-            name = 'action:' + moves[0].name;
-          }
-        }
-      }
-    }
-
-    if (!layout && otherPlayerAction) {
-      const actionLayout = game.board._ui.stepLayouts["action:" + otherPlayerAction];
-      if (actionLayout?.element?._ui?.computedStyle) {
-        layout = actionLayout;
-        name = 'action:' + otherPlayerAction;
-      }
-    }
-
-    if (!layout && step) {
-      name = 'step:' + step;
-      layout = game.board._ui.stepLayouts[name];
-    }
-
-    if (!layout) {
-      name = '*';
-      layout = game.board._ui.stepLayouts[name];
-    }
-
-    if (layout) {
-      const box: Box = layout.element.relativeTransformToBoard();
-
-      if (layout.position === 'beside' || layout.position === 'stack') {
-        if (box.left > 100 - box.left - box.width) {
-          style.right = `clamp(0%, calc(${100 - box.left - (layout.position === 'beside' ? 0 : box.width)}% + ${layout.position === 'beside' ? layout.gap : 0}vw), 100%)`;
-          style.left = undefined;
-        } else {
-          style.left = `clamp(0%, calc(${box.left + (layout.position === 'beside' ? box.width : 0)}% + ${layout.position === 'beside' ? layout.gap : 0}vw), 100%)`;
-        }
-
-        if (box.top > 100 - box.top - box.height) {
-          style.bottom = `clamp(0%, calc(${100 - box.top - (layout.position === 'beside' ? box.height : 0)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw), 100%)`;
-          style.top = undefined;
-        } else {
-          style.top = `clamp(0%, calc(${box.top + (layout.position === 'beside' ? 0: box.height)}% + ${layout.position === 'beside' ? 0 : layout.gap}vw), 100%)`;
-        }
-      } else {
-        // inset
-        if (layout.right !== undefined) {
-          style.right = 100 + ((layout.right * box.width / 100) - box.left - box.width) + '%';
-        } else if (layout.center !== undefined) {
-          style.left ??= ((layout.center - 50) * box.width / 100) + box.left + '%';
-          style.right = 100 + ((50 - layout.center) * box.width / 100) - box.left - box.width + '%';
-          style.margin = '0 auto';
-        } else {
-          style.left ??= ((layout.left ?? 0) * box.width / 100) + box.left + '%';
-        }
-
-        if (layout.bottom !== undefined) {
-          style.bottom = 100 + ((layout.bottom * box.height / 100) - box.top - box.height) + '%';
-        } else {
-          style.top = ((layout.top ?? 0) * box.height / 100) + box.top + '%';
-        }
-      }
-
-      if (layout.width !== undefined) style.maxWidth = (layout.width * box.width / 100) + '%';
-      if (layout.height !== undefined) style.maxHeight = (layout.height * box.height / 100) + '%';
-    } else {
-      style = {left: 0, bottom: 0};
-    }
-
-    return {style, name, moves};
-  }, [selected, pendingMoves, boardSelections, move, disambiguateElement, otherPlayerAction, step, game.board._ui.stepLayouts]);
+    selectElement(moves, element);
+  }, [selectElement]);
 
   const domRef = useCallback((node: HTMLDivElement) => {
     if (!node) return;
@@ -204,12 +56,12 @@ export default () => {
     const keydownHandler = (e: KeyboardEvent) => {
       if (e.repeat) return;
       if (e.code === 'Escape') {
-        if (mode === 'game') submitMove();
+        if (mode === 'game') handleSubmitMove();
       }
     };
     window.addEventListener('keydown', keydownHandler);
     return () => window.removeEventListener('keydown', keydownHandler);
-  }, [submitMove, mode]);
+  }, [handleSubmitMove, mode]);
 
   useEffect(() => {
     window.addEventListener('resize', setBoardSize);
@@ -261,18 +113,14 @@ export default () => {
             element={game.board}
             json={boardJSON[0]}
             mode={announcement ? 'info' : mode}
-            onSelectElement={onSelectElement}
-            onSelectPlacement={onSelectPlacement}
+            onSelectElement={handleSelectElement}
           />
         )}
       </div>
 
-      {mode === 'game' && !announcement && (moves.length || !game.players.currentPosition.includes(position)) && (
+      {mode === 'game' && !announcement && (
         <PlayerControls
-          name={name}
-          style={style}
-          moves={moves}
-          onSubmit={submitMove}
+          onSubmit={handleSubmitMove}
         />
       )}
 
