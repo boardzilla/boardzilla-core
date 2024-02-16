@@ -1,4 +1,5 @@
 import { GameElement } from '../board/index.js';
+import { serializeObject } from '../action/utils.js';
 
 import type PlayerCollection from './collection.js';
 import type { Board } from '../board/index.js';
@@ -128,11 +129,21 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
     let {_players, board: _b, game: _g, ...attrs}: Record<any, any> = this;
 
     // remove methods
-    attrs = Object.fromEntries(Object.entries(attrs).filter(
-      ([, value]) => typeof value !== 'function'
-    ));
+    attrs = serializeObject(
+      Object.fromEntries(Object.entries(attrs).filter(
+        ([, value]) => typeof value !== 'function'
+      ))
+    );
 
-    return attrs;
+    if (globalThis.window) { // guard-rail in dev
+      try {
+        structuredClone(attrs);
+      } catch (e) {
+        console.error(`invalid properties on player ${this}:\n${JSON.stringify(attrs, undefined, 2)}`);
+        throw(e);
+      }
+      return attrs;
+    }
   }
 
   toString() {
