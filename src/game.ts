@@ -574,7 +574,7 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    * Add a message that will be broadcast in the chat at the next game update,
    * based on the current state of the game.
    *
-   * @param message - The message to send. This can contain interpolated strings
+   * @param text - The text of the message to send. This can contain interpolated strings
    * with double braces, i.e. {{player}} that are defined in args. Of course,
    * strings can be interpolated normally using template literals. However game
    * objects (e.g. players or pieces) passed in as args will be displayed
@@ -589,8 +589,8 @@ export default class Game<P extends Player<P, B> = any, B extends Board<P, B> = 
    *   { player, score: player.score() }
    * );
    */
-  message(message: string, args?: Record<string, Argument<P>>) {
-    this.messages.push({body: n(message, args, true)});
+  message(text: string, args?: Record<string, Argument<P>>) {
+    this.messages.push({body: n(text, args, true)});
   }
 
   /**
