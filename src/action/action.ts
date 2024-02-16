@@ -99,7 +99,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   selections: Selection<P>[] = [];
   moves: ((args: Record<string, Argument<P>>) => any)[] = [];
   condition?: ((args: A) => boolean) | boolean;
-  messages: {message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
+  messages: {text: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
   order: ('move' | 'message')[] = [];
 
   game: Game;
@@ -258,7 +258,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       } else {
         const message = this.messages[messageIndex++];
         const messageArgs = ((typeof message.args === 'function') ? message.args(args as A) : message.args);
-        this.game.message(message.message, {...args, player, ...messageArgs});
+        this.game.message(message.text, {...args, player, ...messageArgs});
       }
     }
   }
@@ -313,8 +313,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * action's `message` and `do` functions can be intermixed in this way to
    * generate messages at different points int the execution of a move.
    *
-   * @param message - The message to send. This can contain interpolated strings
-   * with double braces just as when calling {@link Game#message}
+   * @param text - The text of the message to send. This can contain interpolated
+   * strings with double braces just as when calling {@link Game#message}
    * directly. However when using this method, the player performing the action,
    * plus any choices made in the action are automatically made available.
    *
@@ -336,8 +336,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * )
    * @category Behaviour
    */
-  message(message: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
-    this.messages.push({message, args});
+  message(text: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
+    this.messages.push({text, args});
     this.order.push('message');
     return this;
   }
