@@ -11,5 +11,6 @@ await esbuild.build({
     '.ogg': 'dataurl',
     '.jpg': 'file',
   },
+  sourcemap: 'inline',
   plugins: [sassPlugin()],
 })
