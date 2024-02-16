@@ -985,6 +985,15 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     if (this._t.children.length && (!seenBy || this.isVisibleTo(seenBy))) {
       json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
     }
+
+    if (globalThis.window) { // guard-rail in dev
+      try {
+        structuredClone(json);
+      } catch (e) {
+        console.error(`invalid properties on ${this}:\n${JSON.stringify(json, undefined, 2)}`);
+        throw(e);
+      }
+    }
     return json;
   }
 

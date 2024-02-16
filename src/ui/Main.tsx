@@ -142,8 +142,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   const catchError = useCallback((error: string) => {
     if (!error) return
     console.error(error);
-    setError(error);
-  }, [setError]);
+  }, []);
 
   const queue = useMemo(() => new Queue(1) /* speed */, []);
 

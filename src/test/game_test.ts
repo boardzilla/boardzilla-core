@@ -1,7 +1,7 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import Game from '../game.js'
+import Game, { PlayerAttributes } from '../game.js'
 
 import {
   Player,
@@ -22,6 +22,7 @@ describe('Game', () => {
 
   class TestPlayer extends Player<TestPlayer, TestBoard> {
     tokens: number = 0;
+    rival?: TestPlayer;
   }
 
   class TestBoard extends Board<TestPlayer, TestBoard> {
@@ -297,6 +298,14 @@ describe('Game', () => {
       game.setRandomSeed('a');
       game.players.shuffle();
       expect(game.players[0]).to.not.equal(player);
+    });
+
+    it('preserves serializable attributes from json', () => {
+      game.players[0].rival = game.players[1];
+
+      const json = game.players.map(p => p.toJSON() as PlayerAttributes<TestPlayer>);
+      game.players.fromJSON(json);
+      expect(game.players.map(p => p.toJSON())).to.deep.equals(json);
     });
   });
 
