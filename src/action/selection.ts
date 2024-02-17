@@ -122,6 +122,7 @@ export default class Selection<P extends Player> {
   initial?: Argument<P> | ((args: Record<string, Argument<P>>) => Argument<P>);
   regexp?: RegExp;
   value?: Argument<P>;
+  invalidOptions: {option: Argument<P>, error: string}[] = [];
 
   constructor(name: string, s: SelectionDefinition<P> | Selection<P>) {
     this.name = name;
@@ -294,18 +295,12 @@ export default class Selection<P extends Player> {
     }
   }
 
-  overrideOptions(options: SingleArgument<P>[]): ResolvedSelection<P> {
+  overrideOptions(this: ResolvedSelection<P>, options: SingleArgument<P>[]) {
     if (this.type === 'board') {
       this.boardChoices = options as GameElement<P>[];
-      return this as ResolvedSelection<P>;
+    } else {
+      this.choices = options as GameElement<P>[];
     }
-    return new Selection(this.name, {
-      selectFromChoices: {
-        choices: options,
-        //min: selection.min, TODO
-        //max: selection.max
-      }
-    }) as ResolvedSelection<P>;
   }
 
   toString(): string {

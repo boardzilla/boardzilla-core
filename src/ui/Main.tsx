@@ -131,7 +131,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, setFinished, setError, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.game, s.setFinished, s.setError, s.updateState, s.setUserOnline, s.announcementIndex]);
+  const [game, setFinished, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.game, s.setFinished, s.updateState, s.setUserOnline, s.announcementIndex]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);

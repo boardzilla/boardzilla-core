@@ -14,6 +14,7 @@ import type { SerializedMove } from '../game.js';
 import {
   starterGame,
   starterGameWithConfirm,
+  starterGameWithValidate,
   starterGameWithCompoundMove,
   starterGameWithTiles,
   starterGameWithTilesConfirm,
@@ -90,6 +91,18 @@ describe('UI', () => {
 
     expect(history.length).to.equal(1);
     expect(state.pendingMoves).to.deep.equal([]);
+  });
+
+  it("validates", () => {
+    const store = getGameStore(starterGameWithValidate);
+
+    updateStore(store, 2, {tokens: 4});
+    let state = store.getState();
+    let token = state.game.board.first(Token)!;
+    const clickMoves = state.boardSelections[token.branch()].clickMoves;
+
+    expect(state.boardSelections[token.branch()].error).to.equal('not first');
+    expect(clickMoves.length).to.equal(0);
   });
 
   it("cancels confirm", () => {

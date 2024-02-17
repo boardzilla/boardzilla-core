@@ -81,6 +81,19 @@ export const starterGameWithConfirm = gameFactory(game => {
   });
 });
 
+export const starterGameWithValidate = gameFactory(game => {
+  game.defineActions({
+    take: player => game.action({
+      prompt: 'Choose a token',
+    }).chooseOnBoard(
+      'token', $.pool.all(Token),
+      { validate: ({ token }) => token.container()!.first(Token) === token ? 'not first' : undefined }
+    ).move(
+      'token', player.my('mat')!,
+    ),
+  });
+});
+
 export const starterGameWithCompoundMove = gameFactory(game => {
   game.defineActions({
     take: player => game.action({

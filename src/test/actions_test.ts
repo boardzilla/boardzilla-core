@@ -221,8 +221,8 @@ describe('Actions', () => {
       testAction = new Action({ prompt: 'p' })
         .chooseFrom('r', ['oil', 'garbage'])
         .chooseNumber('n', {
-        max: ({ r }) => r === 'oil' ? 3 : 1
-      });
+          max: ({ r }) => r === 'oil' ? 3 : 1
+        });
     });
 
     it('shows first selection', () => {
@@ -280,6 +280,29 @@ describe('Actions', () => {
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');
       expect(moves![0].selections[0].choices).to.deep.equal(['oil']);
+    });
+  });
+
+  describe('validation rules', () => {
+    let testAction: Action<any, {r: string, n: number}>;
+    beforeEach(() => {
+      testAction = new Action({ prompt: 'p' })
+        .chooseFrom(
+          'r', ['oil', 'garbage', 'steel'],
+          {
+            validate: ({r}) => r === 'steel' ? 'no steel allowed' : true
+          }
+        ).chooseNumber(
+          'n', {
+            max: ({ r }) => r === 'oil' ? 3 : 1
+          }
+        );
+    });
+
+    it('validates choices', () => {
+      const moves = testAction._getPendingMoves({});
+      expect(moves?.[0].selections[0].choices).to.deep.equal(['oil', 'garbage']);
+      expect(moves?.[0].selections[0].invalidOptions).to.deep.equal([{option: 'steel', error: 'no steel allowed'}]);
     });
   });
 

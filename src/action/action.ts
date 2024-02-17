@@ -157,7 +157,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }
 
   _getPendingMovesInner(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
-    const selection = this._nextSelection(args);
+    let selection = this._nextSelection(args);
     if (!selection) return [];
 
     const move = {
@@ -176,18 +176,27 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       let hasCompleteMove = false
       for (const option of selection.options()) {
         const allArgs = {...args, [selection.name]: option};
-        if (selection.validation && selection.error(allArgs)) continue;
+        if (selection.validation && !selection.isMulti()) {
+          const error = selection.error(allArgs);
+          if (error) {
+            pruned = true;
+            selection.invalidOptions.push({ option, error })
+            continue;
+          }
+        }
         const submoves = this._getPendingMovesInner(allArgs);
         if (submoves === undefined) {
           pruned = true;
         } else {
           possibleOptions.push(option);
-          hasCompleteMove ||= submoves.length === 0; // TODO smarter expansion needed when triggered/optional selections are added
+          hasCompleteMove ||= submoves.length === 0;
           pendingMoves = pendingMoves.concat(submoves);
         }
       }
       if (!possibleOptions.length) return undefined;
-      if (pruned && !selection.isMulti()) selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
+      if (pruned && !selection.isMulti()) {
+        selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
+      }
 
       // return the next selection(s) if skipIf, provided it exists for all possible choices
       // special case: do not skip "apparent" choices in group even if they are ultimately forced, in order to best present the limited options
@@ -440,7 +449,12 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
     }
   ): Action<P, A & {[key in N]: T}> {
-    this._addSelection(new Selection<P>(name, { ...(options || {}), selectFromChoices: { choices } }));
+    this._addSelection(new Selection<P>(name, {
+      prompt: options?.prompt,
+      validation: options?.validate,
+      confirm: options?.confirm,
+      selectFromChoices: { choices }
+    }));
     return this as unknown as Action<P, A & {[key in N]: T}>;
   }
 
@@ -854,8 +868,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   placePiece(piece: keyof A | Piece, into: GameElement, options?: {
     prompt?: string | ((args: A) => string),
-    confirm?: string | [string, Record<string, Argument<P>> | ((args: A) => Record<string, Argument<P>>) | undefined]
-    validate?: ((args: A) => string | boolean | undefined),
+    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {__placement__: [number, number]}) => Record<string, Argument<P>>) | undefined]
+    validate?: ((args: A & {__placement__: [number, number]}) => string | boolean | undefined),
   }) {
     const { prompt, confirm, validate } = options || {};
     if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only place one piece");

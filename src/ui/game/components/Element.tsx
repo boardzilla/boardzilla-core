@@ -25,34 +25,39 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, boardJSON] =
-    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.boardJSON]);
+  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, boardJSON] =
+    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
   const wrapper = useRef<HTMLDivElement | null>(null);
   const domElement = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const branch = useMemo(() => element.branch(), [element, boardJSON]);
-  const selections = boardSelections[branch];
+
   const isSelected = mode === 'game' && (selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
-  const clickable = mode === 'game' && !dragElement && selections?.clickMoves.length;
-  const selectable = mode === 'game' && !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
-  const draggable = mode === 'game' && !!selections?.dragMoves?.length; // ???
-  const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
-  const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const isVisible = useMemo(() => element.isVisible(), [element, boardJSON])
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const relativeTransform = useMemo(() => element.relativeTransformToBoard(), [element, element._ui.computedStyle]);
   const absoluteTransform = useMemo(() => element.absoluteTransform(relativeTransform), [element, relativeTransform]);
+
+  const selections = boardSelections[branch];
+  const invalidSelectionError = mode === 'game' && selections?.error;
+  const clickable = mode === 'game' && !invalidSelectionError && !dragElement && selections?.clickMoves.length;
+  const selectable = mode === 'game' && !invalidSelectionError && !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
+  const draggable = mode === 'game' && !invalidSelectionError && !!selections?.dragMoves?.length; // ???
+  const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
+  const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
 
   const previousRender = useMemo(() => {
     if (element.hasChangedParent()) {
       const previousRender = previousRenderedState.elements[element._t.was!];
       if (previousRender && previousRender.movedTo !== branch) return previousRender;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element, branch, previousRenderedState, boardJSON]);
 
   const newAttrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
@@ -112,14 +117,16 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
   }, [element, newAttrs]);
 
-  const onClick = useCallback((e: React.MouseEvent | MouseEvent) => {
+  const handleClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
     if (placing) {
       selectPlacement({column: element.column!, row: element.row!});
+    } else if (invalidSelectionError) {
+      setError(invalidSelectionError)
     } else {
       onSelectElement(selections.clickMoves, element);
     }
-  }, [element, onSelectElement, selections, placing, selectPlacement]);
+  }, [element, onSelectElement, selections, placing, invalidSelectionError, setError, selectPlacement]);
 
   const handleDragStart = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
@@ -439,11 +446,13 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
           selected: isSelected && mode === 'game',
-          clickable, selectable, droppable,
+          clickable: clickable || invalidSelectionError,
+          selectable,
+          droppable
         }
       )}
       style={element.player ? {['--player-color' as string]: element.player.color} : {}}
-      onClick={clickable || placing ? onClick : undefined}
+      onClick={clickable || placing || invalidSelectionError ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseMove={placement?.into === element && !placement.selected ? handlePlacement : undefined}
