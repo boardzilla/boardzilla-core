@@ -10,3 +10,5 @@ and much more!
 Visit us at https://boardzilla.io.
 
 See documentation at https://docs.boardzilla.io.
+
+(c)2024 Andrew Hull
