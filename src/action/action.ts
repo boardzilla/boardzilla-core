@@ -453,6 +453,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       prompt: options?.prompt,
       validation: options?.validate,
       confirm: options?.confirm,
+      skipIf: options?.skipIf,
       selectFromChoices: { choices }
     }));
     return this as unknown as Action<P, A & {[key in N]: T}>;

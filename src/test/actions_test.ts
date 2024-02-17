@@ -170,20 +170,16 @@ describe('Actions', () => {
           validate: ({ lumber, steel, meat, plastic }) => lumber + steel + meat + plastic > 0
         });
       const move = testAction._getPendingMoves({});
-      if (!move) {
-        expect(move).to.not.be.undefined;
-      } else {
-        expect(move[0].selections.length).to.equal(2);
-        expect(move[0].selections[0].name).to.equal('lumber');
-        expect(move[0].selections[1].name).to.equal('meat');
-      }
+      expect(move).to.not.be.undefined;
+      expect(move?.[0].selections.length).to.equal(2);
+      expect(move?.[0].selections[0].name).to.equal('lumber');
+      expect(move?.[0].selections[1].name).to.equal('meat');
+
       const move2 = testAction._getPendingMoves({lumber: 1, meat: 0});
-      if (!move2) {
-        expect(move2).to.not.be.undefined;
-      } else {
-        expect(move2[0].selections.length).to.equal(1);
-        expect(move2[0].selections[0].name).to.equal('plastic'); // bit odd, but this is skippable
-      }
+      expect(move2).to.not.be.undefined;
+      expect(move2?.[0].selections.length).to.equal(1);
+      expect(move2?.[0].selections[0].name).to.equal('plastic'); // bit odd, but this is skippable
+
       const move3 = testAction._getPendingMoves({lumber: 0, meat: 0});
       expect(move3).to.be.undefined;
     });

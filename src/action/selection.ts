@@ -244,7 +244,7 @@ export default class Selection<P extends Player> {
   }
 
   isMulti() {
-    return this.min !== undefined || this.max !== undefined;
+    return (this.type === 'choices' || this.type === 'board') && (this.min !== undefined || this.max !== undefined);
   }
 
   isBoardChoice() {
