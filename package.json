@@ -2,7 +2,7 @@
   "name": "@boardzilla/core",
   "version": "0.0.96",
   "author": "Andrew Hull <aghull@gmail.com>",
-  "license": "MIT",
+  "license": "AGPLv3",
   "scripts": {
     "clean": "rm -rf dist docs",
     "build": "tsc && node esbuild.mjs && rm -rf dist/test",
