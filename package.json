@@ -2,7 +2,7 @@
   "name": "@boardzilla/core",
   "version": "0.0.97",
   "author": "Andrew Hull <aghull@gmail.com>",
-  "license": "AGPLv3",
+  "license": "AGPL-3.0",
   "scripts": {
     "clean": "rm -rf dist docs",
     "build": "tsc && node esbuild.mjs && rm -rf dist/test",

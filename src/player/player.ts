@@ -142,8 +142,8 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
         console.error(`invalid properties on player ${this}:\n${JSON.stringify(attrs, undefined, 2)}`);
         throw(e);
       }
-      return attrs;
     }
+    return attrs;
   }
 
   toString() {
