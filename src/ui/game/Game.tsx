@@ -103,7 +103,11 @@ export default () => {
           'browser-firefox': globalThis.navigator?.userAgent.indexOf('Firefox') > -1,
         }
       )}
-      style={{ ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio }}
+      style={{
+        ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio,
+        ['--current-player-color' as string]: game.players.currentPosition.length === 1 ? game.players.current()?.color : '',
+        ['--my-player-color' as string]: game.players.atPosition(position)?.color
+      }}
     >
       <audio ref={clickAudio} src={click} id="click"/>
       {mode !== 'debug' && <div id="background" className="full-page-cover" />}
