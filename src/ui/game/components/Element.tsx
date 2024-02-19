@@ -447,6 +447,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
           [element.constructor.name]: baseClass !== element.constructor.name,
           selected: isSelected && mode === 'game',
           clickable: clickable || invalidSelectionError,
+          invalid: !!invalidSelectionError || (placing && placement?.invalid),
           selectable,
           droppable
         }

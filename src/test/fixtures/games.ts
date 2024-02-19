@@ -133,6 +133,19 @@ export const starterGameWithTilesConfirm = gameFactory(game => {
   });
 });
 
+export const starterGameWithTilesValidate = gameFactory(game => {
+  game.defineActions({
+    take: player => game.action({
+      prompt: 'Choose a token',
+    }).chooseOnBoard(
+      'token', $.pool.all(Token),
+    ).placePiece(
+      'token', player.my('mat')!,
+      { validate: ({ token }) => (token.column + token.row) % 2 !== 0 ? 'must be black square' : undefined, }
+    ),
+  });
+});
+
 export const starterGameWithTilesCompound = gameFactory(game => {
   game.defineActions({
     take: player => game.action({

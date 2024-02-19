@@ -124,7 +124,6 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
 
   fromJSON(boardJSON: ElementJSON[]) {
     let { className, children, _id, order, ...rest } = boardJSON[0];
-    if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
 
     // reset all on self
@@ -136,6 +135,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1), '1');
     if (order) this._t.order = order;
 
+    if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
     Object.assign(this, {...rest});
     this.assignAttributesFromJSON(children || [], '0');
     this._ctx.removed.assignAttributesFromJSON(boardJSON.slice(1), '1');

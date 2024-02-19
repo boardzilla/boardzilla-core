@@ -96,6 +96,7 @@ export type GameStore = {
   placement?: { // placing a piece inside a grid as part of the current move
     selected?: { row: number, column: number }; // player indicated choice, ready for validation/confirmation
     piece: Piece; // temporary ghost piece
+    invalid?: boolean
     into: GameElement;
     layout: Exclude<GameElement['_ui']['computedLayouts'], undefined>[number];
   };
@@ -281,21 +282,24 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   }),
 
   setPlacement: ({ column, row }) => set(s => {
+    const state: Partial<GameStore> = {};
     if (
       !s.placement ||
         s.placement.piece.container()!.atPosition({ column, row }) ||
-        s.pendingMoves?.[0].selections[0]?.type !== 'place' ||
-        s.pendingMoves?.[0].selections[0]?.error({ ...s.move?.args, '__placement__': [column, row] })
+        s.pendingMoves?.[0].selections[0]?.type !== 'place'
     ) {
       return {}
     }
     s.placement.piece.column = column;
     s.placement.piece.row = row;
-    return updateBoard(s.game, s.position!);
+    s.placement.invalid = !!s.pendingMoves?.[0].selections[0]?.error({ ...s.move?.args, '__placement__': [column, row] });;
+    return {... state, ...updateBoard(s.game, s.position!) };
   }),
 
   selectPlacement: ({ column, row }: { column: number, row: number }) => set(s => {
     if (!s.pendingMoves) return { placement: undefined };
+    const error = s.pendingMoves?.[0].selections[0]?.error({ ...s.move?.args, '__placement__': [column, row] });
+    if (error) return { error };
 
     // must be single move and single selection at this point
     const state = {

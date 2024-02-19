@@ -178,7 +178,9 @@ describe('Actions', () => {
       const move2 = testAction._getPendingMoves({lumber: 1, meat: 0});
       expect(move2).to.not.be.undefined;
       expect(move2?.[0].selections.length).to.equal(1);
-      expect(move2?.[0].selections[0].name).to.equal('plastic'); // bit odd, but this is skippable
+      // bit odd, returns a forced choice so we can show something, although the UI will skip this ultimately
+      expect(move2?.[0].selections[0].name).to.equal('plastic');
+      console.log(move2?.[0].args);
 
       const move3 = testAction._getPendingMoves({lumber: 0, meat: 0});
       expect(move3).to.be.undefined;
