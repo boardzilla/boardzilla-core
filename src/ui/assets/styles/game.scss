@@ -197,6 +197,12 @@ html, body { height: 100% }
       }
     }
 
+    .invalid {
+      > .bz-default {
+        background: #fcc;
+      }
+    }
+
     .Piece.selected {
       > .bz-default {
         transform: scale(1.2);

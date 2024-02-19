@@ -836,7 +836,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * that players can move into the desired location, snapping to the grid of
    * the destination as the player moves.
    *
-   * @param piece - A {@link Piece} to move or the name of the piece selection in this action
+   * @param piece - The name of the piece selection in this action from a
+   * `chooseOnBoard` prior to this
    * @param into - A {@link GameElement} to move into
    *
    * @param options.validate - A function that takes an object of key-value
@@ -867,25 +868,26 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * })
    * @category Choices
    */
-  placePiece(piece: keyof A | Piece, into: GameElement, options?: {
+  placePiece<T extends keyof A & string>(piece: T, into: GameElement, options?: {
     prompt?: string | ((args: A) => string),
-    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {__placement__: [number, number]}) => Record<string, Argument<P>>) | undefined]
-    validate?: ((args: A & {__placement__: [number, number]}) => string | boolean | undefined),
+    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in T]: { column: number, row: number }}) => Record<string, Argument<P>>) | undefined]
+    validate?: ((args: A & {[key in T]: { column: number, row: number }}) => string | boolean | undefined),
   }) {
     const { prompt, confirm, validate } = options || {};
     if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only place one piece");
+    const pieceSelection = this.selections.find(s => s.name === piece);
+    if (!pieceSelection) throw (`No selection named ${String(piece)} for placePiece`)
     const positionSelection = this._addSelection(new Selection<P>(
-      '__placement__', { prompt, confirm, validation: validate, selectPlaceOnBoard: true }
+      '__placement__', { prompt, confirm, validation: validate, selectPlaceOnBoard: {piece} }
     ));
     positionSelection.clientContext = { placement: { piece, into } };
     this.moves.push((args: A & {__placement__: [number, number]}) => {
-      const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece;
-      const selectedInto = into instanceof GameElement ? into : args[into] as GameElement;
-      selectedPiece.putInto(selectedInto, { placement: { column: args['__placement__'][0], row: args['__placement__'][1] } });
+      const selectedPiece = args[piece];
+      if (!(selectedPiece instanceof Piece)) throw Error(`Cannot place piece selection named ${String(piece)}. Returned ${selectedPiece} instead of a piece`);
+      selectedPiece.putInto(into, { placement: { column: args['__placement__'][0], row: args['__placement__'][1] } });
     });
     this.order.push('move');
-    const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     if (pieceSelection) pieceSelection.clientContext = { dragInto: into };
-    return this as unknown as Action<P, A & {__placement__: [number, number]}>;
+    return this as unknown as Action<P, A & {__placement__: [number, number]} & {[key in T]: { column: number, row: number }}>;
   }
 }
