@@ -81,6 +81,19 @@ export const starterGameWithConfirm = gameFactory(game => {
   });
 });
 
+export const starterGameWithValidate = gameFactory(game => {
+  game.defineActions({
+    take: player => game.action({
+      prompt: 'Choose a token',
+    }).chooseOnBoard(
+      'token', $.pool.all(Token),
+      { validate: ({ token }) => token.container()!.first(Token) === token ? 'not first' : undefined }
+    ).move(
+      'token', player.my('mat')!,
+    ),
+  });
+});
+
 export const starterGameWithCompoundMove = gameFactory(game => {
   game.defineActions({
     take: player => game.action({
@@ -116,6 +129,19 @@ export const starterGameWithTilesConfirm = gameFactory(game => {
     ).placePiece(
       'token', player.my('mat')!,
       { confirm: "confirm placement?" }
+    ),
+  });
+});
+
+export const starterGameWithTilesValidate = gameFactory(game => {
+  game.defineActions({
+    take: player => game.action({
+      prompt: 'Choose a token',
+    }).chooseOnBoard(
+      'token', $.pool.all(Token),
+    ).placePiece(
+      'token', player.my('mat')!,
+      { validate: ({ token }) => (token.column + token.row) % 2 !== 0 ? 'must be black square' : undefined, }
     ),
   });
 });

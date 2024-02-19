@@ -14,9 +14,11 @@ import type { SerializedMove } from '../game.js';
 import {
   starterGame,
   starterGameWithConfirm,
+  starterGameWithValidate,
   starterGameWithCompoundMove,
   starterGameWithTiles,
   starterGameWithTilesConfirm,
+  starterGameWithTilesValidate,
   starterGameWithTilesCompound,
   Token
 } from './fixtures/games.js';
@@ -92,6 +94,18 @@ describe('UI', () => {
     expect(state.pendingMoves).to.deep.equal([]);
   });
 
+  it("validates", () => {
+    const store = getGameStore(starterGameWithValidate);
+
+    updateStore(store, 2, {tokens: 4});
+    let state = store.getState();
+    let token = state.game.board.first(Token)!;
+    const clickMoves = state.boardSelections[token.branch()].clickMoves;
+
+    expect(state.boardSelections[token.branch()].error).to.equal('not first');
+    expect(clickMoves.length).to.equal(0);
+  });
+
   it("cancels confirm", () => {
     const store = getGameStore(starterGameWithConfirm);
 
@@ -151,12 +165,15 @@ describe('UI', () => {
     state = store.getState();
 
     state.setPlacement({ column: 2, row: 2 });
-    token = state.game.board.first(Token)!;
+    const ghost = state.game.board.first(Token)!;
+    token = state.game.board.first('pool')!.first(Token)!;
 
     expect(history.length).to.equal(0);
     expect(state.pendingMoves?.[0].selections[0].type).to.equal('place');
-    expect(token.column).to.equal(2);
-    expect(token.row).to.equal(2);
+    expect(ghost.column).to.equal(2);
+    expect(ghost.row).to.equal(2);
+    expect(token.column).to.be.undefined;
+    expect(token.row).to.be.undefined;
 
     state.selectPlacement({ column: 2, row: 2 });
     expect(history.length).to.equal(1);
@@ -189,6 +206,31 @@ describe('UI', () => {
     expect(token.row).to.equal(2);
     expect(state.game.board.first('mat')!.all(Token).length).to.equal(1); // ghost piece
     expect(state.game.board.first('pool')!.all(Token).length).to.equal(4);
+  });
+
+  it("places pieces with validate", () => {
+    const store = getGameStore(starterGameWithTilesValidate);
+
+    updateStore(store, 2, {tokens: 4});
+    let state = store.getState();
+    let token = state.game.board.first(Token)!;
+    const clickMoves = state.boardSelections[token.branch()].clickMoves;
+    state.selectElement(clickMoves, token);
+    state = store.getState();
+
+    state.setPlacement({ column: 1, row: 2 });
+    state = store.getState();
+    const ghost = state.placement?.piece!
+
+    expect(ghost.column).to.equal(1);
+    expect(ghost.row).to.equal(2);
+    expect(state.placement?.invalid).to.be.true;
+
+    state.selectPlacement({ column: 1, row: 2 });
+
+    state = store.getState();
+    expect(state.error).to.equal('must be black square');
+    expect(history.length).to.equal(0);
   });
 
   it("continues compound place piece", () => {

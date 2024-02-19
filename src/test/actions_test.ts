@@ -170,20 +170,18 @@ describe('Actions', () => {
           validate: ({ lumber, steel, meat, plastic }) => lumber + steel + meat + plastic > 0
         });
       const move = testAction._getPendingMoves({});
-      if (!move) {
-        expect(move).to.not.be.undefined;
-      } else {
-        expect(move[0].selections.length).to.equal(2);
-        expect(move[0].selections[0].name).to.equal('lumber');
-        expect(move[0].selections[1].name).to.equal('meat');
-      }
+      expect(move).to.not.be.undefined;
+      expect(move?.[0].selections.length).to.equal(2);
+      expect(move?.[0].selections[0].name).to.equal('lumber');
+      expect(move?.[0].selections[1].name).to.equal('meat');
+
       const move2 = testAction._getPendingMoves({lumber: 1, meat: 0});
-      if (!move2) {
-        expect(move2).to.not.be.undefined;
-      } else {
-        expect(move2[0].selections.length).to.equal(1);
-        expect(move2[0].selections[0].name).to.equal('plastic'); // bit odd, but this is skippable
-      }
+      expect(move2).to.not.be.undefined;
+      expect(move2?.[0].selections.length).to.equal(1);
+      // bit odd, returns a forced choice so we can show something, although the UI will skip this ultimately
+      expect(move2?.[0].selections[0].name).to.equal('plastic');
+      console.log(move2?.[0].args);
+
       const move3 = testAction._getPendingMoves({lumber: 0, meat: 0});
       expect(move3).to.be.undefined;
     });
@@ -221,8 +219,8 @@ describe('Actions', () => {
       testAction = new Action({ prompt: 'p' })
         .chooseFrom('r', ['oil', 'garbage'])
         .chooseNumber('n', {
-        max: ({ r }) => r === 'oil' ? 3 : 1
-      });
+          max: ({ r }) => r === 'oil' ? 3 : 1
+        });
     });
 
     it('shows first selection', () => {
@@ -280,6 +278,29 @@ describe('Actions', () => {
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');
       expect(moves![0].selections[0].choices).to.deep.equal(['oil']);
+    });
+  });
+
+  describe('validation rules', () => {
+    let testAction: Action<any, {r: string, n: number}>;
+    beforeEach(() => {
+      testAction = new Action({ prompt: 'p' })
+        .chooseFrom(
+          'r', ['oil', 'garbage', 'steel'],
+          {
+            validate: ({r}) => r === 'steel' ? 'no steel allowed' : true
+          }
+        ).chooseNumber(
+          'n', {
+            max: ({ r }) => r === 'oil' ? 3 : 1
+          }
+        );
+    });
+
+    it('validates choices', () => {
+      const moves = testAction._getPendingMoves({});
+      expect(moves?.[0].selections[0].choices).to.deep.equal(['oil', 'garbage']);
+      expect(moves?.[0].selections[0].invalidOptions).to.deep.equal([{option: 'steel', error: 'no steel allowed'}]);
     });
   });
 

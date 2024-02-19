@@ -1,6 +1,6 @@
 import { range } from '../utils.js';
 import { combinations } from './utils.js';
-import { GameElement } from '../board/index.js';
+import { GameElement, Piece } from '../board/index.js';
 
 import type { SingleArgument, Argument } from './action.js';
 import type { Player } from '../player/index.js';
@@ -82,7 +82,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
   value: ButtonSelection<P>;
 } | {
   selectOnBoard?: never;
-  selectPlaceOnBoard: true;
+  selectPlaceOnBoard: {piece: string};
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
@@ -90,14 +90,13 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
 });
 
 // any lambdas have been resolved to actual values
-export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'regexp' | 'skipIf'> & {
+export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'skipIf'> & {
   prompt?: string;
   choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>>;
   boardChoices?: GameElement<P>[];
   min?: number;
   max?: number;
   initial?: Argument<P>;
-  regexp?: RegExp;
   skipIf?: 'never' | 'always' | 'only-one' | boolean;
 }
 
@@ -121,7 +120,9 @@ export default class Selection<P extends Player> {
   max?: number | ((args: Record<string, Argument<P>>) => number);
   initial?: Argument<P> | ((args: Record<string, Argument<P>>) => Argument<P>);
   regexp?: RegExp;
+  placePiece?: string;
   value?: Argument<P>;
+  invalidOptions: {option: Argument<P>, error: string}[] = [];
 
   constructor(name: string, s: SelectionDefinition<P> | Selection<P>) {
     this.name = name;
@@ -154,6 +155,7 @@ export default class Selection<P extends Player> {
         this.initial = s.enterText.initial;
       } else if (s.selectPlaceOnBoard) {
         this.type = 'place';
+        this.placePiece = s.selectPlaceOnBoard.piece;
       } else {
         this.type = 'button';
         this.value = s.value;
@@ -178,7 +180,20 @@ export default class Selection<P extends Player> {
     const s = this.resolve(args);
 
     if (s.validation) {
-      const error = s.validation(args);
+      let error: string | boolean | undefined = undefined;
+      if (s.type === 'place') {
+        // temporarily set piece to place for ease of validation
+        const placePiece = (args[s.placePiece!] as Piece);
+        const { row, column } = placePiece;
+        const [newColumn, newRow] = args['__placement__'] as [number, number];
+        placePiece.column = newColumn;
+        placePiece.row = newRow;
+        error = s.validation(args);
+        placePiece.column = column;
+        placePiece.row = row;
+      } else {
+        error = s.validation(args);
+      }
       if (error !== undefined && error !== true) return error || 'Invalid selection';
     }
 
@@ -243,7 +258,7 @@ export default class Selection<P extends Player> {
   }
 
   isMulti() {
-    return this.min !== undefined || this.max !== undefined;
+    return (this.type === 'choices' || this.type === 'board') && (this.min !== undefined || this.max !== undefined);
   }
 
   isBoardChoice() {
@@ -294,18 +309,12 @@ export default class Selection<P extends Player> {
     }
   }
 
-  overrideOptions(options: SingleArgument<P>[]): ResolvedSelection<P> {
+  overrideOptions(this: ResolvedSelection<P>, options: SingleArgument<P>[]) {
     if (this.type === 'board') {
       this.boardChoices = options as GameElement<P>[];
-      return this as ResolvedSelection<P>;
+    } else {
+      this.choices = options as GameElement<P>[];
     }
-    return new Selection(this.name, {
-      selectFromChoices: {
-        choices: options,
-        //min: selection.min, TODO
-        //max: selection.max
-      }
-    }) as ResolvedSelection<P>;
   }
 
   toString(): string {

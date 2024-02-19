@@ -40,7 +40,10 @@ export function updateSelections(store: GameStore): GameStore {
 
   const player = game.players.atPosition(position);
   if (!player) return store;
-  let state = { ...store };
+  let state: GameStore = {
+    ...store,
+    error: undefined
+  };
   let pendingMoves: GamePendingMoves
   let maySubmit = !!move;
   let autoSubmit = false;
@@ -148,6 +151,8 @@ export function updateSelections(store: GameStore): GameStore {
             state.error = game.processMove({ player, ...move });
 
             if (state.error) {
+              // should probably never reach this point since the error would
+              // have been caught with any possible choices presented
               throw Error(state.error);
             } else {
               game.play();
@@ -357,8 +362,9 @@ export function updateBoardSelections(store: GameStore): Pick<GameStore, "boardS
     clickMoves: UIMove[],
     dragMoves: {
       move: UIMove,
-      drag: Selection<Player> | ResolvedSelection<Player>
-    }[]
+      drag: Selection<Player> | ResolvedSelection<Player>,
+    }[],
+    error?: string
   }> = {};
   for (const p of pendingMoves) {
     for (const sel of p.selections) {
@@ -368,6 +374,10 @@ export function updateBoardSelections(store: GameStore): Pick<GameStore, "boardS
         for (const el of boardChoices) {
           boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
           boardSelections[el.branch()].clickMoves.push(boardMove);
+        }
+        for (const {option, error} of sel.invalidOptions) {
+          boardSelections[(option as GameElement).branch()] ??= { clickMoves: [], dragMoves: [] };
+          boardSelections[(option as GameElement).branch()].error = error;
         }
         let { dragInto, dragFrom } = sel.clientContext as { dragInto?: Selection<Player> | GameElement, dragFrom?: Selection<Player> | GameElement };
         if (dragInto) {
@@ -459,6 +469,7 @@ export function decorateUIMove(move: PendingMove<Player> | UIMove): UIMove {
 export function clearMove(): Partial<GameStore> {
   return {
     move: undefined,
+    error: undefined,
     uncommittedArgs: {},
     disambiguateElement: undefined,
     selected: [],

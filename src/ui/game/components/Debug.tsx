@@ -9,7 +9,7 @@ const Debug = () => {
   if (!game) return null;
 
   return (
-    <div id="debug-overlay">
+    <div id="debug-overlay" className="full-page-cover">
       <div id="flow-debug">
         <FlowDebug flow={game.flow.visualize()} nest={0} current={true} />
       </div>
