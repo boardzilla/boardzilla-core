@@ -138,7 +138,7 @@ html, body { height: 100% }
 
     .transform-wrapper {
       position: absolute;
-      transform-origin: top left;
+      transform-origin: center;
       transition: transform .6s, top .6s, left .6s, width .6s, height .6s;
       visibility: hidden;
       &.has-info {

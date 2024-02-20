@@ -81,10 +81,11 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     return {
       scaleX: previousRender.style.width / newPosition.width,
       scaleY: previousRender.style.height / newPosition.height,
-      translateX: (previousRender.style.left - newPosition.left) / newPosition.width * 100,
-      translateY: (previousRender.style.top - newPosition.top) / newPosition.height * 100,
+      translateX: (previousRender.style.left + previousRender.style.width / 2 - newPosition.left - newPosition.width / 2) / newPosition.width * 100,
+      translateY: (previousRender.style.top + previousRender.style.height / 2 - newPosition.top - newPosition.height / 2) / newPosition.height * 100,
+      rotate: (previousRender.style.rotation ?? 0) - (element.rotation ?? 0)
     };
-  }, [relativeTransform, previousRender, mode, positioning]);
+  }, [relativeTransform, previousRender, mode, positioning, element]);
 
   useEffect(() => {
     if (placing && moveTransform) setPositioning(true);
@@ -236,7 +237,8 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
 
     if (moveTransform) {
-      let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY})`;
+      let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY}) rotate(${moveTransform.rotate}deg)`;
+
       if (previousRenderedState.elements[element._t.was!]) previousRenderedState.elements[element._t.was!].movedTo = branch;
       if (dragOffset.element && dragOffset.element === element._t.was) {
         transformToNew = `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + transformToNew;
@@ -249,6 +251,8 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       Object.assign(styleBuilder, {'--transformed-to-old': String(uuid())});
     }
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
+
+    if (element.rotation) styleBuilder.transform = (styleBuilder.transform ?? '') + `rotate(${element.rotation}deg)`;
 
     return styleBuilder;
   }, [element, dragging, mode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
@@ -495,7 +499,8 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   element._t.was = branch;
   //console.log('doneMoving', branch);
   if (renderedState[branch]) {
-    renderedState[branch].style = relativeTransform;
+    renderedState[branch].style = relativeTransform ?? {};
+    renderedState[branch].style!.rotation = element.rotation;
     renderedState[branch].attrs = newAttrs;
   }
 

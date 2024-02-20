@@ -39,7 +39,7 @@ type GenericSorter = string | ((e: GameElement) => number | string)
  * ones from the base GameElement
  */
 export type ElementAttributes<T extends GameElement> =
-  Partial<Pick<T, {[K in keyof T]: K extends keyof GameElement ? never : (T[K] extends (...a:any[]) => any ? never : K)}[keyof T] | 'name' | 'player' | 'row' | 'column'>>
+  Partial<Pick<T, {[K in keyof T]: K extends keyof GameElement ? never : (T[K] extends (...a:any[]) => any ? never : K)}[keyof T] | 'name' | 'player' | 'row' | 'column' | 'rotation'>>
 
 export type ElementContext<P extends Player<P, B> = any, B extends Board<P, B> = any> = {
   game: Game<P, B>;
@@ -288,6 +288,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   row?: number;
 
   column?: number;
+
+  rotation?: number; // degrees
 
   /**
    * The {@link Board} to which this element belongs
@@ -973,7 +975,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
       attrs = Object.fromEntries(Object.entries(attrs).filter(
-        ([attr]) => attr === '_visible' || attr !== 'name' && (this.constructor as typeof GameElement).visibleAttributes?.includes(attr)
+        ([attr]) => ['_visible', 'row', 'column', 'rotation'].includes(attr) ||
+          (attr !== 'name' && (this.constructor as typeof GameElement).visibleAttributes?.includes(attr))
       )) as typeof attrs;
     }
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
