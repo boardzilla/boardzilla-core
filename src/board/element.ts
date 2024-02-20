@@ -96,7 +96,7 @@ export type ElementUI<T extends GameElement> = {
       offsetColumn: Vector,
       offsetRow: Vector,
     },
-    showBoundingBox?: string,
+    showBoundingBox?: string | boolean,
     children: GameElement[],
     drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
   }[]
@@ -232,7 +232,7 @@ export type LayoutAttributes<T extends GameElement> = {
    * Set to true for debugging. Creates a visible box on screen around the
    * defined `area`, tagged with the provided string.
    */
-  showBoundingBox?: string,
+  showBoundingBox?: string | boolean,
   /**
    * Specifies that this layout should inhabit a drawer, a collapsible area that
    * can be hidden to save overall space on the board.
@@ -1169,7 +1169,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       this._ui.computedLayouts[l] = {
         area,
         children: children ?? [],
-        showBoundingBox: attributes.showBoundingBox,
+        showBoundingBox: attributes.showBoundingBox ?? this.board._ui.boundingBoxes,
         drawer: attributes.drawer
       };
 

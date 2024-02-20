@@ -422,7 +422,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   let boundingBoxes: React.JSX.Element[] = [];
   if (element._ui.computedLayouts) {
     boundingBoxes = element._ui.computedLayouts.filter(layout => layout.showBoundingBox).map((layout, k) => (
-      <div key={k + (layout.showBoundingBox || '')} className="bz-show-grid" style={{
+      <div key={k} className="bz-show-grid" style={{
         left: layout.area.left + '%',
         top: layout.area.top + '%',
         width: layout.area.width + '%',
@@ -430,7 +430,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
         // backgroundSize: `${(layout.grid?.offsetColumn.x ?? 100) / layout.area.width * 100}% ${(layout.grid?.offsetRow.y ?? 100) / layout.area.height * 100}%`,
         // backgroundPosition: `calc(${(layout.grid?.anchor.x ?? 0) / layout.area.width * 10000}% - 1px) calc(${(layout.grid?.anchor.y ?? 0) / layout.area.height * 10000}% - 1px)`
       }}>
-        <span>{layout.showBoundingBox}</span>
+        {typeof layout.showBoundingBox === 'string' && <span>{layout.showBoundingBox}</span>}
       </div>
     ));
   }

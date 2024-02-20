@@ -155,7 +155,14 @@ export function updateSelections(store: GameStore): GameStore {
               // have been caught with any possible choices presented
               throw Error(state.error);
             } else {
-              game.play();
+              try {
+                game.play();
+              } catch (e) {
+                // this is a nice-to-have to speed up animations by
+                // "pre-playing" the flow. this could legitimately fail until
+                // the updated state is received from the server so exceptions
+                // here are ignored.
+              }
               game.sequence = Math.floor(game.sequence) + 0.5; // intermediate local update that will need to be merged
               let json: any = undefined;
               if (game.intermediateUpdates.length) {

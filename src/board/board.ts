@@ -149,6 +149,7 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
     setupLayout?: (board: B, player: P, boardSize: string) => void;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
+    boundingBoxes?: boolean;
     stepLayouts: Record<string, ActionLayout>;
     previousStyles: Record<any, Box>;
     announcements: Record<string, (board: B) => JSX.Element>;
@@ -248,5 +249,14 @@ export default class Board<P extends Player<P, B> = any, B extends Board<P, B> =
    */
   disableDefaultAppearance() {
     this._ui.disabledDefaultAppearance = true;
+  }
+
+  /**
+   * Show bounding boxes around every layout
+   *
+   * @category UI
+   */
+  showLayoutBoundingBoxes() {
+    this._ui.boundingBoxes = true;
   }
 }

@@ -811,13 +811,13 @@ html, body { height: 100% }
 
   #corner-controls {
     position: fixed;
-    top: 1vmin;
-    left: 1vmin;
+    top: 1vh;
+    left: 1vh;
     z-index: 200;
 
     #info-toggle {
       position: absolute;
-      height: 3vmin;
+      height: 3vh;
       top: 0;
       left: 0;
       svg {
@@ -830,7 +830,7 @@ html, body { height: 100% }
 
     #debug-toggle {
       position: absolute;
-      height: 3vmin;
+      height: 3vh;
       top: 0;
       left: 3.5vmin;
       svg {
