@@ -99,7 +99,8 @@ export type ElementUI<T extends GameElement> = {
     showBoundingBox?: string | boolean,
     children: GameElement[],
     drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
-  }[]
+  }[],
+  ghost?: boolean,
 };
 
 /**
@@ -133,6 +134,14 @@ export type LayoutAttributes<T extends GameElement> = {
    * Columns, as per `rows`
    */
   columns?: number | {min: number, max?: number} | {min?: number, max: number},
+  /**
+   * If supplied, creates an empty margin in the row/column grid of this size
+   * around the contents while placing new elements. It is common to set
+   * `extensionMargin` to 1 to allow players to place new tiles into the space
+   * around the existing tiles, thereby extending the grid. Otherwise new tiles
+   * can only be placed in the existing grid.
+   */
+  extensionMargin?: number,
   /**
    * If supplied, this overrides all other attributes to define a set of
    * strictly defined boxes for placing each element. Any elements that exceed
@@ -285,11 +294,21 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    */
   player?: P;
 
+  /**
+   * Row of element within its layout grid if specified directly or by a
+   * "sticky" layout.
+   * @category Structure
+   */
   row?: number;
 
+  /**
+   * Column of element within its layout grid if specified directly or by a
+   * "sticky" layout.
+   * @category Structure
+   */
   column?: number;
 
-  rotation?: number; // degrees
+  _rotation?: number; // degrees
 
   /**
    * The {@link Board} to which this element belongs
@@ -896,6 +915,19 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   }
 
   /**
+   * Rotation of element if set, normalized to 0-359 degrees
+   * @category Structure
+   */
+  get rotation() {
+    if (this._rotation === undefined) return this._rotation;
+    return (this._rotation % 360 + 360) % 360;
+  }
+
+  set rotation(r) {
+    this._rotation = r;
+  }
+
+  /**
    * Returns a string identifying the tree position of the element suitable for
    * anonymous reference
    * @internal
@@ -956,7 +988,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   attributeList<T extends GameElement<P, B>>(this: T): ElementAttributes<T> {
     let attrs: Record<string, any>;
     ({ ...attrs } = this);
-    for (const attr of ['_t', '_ctx', '_ui', 'board', 'game', 'pile', '_eventHandlers']) delete attrs[attr];
+    for (const attr of ['_t', '_ctx', '_ui', 'board', 'game', 'pile', '_eventHandlers', 'rotation']) delete attrs[attr];
 
     // remove methods
     return Object.fromEntries(Object.entries(attrs).filter(
@@ -975,7 +1007,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
       attrs = Object.fromEntries(Object.entries(attrs).filter(
-        ([attr]) => ['_visible', 'row', 'column', 'rotation'].includes(attr) ||
+        ([attr]) => ['_visible', 'row', 'column', '_rotation'].includes(attr) ||
           (attr !== 'name' && (this.constructor as typeof GameElement).visibleAttributes?.includes(attr))
       )) as typeof attrs;
     }
@@ -1190,7 +1222,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
         // find bounding box for any set positions
         for (let c = 0; c != children.length; c++) {
           const child = children[c];
-          if (child.column !== undefined && child.row !== undefined) {
+          if (child.column !== undefined && child.row !== undefined && !child._ui.ghost) {
             cells[c] = [child.column, child.row];
             if (min.column === undefined || child.column < min.column) min.column = child.column;
             if (min.row === undefined || child.row < min.row) min.row = child.row;
@@ -1217,31 +1249,34 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           top: alignment.includes('top') ? 0 : (alignment.includes('bottom') ? 1 : 0.5),
         };
 
+        const ghostPiecesIgnoredForLayout = (attributes.extensionMargin ?? 0) > 0 ? children.filter(c => c._ui.ghost).length : 0;
+        const elements = children.length - ghostPiecesIgnoredForLayout;
+
         // expand grid as needed for children in direction specified
         if (children.length) {
           if (direction === 'square') {
             columns = Math.max(minColumns,
               Math.min(
                 maxColumns,
-                Math.ceil(children.length / minRows),
-                Math.max(Math.ceil(children.length / maxRows), Math.ceil(Math.sqrt(children.length)))
+                Math.ceil(elements / minRows),
+                Math.max(Math.ceil(elements / maxRows), Math.ceil(Math.sqrt(elements)))
               )
             );
             rows = Math.max(minRows,
               Math.min(maxRows,
-                Math.ceil(children.length / minColumns),
-                Math.ceil(children.length / columns)
+                Math.ceil(elements / minColumns),
+                Math.ceil(elements / columns)
               )
             );
           } else {
-            if (rows * columns < children.length) {
+            if (rows * columns < elements) {
               if (['ltr', 'ltr-btt', 'rtl', 'rtl-btt'].includes(direction)) {
-                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(children.length / rows)));
-                rows = Math.max(rows, Math.min(maxRows, Math.ceil(children.length / columns)));
+                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(elements / rows)));
+                rows = Math.max(rows, Math.min(maxRows, Math.ceil(elements / columns)));
               }
               if (['ttb', 'btt', 'ttb-rtl', 'btt-rtl'].includes(direction)) {
-                rows = Math.max(rows, Math.min(maxRows, Math.ceil(children.length / columns)));
-                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(children.length / rows)));
+                rows = Math.max(rows, Math.min(maxRows, Math.ceil(elements / columns)));
+                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(elements / rows)));
               }
             }
           }
@@ -1250,6 +1285,13 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
           origin = {
             column: Math.min(min.column, max.column, Math.max(1, max.column - columns + 1)),
             row: Math.min(min.row, max.row, Math.max(1, max.row - rows + 1))
+          }
+
+          if (ghostPiecesIgnoredForLayout > 0 && children.length > ghostPiecesIgnoredForLayout) {
+            columns += attributes.extensionMargin! + attributes.extensionMargin!;
+            rows += attributes.extensionMargin! + attributes.extensionMargin!;
+            origin.column -= attributes.extensionMargin!;
+            origin.row -= attributes.extensionMargin!;
           }
 
           let available: Vector;
@@ -1331,6 +1373,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
               }
               if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) break;
             } else {
+              if (child._ui.ghost) cells[c] = [child.column, child.row];
               c++;
             }
           }

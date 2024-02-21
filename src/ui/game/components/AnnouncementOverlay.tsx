@@ -7,7 +7,6 @@ const AnnouncementOverlay = ({ announcement, onDismiss }: {
 }) => {
   const [game] = gameStore(s => [s.game]);
   const [delay, setDelay] = useState(false);
-  console.log('announcement', announcement, delay);
 
   useEffect(() => {
     const timer = setTimeout(() => setDelay(true), 1000);

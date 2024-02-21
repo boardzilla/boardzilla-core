@@ -66,6 +66,17 @@ export function updateSelections(store: GameStore): GameStore {
       if (typeof piece === 'string') piece = moves[0].args[piece] as Piece;
       const into = selection.clientContext.placement.into as GameElement;
       const clone = piece.cloneInto(into);
+      clone._ui.ghost = true;
+      if (selection.rotationChoices) {
+        // find the closest allowable rotation to the current rotation
+        clone.rotation = clone.rotation === undefined ?
+          selection.rotationChoices[0] :
+          [...selection.rotationChoices].sort((r1, r2) => {
+            const a1 = Math.abs(((r1 - clone.rotation!) % 360 + 360) % 360 - 180);
+            const a2 = Math.abs(((r2 - clone.rotation!) % 360 + 360) % 360 - 180);
+            return a1 < a2 ? 1 : -1;
+          })[0];
+      }
       let layoutIndex = into.getLayoutItems().findIndex(l => l?.includes(clone as Piece));
 
       state = {
@@ -77,7 +88,8 @@ export function updateSelections(store: GameStore): GameStore {
       state.placement = {
         piece: clone,
         into,
-        layout
+        layout,
+        rotationChoices: selection.rotationChoices,
       };
     }
 

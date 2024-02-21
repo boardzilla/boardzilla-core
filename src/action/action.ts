@@ -1,5 +1,6 @@
 import Selection from './selection.js';
 import { GameElement } from '../board/index.js';
+import { n } from '../utils.js';
 
 import type {
   ResolvedSelection,
@@ -177,7 +178,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       for (const option of selection.options()) {
         const allArgs = {...args, [selection.name]: option};
         if (selection.validation && !selection.isMulti()) {
-          const error = selection.error(allArgs);
+          const error = this._withDecoratedArgs(allArgs as A, args => selection!.error(args))
           if (error) {
             pruned = true;
             selection.invalidOptions.push({ option, error })
@@ -242,7 +243,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         if (arg) args[selection.name] = arg;
       }
 
-      error = selection.error(args);
+      error = this._withDecoratedArgs(args as A, args => selection.error(args))
       if (error) {
         console.error(`Invalid choice for ${selection.name}. Got "${args[selection.name]}" ${error}`);
         break;
@@ -276,6 +277,42 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     if (this.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
     this.selections.push(selection);
     return selection;
+  }
+
+  // fn must be idempotent
+  _withDecoratedArgs(args: A, fn: (args: A) => any) {
+    if (args['__placement__']) {
+      const placementSelection = this.selections.find(s => s.name === '__placement__');
+      if (placementSelection && args[placementSelection.placePiece!]) {
+        args = {...args};
+        // temporarily set piece to place to access position properties
+        const placePiece = (args[placementSelection.placePiece!] as Piece);
+        const { row, column, rotation } = placePiece;
+        const [newColumn, newRow, newRotation] = args['__placement__'] as [number, number, number?];
+        placePiece.column = newColumn;
+        placePiece.row = newRow;
+        placePiece.rotation = newRotation;
+        const result = fn(args);
+        placePiece.column = column;
+        placePiece.row = row;
+        placePiece.rotation = rotation;
+        return result;
+      }
+    }
+    return fn(args);
+  }
+
+  _getError(selection: ResolvedSelection<P>, args: A) {
+    return this._withDecoratedArgs(args, args => selection.error(args));
+  }
+
+  _getConfirmation(selection: ResolvedSelection<P>, args: A) {
+    if (!selection.confirm) return;
+    const argList = selection.confirm[1];
+    return n(
+      selection.confirm[0],
+      {...args, ...(typeof argList === 'function' ? this._withDecoratedArgs(args, argList) : argList)}
+    );
   }
 
   /**
@@ -842,9 +879,11 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *
    * @param options.validate - A function that takes an object of key-value
    * pairs for all player choices and returns a boolean. The position selected
-   * will be available under the special choice name "__placement__". If false,
-   * the game will not allow the player to submit these choices. If a string is
-   * returned, this will display as the reason for disallowing these selections.
+   * during the piece placement can be checked by reading the 'column', 'row'
+   * and `rotation` properties of the `piece` as provided in the first
+   * argument. If false, the game will not allow the player to submit these
+   * choices. If a string is returned, this will display as the reason for
+   * disallowing these selections.
    *
    * @param options.confirm - A confirmation message that the player will always
    * see before commiting this choice. This can be useful to present additional
@@ -855,15 +894,20 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * being a function that takes an object of key-value pairs for all player
    * choices, and returns the interpolation object.
    *
+   * @param options.rotationChoices = An array of valid rotations in
+   * degrees. These choices must be normalized to numbers between 0-359°. If
+   * supplied the piece will be given rotation handles for the player to set the
+   * rotation and position together.
+   *
    * player => action({
    *   prompt: 'Place your tile'
    * }).chooseOnBoard(
    *   'tile', player.my(Tile)
    * ).placePiece(
    *   'tile', $.map, {
-   *     confirm: ({ __position__ }) => [
+   *     confirm: ({ tile }) => [
    *       'Place tile into row {{row}} and column {{column}}?',
-   *       __position__
+   *       tile
    *     ]
    * })
    * @category Choices
@@ -872,22 +916,26 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     prompt?: string | ((args: A) => string),
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in T]: { column: number, row: number }}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in T]: { column: number, row: number }}) => string | boolean | undefined),
+    rotationChoices?: number[],
   }) {
     const { prompt, confirm, validate } = options || {};
     if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only place one piece");
     const pieceSelection = this.selections.find(s => s.name === piece);
     if (!pieceSelection) throw (`No selection named ${String(piece)} for placePiece`)
     const positionSelection = this._addSelection(new Selection<P>(
-      '__placement__', { prompt, confirm, validation: validate, selectPlaceOnBoard: {piece} }
+      '__placement__', { prompt, confirm, validation: validate, selectPlaceOnBoard: {piece, rotationChoices: options?.rotationChoices} }
     ));
     positionSelection.clientContext = { placement: { piece, into } };
-    this.moves.push((args: A & {__placement__: [number, number]}) => {
+    this.moves.push((args: A & {__placement__: number[]}) => {
       const selectedPiece = args[piece];
       if (!(selectedPiece instanceof Piece)) throw Error(`Cannot place piece selection named ${String(piece)}. Returned ${selectedPiece} instead of a piece`);
-      selectedPiece.putInto(into, { placement: { column: args['__placement__'][0], row: args['__placement__'][1] } });
+      selectedPiece.putInto(into);
+      selectedPiece.column = args['__placement__'][0];
+      selectedPiece.row = args['__placement__'][1];
+      selectedPiece.rotation = args['__placement__'][2];
     });
     this.order.push('move');
     if (pieceSelection) pieceSelection.clientContext = { dragInto: into };
-    return this as unknown as Action<P, A & {__placement__: [number, number]} & {[key in T]: { column: number, row: number }}>;
+    return this as unknown as Action<P, A & {__placement__: number[]} & {[key in T]: { column: number, row: number }}>;
   }
 }

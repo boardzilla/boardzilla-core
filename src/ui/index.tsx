@@ -111,9 +111,10 @@ export type GameStore = {
     invalid?: boolean
     into: GameElement;
     layout: Exclude<GameElement['_ui']['computedLayouts'], undefined>[number];
+    rotationChoices?: number[];
   };
-  setPlacement: (placement: {column: number, row: number}) => void; // select placement. not committed, analagous to input state in a controlled form
-  selectPlacement: (placement: {column: number, row: number}) => void; // commit placement
+  setPlacement: (placement: {column?: number, row?: number, rotation?: number}) => void; // select placement. not committed, analagous to input state in a controlled form
+  selectPlacement: (placement: {column: number, row: number, rotation?: number}) => void; // commit placement
   infoElement?: {info: JSX.Element | boolean, element: GameElement };
   setInfoElement: (el?: {info: JSX.Element | boolean, element: GameElement }) => void;
   userOnline: Map<string, boolean>
@@ -190,6 +191,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       step: undefined,
       boardSelections: {},
       pendingMoves: undefined,
+      placement: undefined,
       ...updateBoard(game, position, update.state.board),
     };
 
@@ -293,37 +295,50 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     });
   }),
 
-  setPlacement: ({ column, row }) => set(s => {
+  setPlacement: ({ column, row, rotation }) => set(s => {
     const state: Partial<GameStore> = {};
-    if (
-      !s.placement ||
-        s.placement.piece.container()!.atPosition({ column, row }) ||
-        s.pendingMoves?.[0].selections[0]?.type !== 'place'
-    ) {
+    if (!s.placement || s.pendingMoves?.[0].selections[0]?.type !== 'place') {
       return {}
     }
-    s.placement.piece.column = column;
-    s.placement.piece.row = row;
-    s.placement.invalid = !!s.pendingMoves?.[0].selections[0]?.error({ ...s.move?.args, '__placement__': [column, row] });;
+    if (column !== undefined && row !== undefined && !s.placement?.piece.container()!.atPosition({ column, row })) {
+      s.placement.piece.column = column;
+      s.placement.piece.row = row;
+    }
+    if (rotation !== undefined) {
+      s.placement.piece.rotation = rotation;
+    }
+    s.placement.invalid = !!s.game.getAction(s.pendingMoves?.[0].name, s.game.players.atPosition(s.position!)!)._getError(
+      s.pendingMoves?.[0].selections[0],
+      {
+        ...s.move?.args,
+        '__placement__': [s.placement.piece.column ?? 1, s.placement.piece.row ?? 1, s.placement.piece.rotation]
+      }
+    );
     return {... state, ...updateBoard(s.game, s.position!) };
   }),
 
-  selectPlacement: ({ column, row }: { column: number, row: number }) => set(s => {
+  selectPlacement: ({ column, row, rotation }) => set(s => {
     if (!s.pendingMoves) return { placement: undefined };
-    const error = s.pendingMoves?.[0].selections[0]?.error({ ...s.move?.args, '__placement__': [column, row] });
+    const error = s.game.getAction(s.pendingMoves?.[0].name, s.game.players.atPosition(s.position!)!)._getError(
+      s.pendingMoves?.[0].selections[0],
+      {
+        ...s.move?.args,
+        '__placement__': [column, row].concat(rotation ? [rotation] : [])
+      }
+    );
     if (error) return { error };
 
     // must be single move and single selection at this point
     const state = {
       placement: {
         ...s.placement!,
-        selected: { row, column },
+        selected: { row, column, rotation },
       },
     };
 
     if (!s.pendingMoves[0].requireExplicitSubmit) {
       get().clearMove()
-      get().selectMove(s.pendingMoves[0], {__placement__: [column, row]});
+      get().selectMove(s.pendingMoves[0], { __placement__: [column, row].concat(rotation ? [rotation] : []) });
       return state;
     }
 
@@ -333,7 +348,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       disambiguateElement: undefined,
       uncommittedArgs: {
         ...s.uncommittedArgs,
-        __placement__: [column, row]
+        __placement__: [column, row].concat(rotation ? [rotation] : [])
       }
     });
   }),

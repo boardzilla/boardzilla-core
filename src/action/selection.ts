@@ -82,7 +82,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
   value: ButtonSelection<P>;
 } | {
   selectOnBoard?: never;
-  selectPlaceOnBoard: {piece: string};
+  selectPlaceOnBoard: {piece: string, rotationChoices?: number[]};
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
@@ -121,6 +121,7 @@ export default class Selection<P extends Player> {
   initial?: Argument<P> | ((args: Record<string, Argument<P>>) => Argument<P>);
   regexp?: RegExp;
   placePiece?: string;
+  rotationChoices?: number[];
   value?: Argument<P>;
   invalidOptions: {option: Argument<P>, error: string}[] = [];
 
@@ -156,6 +157,7 @@ export default class Selection<P extends Player> {
       } else if (s.selectPlaceOnBoard) {
         this.type = 'place';
         this.placePiece = s.selectPlaceOnBoard.piece;
+        this.rotationChoices = s.selectPlaceOnBoard.rotationChoices;
       } else {
         this.type = 'button';
         this.value = s.value;
@@ -180,20 +182,7 @@ export default class Selection<P extends Player> {
     const s = this.resolve(args);
 
     if (s.validation) {
-      let error: string | boolean | undefined = undefined;
-      if (s.type === 'place') {
-        // temporarily set piece to place for ease of validation
-        const placePiece = (args[s.placePiece!] as Piece);
-        const { row, column } = placePiece;
-        const [newColumn, newRow] = args['__placement__'] as [number, number];
-        placePiece.column = newColumn;
-        placePiece.row = newRow;
-        error = s.validation(args);
-        placePiece.column = column;
-        placePiece.row = row;
-      } else {
-        error = s.validation(args);
-      }
+      const error = s.validation(args);
       if (error !== undefined && error !== true) return error || 'Invalid selection';
     }
 

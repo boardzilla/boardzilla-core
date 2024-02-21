@@ -14,8 +14,10 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
   children?: React.ReactNode,
 }) => {
-  const [uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.uncommittedArgs, s.selected, s.disambiguateElement]);
+  const [game, position, uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.game, s.position, s.uncommittedArgs, s.selected, s.disambiguateElement]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+
+  const action = useMemo(() => game.getAction(move.name, game.players.atPosition(position!)!), [game, position, move]);
 
   const initial = useCallback(() => {
     const args: Record<string, Argument<Player> | undefined> = {...move.args};
@@ -55,11 +57,11 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
       ).map(
         s => [
           s.name,
-          args[s.name] === undefined ? 'Missing' : s.error(args as Record<string, Argument<Player>>)
+          args[s.name] === undefined ? 'Missing' : action._getError(s, args)
         ]
       )
     );
-  }, [move.selections]);
+  }, [action, move.selections]);
 
   // display errors
   const validate = useCallback((args: Record<string, Argument<Player> | undefined>) => {
@@ -97,11 +99,11 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
     let confirm = 'Confirm';
     const args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
     if (move.selections[0]?.confirm) {
-      confirm = move.selections[0].confirm[0];
-      Object.assign(args, typeof move.selections[0].confirm[1] === 'function' ? move.selections[0].confirm[1](args) : move.selections[0].confirm[1])
+      const actionConfirm = action._getConfirmation(move.selections[0], args);
+      confirm = actionConfirm ?? confirm;
     }
     return n(confirm, args)
-  }, [move, allArgs, selected, validationErrors]);
+  }, [move, action, allArgs, selected, validationErrors]);
 
   return (
     <form
