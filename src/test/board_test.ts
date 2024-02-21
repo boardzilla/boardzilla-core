@@ -148,7 +148,7 @@ describe('Board', () => {
     const england = map.create(Country, 'england', {});
     const france = map.create(Country, 'france', { rival: england, general: napolean });
     const json = board.allJSON();
-    board.fromJSON(JSON.parse(JSON.stringify(board.allJSON())));
+    board.fromJSON(JSON.parse(JSON.stringify(json)));
     expect(board.allJSON()).to.deep.equals(json);
     expect(board.first(Country, 'france')).to.equal(france);
     expect(board.first(Country, 'france')!.rival).to.equal(england);
@@ -166,11 +166,11 @@ describe('Board', () => {
 
     const map = board.create(Space, 'map', {});
     const france = map.create(Country, 'france');
-    const napolean = france.create(General, 'napolean', { country: france })
+    const napolean = france.create(General, 'napolean', { country: france });
     france.general = napolean;
-    const json = board.allJSON();
-    board.fromJSON(JSON.parse(JSON.stringify(board.allJSON())));
-    expect(board.allJSON()).to.deep.equals(json);
+    const json = board.allJSON(1);
+    board.fromJSON(JSON.parse(JSON.stringify(json)));
+    expect(board.allJSON(1)).to.deep.equals(json);
     expect(board.first(Country, 'france')).to.equal(france);
     expect(board.first(Country, 'france')!.general?.name).to.equal('napolean');
     expect(board.first(Country, 'france')!.general?.country).to.equal(france);

@@ -23,6 +23,7 @@ describe('Game', () => {
   class TestPlayer extends Player<TestPlayer, TestBoard> {
     tokens: number = 0;
     rival?: TestPlayer;
+    general?: General;
   }
 
   class TestBoard extends Board<TestPlayer, TestBoard> {
@@ -37,12 +38,20 @@ describe('Game', () => {
     flipped: boolean;
   }
 
+  class Country extends Space {
+    general?: General;
+  }
+
+  class General extends Piece {
+    country?: Country;
+  }
+
   let game: Game<TestPlayer, TestBoard>;
   let board: TestBoard;
   const spendSpy = chai.spy();
 
   beforeEach(() => {
-    game = new Game(TestPlayer, TestBoard, [ Card ]);
+    game = new Game(TestPlayer, TestBoard, [ Card, Country, General ]);
     board = game.board;
 
     const {
@@ -100,6 +109,7 @@ describe('Game', () => {
 
     game.players.fromJSON(players);
     game.board.fromJSON([ { className: 'TestBoard', tokens: 0 } ]);
+    game.players.assignAttributesFromJSON(players);
     game.players.setCurrent([1,2,3,4]),
     game.start();
     game.flow.setBranchFromJSON([ { type: 'main', position: null, sequence: 0 } ]);
@@ -304,8 +314,39 @@ describe('Game', () => {
       game.players[0].rival = game.players[1];
 
       const json = game.players.map(p => p.toJSON() as PlayerAttributes<TestPlayer>);
+
       game.players.fromJSON(json);
+      game.players.assignAttributesFromJSON(json);
       expect(game.players.map(p => p.toJSON())).to.deep.equals(json);
+      expect(game.players[0].rival).to.equal(game.players[1]);
+    });
+
+    it('handles serializable references from player to board', () => {
+      game.phase = 'new';
+      const map = board.create(Space, 'map', {});
+      const france = map.create(Country, 'france');
+      const england = map.create(Country, 'england');
+      const napolean = france.create(General, 'napolean', { country: france });
+      game.players[0].general = napolean;
+      france.general = napolean;
+      game.start();
+
+      const playerJSON = game.players.map(p => p.toJSON() as PlayerAttributes<TestPlayer>);
+      const boardJSON = board.allJSON(1);
+
+      napolean.putInto(england);
+
+      game.players.fromJSON(playerJSON);
+      board.fromJSON(JSON.parse(JSON.stringify(boardJSON)));
+      game.players.assignAttributesFromJSON(playerJSON);
+
+      expect(board.allJSON(1)).to.deep.equals(boardJSON);
+      expect(game.players.map(p => p.toJSON())).to.deep.equals(playerJSON);
+
+      expect(game.players[0].general?.name).to.equal('napolean');
+      expect(board.first(Country, 'france')).to.equal(france);
+      expect(board.first(Country, 'france')!.general?.name).to.equal('napolean');
+      expect(board.first(Country, 'france')!.general?.country).to.equal(france);
     });
   });
 
@@ -333,6 +374,7 @@ describe('Game', () => {
       });
 
       game.players.fromJSON(players);
+      game.players.assignAttributesFromJSON(players);
     });
 
     it('accepts move from any', () => {
@@ -659,6 +701,7 @@ describe('Game', () => {
       });
 
       game.players.fromJSON(players);
+      game.players.assignAttributesFromJSON(players);
 
       game.defineFlow(loop(eachPlayer({
         name: 'player',
@@ -720,6 +763,7 @@ describe('Game', () => {
       });
 
       game.players.fromJSON(players.slice(0, 2));
+      game.players.assignAttributesFromJSON(players.slice(0, 2));
     });
 
     it('continuous loop for each player', () => {
