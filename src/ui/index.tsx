@@ -84,8 +84,20 @@ export type GameStore = {
   selected: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   selectElement: (moves: UIMove[], element: GameElement) => void;
   automove?: number;
-  renderedState: Record<string, {key: string, style?: Box, attrs?: Record<string, any>}>;
-  previousRenderedState: { sequence: number, elements: Record<string, {key?: string, style?: Box, attrs?: Record<string, any>, movedTo?: string }> };
+  renderedState: Record<string, {
+    key: string;
+    style?: Box & { rotation?: number };
+    attrs?: Record<string, any>;
+  }>;
+  previousRenderedState: {
+    sequence: number;
+    elements: Record<string, {
+      key?: string;
+      style?: Box & { rotation?: number };
+      attrs?: Record<string, any>;
+      movedTo?: string;
+    }>
+  };
   setBoardSize: () => void;
   dragElement?: string;
   setDragElement: (el?: string) => void;
