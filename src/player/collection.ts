@@ -1,6 +1,7 @@
 import Player from './player.js';
 
 import { shuffleArray } from '../utils.js';
+import { deserializeObject } from '../action/utils.js';
 
 import type { default as Game, PlayerAttributes } from '../game.js';
 import type { Board, Sorter } from '../board/index.js';
@@ -184,12 +185,18 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     return this.sortedBy(key, 'asc')[0][key];
   }
 
-  fromJSON(players: (PlayerAttributes<P>)[]) {
+  fromJSON(players: Record<string, any>[]) {
     // reset all on self
     this.splice(0, this.length);
 
     for (const p of players) {
-      this.addPlayer(p);
+      this.addPlayer({position: p.position} as unknown as PlayerAttributes<P>);
+    }
+  }
+
+  assignAttributesFromJSON(players: PlayerAttributes<P>[]) {
+    for (let p = 0; p !== players.length; p++) {
+      Object.assign(this[p], deserializeObject(players[p], this.game));
     }
   }
 }

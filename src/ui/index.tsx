@@ -164,6 +164,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     } else {
       game.players.fromJSON(update.state.players);
       game.board.fromJSON(update.state.board);
+      game.players.assignAttributesFromJSON(update.state.players);
       game.flow.setBranchFromJSON(update.state.position);
     }
     game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);

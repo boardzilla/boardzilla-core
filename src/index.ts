@@ -113,7 +113,10 @@ export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
     game.messages = state.messages;
     game.announcements = state.announcements;
     game.board.fromJSON(state.board);
+    game.players.assignAttributesFromJSON(state.players);
     game.flow.setBranchFromJSON(state.position);
+  } else {
+    game.players.assignAttributesFromJSON(state.players);
   }
   //console.timeLog('setup', 'setState');
 
