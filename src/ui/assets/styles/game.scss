@@ -167,10 +167,44 @@ html, body { height: 100% }
 
       &.placing {
         z-index: 100;
-        filter: drop-shadow(.2em .2em .2em #0008) drop-shadow(.5em .5em .5em #0008) opacity(.6);
+        filter: drop-shadow(0 0 .2em #0008) drop-shadow(0 0  .5em #0008) opacity(.75);
         cursor: pointer;
         &:not(.animating) {
           transition: transform .2s, top .2s, left .2s, width .2s, height .2s;
+        }
+      }
+
+      .rotator {
+        position: absolute;
+        z-index: 200;
+        transition: transform .2s, top .2s, left .2s, width .2s, height .2s;
+        transform-origin: center;
+        > div {
+          position: absolute;
+          width: 30%;
+          height: 30%;
+          top: 5%;
+          visibility: visible;
+          &.left {
+            left: 5%;
+            cursor: sw-resize;
+          }
+          &.right {
+            right: 5%;
+            cursor: se-resize;
+          }
+          path {
+            fill: white;
+            fill-opacity: 1;
+            stroke: black;
+            stroke-width: 50;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            paint-order: stroke markers fill;
+          }
+          &:hover path {
+            fill: red;
+          }
         }
       }
     }
@@ -832,7 +866,7 @@ html, body { height: 100% }
       position: absolute;
       height: 3vh;
       top: 0;
-      left: 3.5vmin;
+      left: 3.5vh;
       svg {
         display: block;
         height: 100%;

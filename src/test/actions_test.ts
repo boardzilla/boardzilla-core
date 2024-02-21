@@ -304,6 +304,59 @@ describe('Actions', () => {
     });
   });
 
+  describe('_withDecoratedArgs', () => {
+    let board: Board;
+    beforeEach(() => {
+      board = new Board({ classRegistry: [Space, Piece] });
+    });
+
+    it('validates', () => {
+      testAction = new Action({
+        prompt: 'Choose a token',
+      }).chooseOnBoard(
+        'token', board.all(Space),
+      ).placePiece(
+        'token', board,
+        {
+          rotationChoices: [0, 90, 180, 270],
+        }
+      ).chooseFrom('a', [1,2],
+        {
+          validate: ({ token, a }) => !!((token.column + token.row + a) % 2) === !!(token.rotation! % 180) || 'twist+color',
+        }
+      );
+
+      const args = { token: board.create(Space, 'space'), __placement__: [3, 2, 180], a: 2 };
+      expect(testAction._getError(testAction.selections[2].resolve(args), args)).to.equal('twist+color');
+
+      const args2 = { token: board.create(Space, 'space'), __placement__: [3, 2, 90], a: 2 };
+      expect(testAction._getError(testAction.selections[1].resolve(args2), args2)).to.be.undefined;
+    });
+
+    it('confirms', () => {
+      testAction = new Action({
+        prompt: 'Choose a token',
+      }).chooseOnBoard(
+        'token', board.all(Space),
+      ).placePiece(
+        'token', board,
+        {
+          rotationChoices: [0, 90, 180, 270],
+        }
+      ).chooseFrom('a', [1,2],
+        {
+          confirm: [
+            'Place tile into row {{row}} and column {{column}} at {{rotation}} degrees for {{a}}?',
+            ({ token }) => ({ row: token.row, column: token.column, rotation: token.rotation! })
+          ]
+        }
+      );
+
+      const args = { token: board.create(Space, 'space'), __placement__: [3, 2, 180], a: 2 }
+      expect(testAction._getConfirmation(testAction.selections[2].resolve(args), args)).to.equal('Place tile into row 2 and column 3 at 180 degrees for 2?');
+    });
+  });
+
   describe('board moves', () => {
     let board: Board;
     beforeEach(() => {

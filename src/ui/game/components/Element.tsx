@@ -61,7 +61,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   }, [element, branch, previousRenderedState, boardJSON]);
 
   const newAttrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
-    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className'].includes(key) &&
+    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className', '_rotation'].includes(key) &&
       typeof val !== 'function' && typeof val !== 'object' &&
       (isVisible || (element.constructor as typeof GameElement).visibleAttributes?.includes(key)) // should this be scrubbed during json hydration?
   )).map(([key, val]) => (
@@ -83,7 +83,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       scaleY: previousRender.style.height / newPosition.height,
       translateX: (previousRender.style.left + previousRender.style.width / 2 - newPosition.left - newPosition.width / 2) / newPosition.width * 100,
       translateY: (previousRender.style.top + previousRender.style.height / 2 - newPosition.top - newPosition.height / 2) / newPosition.height * 100,
-      rotate: (previousRender.style.rotation ?? 0) - (element.rotation ?? 0)
+      rotate: (previousRender.style.rotation ?? 0) - (element._rotation ?? 0)
     };
   }, [relativeTransform, previousRender, mode, positioning, element]);
 
@@ -121,7 +121,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const handleClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
     if (placing) {
-      selectPlacement({column: element.column!, row: element.row!});
+      selectPlacement({column: element.column!, row: element.row!, rotation: element._rotation});
     } else if (invalidSelectionError) {
       setError(invalidSelectionError)
     } else {
@@ -198,16 +198,16 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
         grid.origin.column,
         Math.min(
           grid.origin.column + grid.columns - 1,
-          Math.ceil(((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x)
+          Math.floor(((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x) + grid.origin.column
         )
       ),
       row: Math.max(
         grid.origin.row,
         Math.min(
           grid.origin.row + grid.rows - 1,
-          Math.ceil(((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y)
+          Math.floor(((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y) + grid.origin.row
         )
-      )
+      ),
     };
 
     if (placement.piece.row !== pointer.row || placement.piece.column !== pointer.column) {
@@ -215,6 +215,21 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
 
   }, [placement, setPlacement])
+
+  const handleRotate = useCallback((direction: number) => {
+    const choices = placement?.rotationChoices;
+    if (!choices) return;
+    let rotation = choices[
+      (choices.indexOf(element.rotation!) + direction + choices.length) % placement!.rotationChoices!.length
+    ];
+    rotation += Math.round(((element._rotation ?? 0) - rotation) / 360) * 360;
+
+    setPlacement({
+      row: element.row ?? 1,
+      column: element.column ?? 1,
+      rotation
+    })
+  }, [element, placement, setPlacement])
 
   let style = useMemo(() => {
     if (mode === 'zoom') return {
@@ -252,7 +267,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
-    if (element.rotation) styleBuilder.transform = (styleBuilder.transform ?? '') + `rotate(${element.rotation}deg)`;
+    if (element._rotation !== undefined) styleBuilder.transform = (styleBuilder.transform ?? '') + `rotate(${element._rotation}deg)`;
 
     return styleBuilder;
   }, [element, dragging, mode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
@@ -474,12 +489,45 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     <div
       ref={wrapper}
       className={classNames("transform-wrapper", { dragging, placing, 'has-info': !!info })}
-      style={{ ...style }}
+      style={style}
     >
       {contents}
       {!!info && <div className="info-hotspot" onClick={() => setInfoElement({ info, element })}/>}
     </div>
   );
+  if (placing && placement?.rotationChoices) {
+    contents = (
+      <>
+        {contents}
+        <div className="rotator" style={{...style, transform: undefined }}>
+          <div className="left" onClick={() => handleRotate(-1)}>
+            <svg
+              viewBox="0 0 254.2486 281.95978"
+              xmlns="http://www.w3.org/2000/svg">
+              <g
+                transform="translate(43.69768,-47.016626)">
+                <path
+                  d="m 135.24991,227.00186 -76.975589,76.97558 -76.97559,-76.97558 53.43953,0.48619 c 0,-102.89725 56.23959,-155.471424 150.812659,-155.471424 l -0.0693,38.606184 c -67.82216,0 -113.184769,38.35922 -113.184769,117.17431 z"
+                />
+              </g>
+            </svg>
+          </div>
+          <div className="right" onClick={() => handleRotate(1)}>
+            <svg
+              viewBox="0 0 254.2486 281.95978"
+              xmlns="http://www.w3.org/2000/svg">
+              <g
+                transform="translate(210,-47.016626) scale(-1 1)">
+                <path
+                  d="m 135.24991,227.00186 -76.975589,76.97558 -76.97559,-76.97558 53.43953,0.48619 c 0,-102.89725 56.23959,-155.471424 150.812659,-155.471424 l -0.0693,38.606184 c -67.82216,0 -113.184769,38.35922 -113.184769,117.17431 z"
+                />
+              </g>
+            </svg>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   if (!isMobile && element instanceof Piece) {
     contents = (
@@ -500,7 +548,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   //console.log('doneMoving', branch);
   if (renderedState[branch]) {
     renderedState[branch].style = relativeTransform ?? {};
-    renderedState[branch].style!.rotation = element.rotation;
+    renderedState[branch].style!.rotation = element._rotation;
     renderedState[branch].attrs = newAttrs;
   }
 

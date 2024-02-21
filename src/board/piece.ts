@@ -19,14 +19,12 @@ export default class Piece<P extends Player<P, B> = any, B extends Board<P, B> =
    * @param options.position - Place the piece into a specific numbered position
    * relative to the other elements in this space. Positive numbers count from
    * the beginning. Negative numbers count from the end.
-   * @param options.placement - Place the piece into a specific row and column
-   * of the container's grid.
    * @param options.fromTop - Place the piece into a specific numbered position counting
    * from the first element
    * @param options.fromBottom - Place the piece into a specific numbered position
    * counting from the last element
    */
-  putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number, placement?: {column: number, row: number}}) {
+  putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
     if (to.isDescendantOf(this)) throw Error(`Cannot put ${this} into itself`);
     let pos: number = to._t.order === 'stacking' ? 0 : to._t.children.length;
     if (options?.position !== undefined) pos = options.position >= 0 ? options.position : to._t.children.length + options.position + 1;
@@ -39,12 +37,8 @@ export default class Piece<P extends Player<P, B> = any, B extends Board<P, B> =
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);
     if (previousParent !== to) {
-      delete this.row;
       delete this.column;
-      if (options?.placement) {
-        this.column = options.placement.column;
-        this.row = options.placement.row;
-      }
+      delete this.row;
       if (to instanceof Space) to.triggerEvent("enter", this);
       if (previousParent instanceof Space) previousParent.triggerEvent("exit", this);
     }
