@@ -1,46 +1,45 @@
 import {
   Player,
-  Board,
+  Game,
   SetupFunction,
   times,
 } from './index.js';
-import type Game from './game.js';
+import type { default as GameManager, PlayerAttributes } from './game-manager.js';
 
 import { createGameStore } from './ui/index.js';
 
 import { GameInterface, GameUpdate, createInterface } from './interface.js';
 import { Argument } from './action/action.js';
-import { PlayerAttributes } from './game.js';
 
 declare global {
   interface Window {
-    serverBoard?: Board;
+    serverGameManager?: GameManager;
   }
 }
 
-class TestRunnerPlayer<P extends Player, B extends Board> {
+class TestRunnerPlayer<P extends Player, B extends Game> {
   runner: TestRunner<P, B>
   store: ReturnType<typeof createGameStore>
   player: PlayerAttributes<Player>
+  gameManager: GameManager
   game: Game
-  board: Board
   position: number
 
-  constructor(runner: TestRunner<P, B>, position: number, store: ReturnType<typeof createGameStore>, player: PlayerAttributes<Player>, game: Game, board: Board) {
+  constructor(runner: TestRunner<P, B>, position: number, store: ReturnType<typeof createGameStore>, player: PlayerAttributes<Player>, gameManager: GameManager, game: Game) {
     this.runner = runner
     this.position = position
     this.store = store
     this.player = player
+    this.gameManager = gameManager
     this.game = game
-    this.board = board
   }
 
-  move(name: string, args: Record<string, Argument<P>>) {
+  move(name: string, args: Record<string, Argument<Player>>) {
     if (!this.runner.server.state) throw Error("Must call TestRunner#start first");
     if (this.runner.server.state!.game.phase === 'finished') throw Error("Cannot take a move on a finished game");
     if (!this.runner.server.state!.game.currentPlayers.includes(this.position)) throw Error("This player cannot take a move");
     const state = this.store.getState();
-    globalThis.$ = state.game.board._ctx.namedSpaces;
+    globalThis.$ = state.gameManager.game._ctx.namedSpaces;
     this.runner.currentPosition = this.position;
     state.selectMove({
       name,
@@ -52,18 +51,18 @@ class TestRunnerPlayer<P extends Player, B extends Board> {
   }
 
   actions() {
-    const pendingMoves = this.game.getPendingMoves(this.runner.server.game.players[this.position - 1]);
+    const pendingMoves = this.gameManager.getPendingMoves(this.runner.server.gameManager.players[this.position - 1]);
     if (!pendingMoves) return [];
     return pendingMoves.moves.map(m => m.name);
   }
 }
 
-export class TestRunner<P extends Player, B extends Board> {
+export class TestRunner<P extends Player, B extends Game> {
   server: {
     interface: GameInterface<Player>;
     state?: GameUpdate<Player>;
-    game: Game<P, B>;
-    board: B
+    gameManager: GameManager<P, B>;
+    game: B
   };
 
   currentPosition: number = 1;
@@ -117,17 +116,17 @@ export class TestRunner<P extends Player, B extends Board> {
     this.getCurrentGame();
     this.players = playerAttrs.map((p, i) => {
       const store = createGameStore()
-      const {setSetup, game} = store.getState();
+      const {setSetup, gameManager} = store.getState();
       setSetup(this.setup);
-      return new TestRunnerPlayer(this, i+1, store, p, game, game.board)
+      return new TestRunnerPlayer(this, i+1, store, p, gameManager, gameManager.game)
     });
     this.updatePlayers(); // initial
     return this.players
   }
 
   getCurrentGame() {
-    this.server.game = globalThis.window.serverBoard?.game as Game<P, B>;
-    this.server.board = this.server.game.board;
+    this.server.gameManager = globalThis.window.serverGameManager as GameManager<P, B>;
+    this.server.game = this.server.gameManager.game;
   }
 
   updatePlayers() {
@@ -143,9 +142,8 @@ export class TestRunner<P extends Player, B extends Board> {
           position: state.position,
           currentPlayers: this.server.state!.game.currentPlayers
         });
-        const { game } = player.store.getState();
-        player.game = game;
-        player.board = game.board;
+        const { gameManager } = player.store.getState();
+        player.game = gameManager.game;
       }
     }
   }

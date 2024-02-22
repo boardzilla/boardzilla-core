@@ -1,806 +1,1222 @@
 import chai from 'chai';
 import spies from 'chai-spies';
+import random from 'random-seed';
 
-import Game, { PlayerAttributes } from '../game.js'
+import {
+  Game,
+  Space,
+  Piece,
+  GameElement,
+} from '../board/index.js';
 
 import {
   Player,
-  Board,
-  createBoardClasses,
-} from '../index.js';
+  PlayerCollection,
+} from '../player/index.js';
 
 chai.use(spies);
 const { expect } = chai;
 
 describe('Game', () => {
-  const players = [
-    { id: 'joe', name: 'Joe', color: 'red', position: 1, tokens: 0, avatar: '', host: true, },
-    { id: 'jane', name: 'Jane', color: 'green', position: 2, tokens: 0, avatar: '', host: false, },
-    { id: 'jag', name: 'Jag', color: 'yellow', position: 3, tokens: 0, avatar: '', host: false, },
-    { id: 'jin', name: 'Jin', color: 'purple', position: 4, tokens: 0, avatar: '', host: false, },
-  ];
+  let game: Game<Player>;
 
-  class TestPlayer extends Player<TestPlayer, TestBoard> {
-    tokens: number = 0;
-    rival?: TestPlayer;
-    general?: General;
-  }
-
-  class TestBoard extends Board<TestPlayer, TestBoard> {
-    tokens: number = 0;
-  }
-
-  const { Space, Piece } = createBoardClasses<TestPlayer, TestBoard>();
-
-  class Card extends Piece {
-    suit: string;
-    value: number;
-    flipped: boolean;
-  }
-
-  class Country extends Space {
-    general?: General;
-  }
-
-  class General extends Piece {
-    country?: Country;
-  }
-
-  let game: Game<TestPlayer, TestBoard>;
-  let board: TestBoard;
-  const spendSpy = chai.spy();
+  const players = new PlayerCollection<Player>;
+  players.className = Player;
+  players.addPlayer({
+    id: 'joe',
+    name: 'Joe',
+    position: 1,
+    color: 'red',
+    avatar: '',
+    host: true
+  });
+  players.addPlayer({
+    id: 'jane',
+    name: 'Jane',
+    position: 2,
+    color: 'green',
+    avatar: '',
+    host: false
+  });
 
   beforeEach(() => {
-    game = new Game(TestPlayer, TestBoard, [ Card, Country, General ]);
-    board = game.board;
+    game = new Game({
+      // @ts-ignore
+      gameManager: { players, addDelay: () => {}, random: random.create('a').random },
+      classRegistry: [Space, Piece, GameElement]
+    });
+    game._ctx.gameManager.game = game;
+  });
 
-    const {
-      playerActions,
-      whileLoop,
-      eachPlayer,
-    } = game.flowCommands
-
-    game.defineFlow(
-      () => {
-        board.tokens = 4;
-        game.message('Starting game with {{tokens}} tokens', {tokens: board.tokens});
-      },
-      whileLoop({ while: () => board.tokens < 8, do: (
-        playerActions({ actions: ['addSome', 'spend']})
-      )}),
-      whileLoop({ while: () => board.tokens > 0, do: (
-        eachPlayer({ name: 'player', startingPlayer: game.players[0], do: [
-          playerActions({ actions: ['takeOne']}),
-          () => {
-            if (board.tokens <= 0) game.finish(game.players.withHighest('tokens'))
-          },
-        ]})
-      )}),
+  it('renders', () => {
+    expect(game.allJSON()).to.deep.equals(
+      [
+        { className: 'Game', _id: 0 },
+      ]
     );
-
-    game.defineActions({
-      addSome: () => game.action({
-        prompt: 'add some counters',
-      }).chooseNumber('n', {
-        prompt: 'how many?',
-        min: 1,
-        max: 3,
-      }).do(
-        ({ n }) => { board.tokens += n }
-      ).message('{{player}} added {{n}}'),
-
-      takeOne: player => game.action({
-        prompt: 'take one counter',
-      }).do(() => {
-        board.tokens --;
-        player.tokens ++;
-      }),
-
-      spend: () => game.action({
-        prompt: 'Spend resource',
-      }).chooseFrom('r', ['gold', 'silver'], {
-        prompt: 'which resource',
-      }).chooseNumber('n', {
-        prompt: 'How much?',
-        min: 1,
-        max: 3,
-      }).do(spendSpy),
-    });
-
-    game.players.fromJSON(players);
-    game.board.fromJSON([ { className: 'TestBoard', tokens: 0 } ]);
-    game.players.assignAttributesFromJSON(players);
-    game.players.setCurrent([1,2,3,4]),
-    game.start();
-    game.flow.setBranchFromJSON([ { type: 'main', position: null, sequence: 0 } ]);
   });
 
-  it('plays', () => {
-    game.play();
-    expect(game.flow.branchJSON()).to.deep.equals([
-      { type: 'main', position: null, sequence: 1 },
-      { type: "loop", position: { index: 0 } },
-      { type: "action", position: {players: undefined} }
-    ]);
-    const step = game.flow.actionNeeded();
-    expect(step?.actions).to.deep.equal([{ name: 'addSome', args: undefined, prompt: undefined }, { name: 'spend', args: undefined, prompt: undefined }]);
+  it('creates new spaces', () => {
+    game.create(Space, 'map', {});
+    expect(game.allJSON()).to.deep.equals(
+      [
+        { className: 'Game', _id: 0, children: [
+          { className: 'Space', name: 'map', _id: 2 }
+        ]},
+      ]
+    );
   });
 
-  it('messages', () => {
-    game.play();
-    expect(game.messages).to.deep.equals([
-      {
-        "body": "Starting game with 4 tokens"
-      }
-    ]);
-    game.processMove({ name: 'addSome', args: {n: 3}, player: game.players[0] });
-    game.play();
-    expect(game.messages).to.deep.equals([
-      {
-        "body": "Starting game with 4 tokens"
-      },
-      {
-        "body": "[[$p[1]|Joe]] added 3"
-      }
-    ]);
+  it('creates new pieces', () => {
+    game.create(Piece, 'token', { player: players[0] });
+    expect(game.allJSON()).to.deep.equals(
+      [
+        { className: 'Game', _id: 0, children: [
+          { className: 'Piece', name: 'token', _id: 2, player: '$p[1]' }
+        ]},
+      ]
+    );
   });
 
-  it('finishes', () => {
-    game.flow.setBranchFromJSON([
-      { type: 'main', position: null, sequence: 2 },
-      { type: 'loop', position: { index: 0 } },
-      { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
-      { type: 'action', position: null }
-    ]);
-    game.board.fromJSON([ { className: 'TestBoard', tokens: 9 } ]);
-    game.players.setCurrent(2);
-    do {
-      game.processMove({ name: 'takeOne', args: {}, player: game.players.current()! });
-      game.play();
-    } while (game.phase === 'started');
-    expect(game.winner.length).to.equal(1);
-    expect(game.winner[0]).to.equal(game.players[1]);
+  it('destroys pieces', () => {
+    game.create(Piece, 'token', { player: players[1] });
+    game.create(Piece, 'token', { player: players[0] });
+    game.first(Piece)!.destroy();
+    expect(game.allJSON()).to.deep.equals(
+      [
+        { className: 'Game', _id: 0, children: [
+          { className: 'Piece', name: 'token', _id: 3, player: '$p[1]' }
+        ]},
+      ]
+    );
   });
 
-  describe('state', () => {
-    it('is stateless', () => {
-      game.play();
-      game.processMove({ name: 'addSome', args: {n: 3}, player: game.players[0] });
-      game.play();
-      const boardState = game.board.allJSON();
-      const flowState = game.flow.branchJSON();
-      game.board.fromJSON(boardState);
-      game.flow.setBranchFromJSON(flowState);
-      expect(game.board.allJSON()).to.deep.equals(boardState);
-      expect(game.flow.branchJSON()).to.deep.equals(flowState);
-      expect(board.tokens).to.equal(7);
-    });
-
-    it("does player turns", () => {
-      game.board.fromJSON([ { className: 'TestBoard', tokens: 9 } ]);
-      game.flow.setBranchFromJSON([
-        { type: 'main', position: null, sequence: 2 },
-        { type: 'loop', position: { index: 0 } },
-        { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
-        { type: 'action', position: null }
-      ]);
-      game.players.setCurrent([2]);
-      expect(game.players.currentPosition).to.deep.equal([2]);
-      game.play();
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([3]);
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([4]);
-      expect(game.flow.branchJSON()[1].position.index).to.equal(0)
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[3] });
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([1]);
-      expect(game.flow.branchJSON()[1].position.index).to.equal(1)
-    });
+  it('removes pieces', () => {
+    game.create(Piece, 'token', { player: players[1] });
+    game.create(Piece, 'token', { player: players[0] });
+    game.first(Piece)!.remove();
+    expect(game.allJSON()).to.deep.equals(
+      [
+        { className: 'Game', _id: 0, children: [
+          { className: 'Piece', name: 'token', _id: 3, player: '$p[1]' }
+        ]},
+        { className: 'Piece', name: 'token', _id: 2, player: '$p[2]' }
+      ]
+    );
   });
 
-  describe('godMode', () => {
-    it("does god mode moves", () => {
-      game.godMode = true;
-      game.phase = 'new';
-      const space1 = game.board.create(Space, 'area1');
-      const space2 = game.board.create(Space, 'area2');
-      const piece = space1.create(Piece, 'piece');
-      game.start();
-      game.play();
-      game.processMove({
-        player: game.players[0],
-        name: '_godMove',
-        args: { piece, into: space2 }
-      });
-      expect(space2.first(Piece)).to.equal(piece);
-    });
-
-    it("does god mode edits", () => {
-      game.godMode = true;
-      game.phase = 'new';
-      const card = game.board.create(Card, 'area1', {suit: "H", value: 1, flipped: false});
-      game.start();
-      game.processMove({
-        player: game.players[0],
-        name: '_godEdit',
-        args: { element: card, property: 'suit', value: 'S' }
-      });
-      expect(card.suit).to.equal('S');
-    });
-
-    it("restricts god mode moves", () => {
-      game.phase = 'new';
-      const space1 = game.board.create(Space, 'area1');
-      const space2 = game.board.create(Space, 'area2');
-      const piece = space1.create(Piece, 'piece');
-      game.start();
-      expect(() => game.processMove({
-        player: game.players[0],
-        name: '_godMove',
-        args: { piece, into: space2 }
-      })).to.throw()
-    });
+  it('removes all', () => {
+    game.create(Piece, 'token', { player: players[1] });
+    game.create(Piece, 'token', { player: players[0] });
+    game.all(Piece).remove();
+    expect(game.allJSON()).to.deep.equals(
+      [
+        { className: 'Game', _id: 0},
+        { className: 'Piece', name: 'token', _id: 2, player: '$p[2]' },
+        { className: 'Piece', name: 'token', _id: 3, player: '$p[1]' }
+      ]
+    );
   });
 
-  describe('processAction', () => {
-    it('runs actions', async () => {
-      game.play();
-      game.processMove({ name: 'spend', args: {r: 'gold', n: 2}, player: game.players[0] });
-      expect(spendSpy).to.have.been.called.with({r: 'gold', n: 2});
-      expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'main', position: null, sequence: 1 },
-        { type: 'loop', position: { index: 0 } },
-        { type: 'action', position: { name: "spend", args: {r: "gold", n: 2}, player: 1 }}
-      ]);
-      game.play();
-      expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'main', position: null, sequence: 1 },
-        { type: 'loop', position: { index: 1 } },
-        { type: "action", position: {players: undefined} }
-      ]);
-    });
-    it('changes state', async () => {
-      game.play();
-      expect(board.tokens).to.equal(4);
-      game.processMove({ name: 'addSome', args: {n: 2}, player: game.players[0] });
-      expect(game.flow.branchJSON()).to.deep.equals([
-        { type: 'main', position: null, sequence: 1 },
-        { type: 'loop', position: { index: 0 } },
-        { type: 'action', position: { name: "addSome", args: {n: 2}, player: 1 }}
-      ]);
-      expect(board.tokens).to.equal(6);
-    });
+  it('builds from json', () => {
+    const map = game.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const piece3 = map.create(Piece, 'token3');
+    const england = map.create(Space, 'england', {});
+    const play = game.create(Space, 'play', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = france.create(Piece, 'token2', { player: players[1] });
+    const json = game.allJSON();
+    game.fromJSON(JSON.parse(JSON.stringify(game.allJSON())));
+    expect(game.allJSON()).to.deep.equals(json);
+    expect(game.first(Piece, 'token1')!._t.id).to.equal(piece1._t.id);
+    expect(game.first(Piece, 'token1')!.player).to.equal(players[0]);
+    expect(game.first(Piece, 'token2')!._t.id).to.equal(piece2._t.id);
+    expect(game.first(Piece, 'token2')!.player).to.equal(players[1]);
+    expect(game.first(Space, 'france')).to.equal(france);
   });
 
-  describe('players', () => {
-    it('sortedBy', () => {
-      expect(game.players.sortedBy('color')[0].color).to.equal('green')
-      expect(game.players.sortedBy('color', 'desc')[0].color).to.equal('yellow')
-      expect(game.players[0].color).to.equal('red')
-    });
+  it('preserves serializable attributes from json', () => {
+    class Country extends Space<Player> {
+      rival: Country;
+      general: Piece<Player>;
+    }
+    game._ctx.classRegistry = [Space, Piece, GameElement, Country];
 
-    it('sortBy', () => {
-      game.players.sortBy('color');
-      expect(game.players[0].color).to.equal('green')
-    });
-
-    it('withHighest', () => {
-      expect(game.players.withHighest('color')).to.equal(game.players[2])
-    });
-
-    it('withLowest', () => {
-      expect(game.players.withLowest('color')).to.equal(game.players[1])
-    });
-
-    it('min', () => {
-      expect(game.players.min('color')).to.equal('green')
-    });
-
-    it('max', () => {
-      expect(game.players.max('color')).to.equal('yellow')
-    });
-
-    it('shuffles', () => {
-      const player = game.players[0];
-      game.setRandomSeed('a');
-      game.players.shuffle();
-      expect(game.players[0]).to.not.equal(player);
-    });
-
-    it('preserves serializable attributes from json', () => {
-      game.players[0].rival = game.players[1];
-
-      const json = game.players.map(p => p.toJSON() as PlayerAttributes<TestPlayer>);
-
-      game.players.fromJSON(json);
-      game.players.assignAttributesFromJSON(json);
-      expect(game.players.map(p => p.toJSON())).to.deep.equals(json);
-      expect(game.players[0].rival).to.equal(game.players[1]);
-    });
-
-    it('handles serializable references from player to board', () => {
-      game.phase = 'new';
-      const map = board.create(Space, 'map', {});
-      const france = map.create(Country, 'france');
-      const england = map.create(Country, 'england');
-      const napolean = france.create(General, 'napolean', { country: france });
-      game.players[0].general = napolean;
-      france.general = napolean;
-      game.start();
-
-      const playerJSON = game.players.map(p => p.toJSON() as PlayerAttributes<TestPlayer>);
-      const boardJSON = board.allJSON(1);
-
-      napolean.putInto(england);
-
-      game.players.fromJSON(playerJSON);
-      board.fromJSON(JSON.parse(JSON.stringify(boardJSON)));
-      game.players.assignAttributesFromJSON(playerJSON);
-
-      expect(board.allJSON(1)).to.deep.equals(boardJSON);
-      expect(game.players.map(p => p.toJSON())).to.deep.equals(playerJSON);
-
-      expect(game.players[0].general?.name).to.equal('napolean');
-      expect(board.first(Country, 'france')).to.equal(france);
-      expect(board.first(Country, 'france')!.general?.name).to.equal('napolean');
-      expect(board.first(Country, 'france')!.general?.country).to.equal(france);
-    });
+    const map = game.create(Space, 'map', {});
+    const napolean = map.create(Piece, 'napolean')
+    const england = map.create(Country, 'england', {});
+    const france = map.create(Country, 'france', { rival: england, general: napolean });
+    const json = game.allJSON();
+    game.fromJSON(JSON.parse(JSON.stringify(json)));
+    expect(game.allJSON()).to.deep.equals(json);
+    expect(game.first(Country, 'france')).to.equal(france);
+    expect(game.first(Country, 'france')!.rival).to.equal(england);
+    expect(game.first(Country, 'france')!.general).to.equal(napolean);
   });
 
-  describe('action for multiple players', () => {
+  it('handles cyclical serializable attributes', () => {
+    class Country extends Space<Player> {
+      general?: General;
+    }
+    class General extends Piece<Player> {
+      country?: Country;
+    }
+    game._ctx.classRegistry = [Space, Piece, GameElement, Country, General];
+
+    const map = game.create(Space, 'map', {});
+    const france = map.create(Country, 'france');
+    const napolean = france.create(General, 'napolean', { country: france });
+    france.general = napolean;
+    const json = game.allJSON(1);
+    game.fromJSON(JSON.parse(JSON.stringify(json)));
+    expect(game.allJSON(1)).to.deep.equals(json);
+    expect(game.first(Country, 'france')).to.equal(france);
+    expect(game.first(Country, 'france')!.general?.name).to.equal('napolean');
+    expect(game.first(Country, 'france')!.general?.country).to.equal(france);
+  });
+
+  it('understands branches', () => {
+    const map = game.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const england = map.create(Space, 'england', {});
+    const play = game.create(Space, 'play', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = france.create(Piece, 'token2', { player: players[1] });
+    const piece3 = play.create(Piece, 'token3');
+    expect(piece1.branch()).to.equal('0/0/0/0');
+    expect(piece2.branch()).to.equal('0/0/0/1');
+    expect(piece3.branch()).to.equal('0/1/0');
+    expect(game.atBranch('0/0/0/0')).to.equal(piece1);
+    expect(game.atBranch('0/0/0/1')).to.equal(piece2);
+    expect(game.atBranch('0/1/0')).to.equal(piece3);
+  });
+
+  it('assigns and finds IDs', () => {
+    const map = game.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const england = map.create(Space, 'england', {});
+    const play = game.create(Space, 'play', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = france.create(Piece, 'token2', { player: players[1] });
+    const piece3 = play.create(Piece, 'token3');
+    expect(piece1._t.id).to.equal(6);
+    expect(piece2._t.id).to.equal(7);
+    expect(piece3._t.id).to.equal(8);
+    expect(game.atID(6)).to.equal(piece1);
+    expect(game.atID(7)).to.equal(piece2);
+    expect(game.atID(8)).to.equal(piece3);
+  });
+
+  it('clones', () => {
+    const map = game.create(Space, 'map', {});
+    const france = map.create(Space, 'france', {});
+    const england = map.create(Space, 'england', {});
+    const piece1 = france.create(Piece, 'token1', { player: players[0] });
+    const piece2 = piece1.cloneInto(england);
+    expect(piece1.player).to.equal(piece2.player);
+    expect(piece1.name).to.equal(piece2.name);
+    expect(england._t.children).to.include(piece2);
+  });
+
+  describe("Element subclasses", () => {
+    class Card extends Piece<Player> {
+      suit: string;
+      pip: number = 1;
+      flipped?: boolean = false;
+      state?: string = 'initial';
+    }
+
     beforeEach(() => {
-      game = new Game(TestPlayer, TestBoard, [ Card ]);
-      board = game.board;
-
-      game.defineActions({
-        takeOne: player => game.action({
-          prompt: 'take one counter',
-          condition: board.tokens > 0
-        }).do(() => {
-          board.tokens --;
-          player.tokens ++;
-        }),
-        declare: () => game.action({
-          prompt: 'declare',
-        }).enterText('d', {
-          prompt: 'declaration'
-        }),
-        pass: () => game.action({
-          prompt: 'pass'
-        }),
-      });
-
-      game.players.fromJSON(players);
-      game.players.assignAttributesFromJSON(players);
+      game._ctx.classRegistry.push(Card);
     });
 
-    it('accepts move from any', () => {
-      const { playerActions } = game.flowCommands
-
-      game.defineFlow(
-        () => { board.tokens = 4 },
-        playerActions({
-          players: game.players,
-          actions: ['takeOne']
-        }),
+    it('takes attrs', () => {
+      game.create(Card, '2H', { suit: 'H', pip: 2 });
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 2 }
+          ]},
+        ]
       );
-      game.start();
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[3] });
-      game.play();
-      expect(game.phase).to.equal('finished');
     });
 
-    it('prompt in actionStep', () => {
-      const {
-        playerActions,
-        eachPlayer,
-      } = game.flowCommands
-
-      game.defineFlow(
-        () => { board.tokens = 1 },
-        eachPlayer({
-          name: 'player',
-          do: playerActions({
-            players: game.players,
-            actions: [{name: 'takeOne', prompt: 'take one!'}]
-          })
-        }),
+    it('takes base attrs', () => {
+      game.create(Card, '2H', { player: players[1], suit: 'H', pip: 2 });
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Card', flipped: false, state: 'initial', name: '2H', player: '$p[2]', suit: 'H', pip: 2, _id: 2 }
+          ]},
+        ]
       );
-      game.start();
-      game.play();
-      expect(game.getPendingMoves(game.players[0])?.moves[0].selections[0].prompt).to.equal('take one!');
     });
 
-    it('args in actionStep', () => {
-      const {
-        playerActions,
-        eachPlayer,
-      } = game.flowCommands
-
-      game.defineFlow(
-        () => { board.tokens = 1 },
-        eachPlayer({
-          name: 'player',
-          do: playerActions({
-            players: game.players,
-            actions: [{name: 'declare', args: {d: 'hi'}}]
-          })
-        }),
-      );
-      game.start();
-      game.play();
-      expect(game.getPendingMoves(game.players[0])?.moves[0].args).to.deep.equal({d: 'hi'});
+    it('searches', () => {
+      game.create(Card, 'AH', { suit: 'H', pip: 1 });
+      game.create(Card, '2H', { suit: 'H', pip: 2 });
+      game.create(Card, '3H', { suit: 'H', pip: 3 });
+      const card = game.first(Card, {pip: 2});
+      expect(card!.name).equals('2H');
+      const card2 = game.first(Card, {pip: 4});
+      expect(card2).equals(undefined);
+      const card3 = game.first(Card, {pip: 2, suit: 'D'});
+      expect(card3).equals(undefined);
+      const cards = game.all(Card, c => c.pip >= 2);
+      expect(cards.length).equals(2);
+      expect(cards[0].name).equals('2H');
+      expect(cards[1].name).equals('3H');
+      const card4 = game.first("2H");
+      expect(card4!.name).equals('2H');
     });
 
-    it('functional args in actionStep', () => {
-      const {
-        playerActions,
-        eachPlayer,
-      } = game.flowCommands
+    it('searches undefined', () => {
+      game.create(Card, 'AH', { suit: 'H', pip: 1, player: players[0] });
+      game.create(Card, '2H', { suit: 'H', pip: 2, player: players[1] });
+      const h3 = game.create(Card, '3H', { suit: 'H', pip: 3 });
+      expect(game.first(Card, {player: undefined})).to.equal(h3);
+    }),
 
-      game.defineFlow(
-        () => { board.tokens = 1 },
-        eachPlayer({
-          name: 'player',
-          do: playerActions({
-            players: game.players,
-            actions: [{name: 'declare', args: ({ player }) => ({d: player.name}) }]
-          })
-        }),
+    it('has', () => {
+      game.create(Card, 'AH', { suit: 'H', pip: 1, player: players[0] });
+      game.create(Card, '2H', { suit: 'H', pip: 2, player: players[1] });
+      expect(game.has(Card, {pip: 2})).to.equal(true);
+      expect(game.has(Card, {pip: 2, suit: 'C'})).to.equal(false);
+    }),
+
+    it('modifies', () => {
+      game.create(Card, 'AH', { suit: 'H', pip: 1 });
+      game.create(Card, '2H', { suit: 'H', pip: 2 });
+      game.create(Card, '3H', { suit: 'H', pip: 3 });
+      const card = game.first(Card, {pip: 2})!;
+      card.suit = 'D';
+      expect(card.suit).equals('D');
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 2 },
+            { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'D', pip: 2, _id: 3 },
+            { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 4 }
+          ]},
+        ]
       );
-      game.start();
-      game.play();
-      expect(game.getPendingMoves(game.players[0])?.moves[0].args).to.deep.equal({d: 'Joe'});
     });
 
-    it('skippable initial playerAction', () => {
-      const { playerActions } = game.flowCommands
+    it('takes from pile', () => {
+      game.create(Card, 'AH', { suit: 'H', pip: 1 });
+      game.create(Card, '2H', { suit: 'H', pip: 2 });
+      const pile = game._ctx.removed;
+      const h3 = pile.create(Card, '3H', { suit: 'H', pip: 3 });
 
-      game.defineFlow(
-        () => { board.tokens = 1 },
-        playerActions({
-          player: game.players[0],
-          actions: ['takeOne'],
-          skipIf: 'never'
-        })
+      expect(h3.branch()).to.equal('1/0');
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 2 },
+            { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 3 },
+          ]},
+          { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 4 }
+        ]
       );
-      game.start();
-      game.play();
-      expect(game.getPendingMoves(game.players[0])?.moves[0].selections[0].type).to.equal('button');
+
+      expect(game.all(Card).length).to.equal(2);
+      expect(pile.all(Card).length).to.equal(1);
     });
 
-    it('optional actions', () => {
-      const {
-        playerActions,
-        eachPlayer,
-      } = game.flowCommands
-
-      game.defineFlow(
-        () => { board.tokens = 1 },
-        eachPlayer({
-          name: 'player',
-          do: playerActions({
-            players: game.players,
-            optional: 'Pass',
-            actions: ['takeOne']
-          })
-        }),
+    it('moves', () => {
+      const deck = game.create(Space, 'deck');
+      const discard = game.create(Space, 'discard');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.create(Card, '3H', { suit: 'H', pip: 3 });
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
       );
-      game.start();
-      game.play();
-      expect(game.getPendingMoves(game.players[0])?.moves.length).to.equal(2);
-      const move1 = game.processMove({ player: game.players[0], name: '__pass__', args: {} });
-      expect(move1).to.be.undefined;
-      game.play();
 
-      expect(game.players.currentPosition).to.deep.equal([2])
-      const move2 = game.processMove({ player: game.players[1], name: 'takeOne', args: {} });
-      expect(move2).to.be.undefined;
-      game.play();
-
-      expect(game.players.currentPosition).to.deep.equal([3]);
-      expect(game.getPendingMoves(game.players[2])?.moves.length).to.equal(1);
-      const move3 = game.processMove({ player: game.players[2], name: 'takeOne', args: {} });
-      expect(move3).not.to.be.undefined;
+      deck.lastN(2, Card).putInto(discard);
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]}
+          ]},
+        ]
+      );
     });
 
-    it('action for every player', () => {
-      const {
-        playerActions,
-        everyPlayer
-      } = game.flowCommands
-
-      game.defineFlow(
-        () => { board.tokens = 4 },
-        everyPlayer({
-          do: playerActions({
-            actions: ['takeOne']
-          })
-        })
+    it('moves with stacking order', () => {
+      const deck = game.create(Space, 'deck');
+      const discard = game.create(Space, 'discard');
+      deck.setOrder('stacking');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.create(Card, '3H', { suit: 'H', pip: 3 });
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, order: 'stacking', children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
       );
 
-      game.start();
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
-      game.play();
-      expect(game.phase).to.equal('started');
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
-      game.play();
-      expect(game.phase).to.equal('started');
-      expect(game.players.currentPosition).to.deep.equal([1, 4])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
-      game.play();
-      expect(game.phase).to.equal('started');
-      expect(game.players.currentPosition).to.deep.equal([4])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[3] });
-      game.play();
-      expect(game.phase).to.equal('finished');
+      deck.lastN(2, Card).putInto(discard);
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, order: 'stacking', children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
+            ]}
+          ]},
+        ]
+      );
+
+      discard.all(Card).putInto(deck);
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, order: 'stacking', children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
+      );
     });
 
-    it('action for every player with followups', () => {
-      const {
-        playerActions,
-        everyPlayer
-      } = game.flowCommands
-
-      game.defineFlow(
-        () => { board.tokens = 4 },
-        everyPlayer({
-          do: playerActions({
-            name: 'take-1',
-            actions: [
-              {
-                name: 'takeOne',
-                do: playerActions({
-                  name: 'declare',
-                  actions: ['declare']
-                }),
-              },
-              'pass'
-            ]
-          })
-        })
+    it('moves fromTop', () => {
+      const deck = game.create(Space, 'deck');
+      const discard = game.create(Space, 'discard');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.create(Card, '3H', { suit: 'H', pip: 3 });
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3}
+          ]},
+        ]
       );
 
-      game.start();
-      game.play();
-      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
-      expect(game.getPendingMoves(game.players[2])?.step).to.equal('declare');
-
-      game.processMove({ name: 'declare', args: {d: 'well i never'}, player: game.players[2] });
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
-      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
-      expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
-
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 4])
-      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
-      expect(game.getPendingMoves(game.players[1])?.step).to.equal('declare');
-      expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
-
-      game.processMove({ name: 'declare', args: {d: 'i do'}, player: game.players[1] });
-      game.play();
-      expect(game.players.currentPosition).to.deep.equal([1, 4])
-      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
-      expect(game.getPendingMoves(game.players[1])).to.equal(undefined);
-      expect(game.getPendingMoves(game.players[2])).to.equal(undefined);
-      expect(game.getPendingMoves(game.players[3])?.step).to.equal('take-1');
+      deck.lastN(2, Card).putInto(discard, {fromTop: 0});
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 },
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 }
+            ]}
+          ]},
+        ]
+      );
     });
 
-    it('survives ser/deser', () => {
-      const {
-        playerActions,
-        everyPlayer
-      } = game.flowCommands
+    it('tracks movement', () => {
+      const deck = game.create(Space, 'deck');
+      const discard = game.create(Space, 'discard');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.create(Card, '3H', { suit: 'H', pip: 3 });
+      const json = game.allJSON();
+      game._ctx.trackMovement = true;
+      game.fromJSON(json);
 
-      game.defineFlow(
-        () => { board.tokens = 4 },
-        everyPlayer({
-          do: playerActions({
-            name: 'take-1',
-            actions: [
-              {
-                name: 'takeOne',
-                do: playerActions({
-                  name: 'declare',
-                  actions: ['declare']
-                })
-              },
-              'pass'
-            ]
-          })
-        })
+      deck.lastN(2, Card).putInto(discard);
+      expect(game.allJSON()).to.deep.equals(
+        [
+          { className: 'Game', _id: 0, children: [
+            { className: 'Space', name: 'deck', _id: 2, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4, was: '0/0/0' }
+            ]},
+            { className: 'Space', name: 'discard', _id: 3, children: [
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5, was: '0/0/1' },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6, was: '0/0/2' }
+            ]}
+          ]},
+        ]
+      );
+    });
+
+    it("understands players", () => {
+      const players1Mat = game.create(Space, 'mat', {player: players[0]});
+      game.create(Space, 'mat', {player: players[1]});
+
+      players1Mat.create(Card, 'player-1-card', { suit: 'H', pip: 1, player: players[0] });
+      players1Mat.create(Card, 'player-2-card', { suit: 'H', pip: 1, player: players[1] });
+      players1Mat.create(Card, 'neutral-card', { suit: 'H', pip: 2 });
+      players[0].game = game;
+      players[1].game = game;
+
+      expect(() => game.all(Card, { mine: true })).to.throw;
+
+      game._ctx.player = players[0];
+      expect(game.all(Card, { mine: true }).length).to.equal(2);
+      expect(game.all(Card, { mine: false }).length).to.equal(1);
+      expect(game.all(Card, { owner: players[0] }).length).to.equal(2);
+      expect(game.last(Card, { mine: true })!.name).to.equal('neutral-card');
+      expect(game.first('neutral-card')!.owner).to.equal(players[0]);
+
+      game._ctx.player = players[1];
+      expect(game.all(Card, { mine: true }).length).to.equal(1);
+      expect(game.all(Card, { owner: players[1] }).length).to.equal(1);
+      expect(game.all(Card, { mine: false }).length).to.equal(2);
+
+      expect(players[0].allMy(Card).length).to.equal(2);
+      expect(players[1].allMy(Card).length).to.equal(1);
+      expect(players[0].has(Card, {pip: 1})).to.equal(true);
+      expect(players[0].has(Card, 'player-2-card')).to.equal(false);
+      expect(players[0].has(Card, {pip: 2})).to.equal(true);
+      expect(players[1].has(Card, {pip: 1})).to.equal(true);
+      expect(players[1].has(Card, {pip: 2})).to.equal(false);
+    });
+
+    it("sorts", () => {
+      const deck = game.create(Space, 'deck');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2C', { suit: 'C', pip: 2 });
+      deck.create(Card, '3D', { suit: 'D', pip: 3 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+
+      expect(game.all(Card).withHighest('pip')!.name).to.equal('3D');
+      expect(game.all(Card).withHighest('suit')!.name).to.equal('AH');
+      expect(game.all(Card).withHighest('suit', 'pip')!.name).to.equal('2H');
+      expect(game.all(Card).withHighest(c => c.suit === 'D' ? 100 : 1)!.name).to.equal('3D');
+      expect(game.all(Card).min('pip')).to.equal(1);
+      expect(game.all(Card).max('pip')).to.equal(3);
+      expect(game.all(Card).min('suit')).to.equal('C');
+      expect(game.all(Card).max('suit')).to.equal('H');
+    });
+
+    it("shuffles", () => {
+      const deck = game.create(Space, 'deck');
+      deck.create(Card, 'AH', { suit: 'H', pip: 1 });
+      deck.create(Card, '2C', { suit: 'C', pip: 2 });
+      deck.create(Card, '3D', { suit: 'D', pip: 3 });
+      deck.create(Card, '2H', { suit: 'H', pip: 2 });
+      deck.shuffle();
+      expect(deck.first(Card)!.name).to.not.equal('AH');
+    });
+
+    it("isVisibleTo", () => {
+      const card = game.create(Card, 'AH', { suit: 'H', pip: 1 });
+      expect(card.isVisible()).to.equal(true);
+      card.hideFromAll();
+      expect(card.isVisible()).to.equal(false);
+      expect(card.isVisibleTo(1)).to.equal(false);
+      expect(card.isVisibleTo(2)).to.equal(false);
+      card.showTo(1);
+      expect(card.isVisibleTo(1)).to.equal(true);
+      expect(card.isVisibleTo(2)).to.equal(false);
+      card.hideFrom(1);
+      expect(card.isVisibleTo(1)).to.equal(false);
+      expect(card.isVisibleTo(2)).to.equal(false);
+      card.showToAll();
+      expect(card.isVisibleTo(1)).to.equal(true);
+      expect(card.isVisibleTo(2)).to.equal(true);
+      card.hideFrom(1);
+      expect(card.isVisibleTo(1)).to.equal(false);
+      expect(card.isVisibleTo(2)).to.equal(true);
+      card.showTo(1);
+      expect(card.isVisibleTo(1)).to.equal(true);
+      expect(card.isVisibleTo(2)).to.equal(true);
+    });
+
+    it("hides", () => {
+      Card.revealWhenHidden('pip', 'flipped', 'state');
+      const card = game.create(Card, 'AH', { suit: 'H', pip: 1 });
+      card.showOnlyTo(1);
+      expect(card.toJSON(1)).to.deep.equal(
+        { className: 'Card', _id: 2, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _visible: { default: false, except: [1] } },
+      );
+      expect(card.toJSON(2)).to.deep.equal(
+        { className: 'Card', flipped: false, state: 'initial', pip: 1, _visible: { default: false, except: [1] } },
+      )
+      game.fromJSON(JSON.parse(JSON.stringify(game.allJSON(2))));
+      const card3 = game.first(Card)!;
+      expect(card3.pip).to.equal(1);
+      expect(card3.suit).to.equal(undefined);
+    });
+
+    it("hides spaces", () => {
+      const hand = game.create(Space, 'hand', { player: players[0] });
+      hand.create(Card, 'AH', { suit: 'H', pip: 1 });
+      hand.showOnlyTo(1);
+
+      expect(hand.toJSON(1)).to.deep.equal(
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, _visible: { default: false, except: [1] }, children: [
+          {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
+        ]}
       );
 
-      game.start();
-      game.play();
-      let boardState = game.board.allJSON();
-      let flowState = game.flow.branchJSON();
-
-      game.phase = 'new';
-      game.defineFlow(
-        () => { board.tokens = 4 },
-        everyPlayer({
-          do: playerActions({
-            name: 'take-1',
-            actions: [
-              {
-                name: 'takeOne',
-                do: playerActions({
-                  name: 'declare',
-                  actions: ['declare']
-                })
-              },
-              'pass'
-            ]
-          })
-        })
+      expect(hand.toJSON(2)).to.deep.equal(
+        { className: 'Space', _id: 2, _visible: { default: false, except: [1] } }
       );
-      game.start();
-      game.board.fromJSON(boardState);
-      game.flow.setBranchFromJSON(flowState);
+    });
 
-      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
+    it("listens to add events", () => {
+      const eventSpy = chai.spy();
+      game.onEnter(Card, eventSpy);
+      const card = game.create(Card, "AH", {suit: "H", pip: 1});
+      expect(eventSpy).to.have.been.called.with(card)
+    });
 
-      boardState = game.board.allJSON();
-      flowState = game.flow.branchJSON();
-      game.board.fromJSON(boardState);
-      game.flow.setBranchFromJSON(flowState);
-      game.play();
+    it("listens to add events from moves", () => {
+      const eventSpy = chai.spy();
+      const deck = game.create(Space, 'deck');
+      game.create(Space, 'discard');
+      deck.onEnter(Card, eventSpy);
+      const card = game.create(Card, "AH", {suit: "H", pip: 1});
+      card.putInto(deck);
+      expect(eventSpy).to.have.been.called.with(card)
+    });
 
-      expect(game.players.currentPosition).to.deep.equal([1, 2, 3, 4])
-      expect(game.getPendingMoves(game.players[0])?.step).to.equal('take-1');
-      expect(game.getPendingMoves(game.players[2])?.step).to.equal('declare');
+    it("listens to exit events from moves", () => {
+      const eventSpy = chai.spy();
+      const deck = game.create(Space, 'deck');
+      game.create(Space, 'discard');
+      deck.onExit(Card, eventSpy);
+      const card = game.create(Card, "AH", {suit: "H", pip: 1});
+      card.putInto(deck);
+      expect(eventSpy).not.to.have.been.called()
+      card.remove();
+      expect(eventSpy).to.have.been.called.with(card)
+    });
+
+    it("preserves events in JSON", () => {
+      const eventSpy = chai.spy();
+      game.onEnter(Card, eventSpy);
+      game.fromJSON(JSON.parse(JSON.stringify(game.allJSON())));
+      game.create(Card, "AH", {suit: "H", pip: 1});
+      expect(eventSpy).to.have.been.called()
     });
   });
 
-  describe('action followups', () => {
-    beforeEach(() => {
-      game = new Game(TestPlayer, TestBoard, [ Card ]);
-      board = game.board;
-      const {
-        loop,
-        eachPlayer,
-        playerActions
-      } = game.flowCommands
+  describe("graph", () => {
+    it("adjacency", () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      a.connectTo(b);
+      expect(a.isAdjacentTo(b)).to.equal(true);
+      expect(a.isAdjacentTo(c)).to.equal(false);
+      expect(a.others({ adjacent: true }).includes(b)).to.equal(true);
+      expect(a.others({ adjacent: true }).includes(c)).to.not.equal(true);
+    })
 
-      game.defineActions({
-        takeOne: player => game.action({
-          prompt: 'take one counter',
-        }).do(() => {
-          board.tokens --;
-          player.tokens ++;
-          if (board.tokens < 10) game.followUp({
-            player: game.players[1],
-            name: 'declare',
-            prompt: 'follow',
-          });
-        }),
-        declare: () => game.action({
-          prompt: 'declare',
-        }).enterText('d', {
-          prompt: 'declaration'
-        }),
-      });
+    it("calculates distance", () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      a.connectTo(b, 2);
+      b.connectTo(c, 3);
+      a.connectTo(c, 6);
+      expect(a.distanceTo(c)).to.equal(5);
+    })
 
-      game.players.fromJSON(players);
-      game.players.assignAttributesFromJSON(players);
+    it("calculates closest", () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      a.connectTo(b, 2);
+      b.connectTo(c, 3);
+      a.connectTo(c, 6);
+      expect(a.closest()).to.equal(b);
+    })
 
-      game.defineFlow(loop(eachPlayer({
-        name: 'player',
-        do: playerActions({
-          actions: ['takeOne']
-        }),
-      })));
+    it("finds adjacencies", () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      a.connectTo(b, 2);
+      b.connectTo(c, 3);
+      a.connectTo(c, 6);
+      c.connectTo(d, 1);
+      expect(a.adjacencies()).to.deep.equal([b, c]);
+      expect(a.others({ adjacent: true })).to.deep.equal([b, c]);
+      expect(c.adjacencies()).to.deep.equal([a, b, d]);
+      expect(c.others({ adjacent: true })).to.deep.equal([a, b, d]);
+    })
+
+    it("searches by distance", () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      a.connectTo(b, 2);
+      b.connectTo(c, 3);
+      a.connectTo(c, 6);
+      c.connectTo(d, 1);
+      expect(a.withinDistance(5).all(Space)).to.deep.equal([b,c]);
+      expect(a.others({ withinDistance: 5}).length).to.equal(2);
+    })
+  });
+
+  describe('grids', () => {
+    class Cell extends Space<Player> { color: string }
+
+    it('creates squares', () => {
+      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
+      game.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
+      expect(game.all(Cell).length).to.equal(9);
+      expect(game.first(Cell)!.row).to.equal(1);
+      expect(game.first(Cell)!.column).to.equal(1);
+      expect(game.last(Cell)!.row).to.equal(3);
+      expect(game.last(Cell)!.column).to.equal(3);
+
+      const corner = game.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
+
+      const middle = game.first(Cell, {row: 2, column: 2})!;
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
     });
 
-    it('allows followup', () => {
-      game.board.tokens = 11;
-      game.start();
-      game.play();
+    it('creates squares with diagonals', () => {
+      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
+      game.createGrid({ rows: 3, columns: 3, diagonalDistance: 1.5 }, Cell, 'cell');
+      expect(game.all(Cell).length).to.equal(9);
+      expect(game.first(Cell)!.row).to.equal(1);
+      expect(game.first(Cell)!.column).to.equal(1);
+      expect(game.last(Cell)!.row).to.equal(3);
+      expect(game.last(Cell)!.column).to.equal(3);
 
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
-      game.play();
-      expect(game.allowedActions(game.players[0]).actions.length).to.equal(0);
-      expect(game.allowedActions(game.players[1]).actions.length).to.equal(1);
+      const corner = game.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
 
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
-      game.play();
-      expect(game.allowedActions(game.players[1]).actions.length).to.equal(1);
-      expect(game.allowedActions(game.players[1]).actions[0].name).to.equal('declare');
-      expect(game.allowedActions(game.players[1]).actions[0].player).to.equal(game.players[1]);
-      expect(game.allowedActions(game.players[0]).actions.length).to.equal(0);
-      expect(game.allowedActions(game.players[1]).actions[0].prompt).to.equal('follow');
+      const knight = game.first(Cell, {row: 3, column: 2})!;
+      expect(corner.distanceTo(knight)).to.equal(2.5);
     });
 
-    it('allows followup for other player', () => {
-      game.board.tokens = 12;
-      game.start();
-      game.play();
+    it('creates hexes', () => {
+      game = new Game({ classRegistry:  [Space, Piece, GameElement, Cell] });
+      game.createGrid({ rows: 3, columns: 3, style: 'hex' }, Cell, 'cell');
+      expect(game.all(Cell).length).to.equal(9);
+      expect(game.first(Cell)!.row).to.equal(1);
+      expect(game.first(Cell)!.column).to.equal(1);
+      expect(game.last(Cell)!.row).to.equal(3);
+      expect(game.last(Cell)!.column).to.equal(3);
 
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
-      game.play();
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
-      game.play();
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[2] });
-      game.play();
-      expect(game.allowedActions(game.players[0]).actions.length).to.equal(0);
-      expect(game.allowedActions(game.players[2]).actions.length).to.equal(0);
-      expect(game.allowedActions(game.players[1]).actions.length).to.equal(1);
+      const corner = game.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
+
+      const middle = game.first(Cell, {row: 2, column: 2})!;
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [1,2], [2,1], [2,3], [3,2], [3,3]]);
+    });
+
+    it('creates inverse hexes', () => {
+      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
+      game.createGrid({ rows: 3, columns: 3, style: 'hex-inverse' }, Cell, 'cell');
+      expect(game.all(Cell).length).to.equal(9);
+      expect(game.first(Cell)!.row).to.equal(1);
+      expect(game.first(Cell)!.column).to.equal(1);
+      expect(game.last(Cell)!.row).to.equal(3);
+      expect(game.last(Cell)!.column).to.equal(3);
+
+      const corner = game.first(Cell, {row: 1, column: 1})!;
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
+
+      const middle = game.first(Cell, {row: 2, column: 2})!;
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
+    });
+
+    it('adjacencies', () => {
+      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
+      game.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
+      for (const cell of game.all(Cell, {row: 2})) cell.color = 'red';
+      const center = game.first(Cell, {row: 2, column: 2})!;
+      expect(center.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[1, 2], [2, 1], [2, 3], [3, 2]]);
+      expect(center.adjacencies(Cell, {color: 'red'}).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [2, 3]]);
+      expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 2})!)).to.be.true;
+      expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 1})!)).to.be.false;
     });
   });
 
+  describe('placement', () => {
+    it('creates squares', () => {
+      game = new Game({ classRegistry: [Space, Piece] });
+      const piece1 = game.create(Piece, 'piece-1', { row: 1, column: 1 });
+      const piece2 = game.create(Piece, 'piece-2', { row: 1, column: 2 });
+      const piece3 = game.create(Piece, 'piece-3', { row: 2, column: 2 });
 
-  describe('each player', () => {
+      expect(piece1.adjacencies(Piece).length).to.equal(1);
+      expect(piece1.adjacencies(Piece)[0]).to.equal(piece2);
+      expect(piece2.adjacencies(Piece).length).to.equal(2);
+      expect(piece2.adjacencies(Piece)).includes(piece1);
+      expect(piece2.adjacencies(Piece)).includes(piece3);
+
+      expect(piece2.isAdjacentTo(piece1)).to.equal(true);
+      expect(piece2.isAdjacentTo(piece3)).to.equal(true);
+      expect(piece1.isAdjacentTo(piece3)).to.equal(false);
+    });
+  });
+
+  describe('layouts', () => {
     beforeEach(() => {
-      game = new Game(TestPlayer, TestBoard, [ Card ]);
-      board = game.board;
-
-      game.defineActions({
-        takeOne: player => game.action({
-          prompt: 'take one counter',
-        }).do(() => {
-          board.tokens --;
-          player.tokens ++;
-        }),
+      game = new Game({ classRegistry: [Space, Piece, GameElement] });
+      game.layout(GameElement, {
+        margin: 0,
+        gap: 0,
       });
-
-      game.players.fromJSON(players.slice(0, 2));
-      game.players.assignAttributesFromJSON(players.slice(0, 2));
     });
 
-    it('continuous loop for each player', () => {
-      const {
-        whileLoop,
-        playerActions,
-        eachPlayer
-      } = game.flowCommands
+    it('applies', () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      game.applyLayouts();
 
-      game.defineFlow(whileLoop({
-        while: () => true,
-        do: eachPlayer({
-          name: 'player',
-          do: playerActions({
-            actions: ['takeOne']
-          }),
-        })
-      }));
-      game.board.tokens = 20;
-      game.start();
-      game.play();
+      expect(game._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 100 })
+      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+    });
 
-      expect(game.players.currentPosition).to.deep.equal([1])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
-      game.play();
+    it('applies overlaps', () => {
+      const s1 = game.create(Space, 's1');
+      const s2 = game.create(Space, 's2');
+      const s3 = game.create(Space, 's3');
+      const s4 = game.create(Space, 's4');
+      const p1 = game.create(Piece, 'p1');
+      const p2 = game.create(Piece, 'p2');
+      const p3 = game.create(Piece, 'p3');
+      const p4 = game.create(Piece, 'p4');
+      game.applyLayouts(() => {
+        game.layout(Piece, {
+          rows: 3,
+          columns: 3,
+          direction: 'ltr'
+        });
+      });
 
-      expect(game.players.currentPosition).to.deep.equal([2])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
-      game.play();
+      expect(p1._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100 / 3, height: 100 / 3 })
+      expect(p2._ui.computedStyle).to.deep.equal({ left: 100 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
+      expect(p3._ui.computedStyle).to.deep.equal({ left: 200 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
+      expect(p4._ui.computedStyle).to.deep.equal({ left: 0, top: 100 / 3, width: 100 / 3, height: 100 / 3 })
+    });
 
-      expect(game.players.currentPosition).to.deep.equal([1])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[0] });
-      game.play();
+    it('adds gaps and margins', () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          gap: 10,
+          margin: 5
+        });
+      });
+      expect(a._ui.computedStyle).to.deep.equal({ left: 5, top: 5, width: 40, height: 40 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 55, top: 5, width: 40, height: 40 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 5, top: 55, width: 40, height: 40 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 55, top: 55, width: 40, height: 40 })
+    });
 
-      expect(game.players.currentPosition).to.deep.equal([2])
-      game.processMove({ name: 'takeOne', args: {}, player: game.players[1] });
-      game.play();
+    it('adds gaps and margins absolutely to relative sizes', () => {
+      const outer = game.createMany(4, Space, 'outer');
+      const a = outer[3].create(Space, 'a');
+      const b = outer[3].create(Space, 'b');
+      const c = outer[3].create(Space, 'c');
+      const d = outer[3].create(Space, 'd');
+      game.applyLayouts(() => {
+        outer[3].layout(GameElement, {
+          gap: 4,
+          margin: 2
+        });
+      });
+      expect(a._ui.computedStyle).to.deep.equal({ left: 4, top: 4, width: 42, height: 42 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 4, width: 42, height: 42 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 4, top: 54, width: 42, height: 42 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 54, top: 54, width: 42, height: 42 })
+    });
+
+    it('areas are relative to parent', () => {
+      const outer = game.createMany(3, Space, 'outer');
+      const a = outer[2].create(Space, 'a');
+      const b = outer[2].create(Space, 'b');
+      const c = outer[2].create(Space, 'c');
+      const d = outer[2].create(Space, 'd');
+      game.applyLayouts(() => {
+        outer[2].layout(GameElement, {
+          gap: 4,
+          area: {
+            left: 10,
+            top: 20,
+            width: 80,
+            height: 60,
+          }
+        });
+      });
+      expect(a._ui.computedStyle).to.deep.equal({ left: 10, top: 20, width: 36, height: 26 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 20, width: 36, height: 26 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 10, top: 54, width: 36, height: 26 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 54, top: 54, width: 36, height: 26 })
+    });
+
+    it('aligns', () => {
+      const spaces = game.createMany(3, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          scaling: 'fit',
+          alignment: 'right',
+        });
+      });
+
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 60, top: 0, width: 40, height: 50 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 40, height: 50 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 60, top: 50, width: 40, height: 50 })
+    });
+
+    it('aligns vertical', () => {
+      const spaces = game.createMany(3, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 5 / 4,
+          scaling: 'fit',
+          alignment: 'bottom right',
+        });
+      });
+
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 50, top: 60, width: 50, height: 40 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 0, top: 60, width: 50, height: 40 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 50, top: 20, width: 50, height: 40 })
+    });
+
+    it('sizes to fit', () => {
+      const spaces = game.createMany(3, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          scaling: 'fit'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 10, top: 0, width: 40, height: 50 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 40, height: 50 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 10, top: 50, width: 40, height: 50 })
+    });
+
+    it('sizes to fill', () => {
+      const spaces = game.createMany(3, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          scaling: 'fill'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 62.5 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 62.5 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 37.5, width: 50, height: 62.5 })
+    });
+
+    it('retains sizes', () => {
+      const spaces = game.createMany(3, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          size: { width: 20, height: 25 },
+        });
+      });
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 30, top: 25, width: 20, height: 25 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 25, width: 20, height: 25 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 30, top: 50, width: 20, height: 25 })
+    });
+
+    it('fits based on aspect ratios', () => {
+      const spaces = game.createMany(3, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 5 / 4,
+          scaling: 'fit'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 10, width: 50, height: 40 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 10, width: 50, height: 40 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 40 })
+    });
+
+    it('fills based on aspect ratios', () => {
+      const spaces = game.createMany(3, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 5 / 4,
+          scaling: 'fill'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 62.5, height: 50 })
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 37.5, top: 0, width: 62.5, height: 50 })
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 62.5, height: 50 })
+    });
+
+    it('accommodate min row', () => {
+      const spaces = game.createMany(10, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          rows: { min: 2 },
+          columns: 1,
+          aspectRatio: 5 / 4,
+          scaling: 'fill'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle?.width).to.equal(62.5);
+      expect(spaces[0]._ui.computedStyle?.height).to.equal(50);
+      expect(spaces[0]._ui.computedStyle?.top).to.be.approximately(0, 0.0001);
+    });
+
+    it('accommodate min col', () => {
+      const spaces = game.createMany(10, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          columns: { min: 2 },
+          rows: 1,
+          aspectRatio: 4 / 5,
+          scaling: 'fill'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle?.height).to.equal(62.5);
+      expect(spaces[0]._ui.computedStyle?.width).to.equal(50);
+      expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
+    });
+
+    it('accommodate min row with size', () => {
+      const spaces = game.createMany(10, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          rows: { min: 2 },
+          columns: 1,
+          size: { width: 5, height: 4 },
+          scaling: 'fill'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle?.width).to.equal(62.5);
+      expect(spaces[0]._ui.computedStyle?.height).to.equal(50);
+      expect(spaces[0]._ui.computedStyle?.top).to.be.approximately(0, 0.0001);
+    });
+
+    it('accommodate min columns with size', () => {
+      const spaces = game.createMany(10, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          columns: { min: 2 },
+          rows: 1,
+          size: { width: 4, height: 5 },
+          scaling: 'fill'
+        });
+      });
+      expect(spaces[0]._ui.computedStyle?.height).to.equal(62.5);
+      expect(spaces[0]._ui.computedStyle?.width).to.equal(50);
+      expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
+    });
+
+    it('isomorphic', () => {
+      const spaces = game.createMany(9, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          offsetColumn: {x: 100, y: 100},
+          scaling: 'fit',
+        });
+      });
+
+      expect(spaces[0]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 0 });
+      expect(spaces[1]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 58, top: 20 });
+      expect(spaces[2]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 74, top: 40 });
+      expect(spaces[3]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 26, top: 20 });
+      expect(spaces[4]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 40 });
+      expect(spaces[5]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 58, top: 60 });
+      expect(spaces[6]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 10, top: 40 });
+      expect(spaces[7]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 26, top: 60 });
+      expect(spaces[8]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 80 });
+    });
+
+    it('stacks', () => {
+      const spaces = game.createMany(9, Space, 'space');
+      game.applyLayouts(() => {
+        game.layout(GameElement, {
+          aspectRatio: 4 / 5,
+          offsetColumn: {x: -5, y: -5},
+          scaling: 'fit',
+          direction: 'ltr'
+        });
+      });
+
+      expect(spaces[8]!._ui.computedStyle!.top).to.equal(0);
+      expect(spaces[0]!._ui.computedStyle!.top + spaces[0]!._ui.computedStyle!.height).to.equal(100);
+    });
+
+    it('align+scale', () => {
+      const pieces = game.createMany(6, Piece, 'piece');
+
+      game.applyLayouts(() => {
+        game.layout(Piece, {
+          offsetColumn: {x: 10, y: 10},
+          scaling: 'fit',
+        });
+      });
+
+      expect(pieces[0]!._ui.computedStyle!.top).to.equal(0);
+      expect(pieces[5]!._ui.computedStyle!.top + pieces[5]!._ui.computedStyle!.height).to.equal(100);
+      expect(pieces[3]!._ui.computedStyle!.left).to.equal(0);
+      expect(pieces[2]!._ui.computedStyle!.left + pieces[2]!._ui.computedStyle!.width).to.equal(100);
+    });
+
+    it('specificity', () => {
+      class Country extends Space<Player> { }
+      game = new Game({ classRegistry: [Space, Piece, GameElement, Country] });
+
+      const spaces = game.createMany(4, Space, 'space');
+      const space = game.create(Space, 'special');
+      const france = game.create(Country, 'france');
+      const special = game.create(Country, 'special');
+      const el = game.create(GameElement, 'whatev');
+
+      game.applyLayouts(() => {
+        game.layout(spaces[2], { direction: 'btt-rtl', showBoundingBox: '1' });
+        game.layout('special', { direction: 'ttb-rtl', showBoundingBox: '2' });
+        game.layout(spaces.slice(0, 2), { direction: 'ttb', showBoundingBox: '3' });
+        game.layout(Country, { direction: 'rtl', showBoundingBox: '4' });
+        game.layout(Space, { direction: 'btt', showBoundingBox: '5' });
+        game.layout(GameElement, { direction: 'ltr-btt', showBoundingBox: '6' });
+      });
+
+      expect(game._ui.computedLayouts?.[6].children).to.include(el); // by GameElement
+      expect(game._ui.computedLayouts?.[5].children).contains(spaces[3]); // by Space
+      expect(game._ui.computedLayouts?.[4].children).contains(france); // by more specific class
+      expect(game._ui.computedLayouts?.[3].children).contains(spaces[0]); // by single ref
+      expect(game._ui.computedLayouts?.[2].children).contains(space); // by name
+      expect(game._ui.computedLayouts?.[2].children).contains(special); // by name
+      expect(game._ui.computedLayouts?.[1].children).contains(spaces[2]); // by array ref
+    });
+
+    it('can place', () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      a.row = 2;
+      a.column = 2;
+      game.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+    });
+
+    it('can shift bounds', () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      a.row = 4;
+      a.column = 4;
+      game.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+    });
+
+    it('can shift negative', () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      a.row = -4;
+      a.column = -4;
+      game.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+    });
+
+    it('can stretch bounds', () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      a.row = 1;
+      a.column = 2;
+      d.row = 4;
+      d.column = 2;
+      game.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 25 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 25, width: 100, height: 25 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 100, height: 25 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 100, height: 25 })
+    });
+
+    it('can become sparse', () => {
+      const a = game.create(Space, 'a');
+      const b = game.create(Space, 'b');
+      const c = game.create(Space, 'c');
+      const d = game.create(Space, 'd');
+      a.row = 4;
+      a.column = 1;
+      d.row = 1;
+      d.column = 4;
+      game.applyLayouts();
+
+      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 25, height: 25 })
+      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 25, height: 25 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 25, top: 0, width: 25, height: 25 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 75, top: 0, width: 25, height: 25 })
+    });
+
+    it('can place sticky', () => {
+      const a = game.create(Piece, 'a');
+      const b = game.create(Piece, 'b');
+      const c = game.create(Piece, 'c');
+      const d = game.create(Piece, 'd');
+      game.applyLayouts(() => {
+        game.layout(Piece, { sticky: true });
+      });
+      a.remove();
+
+      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
     });
   });
 });
+
+      // console.log('<div style="width: 200; height: 200; position: relative; outline: 1px solid black">');
+      // for (const c of game._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}%; top: ${c._ui.computedStyle?.top}%; width: ${c._ui.computedStyle?.width}%; height: ${c._ui.computedStyle?.height}%; background: red; outline: 1px solid blue"></div>`);
+      // console.log('</div>');

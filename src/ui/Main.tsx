@@ -131,7 +131,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   maxPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, setFinished, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.game, s.setFinished, s.updateState, s.setUserOnline, s.announcementIndex]);
+  const [gameManager, setFinished, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.gameManager, s.setFinished, s.updateState, s.setUserOnline, s.announcementIndex]);
   const [settings, setSettings] = useState<GameSettings>();
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
@@ -147,12 +147,12 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   const queue = useMemo(() => new Queue(1) /* speed */, []);
 
   useEffect(() => {
-    if (game.announcements[announcementIndex]) {
+    if (gameManager.announcements[announcementIndex]) {
       queue.pause();
     } else if (queue.paused) {
       setTimeout(() => queue.resume(), 500);
     }
-  }, [queue, game, announcementIndex])
+  }, [queue, gameManager, announcementIndex])
 
   const listener = useCallback((event: MessageEvent<
     UsersEvent |
@@ -178,7 +178,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       {
         if (data.state instanceof Array) {
           const states = data.state;
-          let delay = data.state[0].sequence === game.sequence + 1;
+          let delay = data.state[0].sequence === gameManager.sequence + 1;
 
           for (let i = 0; i !== states.length; i++) {
             const state = states[i];
@@ -186,7 +186,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
             delay = true;
           }
         } else {
-          let delay = data.state.sequence === game.sequence + 1;
+          let delay = data.state.sequence === gameManager.sequence + 1;
           queue.schedule(() => updateState(data as typeof data & {state: typeof data.state}), delay); // TS needs help here...
         }
         if (data.type === 'gameFinished') queue.schedule(() => setFinished(true), true);
@@ -201,7 +201,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, [setUserOnline, setFinished, moveCallbacks, game, queue, updateState, catchError]);
+  }, [setUserOnline, setFinished, moveCallbacks, gameManager, queue, updateState, catchError]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
@@ -245,7 +245,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
 
   return (
     <>
-      {game.phase === 'new' && settings &&
+      {gameManager.phase === 'new' && settings &&
         <Setup
           users={users}
           minPlayers={minPlayers}
@@ -259,7 +259,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
           onStart={start}
         />
       }
-      {(game.phase === 'started' || game.phase === 'finished') && <Game/>}
+      {(gameManager.phase === 'started' || gameManager.phase === 'finished') && <Game/>}
     </>
   );
 }

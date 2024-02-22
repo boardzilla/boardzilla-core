@@ -14,10 +14,10 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
   children?: React.ReactNode,
 }) => {
-  const [game, position, uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.game, s.position, s.uncommittedArgs, s.selected, s.disambiguateElement]);
+  const [gameManager, position, uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.gameManager, s.position, s.uncommittedArgs, s.selected, s.disambiguateElement]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
-  const action = useMemo(() => game.getAction(move.name, game.players.atPosition(position!)!), [game, position, move]);
+  const action = useMemo(() => gameManager.getAction(move.name, gameManager.players.atPosition(position!)!), [gameManager, position, move]);
 
   const initial = useCallback(() => {
     const args: Record<string, Argument<Player> | undefined> = {...move.args};

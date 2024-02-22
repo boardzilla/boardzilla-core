@@ -8,7 +8,7 @@ import type {
 } from './selection.js';
 import { Piece } from '../board/index.js';
 import type { Player } from '../player/index.js';
-import type { default as Game, PendingMove } from '../game.js';
+import type { default as GameManager, PendingMove } from '../game-manager.js';
 
 /**
  * A single argument
@@ -103,7 +103,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   messages: {text: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
   order: ('move' | 'message')[] = [];
 
-  game: Game;
+  gameManager: GameManager;
 
   constructor({ prompt, description, condition }: {
     prompt?: string,
@@ -268,7 +268,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       } else {
         const message = this.messages[messageIndex++];
         const messageArgs = ((typeof message.args === 'function') ? message.args(args as A) : message.args);
-        this.game.message(message.text, {...args, player, ...messageArgs});
+        this.gameManager.game.message(message.text, {...args, player, ...messageArgs});
       }
     }
   }
@@ -338,7 +338,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    *     max: 3
    * }).do(({ resource, amount }) => {
    *   // the choices are automatically passed in with their proper type
-   *   board.firstN(amount, Resource, {resource}).putInto(
+   *   game.firstN(amount, Resource, {resource}).putInto(
    *     player.my('stockPile')
    *   );
    * })

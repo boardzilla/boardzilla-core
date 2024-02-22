@@ -5,7 +5,7 @@ const AnnouncementOverlay = ({ announcement, onDismiss }: {
   announcement: string,
   onDismiss: () => void
 }) => {
-  const [game] = gameStore(s => [s.game]);
+  const [gameManager] = gameStore(s => [s.gameManager]);
   const [delay, setDelay] = useState(false);
 
   useEffect(() => {
@@ -18,17 +18,17 @@ const AnnouncementOverlay = ({ announcement, onDismiss }: {
   return (
     <div id="announcement-overlay" className="full-page-cover" onClick={() => onDismiss()}>
       <div id="announcement" className="modal-popup" onClick={() => onDismiss()}>
-        {announcement !== '__finish__' && game.board._ui.announcements[announcement](game.board)}
+        {announcement !== '__finish__' && gameManager.game._ui.announcements[announcement](gameManager.game)}
         {announcement === '__finish__' && (
           <>
             <h1>Game finished</h1>
-            {game.winner.length > 0 && (
-              <h2 style={{color: game.winner.length === 1 ? game.winner[0].color : ''}}>
-                {game.players.length === 1 ? 'You' : game.winner.map(p => p.name).join(', ')} win{game.winner.length === 1 && game.players.length !== 1 && 's'}!
+            {gameManager.winner.length > 0 && (
+              <h2 style={{color: gameManager.winner.length === 1 ? gameManager.winner[0].color : ''}}>
+                {gameManager.players.length === 1 ? 'You' : gameManager.winner.map(p => p.name).join(', ')} win{gameManager.winner.length === 1 && gameManager.players.length !== 1 && 's'}!
               </h2>
             )}
-            {game.winner.length === 0 && game.players.length > 1 && <h2>Tie game</h2>}
-            {game.winner.length === 0 && game.players.length === 1 && <h2 style={{color: "#800"}}>You lose</h2>}
+            {gameManager.winner.length === 0 && gameManager.players.length > 1 && <h2>Tie game</h2>}
+            {gameManager.winner.length === 0 && gameManager.players.length === 1 && <h2 style={{color: "#800"}}>You lose</h2>}
           </>
         )}
       </div>

@@ -9,9 +9,9 @@ import {
 import { serializeObject, deserializeObject } from '../action/utils.js';
 import random from 'random-seed';
 
-import type Game from '../game.js';
+import type GameManager from '../game-manager.js';
 import type Player from '../player/player.js';
-import type Board from './board.js';
+import type Game from './game.js';
 import type Space from './space.js';
 import type { ElementFinder, Sorter } from './element-collection.js';
 import type { Argument } from '../action/action.js';
@@ -41,8 +41,8 @@ type GenericSorter = string | ((e: GameElement) => number | string)
 export type ElementAttributes<T extends GameElement> =
   Partial<Pick<T, {[K in keyof T]: K extends keyof GameElement ? never : (T[K] extends (...a:any[]) => any ? never : K)}[keyof T] | 'name' | 'player' | 'row' | 'column' | 'rotation'>>
 
-export type ElementContext<P extends Player<P, B> = any, B extends Board<P, B> = any> = {
-  game: Game<P, B>;
+export type ElementContext<P extends Player<P, B> = any, B extends Game<P, B> = any> = {
+  gameManager: GameManager<P, B>;
   top: GameElement<P, B>;
   namedSpaces: Record<string, Space<P, B>>
   uniqueNames: Record<string, boolean>
@@ -271,12 +271,12 @@ export type LayoutAttributes<T extends GameElement> = {
 };
 
 /**
- * Abstract base class for all Board elements. Do not subclass this
+ * Abstract base class for all Game elements. Do not subclass this
  * directly. Instead use {@link Space} or {@link Piece} as the base for
  * subclassing your own elements.
  * @category Board
  */
-export default class GameElement<P extends Player<P, B> = any, B extends Board<P, B> = any> {
+export default class GameElement<P extends Player<P, B> = any, B extends Game<P, B> = any> {
   /**
    * Element name, used to distinguish elements. Elements with the same name are
    * generally considered indistibuishable. Names are also used for easy
@@ -311,16 +311,16 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   _rotation?: number; // degrees
 
   /**
-   * The {@link Board} to which this element belongs
+   * The {@link Game} to which this element belongs
    * @category Structure
    */
-  board: B;
+  game: B;
 
   /**
-   * A reference to the {@link Game}
+   * A reference to the {@link GameManager}
    * @category Structure
    */
-  game: Game<P, B>;
+  gameManager: GameManager<P, B>;
 
   /**
    * ctx shared for all elements in the tree
@@ -349,6 +349,8 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   static isGameElement = true;
 
+  static unserializableAttributes = ['_ctx', '_t', '_ui', '_eventHandlers', 'game', 'gameManager', 'pile', 'flowCommands', 'flowGuard', 'players', 'random'];
+
   static visibleAttributes: string[] | undefined;
 
   /**
@@ -368,7 +370,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       this._ctx.namedSpaces = {};
     }
 
-    this.game = this._ctx.game as Game<P, B>;
+    this.gameManager = this._ctx.gameManager as GameManager<P, B>;
 
     this._t = {
       children: new ElementCollection(),
@@ -691,7 +693,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @category Structure
    */
   shuffle() {
-    shuffleArray(this._t.children, this._ctx.game?.random || Math.random);
+    shuffleArray(this._t.children, this._ctx.gameManager?.random || Math.random);
   }
 
   /**
@@ -830,20 +832,20 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * Create an element inside this element. This can only be called during the
    * game setup (see {@link createGame}. Any game elements that are required
    * must be created before the game starts. Elements that only appear later in
-   * the game can be created inside the {@link Board#pile} or made invisible.
+   * the game can be created inside the {@link Game#pile} or made invisible.
    * @category Structure
    *
    * @param className - Class to create. This class must be included in the `elementClasses` in {@link createGame}.
    * @param name - Sets {@link GameElement#name | name}
    * @param attributes - Sets any attributes of the class that are defined in
    * your own class that extend {@link Space}, {@link Piece}, or {@link
-   * Board}. Can also include {@link player}.
+   * Game}. Can also include {@link player}.
    *
    * @example
    * deck.create(Card, 'ace-of-hearts', { suit: 'H', value: '1' });
    */
   create<T extends GameElement>(className: ElementClass<T>, name: string, attributes?: ElementAttributes<T>): T {
-    if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be created once game has started.');
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be created once game has started.');
     const el = this.createElement(className, name, attributes);
     el._t.parent = this;
     if (this._t.order === 'stacking') {
@@ -867,7 +869,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * Create n elements inside this element of the same class. This can only be
    * called during the game setup (see {@link createGame}. Any game elements
    * that are required must be created before the game starts. Elements that
-   * only appear later in the game can be created inside the {@link Board#pile}
+   * only appear later in the game can be created inside the {@link Game#pile}
    * or made invisible.
    * @category Structure
    *
@@ -876,7 +878,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    * @param name - Sets {@link GameElement#name | name}
    * @param attributes - Sets any attributes of the class that are defined in
    * your own class that extend {@link Space}, {@link Piece}, or {@link
-   * Board}. Can also include {@link player}. If a function is supplied here, a
+   * Game}. Can also include {@link player}. If a function is supplied here, a
    * single number argument will be passed with the number of the added element,
    * starting with 1.
    */
@@ -891,11 +893,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
     if (!this._ctx.classRegistry.includes(className)) {
       const classNameBasedOnName = this._ctx.classRegistry.find(c => c.name === className.name) as ElementClass<T>;
-      if (!classNameBasedOnName) throw Error(`No class found ${className.name}. Declare any classes in \`board.registerClasses\``);
+      if (!classNameBasedOnName) throw Error(`No class found ${className.name}. Declare any classes in \`game.registerClasses\``);
       className = classNameBasedOnName;
     }
     const el = new className(this._ctx);
-    el.board = this.board;
+    el.game = this.game;
     el.name = name;
     Object.assign(el, attrs);
     return el;
@@ -903,13 +905,13 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
 
   /**
    * Permanently remove an element. This can only be done while defining the
-   * board, and is usually only useful when creating groups of elements, such as
+   * game, and is usually only useful when creating groups of elements, such as
    * {@link createMany} or {@link createGrid} where some of the created elements
    * are not needed.
    * @category Structure
    */
   destroy() {
-    if (this._ctx.game?.phase === 'started') throw Error('Board elements cannot be destroy once game has started.');
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be destroy once game has started.');
     const position = this._t.parent!._t.children.indexOf(this);
     this._t.parent!._t.children.splice(position, 1);
   }
@@ -988,7 +990,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
   attributeList<T extends GameElement<P, B>>(this: T): ElementAttributes<T> {
     let attrs: Record<string, any>;
     ({ ...attrs } = this);
-    for (const attr of ['_t', '_ctx', '_ui', 'board', 'game', 'pile', '_eventHandlers', 'rotation']) delete attrs[attr];
+    for (const attr of GameElement.unserializableAttributes) delete attrs[attr];
 
     // remove methods
     return Object.fromEntries(Object.entries(attrs).filter(
@@ -1046,7 +1048,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       }
       if (!child) {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
-        if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.defineBoard\``);
+        if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.registerClasses\``);
         child = this.createElement(elementClass, name) as GameElement;
         child._t.setId(_id);
         child._t.parent = this;
@@ -1063,7 +1065,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
       let { className: _cn, children, was: _w, _id, name: _n, order: _o, ...rest } = json;
-      if (this._ctx.game) rest = deserializeObject({...rest}, this._ctx.game);
+      rest = deserializeObject({...rest}, this.game);
       let child = this._t.children[i];
       Object.assign(child, rest);
       child.assignAttributesFromJSON(children || [], branch + '/' + i);
@@ -1120,7 +1122,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
    */
   absoluteTransform(preComputedRelativeTransform?: Box): Box {
     preComputedRelativeTransform ??= this.relativeTransformToBoard();
-    return this.board._ui.frame ? translate(preComputedRelativeTransform, this.board._ui.frame) : preComputedRelativeTransform;
+    return this.game._ui.frame ? translate(preComputedRelativeTransform, this.game._ui.frame) : preComputedRelativeTransform;
   }
 
   /**
@@ -1204,7 +1206,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Board<P
       this._ui.computedLayouts[l] = {
         area,
         children: children ?? [],
-        showBoundingBox: attributes.showBoundingBox ?? this.board._ui.boundingBoxes,
+        showBoundingBox: attributes.showBoundingBox ?? this.game._ui.boundingBoxes,
         drawer: attributes.drawer
       };
 

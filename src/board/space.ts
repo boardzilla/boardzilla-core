@@ -6,7 +6,7 @@ import graphology from 'graphology';
 import { dijkstra } from 'graphology-shortest-path';
 import { bfsFromNode } from 'graphology-traversal';
 
-import type Board from './board.js';
+import type Game from './game.js';
 import type { ElementClass, ElementAttributes } from './element.js';
 import type { ElementFinder } from './element-collection.js';
 import type Player from '../player/player.js';
@@ -14,11 +14,11 @@ import type Player from '../player/player.js';
 export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => void} & Record<any, any>;
 
 /**
- * Spaces are areas of the board. The spaces of your board are declared during
+ * Spaces are areas of the game. The spaces of your game are declared during
  * setup in {@link createGame} and never change during play.
  * @category Board
  */
-export default class Space<P extends Player<P, B> = any, B extends Board<P, B> = any> extends GameElement<P, B> {
+export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = any> extends GameElement<P, B> {
   _eventHandlers: {
     enter: ElementEventHandler<GameElement>[],
     exit: ElementEventHandler<GameElement>[],
@@ -95,7 +95,7 @@ export default class Space<P extends Player<P, B> = any, B extends Board<P, B> =
    * @param name - Sets {@link GameElement#name | name}
    * @param attributes - Sets any attributes of the class that are defined in
    * your own class that extend {@link Space}, {@link Piece}, or {@link
-   * Board}. Can also include {@link player}.
+   * Game}. Can also include {@link player}.
    *
    * @category Structure
    */

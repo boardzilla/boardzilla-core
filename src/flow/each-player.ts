@@ -20,9 +20,9 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
     if (startingPlayer) {
       initial = () => startingPlayer instanceof Function ? startingPlayer(this.flowStepArgs()) : startingPlayer
     } else {
-      initial = () => this.game.players[0];
+      initial = () => this.gameManager.players[0];
     }
-    let next = (player: P) => (nextPlayer ? nextPlayer(player) : this.game.players.after(player));
+    let next = (player: P) => (nextPlayer ? nextPlayer(player) : this.gameManager.players.after(player));
 
     super({
       name,
@@ -32,14 +32,14 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
       do: block
     });
 
-    this.whileCondition = position => continueUntil !== undefined ? !continueUntil(position.value) : position.index < this.game.players.length * (this.turns || 1)
+    this.whileCondition = position => continueUntil !== undefined ? !continueUntil(position.value) : position.index < this.gameManager.players.length * (this.turns || 1)
     this.turns = turns;
   }
 
   setPosition(position: typeof this.position, sequence?: number, reset=true) {
     super.setPosition(position, sequence, reset);
     if (this.position.value) {
-      this.game.players.setCurrent(this.position.value);
+      this.gameManager.players.setCurrent(this.position.value);
     }
   }
 
@@ -53,7 +53,7 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
   fromJSON(position: any) {
     return {
       index: position.index,
-      value: position.value ? deserializeSingleArg(position.value, this.game) as P: undefined
+      value: position.value ? deserializeSingleArg(position.value, this.gameManager.game) as P: undefined
     }
   }
 

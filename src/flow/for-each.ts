@@ -46,8 +46,8 @@ export default class ForEach<P extends Player, T extends Serializable<P>> extend
   fromJSON(position: any) {
     return {
       index: position.index,
-      value: deserialize(position.value, this.game),
-      collection: deserialize(position.collection, this.game)
+      value: deserialize(position.value, this.gameManager.game),
+      collection: deserialize(position.collection, this.gameManager.game)
     };
   }
 

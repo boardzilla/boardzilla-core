@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
-import Game from '../game.js'
-import { Board, GameElement, Piece } from '../board/index.js'
+import GameManager from '../game-manager.js'
+import { Game, GameElement, Piece } from '../board/index.js'
 import Player from '../player/player.js'
 import {
   updateSelections,
@@ -20,7 +20,7 @@ import type { Box, ElementJSON } from '../board/element.js'
 import type Selection from '../action/selection.js'
 import type { Argument } from '../action/action.js'
 import type { SetupFunction } from '../index.js'
-import type { BoardSize } from '../board/board.js';
+import type { BoardSize } from '../board/game.js';
 import type { GameState } from '../interface.js';
 import type { ResolvedSelection } from '../action/selection.js';
 export { ProfileBadge } from './game/components/ProfileBadge.js';
@@ -44,13 +44,13 @@ export type GameStore = {
   setUserID: (userID: string) => void;
   dev?: boolean;
   setDev: (dev?: boolean) => void;
-  setup?: SetupFunction<Player, Board<Player>>;
-  setSetup: (s: SetupFunction<Player, Board<Player>>) => void;
-  game: Game<Player, Board<Player>>;
+  setup?: SetupFunction<Player, Game<Player>>;
+  setSetup: (s: SetupFunction<Player, Game<Player>>) => void;
+  gameManager: GameManager<Player, Game<Player>>;
   finished: boolean;
   setFinished: (finished: boolean) => void;
   isMobile: boolean;
-  boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with game.sequence
+  boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with gameManager.sequence
   updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}, readOnly?: boolean) => void;
   position?: number; // this player
   move?: UIMove; // move in progress
@@ -128,21 +128,21 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   setUserID: userID => set({ userID }),
   setDev: dev => set({ dev }),
   setSetup: setup => set({ setup }),
-  game: new Game(Player, Board),
+  gameManager: new GameManager(Player, Game),
   finished: false,
   setFinished: finished => set({ finished }),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
   boardJSON: [],
   updateState: (update, readOnly=false) => set(s => {
-    let { game } = s;
+    let { gameManager } = s;
     const position = s.position || update.position;
     let renderedState = s.renderedState;
     let previousRenderedState = s.previousRenderedState;
     window.clearTimeout(s.automove);
-    if (update.state.sequence === s.game.sequence + 1) {
+    if (update.state.sequence === s.gameManager.sequence + 1) {
       // demote current state to previous and play over top
       renderedState = {};
-      previousRenderedState = {sequence: s.game.sequence, elements: {...s.renderedState}};
+      previousRenderedState = {sequence: s.gameManager.sequence, elements: {...s.renderedState}};
     } else if (update.state.sequence !== s.previousRenderedState.sequence + 1) {
       // old state is invalid
       renderedState = {};
@@ -150,38 +150,36 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     }
     // otherwise reuse previous+current state, we're overwriting an internal version of the same state
 
-    if (game.phase === 'new' && s.setup) {
-      game = s.setup(update.state);
+    if (gameManager.phase === 'new' && s.setup) {
+      gameManager = s.setup(update.state);
       // @ts-ignore;
-      window.game = game;
+      window.game = gameManager.game;
       // @ts-ignore;
-      window.board = game.board;
-      // @ts-ignore;
-      for (const className of game.board._ctx.classRegistry) window[className.name] = className;
-      game.board.setBoardSize(
-        game.board.getBoardSize(window.innerWidth, window.innerHeight, !!globalThis.navigator?.userAgent.match(/Mobi/))
+      for (const className of gameManager.game._ctx.classRegistry) window[className.name] = className;
+      gameManager.game.setBoardSize(
+        gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, !!globalThis.navigator?.userAgent.match(/Mobi/))
       );
     } else {
-      game.players.fromJSON(update.state.players);
-      game.board.fromJSON(update.state.board);
-      game.players.assignAttributesFromJSON(update.state.players);
-      game.flow.setBranchFromJSON(update.state.position);
+      gameManager.players.fromJSON(update.state.players);
+      gameManager.game.fromJSON(update.state.board);
+      gameManager.players.assignAttributesFromJSON(update.state.players);
+      gameManager.flow.setBranchFromJSON(update.state.position);
     }
-    game.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
-    game.phase = 'started';
-    game.messages = update.state.messages;
-    game.announcements = update.state.announcements;
-    game.winner = [];
+    gameManager.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
+    gameManager.phase = 'started';
+    gameManager.messages = update.state.messages;
+    gameManager.announcements = update.state.announcements;
+    gameManager.winner = [];
 
     if (update.type === 'gameFinished') {
-      game.players.setCurrent([]);
-      game.winner = update.winners.map(p => game.players.atPosition(p)!);
+      gameManager.players.setCurrent([]);
+      gameManager.winner = update.winners.map(p => gameManager.players.atPosition(p)!);
     }
-    console.debug(`Game update for player #${position}. Current flow:\n ${game.flow.stacktrace()}`);
+    console.debug(`Game update for player #${position}. Current flow:\n ${gameManager.flow.stacktrace()}`);
 
     let state: GameStore = {
       ...s,
-      game,
+      gameManager,
       position,
       finished: false,
       move: undefined,
@@ -193,7 +191,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       boardSelections: {},
       pendingMoves: undefined,
       placement: undefined,
-      ...updateBoard(game, position, update.state.board),
+      ...updateBoard(gameManager, position, update.state.board),
     };
 
     // may override board with new information from playing forward from the new state
@@ -203,7 +201,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
     state.previousRenderedState = previousRenderedState;
     state.renderedState = renderedState;
-    s.game.sequence = update.state.sequence;
+    s.gameManager.sequence = update.state.sequence;
 
     return state;
   }),
@@ -229,7 +227,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         state = {
           ...state,
           placement: undefined,
-          ...updateBoard(s.game, s.position!)
+          ...updateBoard(s.gameManager, s.position!)
         };
       }
     }
@@ -237,11 +235,11 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     state = updateSelections(state);
 
     if (!pendingMove) {
-      s.game.sequence = Math.floor(s.game.sequence);
+      s.gameManager.sequence = Math.floor(s.gameManager.sequence);
     }
 
-    if (s.game.sequence > Math.floor(s.game.sequence)) {
-      state.previousRenderedState = {sequence: Math.floor(s.game.sequence), elements: {...s.renderedState}};
+    if (s.gameManager.sequence > Math.floor(s.gameManager.sequence)) {
+      state.previousRenderedState = {sequence: Math.floor(s.gameManager.sequence), elements: {...s.renderedState}};
       state.renderedState = {};
     }
 
@@ -308,19 +306,19 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     if (rotation !== undefined) {
       s.placement.piece.rotation = rotation;
     }
-    s.placement.invalid = !!s.game.getAction(s.pendingMoves?.[0].name, s.game.players.atPosition(s.position!)!)._getError(
+    s.placement.invalid = !!s.gameManager.getAction(s.pendingMoves?.[0].name, s.gameManager.players.atPosition(s.position!)!)._getError(
       s.pendingMoves?.[0].selections[0],
       {
         ...s.move?.args,
         '__placement__': [s.placement.piece.column ?? 1, s.placement.piece.row ?? 1, s.placement.piece.rotation]
       }
     );
-    return {... state, ...updateBoard(s.game, s.position!) };
+    return {... state, ...updateBoard(s.gameManager, s.position!) };
   }),
 
   selectPlacement: ({ column, row, rotation }) => set(s => {
     if (!s.pendingMoves) return { placement: undefined };
-    const error = s.game.getAction(s.pendingMoves?.[0].name, s.game.players.atPosition(s.position!)!)._getError(
+    const error = s.gameManager.getAction(s.pendingMoves?.[0].name, s.gameManager.players.atPosition(s.position!)!)._getError(
       s.pendingMoves?.[0].selections[0],
       {
         ...s.move?.args,
@@ -357,10 +355,10 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   renderedState: {},
   previousRenderedState: {sequence: -1, elements: {}},
   setBoardSize: () => set(s => {
-    const boardSize = s.game.board.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
-    if (boardSize.name !== s.game.board._ui.boardSize.name && s.position) {
-      s.game.board.setBoardSize(boardSize);
-      updateBoard(s.game, s.position);
+    const boardSize = s.gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
+    if (boardSize.name !== s.gameManager.game._ui.boardSize.name && s.position) {
+      s.gameManager.game.setBoardSize(boardSize);
+      updateBoard(s.gameManager, s.position);
     }
     return {};
   }),
@@ -369,7 +367,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     const moves = s.boardSelections[dragElement].dragMoves;
     let dropSelections: UIMove[] = [];
     if (moves) for (let {move, drag} of moves) {
-      const elementChosen = {[move.selections[0].name]: s.game!.board.atBranch(dragElement)};
+      const elementChosen = {[move.selections[0].name]: s.gameManager!.game.atBranch(dragElement)};
       const sel = drag.resolve({...(s.move?.args || {}), ...elementChosen});
       // create new move with the dragElement included as an arg and the dropzone as the new selection
       dropSelections.push(decorateUIMove({
@@ -430,11 +428,11 @@ export type SetupComponentProps = {
  *
  * @param options.layout - A function for declaring all UI customization in the
  * game. Typically this will include calls to {@link GameElement#layout}, {@link
- * GameElement#appearance}, {@link Board#layoutStep} and {@link
- * Board#layoutAction}.
+ * GameElement#appearance}, {@link Game#layoutStep} and {@link
+ * Game#layoutAction}.
  *
  * @param options.announcements - A list of announcements. Each is a function
- * that accepts the {@link Board} object and returns the JSX of the
+ * that accepts the {@link Game} object and returns the JSX of the
  * announcement. These can be called from {@link game#announce} or {@link
  * game.finish}.
  *
@@ -442,31 +440,31 @@ export type SetupComponentProps = {
  * info sidebar. Each is an object with:
  * <ul>
  * <li>title: The title shown in the sidebar
- * <li>modal: a function that accepts the {@link Board} object and returns the JSX
+ * <li>modal: a function that accepts the {@link Game} object and returns the JSX
  *   of the modal.
- * <li>condition: An optional condition function that accepts the {@link Board}
+ * <li>condition: An optional condition function that accepts the {@link Game}
  *   object and returns as a boolean whether the modal should be currently
  *   available
  * </ul>
  *
  * @category UI
  */
-export const render = <P extends Player, B extends Board>(setup: SetupFunction<P, B>, options: {
+export const render = <P extends Player, B extends Game>(setup: SetupFunction<P, B>, options: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize,
-  layout?: (board: B, player: P, boardSize: string) => void,
-  announcements?: Record<string, (board: B) => JSX.Element>
-  infoModals?: {title: string, modal: (board: B) => JSX.Element}[]
+  layout?: (game: B, player: P, boardSize: string) => void,
+  announcements?: Record<string, (game: B) => JSX.Element>
+  infoModals?: {title: string, modal: (game: B) => JSX.Element}[]
 }): void => {
   const { settings, boardSizes, layout, announcements, infoModals } = options;
   const state = gameStore.getState();
   const setupGame: SetupFunction = state => {
-    const game = setup(state);
-    game.board._ui.boardSizes = boardSizes;
-    game.board._ui.setupLayout = layout;
-    game.board._ui.announcements = announcements ?? {};
-    game.board._ui.infoModals = infoModals ?? [];
-    return game;
+    const gameManager = setup(state);
+    gameManager.game._ui.boardSizes = boardSizes;
+    gameManager.game._ui.setupLayout = layout;
+    gameManager.game._ui.announcements = announcements ?? {};
+    gameManager.game._ui.infoModals = infoModals ?? [];
+    return gameManager;
   }
   // we can anonymize Player class internally
   state.setSetup(setupGame);

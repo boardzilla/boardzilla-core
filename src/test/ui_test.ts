@@ -2,14 +2,13 @@ import chai from 'chai';
 
 import {
   Player,
-  Board,
+  Game,
   times,
   createGame,
 } from '../index.js';
 import { createGameStore } from '../ui/index.js';
 
-import type Game from '../game.js';
-import type { SerializedMove } from '../game.js';
+import type { default as GameManager, SerializedMove } from '../game-manager.js';
 
 import {
   starterGame,
@@ -52,7 +51,7 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    const token = state.game.board.first(Token)!;
+    const token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     expect(state.pendingMoves?.length).to.equal(1);
     expect(state.pendingMoves?.[0].name).to.equal('take');
@@ -66,8 +65,8 @@ describe('UI', () => {
 
     expect(state.pendingMoves).to.deep.equal([]);
     expect(state.boardPrompt).to.match(/taking their turn/);
-    expect(state.game.board.first('mat')!.all(Token).length).to.equal(1);
-    expect(state.game.board.first('pool')!.all(Token).length).to.equal(3);
+    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1);
+    expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(3);
   });
 
   it("prompts confirm", () => {
@@ -75,11 +74,11 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    let token = state.game.board.first(Token)!;
+    let token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
-    token = state.game.board.first(Token)!;
+    token = state.gameManager.game.first(Token)!;
 
     expect(history.length).to.equal(0);
     expect(state.selected).to.deep.equal([token]);
@@ -99,7 +98,7 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    let token = state.game.board.first(Token)!;
+    let token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
 
     expect(state.boardSelections[token.branch()].error).to.equal('not first');
@@ -111,7 +110,7 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    const token = state.game.board.first(Token)!;
+    const token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
@@ -125,8 +124,8 @@ describe('UI', () => {
     state = store.getState();
 
     expect(history.length).to.equal(0);
-    expect(state.game.board.first('mat')!.all(Token).length).to.equal(0);
-    expect(state.game.board.first('pool')!.all(Token).length).to.equal(4);
+    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(0);
+    expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(4);
   });
 
   it("continues compound move", () => {
@@ -134,11 +133,11 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    let token = state.game.board.first(Token)!;
+    let token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
-    token = state.game.board.first(Token)!;
+    token = state.gameManager.game.first(Token)!;
 
     expect(history.length).to.equal(0);
     expect(state.selected.length).to.equal(0);
@@ -150,8 +149,8 @@ describe('UI', () => {
 
     state.selectMove(state.pendingMoves?.[0], {a: 1});
     expect(history.length).to.equal(1);
-    expect(state.game.board.first('mat')!.all(Token).length).to.equal(1);
-    expect(state.game.board.first('pool')!.all(Token).length).to.equal(3);
+    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1);
+    expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(3);
   });
 
   it("places pieces", () => {
@@ -159,14 +158,14 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    let token = state.game.board.first(Token)!;
+    let token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
 
     state.setPlacement({ column: 2, row: 2 });
-    const ghost = state.game.board.first(Token)!;
-    token = state.game.board.first('pool')!.first(Token)!;
+    const ghost = state.gameManager.game.first(Token)!;
+    token = state.gameManager.game.first('pool')!.first(Token)!;
 
     expect(history.length).to.equal(0);
     expect(state.pendingMoves?.[0].selections[0].type).to.equal('place');
@@ -179,8 +178,8 @@ describe('UI', () => {
     expect(history.length).to.equal(1);
     expect(history[0].name).to.equal('take');
     expect(history[0].args.__placement__).to.deep.equal([2, 2]);
-    expect(state.game.board.first('mat')!.all(Token).length).to.equal(1);
-    expect(state.game.board.first('pool')!.all(Token).length).to.equal(3);
+    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1);
+    expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(3);
   });
 
   it("places pieces with confirm", () => {
@@ -188,7 +187,7 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    let token = state.game.board.first(Token)!;
+    let token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
@@ -197,15 +196,15 @@ describe('UI', () => {
     state.selectPlacement({ column: 2, row: 2 });
 
     state = store.getState();
-    token = state.game.board.first(Token)!;
+    token = state.gameManager.game.first(Token)!;
 
     expect(history.length).to.equal(0);
     expect(state.pendingMoves?.[0].selections[0].type).to.equal('place');
     expect(state.pendingMoves?.[0].requireExplicitSubmit).to.be.true;
     expect(token.column).to.equal(2);
     expect(token.row).to.equal(2);
-    expect(state.game.board.first('mat')!.all(Token).length).to.equal(1); // ghost piece
-    expect(state.game.board.first('pool')!.all(Token).length).to.equal(4);
+    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1); // ghost piece
+    expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(4);
   });
 
   it("places pieces with validate", () => {
@@ -213,7 +212,7 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    let token = state.game.board.first(Token)!;
+    let token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
@@ -238,7 +237,7 @@ describe('UI', () => {
 
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
-    let token = state.game.board.first(Token)!;
+    let token = state.gameManager.game.first(Token)!;
     const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
@@ -256,14 +255,14 @@ describe('UI', () => {
 
     state.selectMove(state.pendingMoves?.[0], {a: 1});
     expect(history.length).to.equal(1);
-    expect(state.game.board.first('mat')!.all(Token).length).to.equal(1);
-    expect(state.game.board.first('pool')!.all(Token).length).to.equal(3);
+    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1);
+    expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(3);
   });
 });
 
 function getGameStore(gameCreator: (game: Game) => void) {
   const store = createGameStore();
-  const setup = createGame(Player, Board, gameCreator);
+  const setup = createGame(Player, Game, gameCreator);
   store.getState().setSetup(setup);
   return store;
 }
@@ -282,21 +281,21 @@ function updateStore(store: ReturnType<typeof createGameStore>, players: number,
   }));
 
   // initial state
-  const game = setup!({
+  const gameManager = setup!({
     players: playerAttrs,
     settings,
     rseed: 'rseed',
   })
 
-  game.play();
+  gameManager.play();
 
-  let state = (game as Game<Player, Board>).getPlayerStates()[0].state;
+  let state = (gameManager as GameManager<Player, Game>).getPlayerStates()[0].state;
   if (state instanceof Array) state = state[state.length - 1];
 
   updateState({
     type: 'gameUpdate',
     state,
     position: 1,
-    currentPlayers: game.players.currentPosition
+    currentPlayers: gameManager.players.currentPosition
   });
 }

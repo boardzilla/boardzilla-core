@@ -8,7 +8,7 @@ const InfoOverlay = ({ setMode }: {
   const [collapsed, setCollapsed] = useState(false);
   const [infoModal, setInfoModal] = useState<number | undefined>(undefined);
 
-  const [game, infoElement, setInfoElement, actionDescription] = gameStore(s => [s.game, s.infoElement, s.setInfoElement, s.actionDescription]);
+  const [gameManager, infoElement, setInfoElement, actionDescription] = gameStore(s => [s.gameManager, s.infoElement, s.setInfoElement, s.actionDescription]);
 
   let elementStyle: React.CSSProperties | undefined = useMemo(() => {
     if (!infoElement?.element) return {};
@@ -74,11 +74,11 @@ const InfoOverlay = ({ setMode }: {
               <div className="contents">
                 <h1>Currently</h1>
                 <ul>
-                  {game.messages.map((m, i) => {
+                  {gameManager.messages.map((m, i) => {
                     const player = m.body.match(/\[\[\$p\[(\d+)/);
                     let color: string | undefined = undefined;
                     if (player) {
-                      color = game.players.atPosition(parseInt(player[1]))?.color;
+                      color = gameManager.players.atPosition(parseInt(player[1]))?.color;
                     }
                     return (
                       <li style={{color}} key={i}>
@@ -87,7 +87,7 @@ const InfoOverlay = ({ setMode }: {
                     );
                   })}
                   {actionDescription && (
-                    <li style={{color: game.players.allCurrent()[0]?.color}}>
+                    <li style={{color: gameManager.players.allCurrent()[0]?.color}}>
                       <span>{actionDescription}</span>
                     </li>
                   )}
@@ -95,8 +95,8 @@ const InfoOverlay = ({ setMode }: {
               </div>
               <div className="contents">
                 <h1>More game info</h1>
-                {game.board._ui.infoModals?.
-                  filter(({ condition }) => !condition || condition(game.board)).
+                {gameManager.game._ui.infoModals?.
+                  filter(({ condition }) => !condition || condition(gameManager.game)).
                   map(({ title }, key) => (
                     <button key={key} className="info-modal-title" onClick={() => { setInfoElement(); setInfoModal(key) }}>
                       {title}
@@ -131,7 +131,7 @@ const InfoOverlay = ({ setMode }: {
               </>
             )}
             {!infoElement && (
-              game.board._ui.infoModals[infoModal!].modal(game.board)
+              gameManager.game._ui.infoModals[infoModal!].modal(gameManager.game)
             )}
           </div>
         )}

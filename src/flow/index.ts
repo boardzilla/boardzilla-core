@@ -47,7 +47,7 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  *
  * @param options.name - A unique name for this player action. If provided, this
  * can be used for the UI to determine placement of messages for this action in
- * {@link Board#layoutStep}.
+ * {@link Game#layoutStep}.
  *
  * @param options.prompt - A prompting message for the player taking the action
  * to decide between their choices. May be a string or a function accepting

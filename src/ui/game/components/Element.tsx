@@ -37,7 +37,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
 
   const isSelected = mode === 'game' && (selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
-  const appearance = element._ui.appearance.render || (element.board._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
+  const appearance = element._ui.appearance.render || (element.game._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const isVisible = useMemo(() => element.isVisible(), [element, boardJSON])
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,7 +61,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   }, [element, branch, previousRenderedState, boardJSON]);
 
   const newAttrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
-    !['_t', '_ctx', '_ui', '_visible', 'game', 'pile', 'board', '_eventHandlers', 'className', '_rotation'].includes(key) &&
+    !GameElement.unserializableAttributes.includes(key) &&
       typeof val !== 'function' && typeof val !== 'object' &&
       (isVisible || (element.constructor as typeof GameElement).visibleAttributes?.includes(key)) // should this be scrubbed during json hydration?
   )).map(([key, val]) => (
