@@ -60,6 +60,8 @@ export function updateSelections(store: GameStore): GameStore {
   let moves = pendingMoves?.moves;
 
   if (moves?.length === 1 && moves[0].selections.length === 1) {
+    if (!move) move = decorateUIMove(moves[0]);
+
     const selection = moves[0].selections[0];
     if (selection.type === 'place' && !placement) {
       let piece = selection.clientContext.placement.piece as string | Piece;
