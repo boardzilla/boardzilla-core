@@ -13,14 +13,13 @@ const colors = [
   '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
   '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'];
 
-const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePlayers, onUpdateSelfPlayer, onUpdateSettings }: {
+const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePlayers, onUpdateSettings }: {
   users: User[],
   players: User[],
   minPlayers: number,
   maxPlayers: number,
   seatCount: number,
   onUpdatePlayers: (operations: UpdatePlayersMessage['operations']) => void,
-  onUpdateSelfPlayer: ({ color, name }: { color: string, name: string }) => void,
   onUpdateSettings: (update: {settings?: GameSettings, seatCount?: number}) => void,
 }) => {
   const [userID, host] = gameStore(s => [s.userID, s.host]);
@@ -32,33 +31,38 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
     updateName(id, prompt("Please enter a name", user?.name)!);
   }
 
-  const seatPlayer = (position: number, userID: string) => {
-    const user = users.find(u => u.id === userID);
-    const unseats = players.filter(p => p.id === userID && p.playerDetails?.position !== position || p.id !== userID && p.playerDetails?.position === position);
-    const usedColors = players.filter(p => p.id !== userID && p.playerDetails?.position !== position).map(p => p.playerDetails?.color);
+  const seatPlayer = (position: number, id: string) => {
+    const user = users.find(u => u.id === id);
+    const unseats = players.filter(p => p.id === id && p.playerDetails?.position !== position || p.id !== id && p.playerDetails?.position === position);
+    const usedColors = players.filter(p => p.id !== id && p.playerDetails?.position !== position).map(p => p.playerDetails?.color);
     const color = colors.find(c => !usedColors.includes(c))!;
+    if (!host && unseats.some(u => u.id !== userID)) return;
 
     const operations: UpdatePlayersMessage['operations'] = unseats.map(u => (
       {type: 'unseat', userID: u.id}
     ));
-    if (userID === "__reserved__") {
-      operations.push({
-        type: "reserve",
-        position,
-        color,
-        name: "Reserved",
-        settings: {}
-      });
-    } else if (user) {
-      operations.push({
-        type: "seat",
-        position,
-        userID,
-        color,
-        name: user.name,
-        settings: {}
-      });
+
+    if (host || id === userID) {
+      if (id === "__reserved__") {
+        operations.push({
+          type: "reserve",
+          position,
+          color,
+          name: "Reserved",
+          settings: {}
+        });
+      } else if (user) {
+        operations.push({
+          type: "seat",
+          position,
+          userID: id,
+          color,
+          name: user.name,
+          settings: {}
+        });
+      }
     }
+
     onUpdatePlayers(operations);
   }
 
@@ -96,32 +100,27 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
     onUpdateSettings({ seatCount: count });
   }, [players, seatCount, maxPlayers, onUpdatePlayers, onUpdateSettings]);
 
-  const updateColor = (userID: string, color: string) => {
+  const updateColor = (id: string, color: string) => {
     setPickingColor(undefined);
-    if (host) {
+    if (host || userID === userID) {
       const operation: UpdateOperation = {
         type: "update",
-        userID,
+        userID: id,
         color,
       };
       onUpdatePlayers([operation]);
-    } else {
-      onUpdateSelfPlayer({ color, name: players.find(p => p.id === userID)!.name });
     }
   }
 
   const updateName = (userID: string, name: string) => {
     setPickingColor(undefined);
-    if (host) {
+    if (host || userID === userID) {
       const operation: UpdateOperation = {
         type: "update",
         userID,
         name,
       };
       onUpdatePlayers([operation]);
-    } else {
-      if (!players.find(p => p.id === userID)!.playerDetails) return
-      onUpdateSelfPlayer({ name, color: players.find(p => p.id === userID)!.playerDetails!.color });
     }
   }
 
@@ -138,7 +137,6 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
                 onMouseDown={e => {if (!host && !player) { seatPlayer(position, userID); e.preventDefault() }}}
                 value={player?.id || ""}
                 onChange={e => seatPlayer(position, e.target.value)}
-                onClick={e => {console.log(e); e.stopPropagation()}}
                 disabled={!host && !!player?.id && player.id !== userID}
                 style={{backgroundColor: player?.playerDetails?.color ?? '#777' }}
               >
@@ -238,15 +236,43 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
             </div>
           );
         })}
-        {seatCount > minPlayers && <button className="addSeat" onClick={() => updateSeatCount(seatCount - 1)}>-</button>}
-        {seatCount < maxPlayers && <button className="addSeat" onClick={() => updateSeatCount(seatCount + 1)}>+</button>}
+        {host && seatCount < maxPlayers && (
+          <svg
+            className="addSeat"
+            viewBox="-4.4276366 41.597518 239.72168 220.78024"
+            xmlns="http://www.w3.org/2000/svg"
+            onClick={() => updateSeatCount(seatCount + 1)}
+          >
+            <path
+              style={{fill: 'white', stroke: 'black', strokeWidth: 26.4583, strokeLinecap: 'round', strokeLinejoin: 'round', paintOrder: 'stroke markers fill'}}
+              d="m 105.68836,54.82669 20.19124,-5e-6 v 39.272268 l 39.32202,0.0606 -0.10104,20.077227 -39.22099,-0.0296 v 39.29772 l -20.19123,-1e-5 v -39.32986 l -39.17016,-0.0739 0.0094,-20.022317 39.16078,-0.1415 z" />
+            <path
+              style={{fill: 'white', stroke: 'black', strokeWidth: 26.4583, strokeLinecap: 'round', strokeLinejoin: 'round', paintOrder: 'stroke markers fill'}}
+              d="M 115.43321,249.14914 8.8009906,142.51692 22.782624,128.29036 l 92.950586,91.87409 91.98988,-91.98987 14.34234,14.34234 z" />
+          </svg>
+        )}
+        {host && seatCount > minPlayers && (
+          <svg
+            className="removeSeat"
+            viewBox="-4.4276366 41.597518 239.72168 220.78024"
+            xmlns="http://www.w3.org/2000/svg"
+            onClick={() => updateSeatCount(seatCount - 1)}
+          >
+            <path
+              style={{fill: 'white', stroke: 'black', strokeWidth: 26.4583, strokeLinecap: 'round', strokeLinejoin: 'round', paintOrder: 'stroke markers fill'}}
+              d="m 65.664793,209.81572 0.10104,-20.07722 98.582377,0.13565 -0.009,20.02231 z" />
+            <path
+              style={{fill: 'white', stroke: 'black', strokeWidth: 26.4583, strokeLinecap: 'round', strokeLinejoin: 'round', paintOrder: 'stroke markers fill'}}
+              d="M 115.4332,54.826137 222.06542,161.45836 208.08379,175.68492 115.1332,83.810827 23.143323,175.8007 8.8009825,161.45836 Z" />
+          </svg>
+        )}
       </div>
       <div id="lobby">
         <div>Waiting in lobby</div>
         <div id="users">
           {users.filter(u => !players.find(player => player.id === u.id)).map(
             u => (
-              <div key={u.id} draggable="true" onDragStart={e => e.dataTransfer.setData('user', u.id)} className="user">
+              <div key={u.id} draggable={true} onDragStart={e => e.dataTransfer.setData('user', u.id)} className="user">
                 <img draggable="false" src={u.avatar}/>{u.name}
               </div>
             )

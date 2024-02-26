@@ -603,7 +603,7 @@ html, body { height: 100% }
             height: 2.75em;
             border-radius: 20em;
             border-width: 0;
-            padding: 0.8em 3em;
+            padding: 0.5em 3em;
             width: 100%;
             color: white;
             color: white;
@@ -614,11 +614,12 @@ html, body { height: 100% }
               outline: none;
             }
 
+            &:disabled {
+              opacity: unset;
+            }
+
             html.dark & {
               background: #444;
-            }
-            option {
-              font-weight: bold;
             }
           }
 
@@ -671,6 +672,16 @@ html, body { height: 100% }
             }
           }
         }
+
+        svg.addSeat, svg.removeSeat {
+          height: 2.5em;
+          margin: .2em 1em;
+          cursor: pointer;
+          transition: transform .2s;
+          &:hover {
+            transform: scale(1.2);
+          }
+        }
       }
 
       #lobby {
@@ -693,6 +704,7 @@ html, body { height: 100% }
           padding: .2em;
           text-align: left;
           min-height: 50px;
+          font-weight: normal;
           .user {
             display: inline-block;
             margin: .2em;

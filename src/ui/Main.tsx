@@ -17,6 +17,7 @@ export type User = {
     position: number;
     ready: boolean;
     settings?: any;
+    reserved: boolean;
     sessionURL?: string;
   };
 };
@@ -81,6 +82,7 @@ export type UpdateOperation = {
   userID: string;
   color?: string;
   name?: string;
+  ready?: boolean;
   settings?: any;
 }
 
@@ -98,15 +100,6 @@ export type UpdatePlayersMessage = {
   type: "updatePlayers";
   id: string;
   operations: PlayerOperation[];
-}
-
-export type UpdateSelfPlayerMessage = {
-  type: "updateSelfPlayer";
-  id: string;
-  name?: string;
-  color?: string;
-  position?: number;
-  ready?: boolean;
 }
 
 export type UpdateSettingsMessage = {
@@ -171,7 +164,6 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
     MessageProcessedEvent
   >) => {
     const data = event.data;
-    console.log('==============================message', data);
     switch(data.type) {
     case 'settingsUpdate':
       setSettings(data.settings);
@@ -243,18 +235,6 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
     window.top!.postMessage(message, "*");
   }, [])
 
-  const updateSelfPlayer = useCallback(({ color, name, ready }: { color?: string, name?: string, ready?: boolean }) => {
-    const message: UpdateSelfPlayerMessage = {
-      id: 'updateSelfPlayer',
-      type: 'updateSelfPlayer',
-      color,
-      name,
-      ready
-    }
-    console.log('updateSelfPlayer', message);
-    window.top!.postMessage(message, "*");
-  }, [])
-
   return (
     <>
       {gameManager.phase === 'new' && settings &&
@@ -267,7 +247,6 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
           settings={settings}
           seatCount={seatCount}
           onUpdatePlayers={updatePlayers}
-          onUpdateSelfPlayer={updateSelfPlayer}
           onUpdateSettings={updateSettings}
         />
       }
