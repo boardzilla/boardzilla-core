@@ -15,6 +15,12 @@
   90% { opacity: .7; filter: drop-shadow(0 0 0 #fff) }
 }
 
+@keyframes pulse-ready {
+  0% { transform: scale(1) }
+  80% { transform: scale(1.2); filter: drop-shadow(0 0 .1em #fff) }
+  100% { transform: scale(1) }
+}
+
 html, body { height: 100% }
 
 @layer game {
@@ -564,6 +570,9 @@ html, body { height: 100% }
         text-align: center;
         margin: .3em 0 .5em;
       }
+      p {
+        text-align: center;
+      }
       html.dark & {
         background: #fff3;
       }
@@ -587,7 +596,6 @@ html, body { height: 100% }
           position: relative;
           select {
             appearance: none;
-            background: #888;
             font-family: 'DM Sans Variable';
             text-align-last: center;
             text-align: center;
@@ -595,7 +603,7 @@ html, body { height: 100% }
             height: 2.75em;
             border-radius: 20em;
             border-width: 0;
-            padding: 0.8em 1em;
+            padding: 0.8em 3em;
             width: 100%;
             color: white;
             color: white;
@@ -609,6 +617,9 @@ html, body { height: 100% }
             html.dark & {
               background: #444;
             }
+            option {
+              font-weight: bold;
+            }
           }
 
           img.avatar {
@@ -619,23 +630,31 @@ html, body { height: 100% }
             border-radius: 50%;
           }
 
-          .rename, .palette {
-            color: white;
+          .rename, .palette, .ready {
             position: absolute;
             font-size: 2em;
             transition: transform .2s;
+          }
+          .rename, .palette {
             &:hover {
               cursor: pointer;
               transform: scale(1.4);
             }
           }
+          .ready {
+            right: .65em;
+            top: .4em;
+          }
           .rename {
             right: .65em;
-            top: .5em;
+            top: .45em;
           }
           .palette {
             right: 1.6em;
-            top: .43em;
+            top: .40em;
+          }
+          .ready {
+            animation: pulse-ready .4s;
           }
 
           .github-picker {
@@ -727,7 +746,7 @@ html, body { height: 100% }
       }
     }
 
-    input.start {
+    button.ready {
       margin: 0 auto;
       display: block;
       white-space: normal;

@@ -47,8 +47,6 @@ export type GameStore = {
   setup?: SetupFunction<Player, Game<Player>>;
   setSetup: (s: SetupFunction<Player, Game<Player>>) => void;
   gameManager: GameManager<Player, Game<Player>>;
-  finished: boolean;
-  setFinished: (finished: boolean) => void;
   isMobile: boolean;
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with gameManager.sequence
   updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}, readOnly?: boolean) => void;
@@ -129,8 +127,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   setDev: dev => set({ dev }),
   setSetup: setup => set({ setup }),
   gameManager: new GameManager(Player, Game),
-  finished: false,
-  setFinished: finished => set({ finished }),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
   boardJSON: [],
   updateState: (update, readOnly=false) => set(s => {
@@ -173,6 +169,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
     if (update.type === 'gameFinished') {
       gameManager.players.setCurrent([]);
+      gameManager.phase = 'finished';
       gameManager.winner = update.winners.map(p => gameManager.players.atPosition(p)!);
     }
     console.debug(`Game update for player #${position}. Current flow:\n ${gameManager.flow.stacktrace()}`);
@@ -181,7 +178,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       ...s,
       gameManager,
       position,
-      finished: false,
       move: undefined,
       prompt: undefined,
       actionDescription: undefined,
@@ -470,7 +466,14 @@ export const render = <P extends Player, B extends Game>(setup: SetupFunction<P,
   state.setSetup(setupGame);
 
   const boostrap = JSON.parse(document.body.getAttribute('data-bootstrap-json') || '{}');
-  const { host, userID, minPlayers, maxPlayers, dev }: { host: boolean, userID: string, minPlayers: number, maxPlayers: number, dev?: boolean } = boostrap;
+  const { host, userID, minPlayers, maxPlayers, defaultPlayers, dev }: {
+    host: boolean,
+    userID: string,
+    minPlayers: number,
+    maxPlayers: number,
+    defaultPlayers: number,
+    dev?: boolean
+  } = boostrap;
   state.setHost(host);
   state.setDev(dev);
   state.setUserID(userID);
@@ -480,6 +483,7 @@ export const render = <P extends Player, B extends Game>(setup: SetupFunction<P,
     <Main
       minPlayers={minPlayers}
       maxPlayers={maxPlayers}
+      defaultPlayers={defaultPlayers}
       setupComponents={settings || {}}
     />
   );

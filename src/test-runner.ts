@@ -20,17 +20,16 @@ declare global {
 class TestRunnerPlayer<P extends Player, B extends Game> {
   runner: TestRunner<P, B>
   store: ReturnType<typeof createGameStore>
-  player: PlayerAttributes<Player>
-  gameManager: GameManager
-  game: Game
+  playerAttrs: PlayerAttributes<P>
+  player: P
+  game: B
   position: number
 
-  constructor(runner: TestRunner<P, B>, position: number, store: ReturnType<typeof createGameStore>, player: PlayerAttributes<Player>, gameManager: GameManager, game: Game) {
+  constructor(runner: TestRunner<P, B>, position: number, store: ReturnType<typeof createGameStore>, playerAttrs: PlayerAttributes<P>, game: B) {
     this.runner = runner
     this.position = position
     this.store = store
-    this.player = player
-    this.gameManager = gameManager
+    this.playerAttrs = playerAttrs
     this.game = game
   }
 
@@ -51,7 +50,7 @@ class TestRunnerPlayer<P extends Player, B extends Game> {
   }
 
   actions() {
-    const pendingMoves = this.gameManager.getPendingMoves(this.runner.server.gameManager.players[this.position - 1]);
+    const pendingMoves = this.game.gameManager.getPendingMoves(this.runner.server.gameManager.players[this.position - 1]);
     if (!pendingMoves) return [];
     return pendingMoves.moves.map(m => m.name);
   }
@@ -118,7 +117,7 @@ export class TestRunner<P extends Player, B extends Game> {
       const store = createGameStore()
       const {setSetup, gameManager} = store.getState();
       setSetup(this.setup);
-      return new TestRunnerPlayer(this, i+1, store, p, gameManager, gameManager.game)
+      return new TestRunnerPlayer(this, i + 1, store, p as unknown as PlayerAttributes<P>, gameManager.game as B)
     });
     this.updatePlayers(); // initial
     return this.players
@@ -132,7 +131,7 @@ export class TestRunner<P extends Player, B extends Game> {
   updatePlayers() {
     for (const player of this.players) {
       const { updateState } = player.store.getState();
-      const state = this.server.state!.players.find(state => state.position === player.player.position)!;
+      const state = this.server.state!.players.find(state => state.position === player.position)!;
       const playerState = (state.state instanceof Array) ? state.state[state.state.length - 1] : state.state;
 
       if (this.server.state!.game.phase === 'started') {
@@ -142,9 +141,18 @@ export class TestRunner<P extends Player, B extends Game> {
           position: state.position,
           currentPlayers: this.server.state!.game.currentPlayers
         });
-        const { gameManager } = player.store.getState();
-        player.game = gameManager.game;
       }
+      if (this.server.state!.game.phase === 'finished') {
+        updateState({
+          type: 'gameFinished',
+          state: playerState,
+          position: state.position,
+          winners: this.server.gameManager.winner.map(p => p.position),
+        });
+      }
+      const { gameManager } = player.store.getState();
+      player.game = gameManager.game as B;
+      player.player = gameManager.players.atPosition(player.position) as P;
     }
   }
 }

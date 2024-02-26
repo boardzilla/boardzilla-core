@@ -233,7 +233,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    *   card => card.hideFromAll()
    * )
    *
-   * @category Actions
+   * @category Definition
    */
   action<A extends Record<string, Argument<P>> = NonNullable<unknown>>(definition: {
     prompt?: string,
@@ -268,6 +268,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    *         }
    *       }
    *     )
+   * @category Game Management
    */
   followUp(action: ActionStub<P>) {
     this._ctx.gameManager.followups.push(action);
@@ -291,6 +292,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * - {@link everyPlayer}
    * - {@link ifElse}
    * - {@link switchCase}
+   * @category Definition
    */
   flowCommands = {
     playerActions: (options: ConstructorParameters<typeof ActionStep<P>>[0]) => this.flowGuard() && new ActionStep<P>(options),
@@ -311,6 +313,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * solo game if no winner is provided, this is considered a loss.
    * @param announcement - an optional announcement from {@link render} to
    * replace the standard boardzilla announcement.
+   * @category Game Management
    */
   finish(winner?: P | P[], announcement?: string) {
     this._ctx.gameManager.phase = 'finished';
@@ -319,8 +322,19 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
   }
 
   /**
+   * Return array of game winners, or undefined if game is not yet finished
+   * @category Game Management
+   */
+  getWinners() {
+    let winner = this._ctx.gameManager.winner;
+    if (!(winner instanceof Array)) winner = [winner];
+    return this._ctx.gameManager.phase === 'finished' ? winner : undefined;
+  }
+
+  /**
    * Add a delay in the animation of the state change at this point for player
    * as they receive game updates.
+   * @category Game Management
    */
   addDelay() {
     if (this.game._ctx.trackMovement) {
