@@ -51,6 +51,13 @@ export type SetupFunction<P extends Player<P, B> = any, B extends Game<P, B> = a
   options?: {trackMovement?: boolean}
 ) => GameManager<P, B>
 
+export const colors = [
+  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
+  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
+  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
+  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'
+];
+
 declare global {
   /**
    * Global reference to all unique named spaces

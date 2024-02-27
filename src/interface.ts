@@ -1,4 +1,6 @@
 import { deserializeArg } from './action/utils.js';
+import { range } from './utils.js';
+import { colors } from './index.js';
 import random from 'random-seed';
 
 import type { ElementJSON } from './board/element.js';
@@ -60,10 +62,7 @@ export type GameInterface<P extends Player> = {
       data: SerializedMove
     },
   ) => GameUpdate<P>
-  getPlayerState: (
-    state: GameState<P>,
-    position: number
-  ) => GameState<P>
+  seatPlayer(players: Player[], seatCount: number): {position: number, color: string, settings: any} | null
 }
 
 function advanceRseed(rseed?: string) {
@@ -155,10 +154,21 @@ export const createInterface = (setup: SetupFunction<Player, Game<Player>>): Gam
       //console.timeEnd('processMove');
       return update;
     },
-    getPlayerState: (state: GameState<Player>, position: number): GameState<Player> => {
-      if (!position) throw Error('getPlayerState without position');
-      const gameManager = setup(state);
-      return gameManager.getState(gameManager.players.atPosition(position));
+    seatPlayer: (players: Player[], seatCount: number): {position: number, color: string, settings: any} | null => {
+      let usedPositions = range(1, seatCount);
+      let usedColors = [...colors];
+      for (const player of players) {
+        usedPositions = usedPositions.filter(position => position !== player.position);
+        usedColors = usedColors.filter(color => color !== player.color);
+      }
+      if (usedPositions.length) {
+        return {
+          position: usedPositions[0],
+          color: usedColors[0],
+          settings: {}
+        };
+      }
+      return null;
     }
   };
 }

@@ -1,17 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import { gameStore } from '../../index.js';
 
-import { times } from '../../../index.js';
+import { times, colors } from '../../../index.js';
 import * as ReactColor from 'react-color';
 const { GithubPicker } = ReactColor;
 
 import type { User, UpdateOperation, UpdatePlayersMessage, GameSettings } from '../../Main.js';
-
-const colors = [
-  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
-  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
-  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
-  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'];
 
 const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePlayers, onUpdateSettings }: {
   users: User[],
@@ -25,8 +19,6 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
   const [userID, host] = gameStore(s => [s.userID, s.host]);
 
   const [pickingColor, setPickingColor] = useState<string>();
-
-  console.log(players);
 
   const rename = (id: string) => {
     const user = users.find(u => u.id === id);
@@ -90,6 +82,11 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
               color: player.playerDetails!.color,
               name: player.name,
               settings: player.playerDetails!.settings
+            });
+            operations.push({
+              type: "update",
+              userID: player.id,
+              ready: player.playerDetails?.ready
             });
           }
         }
@@ -159,7 +156,7 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
                     viewBox="25.762297 68.261274 213.23847 149.07793"
                     xmlns="http://www.w3.org/2000/svg">
                     <path
-                      fill="#21ff21" stroke="black" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" paint-order="stroke fill markers"
+                      fill="#21ff21" stroke="black" strokeWidth="30" strokeLinecap="round" strokeLinejoin="round" paintOrder="stroke fill markers"
                       d="M 42.067911,162.20821 59.401006,144.01333 97.066979,181.31905 202.75316,75.448265 220.91697,93.183881 97.189426,217.33962 Z" />
                   </svg>
                 </div>
