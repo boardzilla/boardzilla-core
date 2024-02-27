@@ -17,7 +17,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
   const [gameManager, position, uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.gameManager, s.position, s.uncommittedArgs, s.selected, s.disambiguateElement]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
-  const action = useMemo(() => gameManager.getAction(move.name, gameManager.players.atPosition(position!)!), [gameManager, position, move]);
+  const action = useMemo(() => move.name === '__pass__' ? undefined : gameManager.getAction(move.name, gameManager.players.atPosition(position!)!), [gameManager, position, move]);
 
   const initial = useCallback(() => {
     const args: Record<string, Argument<Player> | undefined> = {...move.args};
@@ -51,6 +51,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
 
   // return set of errors per selection from validation rules
   const validationErrors = useCallback((args: Record<string, Argument<Player> | undefined>) => {
+    if (!action) return {};
     return Object.fromEntries(
       move.selections.filter(
         s => s.name !== '__action__' && s.name !== '__confirm__'
@@ -91,7 +92,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
 
   const confirm = useMemo(() => {
     if (Object.values(validationErrors(allArgs)).some(e => e)) return undefined;
-    if (!move.requireExplicitSubmit) return undefined;
+    if (!move.requireExplicitSubmit || !action) return undefined;
     if (Object.values(allArgs).some(a => a === undefined)) return undefined;
     for (const s of move.selections) {
       if (s.type === 'board' && s.isMulti() && (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity))) return undefined;
