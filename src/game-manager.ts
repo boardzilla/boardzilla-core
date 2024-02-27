@@ -103,6 +103,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
   setRandomSeed(rseed: string) {
     this.rseed = rseed;
     this.random = random.create(rseed).random;
+    if (this.game.random) this.game.random = this.random;
   }
 
   /**

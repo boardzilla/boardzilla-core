@@ -173,6 +173,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   }
 
   shuffle() {
+    console.log('random', !!this.game?.random);
     shuffleArray(this, this.game?.random || Math.random);
   }
 
