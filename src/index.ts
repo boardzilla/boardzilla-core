@@ -92,7 +92,7 @@ declare global {
 export const createGame = <P extends Player<P, B>, B extends Game<P, B>>(
   playerClass: {new(...a: any[]): P},
   gameClass: ElementClass<B>,
-  gameCreator: (game: Game<P, B>) => void
+  gameCreator: (game: B) => void
 ): SetupFunction<P, B> => (
   state: SetupState<P> | GameState<P>,
   options?: {trackMovement?: boolean}
