@@ -3,8 +3,8 @@ import Player from './player.js';
 import { shuffleArray } from '../utils.js';
 import { deserializeObject } from '../action/utils.js';
 
-import type { default as Game, PlayerAttributes } from '../game.js';
-import type { Board, Sorter } from '../board/index.js';
+import type { PlayerAttributes } from '../game-manager.js';
+import type { Game, Sorter } from '../board/index.js';
 
 /**
  * An Array-like collection of the game's players, mainly used in {@link
@@ -24,7 +24,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   /**
    * A reference to the {@link Game} class
    */
-  game: Game<P, Board<P>>
+  game: Game<P>
 
   addPlayer(attrs: PlayerAttributes<P>) {
     const player = new this.className(attrs);
@@ -32,7 +32,6 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     this.push(player);
     if (this.game) {
       player.game = this.game;
-      player.board = this.game.board;
     }
   }
 
@@ -174,6 +173,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   }
 
   shuffle() {
+    console.log('random', !!this.game?.random);
     shuffleArray(this, this.game?.random || Math.random);
   }
 

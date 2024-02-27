@@ -2,10 +2,9 @@ import { GameElement } from '../board/index.js';
 import { serializeObject } from '../action/utils.js';
 
 import type PlayerCollection from './collection.js';
-import type { Board } from '../board/index.js';
+import type { Game } from '../board/index.js';
 import type { ElementClass } from '../board/element.js';
 import type { ElementFinder, default as ElementCollection } from '../board/element-collection.js';
-import type Game from '../game.js';
 
 /**
  * Base player class. Each game must declare a single player class that extends
@@ -14,7 +13,7 @@ import type Game from '../game.js';
  * is passed to an action for the player taking that action.
  * @category Core
  */
-export default class Player<P extends Player<P, B> = any, B extends Board<P, B> = any> {
+export default class Player<P extends Player<P, B> = any, B extends Game<P, B> = any> {
   /**
    * A player's unique user id
    */
@@ -47,8 +46,7 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
    */
   position: number;
   settings?: any;
-  board: B
-  game: Game<P, B>
+  game: B
   _players: PlayerCollection<P>;
 
   isCurrent(this: P) {
@@ -79,7 +77,7 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
 
   /**
    * Finds all elements of a given type that are owned by this player. This is
-   * equivalent to calling `board.all(...)` with `{owner: this}` as one of the
+   * equivalent to calling `game.all(...)` with `{owner: this}` as one of the
    * search terms. Also see {@link GameElement#owner}.
    */
   allMy<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
@@ -87,15 +85,15 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
   allMy<F extends GameElement<P, B>>(this: P, className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement<P, B>> {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
-      return this.board.all({owner: this}, ...finders);
+      return this.game.all({owner: this}, ...finders);
     }
 
-    return this.board.all<GameElement<P, B>>(className, {owner: this}, ...finders);
+    return this.game.all<GameElement<P, B>>(className, {owner: this}, ...finders);
   }
 
   /**
    * Finds the first element of a given type that is owned by this player. This
-   * is equivalent to calling `board.first(...)` with `{owner: this}` as one of
+   * is equivalent to calling `game.first(...)` with `{owner: this}` as one of
    * the search terms. Also see {@link GameElement#owner}.
    */
   my<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
@@ -103,15 +101,15 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
   my<F extends GameElement<P, B>>(this: P, className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement<P, B> | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
-      return this.board.first({owner: this}, ...finders);
+      return this.game.first({owner: this}, ...finders);
     }
 
-    return this.board.first<GameElement>(className, {owner: this}, ...finders);
+    return this.game.first<GameElement>(className, {owner: this}, ...finders);
   }
 
   /**
    * Returns true if any element of a given type is owned by this player. This
-   * is equivalent to calling `board.has(...)` with `{owner: this}` as one of
+   * is equivalent to calling `game.has(...)` with `{owner: this}` as one of
    * the search terms. Also see {@link GameElement#owner}.
    */
   has<F extends GameElement<P, B>>(this: P, className: ElementClass<F>, ...finders: ElementFinder<F>[]): boolean;
@@ -119,14 +117,14 @@ export default class Player<P extends Player<P, B> = any, B extends Board<P, B> 
   has<F extends GameElement<P, B>>(this: P, className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): boolean {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
-      return this.board.has<GameElement<P, B>>(GameElement, {owner: this}, ...finders);
+      return this.game.has<GameElement<P, B>>(GameElement, {owner: this}, ...finders);
     }
 
-    return this.board.has<GameElement<P, B>>(className, {owner: this}, ...finders);
+    return this.game.has<GameElement<P, B>>(className, {owner: this}, ...finders);
   }
 
   toJSON() {
-    let {_players, board: _b, game: _g, ...attrs}: Record<any, any> = this;
+    let {_players, game: _b, ...attrs}: Record<any, any> = this;
 
     // remove methods
     attrs = serializeObject(

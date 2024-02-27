@@ -54,7 +54,7 @@ describe('Flow', () => {
       ]}),
       () => {}
     ]});
-    const game = {
+    const gameManager = {
       flow: testFlow,
       followups: [],
       players: {
@@ -66,10 +66,11 @@ describe('Flow', () => {
         play: { _process: actionSpy, messages: [] },
         pass: { _process: () => {}, messages: [] }
       }[a]),
-      finish: finishSpy,
+      game: { finish: finishSpy },
     };
-    // @ts-ignore mock game
-    testFlow.game = game;
+    // @ts-ignore mock gameManager
+    testFlow.gameManager = gameManager;
+    testFlow.gameManager.game.players = testFlow.gameManager.players;
 
     testFlow.reset();
   })
@@ -264,7 +265,7 @@ describe('Loop', () => {
       () => {},
     ]});
     // @ts-ignore
-    testFlow.game = { flow: testFlow, players: { setCurrent: () => {} } };
+    testFlow.gameManager = { flow: testFlow, players: { setCurrent: () => {} } };
 
     testFlow.reset();
   })
@@ -374,6 +375,8 @@ describe('Loop', () => {
     it ('resumes', () => {
       const stepSpy = chai.spy((x:number) => {x});
       const loop = forEach({ name: 'foreach', collection: [3, 5, 7], do: ({ foreach }) => stepSpy(foreach) });
+      // @ts-ignore mock gameManager
+      loop.gameManager = {game: {}}
       loop.reset();
       loop.setBranchFromJSON([
         {
@@ -501,8 +504,8 @@ describe('Loop short-circuiting', () => {
 
   it('rejects interrupt with no loop', () => {
     const badLoop = ifElse({ if: () => true, do: Do.break })
-    // @ts-ignore mock game
-    badLoop.game = {phase: 'started'};
+    // @ts-ignore mock gameManager
+    badLoop.gameManager = {phase: 'started'};
     badLoop.reset();
     expect(() => badLoop.play()).to.throw(/Do\.break/);
   });
@@ -584,7 +587,7 @@ describe('Loop short-circuiting', () => {
       playerActions({ actions: ['breakAction'] }),
       ({ loop }) => {console.log('end', loop); stepSpy2('end', loop)}
     ]});
-    const game = {
+    const gameManager = {
       flow: shortLoop,
       followups: [],
       players: {
@@ -596,8 +599,8 @@ describe('Loop short-circuiting', () => {
         breakAction: { _process: Do.repeat, messages: [] },
       }[a]),
     };
-    // @ts-ignore mock game
-    shortLoop.game = game;
+    // @ts-ignore mock gameManager
+    shortLoop.gameManager = gameManager;
 
     shortLoop.reset();
     shortLoop.play();
@@ -617,9 +620,8 @@ describe('Loop short-circuiting', () => {
         ({ loop }) => {console.log('end', loop); stepSpy1()}
       ]}),
     });
-    const game = {
+    const gameManager = {
       flow: shortLoop,
-      finish: stepSpy2,
       followups: [],
       players: {
         currentPosition: [1],
@@ -629,9 +631,10 @@ describe('Loop short-circuiting', () => {
       getAction: (a: string) => ({
         breakAction: { _process: Do.break, messages: [] },
       }[a]),
+      game: { finish: stepSpy2 },
     };
-    // @ts-ignore mock game
-    shortLoop.game = game;
+    // @ts-ignore mock gameManager
+    shortLoop.gameManager = gameManager;
 
     shortLoop.reset();
     shortLoop.play();
@@ -653,7 +656,7 @@ describe('SwitchCase', () => {
     )});
 
     // @ts-ignore
-    testFlow.game = { flow: testFlow };
+    testFlow.gameManager = { flow: testFlow };
     testFlow.reset();
 
     expect(testFlow.branchJSON()).to.deep.equals([
@@ -687,7 +690,7 @@ describe('SwitchCase', () => {
     )});
 
     // @ts-ignore
-    testFlow.game = { flow: testFlow };
+    testFlow.gameManager = { flow: testFlow };
     testFlow.reset();
 
     testFlow.setBranchFromJSON([
@@ -718,7 +721,7 @@ describe('SwitchCase', () => {
     )});
 
     // @ts-ignore
-    testFlow.game = { flow: testFlow };
+    testFlow.gameManager = { flow: testFlow };
     testFlow.reset();
 
     expect(testFlow.branchJSON()).to.deep.equals([
@@ -761,7 +764,7 @@ describe('IfElse', () => {
     });
 
     // @ts-ignore
-    testFlow.game = { flow: testFlow };
+    testFlow.gameManager = { flow: testFlow };
     testFlow.reset();
 
     expect(testFlow.branchJSON()).to.deep.equals([

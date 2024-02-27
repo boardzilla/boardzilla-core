@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { gameStore } from '../../index.js';
 
 import FlowDebug from './FlowDebug.js';
 //import BoardDebug from './BoardDebug';
 
 const Debug = () => {
-  const [game] = gameStore(s => [s.game]);
-  if (!game) return null;
+  const [gameManager] = gameStore(s => [s.gameManager]);
+  if (!gameManager) return null;
 
   return (
     <div id="debug-overlay" className="full-page-cover">
       <div id="flow-debug">
-        <FlowDebug flow={game.flow.visualize()} nest={0} current={true} />
+        <FlowDebug flow={gameManager.flow.visualize()} nest={0} current={true} />
       </div>
     </div>
   );

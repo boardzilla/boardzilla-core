@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { gameStore } from '../index.js';
 
 import Element from './components/Element.js';
@@ -15,13 +15,13 @@ import type { Player } from '../../player/index.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [game, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.game, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON]);
+  const [gameManager, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
-  const announcement = useMemo(() => game.announcements[announcementIndex], [game.announcements, announcementIndex]);
+  const announcement = useMemo(() => gameManager.announcements[announcementIndex], [gameManager.announcements, announcementIndex]);
 
   if (!position) return null;
-  const player = game.players.atPosition(position);
+  const player = gameManager.players.atPosition(position);
   if (!player) return null;
 
   const handleSubmitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => {
@@ -70,12 +70,12 @@ export default () => {
 
   useEffect(() => {
     window.document.documentElement.style.setProperty('font-size', 'min(4vw / var(--aspect-ratio), 4vh)');
-    window.document.documentElement.style.setProperty('--aspect-ratio', String(game.board._ui.boardSize.aspectRatio))
+    window.document.documentElement.style.setProperty('--aspect-ratio', String(gameManager.game._ui.boardSize.aspectRatio))
     return () => {
       window.document.documentElement.style.removeProperty('font-size');
       window.document.documentElement.style.removeProperty('--aspect-ratio');
     }
-  }, [game.board._ui.boardSize]);
+  }, [gameManager.game._ui.boardSize]);
 
   if (!boardJSON.length) return null;
 
@@ -93,7 +93,7 @@ export default () => {
     <div
       id="game"
       ref={domRef}
-      data-board-size={game.board._ui.boardSize?.name}
+      data-board-size={gameManager.game._ui.boardSize?.name}
       data-step={step}
       className={classnames(
         globalThis.navigator?.userAgent.match(/Mobi/) ? 'mobile' : 'desktop', {
@@ -104,9 +104,9 @@ export default () => {
         }
       )}
       style={{
-        ['--aspect-ratio' as string]: game.board._ui.boardSize.aspectRatio,
-        ['--current-player-color' as string]: game.players.currentPosition.length === 1 ? game.players.current()?.color : '',
-        ['--my-player-color' as string]: game.players.atPosition(position)?.color
+        ['--aspect-ratio' as string]: gameManager.game._ui.boardSize.aspectRatio,
+        ['--current-player-color' as string]: gameManager.players.currentPosition.length === 1 ? gameManager.players.current()?.color : '',
+        ['--my-player-color' as string]: gameManager.players.atPosition(position)?.color
       }}
     >
       <audio ref={clickAudio} src={click} id="click"/>
@@ -114,7 +114,7 @@ export default () => {
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
         {mode !== 'debug' && (
           <Element
-            element={game.board}
+            element={gameManager.game}
             json={boardJSON[0]}
             mode={announcement ? 'info' : mode}
             onSelectElement={handleSelectElement}
@@ -128,7 +128,7 @@ export default () => {
         />
       )}
 
-      {game.godMode && mode === 'game' && !announcement && <div className="god-mode-enabled">God mode enabled</div>}
+      {gameManager.godMode && mode === 'game' && !announcement && <div className="god-mode-enabled">God mode enabled</div>}
 
       {mode !== 'info' && (
         <div id="corner-controls">

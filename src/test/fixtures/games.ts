@@ -1,35 +1,33 @@
 import {
+  Game,
   Player,
-  Board,
-  createBoardClasses,
+  createGameClasses,
 } from '../../index.js';
-import type Game from '../../game.js';
 
-export class TestPlayer extends Player<TestPlayer, TestBoard> {
+export class TestPlayer extends Player<TestPlayer, TestGame> {
   tokens: number = 0;
 }
 
-export class TestBoard extends Board<TestPlayer, TestBoard> {
+export class TestGame extends Game<TestPlayer, TestGame> {
   tokens: number = 0;
 }
 
-const { Space, Piece } = createBoardClasses<TestPlayer, TestBoard>();
+const { Space, Piece } = createGameClasses<TestPlayer, TestGame>();
 
 export class Token extends Piece {
   color: 'red' | 'blue';
 }
 
-const gameFactory = (creator: (game: Game<TestPlayer, TestBoard>) => void) => (game: Game<TestPlayer, TestBoard>) => {
-  const { board } = game;
+const gameFactory = (creator: (game: TestGame) => void) => (game: TestGame) => {
   const { playerActions, loop, eachPlayer } = game.flowCommands;
-  board.registerClasses(Token);
+  game.registerClasses(Token);
 
   for (const player of game.players) {
-    const mat = board.create(Space, 'mat', { player });
+    const mat = game.create(Space, 'mat', { player });
     mat.onEnter(Token, t => t.showToAll());
   }
 
-  board.create(Space, 'pool');
+  game.create(Space, 'pool');
   $.pool.onEnter(Token, t => t.hideFromAll());
   $.pool.createMany(game.setting('tokens') - 1, Token, 'blue', { color: 'blue' });
   $.pool.create(Token, 'red', { color: 'red' });

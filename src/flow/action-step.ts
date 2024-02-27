@@ -56,7 +56,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
   reset() {
     const players = this.getPlayers();
-    if (players) this.game.players.setCurrent(players);
+    if (players) this.gameManager.players.setCurrent(players);
     this.setPosition({players});
   }
 
@@ -122,13 +122,13 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     args: Record<string, Argument<P>>,
   }): string | undefined {
     if (!this.allowedActions().includes(move.name)) throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
-    const game = this.game;
+    const gameManager = this.gameManager;
 
-    if (!game.players.currentPosition.includes(move.player)) {
-      throw Error(`Move ${move.name} from player #${move.player} not allowed. Current players: #${game.players.currentPosition.join('; ')}`);
+    if (!gameManager.players.currentPosition.includes(move.player)) {
+      throw Error(`Move ${move.name} from player #${move.player} not allowed. Current players: #${gameManager.players.currentPosition.join('; ')}`);
     }
 
-    const player = game.players.atPosition(move.player);
+    const player = gameManager.players.atPosition(move.player);
     if (!player) return `No such player position: ${move.player}`;
 
     if (move.name === '__pass__') {
@@ -136,8 +136,8 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       return;
     }
 
-    const gameAction = game.getAction(move.name, player);
-    game.followups.splice(0, game.followups.length);
+    const gameAction = gameManager.getAction(move.name, player);
+    gameManager.followups.splice(0, gameManager.followups.length);
     const error = gameAction._process(player, move.args);
     if (error) {
       // failed with a selection required
@@ -153,18 +153,18 @@ export default class ActionStep<P extends Player> extends Flow<P> {
         loop.interrupt(loopInterrupt.shift()!.signal);
         return;
       }
-    } else if (game.followups.length > 0) {
+    } else if (gameManager.followups.length > 0) {
       // validate that this is a proper action list
-      if (game.followups.some(f => !game.actions[f.name])) {
+      if (gameManager.followups.some(f => !gameManager.actions[f.name])) {
         throw Error(`Action ${move.name} followup is not a valid action`);
       }
       if ('followups' in this.position && this.position.followups?.length) {
         this.setPosition({ ...this.position, followups: this.position.followups.slice(1) });
       } else {
-        this.setPosition({...move, followups: [...game.followups]});
+        this.setPosition({...move, followups: [...gameManager.followups]});
       }
       if ('followups' in this.position && this.position.followups![0].player) {
-        this.game.players.setCurrent(this.position.followups![0].player);
+        this.gameManager.players.setCurrent(this.position.followups![0].player);
       }
     } else {
       // succeeded
@@ -196,12 +196,12 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (!position) return {players: undefined};
     return !('player' in position) ? position : {
       ...position,
-      args: deserializeObject(position.args ?? {}, this.game) as Record<string, Argument<P>>,
+      args: deserializeObject(position.args ?? {}, this.gameManager.game) as Record<string, Argument<P>>,
       followups: position.followups?.map((f: any) => ({
         name: f.name,
         prompt: f.prompt,
-        player: deserialize(f.player, this.game),
-        args: deserializeObject(f.args ?? {}, this.game) as Record<string, Argument<P>>,
+        player: deserialize(f.player, this.gameManager.game),
+        args: deserializeObject(f.args ?? {}, this.gameManager.game) as Record<string, Argument<P>>,
       }))
     };
   }
@@ -211,7 +211,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   }
 
   toString(): string {
-    return `player-action${this.name ? ":" + this.name : ""} (player #${this.game.players.currentPosition}, ${this.allowedActions().join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
+    return `player-action${this.name ? ":" + this.name : ""} (player #${this.gameManager.players.currentPosition}, ${this.allowedActions().join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 
   visualize() {
@@ -225,7 +225,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       block: this.position && 'name' in this.position ? this.position.name : undefined,
       position: this.position && (
         ('player' in this.position ? args : undefined) ??
-          ('players' in this.position && this.position.players ? this.position.players.map(p => this.game.players.atPosition(p)).join(', ') : undefined)
+          ('players' in this.position && this.position.players ? this.position.players.map(p => this.gameManager.players.atPosition(p)).join(', ') : undefined)
       ),
     });
   }

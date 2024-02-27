@@ -474,7 +474,7 @@ export default class ElementCollection<T extends GameElement = any> extends Arra
 
   /**
    * Remove all elements in this collection from the playing area and place them
-   * into {@link Board#pile}
+   * into {@link Game#pile}
    * @category Structure
    */
   remove() {

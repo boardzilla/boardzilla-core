@@ -47,7 +47,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
   }
 
   getPlayers(): P[] {
-    return this.players || this.game.players
+    return this.players || this.gameManager.players
   }
 
   // reimpl ourselves to collect json from all players
@@ -79,7 +79,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
       for (let i = 0; i !== this.getPlayers().length; i++) {
         if (this.completed[i] === false) players.push(this.getPlayers()[i]);
       }
-      this.game.players.setCurrent(players);
+      this.gameManager.players.setCurrent(players);
     }
     super.setPosition(positionJSON, sequence);
     if (this.step instanceof Flow && this.position.positions[this.value]) {

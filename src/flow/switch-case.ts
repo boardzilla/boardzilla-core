@@ -61,7 +61,7 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
   fromJSON(position: any) {
     return {
       index: position.index,
-      value: deserialize(position.value, this.game),
+      value: deserialize(position.value, this.gameManager.game),
       default: position.default,
     };
   }

@@ -15,7 +15,9 @@ export type User = {
   playerDetails?: {
     color: string;
     position: number;
+    ready: boolean;
     settings?: any;
+    sessionURL?: string;
   };
 };
 
@@ -36,6 +38,7 @@ export type GameSettings = Record<string, any>
 export type SettingsUpdateEvent = {
   type: "settingsUpdate";
   settings: GameSettings;
+  seatCount: number;
 }
 
 export type GameUpdateEvent = {
@@ -78,18 +81,11 @@ export type UpdateOperation = {
   userID: string;
   color?: string;
   name?: string;
+  ready?: boolean;
   settings?: any;
 }
 
-export type ReserveOperation = {
-  type: 'reserve';
-  position: number;
-  color: string;
-  name: string;
-  settings?: any;
-}
-
-type PlayerOperation = SeatOperation | UnseatOperation | UpdateOperation | ReserveOperation
+type PlayerOperation = SeatOperation | UnseatOperation | UpdateOperation
 
 export type UpdatePlayersMessage = {
   type: "updatePlayers";
@@ -97,17 +93,11 @@ export type UpdatePlayersMessage = {
   operations: PlayerOperation[];
 }
 
-export type UpdateSelfPlayerMessage = {
-  type: "updateSelfPlayer";
-  id: string;
-  name: string;
-  color: string;
-}
-
 export type UpdateSettingsMessage = {
   type: "updateSettings";
   id: string;
   settings: GameSettings;
+  seatCount: number
 }
 
 // used to actually start the game
@@ -126,13 +116,15 @@ export type SwitchPlayerMessage = {
   index: number;
 }
 
-export default ({ minPlayers, maxPlayers, setupComponents }: {
+export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
   minPlayers: number,
   maxPlayers: number,
+  defaultPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [game, setFinished, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.game, s.setFinished, s.updateState, s.setUserOnline, s.announcementIndex]);
+  const [gameManager, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.gameManager, s.updateState, s.setUserOnline, s.announcementIndex]);
   const [settings, setSettings] = useState<GameSettings>();
+  const [seatCount, setSeatCount] = useState(defaultPlayers);
   const [users, setUsers] = useState<User[]>([]);
   const [readySent, setReadySent] = useState<boolean>(false);
   const players = useMemo(() => users.filter(u => !!u.playerDetails), [users]);
@@ -147,12 +139,12 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
   const queue = useMemo(() => new Queue(1) /* speed */, []);
 
   useEffect(() => {
-    if (game.announcements[announcementIndex]) {
+    if (gameManager.announcements[announcementIndex]) {
       queue.pause();
     } else if (queue.paused) {
       setTimeout(() => queue.resume(), 500);
     }
-  }, [queue, game, announcementIndex])
+  }, [queue, gameManager, announcementIndex])
 
   const listener = useCallback((event: MessageEvent<
     UsersEvent |
@@ -166,6 +158,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     switch(data.type) {
     case 'settingsUpdate':
       setSettings(data.settings);
+      setSeatCount(data.seatCount);
       break;
     case 'users':
       setUsers(data.users);
@@ -178,7 +171,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       {
         if (data.state instanceof Array) {
           const states = data.state;
-          let delay = data.state[0].sequence === game.sequence + 1;
+          let delay = data.state[0].sequence === gameManager.sequence + 1;
 
           for (let i = 0; i !== states.length; i++) {
             const state = states[i];
@@ -186,10 +179,9 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
             delay = true;
           }
         } else {
-          let delay = data.state.sequence === game.sequence + 1;
+          let delay = data.state.sequence === gameManager.sequence + 1;
           queue.schedule(() => updateState(data as typeof data & {state: typeof data.state}), delay); // TS needs help here...
         }
-        if (data.type === 'gameFinished') queue.schedule(() => setFinished(true), true);
       }
       break;
     case 'messageProcessed':
@@ -201,7 +193,7 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
       delete moveCallbacks[parseInt(data.id)];
       break;
     }
-  }, [setUserOnline, setFinished, moveCallbacks, game, queue, updateState, catchError]);
+  }, [setUserOnline, moveCallbacks, gameManager, queue, updateState, catchError]);
 
   useEffect(() => {
     window.addEventListener('message', listener, false)
@@ -213,11 +205,17 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     return () => window.removeEventListener('message', listener)
   }, [readySent, listener]);
 
-  const updateSettings = useCallback((settings: GameSettings) => {
-    setSettings(settings);
-    const message: UpdateSettingsMessage = {type: "updateSettings", id: 'settings', settings};
+  const updateSettings = useCallback((update: {settings?: GameSettings, seatCount?: number}) => {
+    if (update.settings) setSettings(update.settings);
+    if (update.seatCount) setSeatCount(update.seatCount);
+    const message: UpdateSettingsMessage = {
+      type: "updateSettings",
+      id: 'settings',
+      settings: update.settings ?? settings ?? {},
+      seatCount: update.seatCount ?? seatCount
+    };
     window.top!.postMessage(message, "*");
-  }, []);
+  }, [seatCount, settings]);
 
   const updatePlayers = useCallback((operations: UpdatePlayersMessage['operations']) => {
     const message: UpdatePlayersMessage = {
@@ -228,24 +226,9 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
     window.top!.postMessage(message, "*");
   }, [])
 
-  const updateSelfPlayer = useCallback(({ color, name }: { color: string, name: string }) => {
-    const message: UpdateSelfPlayerMessage = {
-      id: 'updateSelfPlayer',
-      type: 'updateSelfPlayer',
-      color,
-      name
-    }
-    window.top!.postMessage(message, "*");
-  }, [])
-
-  const start = useCallback(() => {
-    const message: StartMessage = {type: "start", id: 'start'};
-    window.top!.postMessage(message, "*");
-  }, []);
-
   return (
     <>
-      {game.phase === 'new' && settings &&
+      {gameManager.phase === 'new' && settings &&
         <Setup
           users={users}
           minPlayers={minPlayers}
@@ -253,13 +236,12 @@ export default ({ minPlayers, maxPlayers, setupComponents }: {
           setupComponents={setupComponents}
           players={players}
           settings={settings}
+          seatCount={seatCount}
           onUpdatePlayers={updatePlayers}
-          onUpdateSelfPlayer={updateSelfPlayer}
           onUpdateSettings={updateSettings}
-          onStart={start}
         />
       }
-      {(game.phase === 'started' || game.phase === 'finished') && <Game/>}
+      {(gameManager.phase === 'started' || gameManager.phase === 'finished') && <Game/>}
     </>
   );
 }

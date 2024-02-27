@@ -1,9 +1,9 @@
 import { Player } from '../index.js';
-import { Board } from '../board/index.js';
+import { Game } from '../board/index.js';
 import { LoopInterruptControl, loopInterrupt, FlowControl } from './enums.js';
 import { Do } from './enums.js';
 
-import type Game from '../game.js';
+import type GameManager from '../game-manager.js';
 import type { WhileLoopPosition } from './while-loop.js';
 import type { ForLoopPosition } from './for-loop.js';
 import type { ForEachPosition } from './for-each.js';
@@ -122,7 +122,7 @@ export default class Flow<P extends Player> {
   block?: FlowDefinition<P>;
   top: Flow<P>;
   parent?: Flow<P>;
-  game: Game<P, Board<P>>;
+  gameManager: GameManager<P, Game<P>>;
 
   constructor({ name, do: block }: { name?: string, do?: FlowDefinition<P> }) {
     this.name = name;
@@ -202,7 +202,7 @@ export default class Flow<P extends Player> {
     }
 
     if (this.step instanceof Flow) {
-      this.step.game = this.game;
+      this.step.gameManager = this.gameManager;
       this.step.top = this.top;
       this.step.parent = this;
       if (reset) this.step.reset();
@@ -296,21 +296,21 @@ export default class Flow<P extends Player> {
   play() {
     let step;
     do {
-      if (this.game.phase !== 'finished') step = this.playOneStep();
+      if (this.gameManager.phase !== 'finished') step = this.playOneStep();
       if (step) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
-    } while (step === FlowControl.ok && this.game.phase !== 'finished')
+    } while (step === FlowControl.ok && this.gameManager.phase !== 'finished')
     //console.debug("Game Flow:\n" + this.stacktrace());
     if (typeof step === 'object') {
       if (step.signal === LoopInterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
       if (step.signal === LoopInterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
       if (step.signal === LoopInterruptControl.break) throw Error("Cannot use Do.break when not in a loop");
     }
-    if (step === FlowControl.complete) this.game.finish();
+    if (step === FlowControl.complete) this.gameManager.game.finish();
   }
 
   // must override. reset runs any logic needed and call setPosition. Must not modify own state.
   reset() {
-    this.game.players.setCurrent(this.game.players);
+    this.gameManager.players.setCurrent(this.gameManager.players);
     this.setPosition(null);
   }
 

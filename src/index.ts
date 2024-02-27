@@ -1,14 +1,14 @@
-import Game from './game.js';
+import GameManager from './game-manager.js';
 import { Player } from './player/index.js';
 import {
-  Board,
+  Game,
   Piece,
   Space,
   Die,
   GameElement,
 } from './board/index.js';
 
-export { Board, union } from './board/index.js';
+export { Game, union } from './board/index.js';
 
 export { Do } from './flow/index.js';
 
@@ -30,33 +30,40 @@ import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
 import type Action from './action/action.js';
 
-export type { Space, Piece, Game, Action, ElementClass };
+export type { Space, Piece, GameManager, Action, ElementClass };
 
 /**
- * Returns board classes for game with the correct types for board and player.
+ * Returns game classes with the correct types for game and player.
  *
  * @example
- * const {Space, Piece, Die} = createBoardClasses<MyGamePlayer, MyGameBoard>();
+ * const {Space, Piece, Die} = createGameClasses<MyGamePlayer, MyGame>();
  * @category Board
  */
-export const createBoardClasses = <P extends Player<P, B>, B extends Board<P, B>>() => ({
+export const createGameClasses = <P extends Player<P, B>, B extends Game<P, B>>() => ({
   GameElement: GameElement<P, B>,
   Space: Space<P, B>,
   Piece: Piece<P, B>,
   Die: Die<P, B>
 });
 
-export type SetupFunction<P extends Player<P, B> = any, B extends Board<P, B> = any> = (
+export type SetupFunction<P extends Player<P, B> = any, B extends Game<P, B> = any> = (
   state: SetupState<P> | GameState<P>,
   options?: {trackMovement?: boolean}
-) => Game<P, B>
+) => GameManager<P, B>
+
+export const colors = [
+  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
+  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
+  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
+  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'
+];
 
 declare global {
   /**
    * Global reference to all unique named spaces
    *
    * @example
-   * board.create(Space, 'deck');
+   * game.create(Space, 'deck');
    * ...
    * $.deck // =>  equals the Space just created
    */
@@ -69,57 +76,57 @@ declare global {
  * you do not need any custom Player attributes or behaviour, simply put {@link
  * Player} here. This becomes the `P` type generic used throughout Boardzilla.
 
- * @param boardClass - Your board class. This must extend {@link Board}. If you
- * do not need any custom Board attributes or behaviour, simply put {@link
- * Board} here. This becomes the `B` type generic used throughout Boardzilla.
+ * @param gameClass - Your game class. This must extend {@link Game}. If you
+ * do not need any custom Game attributes or behaviour, simply put {@link
+ * Game} here. This becomes the `B` type generic used throughout Boardzilla.
 
  * @param options.setup - A function that sets up the game. This function
  * accepts a single argument which is the instance of {@link Game} for this game. The
  * function should create all the spaces and pieces you need before your game can
  * start and will typically call:
- * - {@link board#registerClasses} to add custom classes for Spaces and Pieces
- * - {@link board#defineActions} to create the game actions
- * - {@link board#defineFlow} to define the game's flow
+ * - {@link game#registerClasses} to add custom classes for Spaces and Pieces
+ * - {@link game#defineActions} to create the game actions
+ * - {@link game#defineFlow} to define the game's flow
  * @category Core
  */
-export const createGame = <P extends Player<P, B>, B extends Board<P, B>>(
+export const createGame = <P extends Player<P, B>, B extends Game<P, B>>(
   playerClass: {new(...a: any[]): P},
-  boardClass: ElementClass<B>,
+  gameClass: ElementClass<B>,
   gameCreator: (game: Game<P, B>) => void
 ): SetupFunction<P, B> => (
   state: SetupState<P> | GameState<P>,
   options?: {trackMovement?: boolean}
-): Game<P, B> => {
+): GameManager<P, B> => {
   //console.time('setup');
-  const game = new Game<P, B>(playerClass, boardClass);
+  const gameManager = new GameManager<P, B>(playerClass, gameClass);
   const inSetup = !('board' in state);
 
-  globalThis.$ = game.board._ctx.namedSpaces;
+  globalThis.$ = gameManager.game._ctx.namedSpaces;
 
-  game.setRandomSeed(state.rseed);
-  game.setSettings(state.settings);
-  game.players.fromJSON(state.players);
+  gameManager.setRandomSeed(state.rseed);
+  gameManager.setSettings(state.settings);
+  gameManager.players.fromJSON(state.players);
 
   // setup board to get all non-serialized setup (spaces, event handlers, graphs)
-  gameCreator(game);
+  gameCreator(gameManager.game);
   //console.timeLog('setup', 'game creator setup');
 
   // lock game from receiving any more setup
-  game.start();
+  gameManager.start();
 
-  if (options?.trackMovement) game.trackMovement();
+  if (options?.trackMovement) gameManager.trackMovement();
   if (!inSetup) {
-    game.sequence = state.sequence;
-    game.messages = state.messages;
-    game.announcements = state.announcements;
-    game.board.fromJSON(state.board);
-    game.players.assignAttributesFromJSON(state.players);
-    game.flow.setBranchFromJSON(state.position);
+    gameManager.sequence = state.sequence;
+    gameManager.messages = state.messages;
+    gameManager.announcements = state.announcements;
+    gameManager.game.fromJSON(state.board);
+    gameManager.players.assignAttributesFromJSON(state.players);
+    gameManager.flow.setBranchFromJSON(state.position);
   } else {
-    game.players.assignAttributesFromJSON(state.players);
+    gameManager.players.assignAttributesFromJSON(state.players);
   }
   //console.timeLog('setup', 'setState');
 
   //console.timeEnd('setup');
-  return game;
+  return gameManager;
 };

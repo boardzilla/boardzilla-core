@@ -5,7 +5,7 @@ import spies from 'chai-spies';
 
 import { Action } from '../action/index.js';
 import Player from '../player/player.js';
-import { Board } from '../index.js';
+import { Game } from '../index.js';
 import Space from '../board/space.js';
 import Piece from '../board/piece.js';
 
@@ -180,7 +180,6 @@ describe('Actions', () => {
       expect(move2?.[0].selections.length).to.equal(1);
       // bit odd, returns a forced choice so we can show something, although the UI will skip this ultimately
       expect(move2?.[0].selections[0].name).to.equal('plastic');
-      console.log(move2?.[0].args);
 
       const move3 = testAction._getPendingMoves({lumber: 0, meat: 0});
       expect(move3).to.be.undefined;
@@ -305,18 +304,18 @@ describe('Actions', () => {
   });
 
   describe('_withDecoratedArgs', () => {
-    let board: Board;
+    let game: Game;
     beforeEach(() => {
-      board = new Board({ classRegistry: [Space, Piece] });
+      game = new Game({ classRegistry: [Space, Piece] });
     });
 
     it('validates', () => {
       testAction = new Action({
         prompt: 'Choose a token',
       }).chooseOnBoard(
-        'token', board.all(Space),
+        'token', game.all(Space),
       ).placePiece(
-        'token', board,
+        'token', game,
         {
           rotationChoices: [0, 90, 180, 270],
         }
@@ -326,10 +325,10 @@ describe('Actions', () => {
         }
       );
 
-      const args = { token: board.create(Space, 'space'), __placement__: [3, 2, 180], a: 2 };
+      const args = { token: game.create(Space, 'space'), __placement__: [3, 2, 180], a: 2 };
       expect(testAction._getError(testAction.selections[2].resolve(args), args)).to.equal('twist+color');
 
-      const args2 = { token: board.create(Space, 'space'), __placement__: [3, 2, 90], a: 2 };
+      const args2 = { token: game.create(Space, 'space'), __placement__: [3, 2, 90], a: 2 };
       expect(testAction._getError(testAction.selections[1].resolve(args2), args2)).to.be.undefined;
     });
 
@@ -337,9 +336,9 @@ describe('Actions', () => {
       testAction = new Action({
         prompt: 'Choose a token',
       }).chooseOnBoard(
-        'token', board.all(Space),
+        'token', game.all(Space),
       ).placePiece(
-        'token', board,
+        'token', game,
         {
           rotationChoices: [0, 90, 180, 270],
         }
@@ -352,46 +351,46 @@ describe('Actions', () => {
         }
       );
 
-      const args = { token: board.create(Space, 'space'), __placement__: [3, 2, 180], a: 2 }
+      const args = { token: game.create(Space, 'space'), __placement__: [3, 2, 180], a: 2 }
       expect(testAction._getConfirmation(testAction.selections[2].resolve(args), args)).to.equal('Place tile into row 2 and column 3 at 180 degrees for 2?');
     });
   });
 
   describe('board moves', () => {
-    let board: Board;
+    let game: Game;
     beforeEach(() => {
-      board = new Board({ classRegistry: [Space, Piece] });
-      const space1 = board.create(Space, 'space-1');
-      board.create(Space, 'space-2');
+      game = new Game({ classRegistry: [Space, Piece] });
+      const space1 = game.create(Space, 'space-1');
+      game.create(Space, 'space-2');
       space1.create(Piece, 'piece-1');
       space1.create(Piece, 'piece-2');
     });
 
     it('chooseOnBoard', () => {
       const boardAction = new Action({
-      }).chooseOnBoard('piece', board.all(Piece));
+      }).chooseOnBoard('piece', game.all(Piece));
       const moves = boardAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('board');
-      expect(moves![0].selections[0].boardChoices).to.deep.equal(board.all(Piece));
+      expect(moves![0].selections[0].boardChoices).to.deep.equal(game.all(Piece));
     });
 
     it('moves', () => {
       const boardAction = new Action({
-      }).chooseOnBoard('piece', board.all(Piece)).move('piece', board.first('space-2')!);
-      boardAction._process(player, {piece: board.first('piece-1')!});
-      expect(board.first('space-1')!.all(Piece).length).to.equal(1);
-      expect(board.first('space-2')!.all(Piece).length).to.equal(1);
+      }).chooseOnBoard('piece', game.all(Piece)).move('piece', game.first('space-2')!);
+      boardAction._process(player, {piece: game.first('piece-1')!});
+      expect(game.first('space-1')!.all(Piece).length).to.equal(1);
+      expect(game.first('space-2')!.all(Piece).length).to.equal(1);
     });
 
     it('places', () => {
       const boardAction = new Action({
-      }).chooseOnBoard('piece', board.all(Piece)).placePiece('piece', board.first('space-2')!);
-      boardAction._process(player, {piece: board.first('piece-1')!, "__placement__": [3, 2]});
-      expect(board.first('space-1')!.all(Piece).length).to.equal(1);
-      expect(board.first('space-2')!.all(Piece).length).to.equal(1);
-      const piece = board.first('piece-1')!;
+      }).chooseOnBoard('piece', game.all(Piece)).placePiece('piece', game.first('space-2')!);
+      boardAction._process(player, {piece: game.first('piece-1')!, "__placement__": [3, 2]});
+      expect(game.first('space-1')!.all(Piece).length).to.equal(1);
+      expect(game.first('space-2')!.all(Piece).length).to.equal(1);
+      const piece = game.first('piece-1')!;
       expect(piece.row).to.equal(2);
       expect(piece.column).to.equal(3);
     });
