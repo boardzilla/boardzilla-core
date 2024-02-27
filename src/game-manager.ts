@@ -234,7 +234,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
         .chooseOnBoard('element', this.game.all(GameElement<P, B>))
         .chooseFrom<'property', string>(
           'property',
-          ({ element }) => Object.keys(element).filter(a => !['_t', '_ctx', '_ui', '_eventHandlers', '_visible', 'mine', 'owner', 'game', 'gameManager', 'pile'].includes(a)),
+          ({ element }) => Object.keys(element).filter(a => !GameElement.unserializableAttributes.concat(['_visible', 'mine', 'owner']).includes(a)),
           { prompt: "Change property" }
         ).enterText('value', {
           prompt: ({ property }) => `Change ${property}`,
