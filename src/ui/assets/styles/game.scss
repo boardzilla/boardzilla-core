@@ -611,10 +611,6 @@ html, body { height: 100% }
             box-shadow: inset .1em .1em 0 #fff4, inset -.1em -.1em 0 #0008;
             filter: drop-shadow(.1em .1em .2em #0008);
 
-            &.reserved {
-              padding: 0.2em 3em .8em;
-            }
-
             &:focus {
               outline: none;
             }
@@ -662,8 +658,8 @@ html, body { height: 100% }
             }
           }
           .ready {
-            right: .65em;
-            top: .4em;
+            left: 1.2em;
+            top: .8em;
           }
           .rename {
             right: .65em;

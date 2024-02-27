@@ -17,7 +17,6 @@ export type User = {
     position: number;
     ready: boolean;
     settings?: any;
-    reserved: boolean;
     sessionURL?: string;
   };
 };
@@ -86,15 +85,7 @@ export type UpdateOperation = {
   settings?: any;
 }
 
-export type ReserveOperation = {
-  type: 'reserve';
-  position: number;
-  color: string;
-  name: string;
-  settings?: any;
-}
-
-type PlayerOperation = SeatOperation | UnseatOperation | UpdateOperation | ReserveOperation
+type PlayerOperation = SeatOperation | UnseatOperation | UpdateOperation
 
 export type UpdatePlayersMessage = {
   type: "updatePlayers";

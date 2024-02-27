@@ -44,7 +44,7 @@ export default ({ users, players, minPlayers, maxPlayers, setupComponents, setti
           <h1>Game Setup</h1>
           {host && <p>Use the invite link above to get other players to join.</p>}
           {players.length < seatCount && <p>The game will start once <b>{seatCount}</b> players are seated and ready.</p>}
-          {players.length === seatCount && players.some(p => !p.playerDetails?.ready) && <p>Waiting for {players.filter(p => !p.playerDetails?.ready && !p.playerDetails?.reserved).map(p => p === self ? 'you' : p.name).reduce((s, p, i, t) => s + (s ? (i === t.length -1 ? ' and ' : ', ') : '') + p, '')} to start.</p>}
+          {players.length === seatCount && players.some(p => !p.playerDetails?.ready) && <p>Waiting for {players.filter(p => !p.playerDetails?.ready).map(p => p === self ? 'you' : p.name).reduce((s, p, i, t) => s + (s ? (i === t.length -1 ? ' and ' : ', ') : '') + p, '')} to start.</p>}
         </div>
         <Seating
           users={users}

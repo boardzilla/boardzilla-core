@@ -47,25 +47,15 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
     // auto unready if changing seats around for more intuitive state game action
     operations.push({ type: "update", userID, ready: false });
 
-    if (host || id === userID) {
-      if (id === "__reserved__") {
-        operations.push({
-          type: "reserve",
-          position,
-          color,
-          name: "Reserved",
-          settings: {}
-        });
-      } else if (user) {
-        operations.push({
-          type: "seat",
-          position,
-          userID: id,
-          color,
-          name: user.name,
-          settings: {}
-        });
-      }
+    if (user && (host || id === userID)) {
+      operations.push({
+        type: "seat",
+        position,
+        userID: id,
+        color,
+        name: user.name,
+        settings: {}
+      });
     }
 
     onUpdatePlayers(operations);
@@ -148,12 +138,10 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
                 onChange={e => seatPlayer(position, e.target.value)}
                 disabled={!host && !!player?.id && player.id !== userID}
                 style={{backgroundColor: player?.playerDetails?.color ?? '#777' }}
-                className={player?.playerDetails?.reserved ? 'reserved' : ''}
               >
                 {host ? (
                   <>
                     <option value="">&lt; open seat &gt;</option>
-                    {player?.playerDetails?.reserved || <option value="__reserved__">&lt; reserved seat &gt;</option>}
                     {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </>
                 ) : (
@@ -164,25 +152,19 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
                 )}
               </select>
               <img className="avatar" draggable="false" src={player?.avatar}/>
-              {player?.playerDetails?.reserved && (
-                <div className="invite-link" onClick={() => { navigator.clipboard.writeText(player.playerDetails?.sessionURL!); alert("Reservation link copied.\nSend this URL to the player."); }}>Get reservation link</div>
-              )}
-              {player?.playerDetails?.ready && !player?.playerDetails?.reserved && (
+              {player?.playerDetails?.ready && (
                 <div className="ready">
                   <svg
                     style={{ width: "1em", height: "1em", verticalAlign: "middle" }}
-                    viewBox="6 67.9 186.4321 162.15454"
+                    viewBox="25.762297 68.261274 213.23847 149.07793"
                     xmlns="http://www.w3.org/2000/svg">
                     <path
-                      fill="white"
-                      d="M 42.28231,151.11989 54.615405,137.92501 82.281381,165.23074 166.60288,80.72462 179.76669,93.460234 82.403825,191.2513 Z M 166.74023,67.9375 c -3.73465,0.213626 -6.80797,2.732338 -9.19962,5.406643 -25.1418,25.144854 -75.410864,75.447617 -75.410864,75.447617 0,0 -12.925652,-13.37758 -18.878454,-19.46105 -5.207137,-5.32143 -10.83206,-5.71583 -15.181836,-1.61638 -9.428935,8.8863 -12.799062,12.12205 -18.174773,17.52981 -3.357165,4.42946 -1.323396,11.19474 3.045917,14.50801 5.43149,5.25949 38.530367,38.10536 44.362134,42.93535 4.51311,2.40882 10.49591,0.77908 13.580078,-3.18164 33.285598,-33.30822 66.598618,-66.58763 99.808598,-99.970704 3.35229,-4.433164 2.15246,-11.363067 -2.22071,-14.675781 -5.48784,-5.292197 -10.5492,-11.056881 -16.51758,-15.828125 -1.61521,-0.783825 -3.41986,-1.153253 -5.21289,-1.09375 z"/>
-                    <path
-                      fill="white"
-                      d="M 145.80384,159.26345 145.96457,217.8716 18.391257,218.17438 17.634302,94.790792 119.69127,94.656029 132.38874,83.012747 c -44.916615,-3.21e-4 -72.389143,-0.03695 -117.305271,0.09655 -5.5059748,0.758228 -9.5551878,6.511072 -8.8084528,11.943482 0.121623,7.559661 -0.285753,120.062201 0.42261,127.601201 1.487958,4.89455 6.8708358,7.97262 11.8523168,7.35281 47.088948,-0.016 83.755517,0.008 130.843917,-0.11463 5.50514,-0.76429 9.55692,-6.51288 8.80706,-11.94762 -0.0772,-4.25376 0.0436,-34.23704 0.0183,-71.67773"/>
+                      fill="#21ff21" stroke="black" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" paint-order="stroke fill markers"
+                      d="M 42.067911,162.20821 59.401006,144.01333 97.066979,181.31905 202.75316,75.448265 220.91697,93.183881 97.189426,217.33962 Z" />
                   </svg>
                 </div>
               )}
-              {player && (!player.playerDetails?.ready || player?.playerDetails?.reserved) && (host || player.id === userID) && (
+              {player && !player.playerDetails?.ready && (host || player.id === userID) && (
                 <>
                   <div
                     className="rename"
