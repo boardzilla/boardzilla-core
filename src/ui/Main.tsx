@@ -164,6 +164,7 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
     MessageProcessedEvent
   >) => {
     const data = event.data;
+    console.log('==================== message', data);
     switch(data.type) {
     case 'settingsUpdate':
       setSettings(data.settings);

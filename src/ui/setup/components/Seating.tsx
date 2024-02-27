@@ -26,6 +26,8 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
 
   const [pickingColor, setPickingColor] = useState<string>();
 
+  console.log(players);
+
   const rename = (id: string) => {
     const user = users.find(u => u.id === id);
     updateName(id, prompt("Please enter a name", user?.name)!);
@@ -41,6 +43,9 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
     const operations: UpdatePlayersMessage['operations'] = unseats.map(u => (
       {type: 'unseat', userID: u.id}
     ));
+
+    // auto unready if changing seats around for more intuitive state game action
+    operations.push({ type: "update", userID, ready: false });
 
     if (host || id === userID) {
       if (id === "__reserved__") {
@@ -70,7 +75,11 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
     if (count < seatCount) {
       // compress and unseat
       const openSeats = [];
-      const operations: UpdatePlayersMessage['operations'] = [];
+      const operations: UpdatePlayersMessage['operations'] = [
+        // auto unready if reducing seats for more intuitive state game action
+        { type: "update", userID, ready: false }
+      ];
+
       for (let i = 1; i <= maxPlayers; i++) {
         const player = players.find(p => p.playerDetails?.position === i)
         if (!player) {
@@ -139,11 +148,12 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
                 onChange={e => seatPlayer(position, e.target.value)}
                 disabled={!host && !!player?.id && player.id !== userID}
                 style={{backgroundColor: player?.playerDetails?.color ?? '#777' }}
+                className={player?.playerDetails?.reserved ? 'reserved' : ''}
               >
                 {host ? (
                   <>
                     <option value="">&lt; open seat &gt;</option>
-                    <option value="__reserved__">&lt; reserved seat &gt;</option>
+                    {player?.playerDetails?.reserved || <option value="__reserved__">&lt; reserved seat &gt;</option>}
                     {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </>
                 ) : (
@@ -154,7 +164,10 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
                 )}
               </select>
               <img className="avatar" draggable="false" src={player?.avatar}/>
-              {player?.playerDetails?.ready && (
+              {player?.playerDetails?.reserved && (
+                <div className="invite-link" onClick={() => { navigator.clipboard.writeText(player.playerDetails?.sessionURL!); alert("Reservation link copied.\nSend this URL to the player."); }}>Get reservation link</div>
+              )}
+              {player?.playerDetails?.ready && !player?.playerDetails?.reserved && (
                 <div className="ready">
                   <svg
                     style={{ width: "1em", height: "1em", verticalAlign: "middle" }}
@@ -169,7 +182,7 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
                   </svg>
                 </div>
               )}
-              {player && !player.playerDetails?.ready && (host || player.id === userID) && (
+              {player && (!player.playerDetails?.ready || player?.playerDetails?.reserved) && (host || player.id === userID) && (
                 <>
                   <div
                     className="rename"

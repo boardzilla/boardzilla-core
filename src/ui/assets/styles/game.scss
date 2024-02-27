@@ -606,10 +606,15 @@ html, body { height: 100% }
             padding: 0.5em 3em;
             width: 100%;
             color: white;
-            color: white;
+            cursor: pointer;
             margin: 0.2em 0;
             box-shadow: inset .1em .1em 0 #fff4, inset -.1em -.1em 0 #0008;
             filter: drop-shadow(.1em .1em .2em #0008);
+
+            &.reserved {
+              padding: 0.2em 3em .8em;
+            }
+
             &:focus {
               outline: none;
             }
@@ -629,6 +634,20 @@ html, body { height: 100% }
             top: 0.75em;
             height: 3.3em;
             border-radius: 50%;
+          }
+
+          .invite-link {
+            position: absolute;
+            left: 0;
+            top: 3.75em;
+            width: 100%;
+            color: white;
+            font-size: 75%;
+            cursor: pointer;
+            transition: transform .2s;
+            &:hover {
+              transform: scale(1.2);
+            }
           }
 
           .rename, .palette, .ready {
@@ -772,6 +791,7 @@ html, body { height: 100% }
       font-size: 1.4em;
       font-weight: bold;
       margin-top: .5em;
+      cursor: pointer;
       transition: transform .2s;
       &:hover {
         transform: scale(1.2);
