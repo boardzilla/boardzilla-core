@@ -50,8 +50,8 @@ export type ActionStub<P extends Player> = {
   /**
    * Description of taking the action from a 3rd person perspective,
    * e.g. "choosing a card". The string will be automatically prefixed with the
-   * player name and verb. If specified, will be used to convey to non-acting
-   * players what actions are happening.
+   * player name and appropriate verb ("is/are"). If specified, this will be
+   * used to convey to non-acting players what actions are happening.
    */
   description?: string,
   /**
@@ -615,8 +615,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   }
 
   /**
-   * Add a choice to this action using the board. Users will click on the board
-   * to make their choice.
+   * Add a choice of game elements to this action. Users will click on the
+   * playing area to make their choice.
    *
    * @param {Object} options
 

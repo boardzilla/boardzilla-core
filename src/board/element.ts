@@ -244,7 +244,7 @@ export type LayoutAttributes<T extends GameElement> = {
   showBoundingBox?: string | boolean,
   /**
    * Specifies that this layout should inhabit a drawer, a collapsible area that
-   * can be hidden to save overall space on the board.
+   * can be hidden to save overall space on the playing area.
    */
   drawer?: {
     closeDirection: 'up' | 'down' | 'left' | 'right',
@@ -288,7 +288,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   /**
    * Player with which this element is identified. This does not affect
    * behaviour but will mark the element as `mine` in queries in the context of
-   * this player (during an action taken by a player or while the board is
+   * this player (during an action taken by a player or while the game is
    * viewed by a given player.).
    * @category Queries
    */
@@ -710,10 +710,10 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   }
 
   /**
-   * Whether this element belongs to the player viewing the board. A player is
-   * considered to be currently viewing the board if this is called in the
+   * Whether this element belongs to the player viewing the game. A player is
+   * considered to be currently viewing the game if this is called in the
    * context of an action taken by a given player (during an action taken by a
-   * player or while the board is viewed by a given player.) It is an error to
+   * player or while the game is viewed by a given player.) It is an error to
    * call this method when not in the context of a player action. When querying
    * for elements using {@link ElementFinder} such as {@link all} and {@link
    * first}, {@link mine} is available as a search key that accepts a value of
@@ -805,7 +805,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   /**
    * Returns whether this element is visible to all players, or to the current
    * player if called when in a player context (during an action taken by a
-   * player or while the board is viewed by a given player.)
+   * player or while the game is viewed by a given player.)
    * @category Visibility
    */
   isVisible() {
@@ -1000,7 +1000,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
 
   /**
    * JSON representation
-   * @param seenBy - optional player position viewing the board
+   * @param seenBy - optional player position viewing the game
    * @internal
    */
   toJSON(seenBy?: number) {
@@ -1114,9 +1114,9 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   }
 
   /**
-   * Viewport relative to a square perfectly containing the board. The `left`
-   * and `top` values are from 0-100. The x and y values in this method are on
-   * the same scale, unlike {@link relativeTransformToBoard}.
+   * Viewport relative to a square perfectly containing the playing area. The
+   * `left` and `top` values are from 0-100. The x and y values in this method
+   * are on the same scale, unlike {@link relativeTransformToBoard}.
    * @category UI
    * @internal
    */
@@ -1126,10 +1126,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   }
 
   /**
-   * Viewport relative to the board. The `left` and `top` values are percentages
-   * from 0-100, where `left: 100` is the right edge of the board and `top: 100`
-   * the bottom. The x and y values in this method are therefore not necessarily
-   * on the same scale, unlike {@link absoluteTransform}.
+   * Viewport relative to the playing area. The `left` and `top` values are
+   * percentages from 0-100, where `left: 100` is the right edge of the playing
+   * area and `top: 100` the bottom. The x and y values in this method are
+   * therefore not necessarily on the same scale, unlike {@link
+   * absoluteTransform}.
    * @category UI
    * @internal
    */

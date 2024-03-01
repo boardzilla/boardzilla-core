@@ -478,7 +478,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
 
   /**
    * Apply default layout rules for all the placement of all player prompts and
-   * choices, in relation to the board
+   * choices, in relation to the playing area
    *
    * @param attributes - see {@link ActionLayout}
    *
@@ -490,7 +490,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
 
   /**
    * Apply layout rules to a particular step in the flow, controlling where
-   * player prompts and choices appear in relation to the board
+   * player prompts and choices appear in relation to the playing area
    *
    * @param step - the name of the step as defined in {@link playerActions}
    * @param attributes - see {@link ActionLayout}
@@ -504,7 +504,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
 
   /**
    * Apply layout rules to a particular action, controlling where player prompts
-   * and choices appear in relation to the board
+   * and choices appear in relation to the playing area
    *
    * @param action - the name of the action as defined in {@link game#defineActions}
    * @param attributes - see {@link ActionLayout}
