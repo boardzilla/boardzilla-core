@@ -1,6 +1,6 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "AGPL-3.0",
   "scripts": {
@@ -18,16 +18,15 @@
   "type": "module",
   "exports": {
     ".": "./entry/index.js",
-    "./index.css": "./index.css"
+    "./index.css": "./assets/index.css"
   },
   "files": [
-    "dist/**/*",
-    "entry",
-    "index.css"
+    "entry/**/*",
+    "assets/**/*"
   ],
-  "types": "dist/index.d.ts",
+  "types": "entry/index.d.ts",
   "sideEffects": [
-    "./dist/ui/assets/index.css"
+    "./assets/index.css"
   ],
   "dependencies": {
     "classnames": "^2.3.1",

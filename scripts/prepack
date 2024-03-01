@@ -1,7 +1,7 @@
 yarn clean
 yarn build
-unlink entry
-unlink index.css
-ln -s dist entry
-ln -s dist/ui/assets/index.css index.css
+rm -r entry
+rm -r assets
+cp -r dist/ui/assets ./assets
+mv dist entry
 
