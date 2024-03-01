@@ -1,0 +1,7 @@
+yarn clean
+yarn build
+unlink entry
+unlink index.css
+ln -s dist entry
+ln -s dist/ui/assets/index.css index.css
+

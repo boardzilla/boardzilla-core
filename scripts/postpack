@@ -1,0 +1,4 @@
+unlink entry
+unlink index.css
+ln -s src entry
+ln -s src/ui/assets/styles/game.scss index.css

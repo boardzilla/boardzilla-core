@@ -6,8 +6,8 @@
   "scripts": {
     "clean": "rm -rf dist docs",
     "build": "tsc && node esbuild.mjs && rm -rf dist/test",
-    "prepack": "yarn clean && yarn build && unlink entry && ln -s dist entry && unlink index.css && ln -s dist/ui/assets/index.css index.css",
-    "postpack": "unlink entry && ln -s src entry && unlink index.css && ln -s src/ui/assets/styles/game.scss index.css",
+    "prepack": "./scripts/prepack",
+    "postpack": "./scripts/postpack",
     "build:test": "tsc && node esbuild.mjs",
     "test": "NODE_ENV=test yarn run build:test && mocha src/test/setup.js dist/test/*_test.js",
     "test:debug": "NODE_ENV=test yarn run build:test && mocha --inspect-brk --timeout 3600000 src/test/setup-debug.js dist/test/*_test.js",
