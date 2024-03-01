@@ -745,6 +745,52 @@ describe('GameManager', () => {
       expect(gameManager.allowedActions(gameManager.players[2]).actions.length).to.equal(0);
       expect(gameManager.allowedActions(gameManager.players[1]).actions.length).to.equal(1);
     });
+
+    it('multi followup', () => {
+      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
+      game = gameManager.game;
+      const {
+        loop,
+        eachPlayer,
+        playerActions
+      } = game.flowCommands
+
+      game.defineActions({
+        takeOne: player => game.action({
+          prompt: 'take one counter',
+        }).do(() => {
+          game.tokens --;
+          player.tokens ++;
+          if (game.tokens < 15) game.followUp({ name: 'declare' });
+          if (game.tokens < 10) game.followUp({ name: 'takeOne' });
+        }),
+        declare: () => game.action({
+          prompt: 'declare',
+        }).enterText('d', {
+          prompt: 'declaration'
+        }),
+      });
+      gameManager.players.fromJSON(players);
+      gameManager.players.assignAttributesFromJSON(players);
+
+      game.defineFlow(loop(eachPlayer({
+        name: 'player',
+        do: playerActions({
+          actions: ['takeOne']
+        }),
+      })));
+
+      gameManager.game.tokens = 10;
+      gameManager.start();
+      gameManager.play();
+
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: { d: 'first' }, player: gameManager.players[0] });
+      gameManager.play();
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
+      gameManager.play();
+    });
   });
 
 

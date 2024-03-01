@@ -158,18 +158,18 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       if (gameManager.followups.some(f => !gameManager.actions[f.name])) {
         throw Error(`Action ${move.name} followup is not a valid action`);
       }
-      if ('followups' in this.position && this.position.followups?.length) {
-        this.setPosition({ ...this.position, followups: this.position.followups.slice(1) });
-      } else {
-        this.setPosition({...move, followups: [...gameManager.followups]});
-      }
-      if ('followups' in this.position && this.position.followups![0].player) {
-        this.gameManager.players.setCurrent(this.position.followups![0].player);
-      }
-    } else {
-      // succeeded
-      this.setPosition(move);
     }
+
+    const followups = ('followups' in this.position && this.position.followups?.length ? this.position.followups.slice(1) : []).concat(gameManager.followups ?? []);
+    const position: ActionStepPosition<P> = move;
+    if (followups.length) {
+      position.followups = followups;
+      if (followups[0].player) {
+        this.gameManager.players.setCurrent(followups[0].player);
+      }
+    }
+    // succeeded
+    this.setPosition(position);
   }
 
   toJSON(forPlayer=true) {
