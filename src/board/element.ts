@@ -1169,12 +1169,32 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   ) {
     let {slots, area, size, aspectRatio, scaling, gap, margin, offsetColumn, offsetRow} = attributes
     if (this._ui.layouts.length === 0) this.resetUI();
-    if (slots && (area || margin || scaling || gap || margin || offsetColumn || offsetRow)) console.warn('Layout has `slots` which overrides supplied grid parameters');
-    if (area && margin) console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
-    if (size && aspectRatio) console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
-    if (size && scaling) console.warn('Both `size` and `scaling` supplied in layout. `scaling` is ignored');
+    if (slots && (area || margin || scaling || gap || margin || offsetColumn || offsetRow)) {
+      console.warn('Layout has `slots` which overrides supplied grid parameters');
+      delete attributes.area;
+      delete attributes.margin;
+      delete attributes.gap;
+      delete attributes.scaling;
+      delete attributes.offsetRow;
+      delete attributes.offsetColumn;
+    }
+    if (area && margin) {
+      console.warn('Both `area` and `margin` supplied in layout. `margin` is ignored');
+      delete attributes.margin;
+    }
+    if (size && aspectRatio) {
+      console.warn('Both `size` and `aspectRatio` supplied in layout. `aspectRatio` is ignored');
+      delete attributes.aspectRatio;
+    }
+    if (size && scaling) {
+      console.warn('Both `size` and `scaling` supplied in layout. `scaling` is ignored');
+      delete attributes.scaling;
+    }
     if (!size && !scaling) scaling = 'fit';
-    if (gap && (offsetColumn || offsetRow)) console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
+    if (gap && (offsetColumn || offsetRow)) {
+      console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
+      delete attributes.gap;
+    }
     if (!margin && !area) attributes.margin = 0;
     this._ui.layouts.push({ applyTo, attributes: { alignment: 'center', direction: 'square', ...attributes} });
   }

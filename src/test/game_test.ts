@@ -1011,7 +1011,7 @@ describe('Game', () => {
       expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
     });
 
-    it('accommodate min row with size', () => {
+    it('size overrides scaling', () => {
       const spaces = game.createMany(10, Space, 'space');
       game.applyLayouts(() => {
         game.layout(GameElement, {
@@ -1021,24 +1021,9 @@ describe('Game', () => {
           scaling: 'fill'
         });
       });
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(62.5);
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(50);
-      expect(spaces[0]._ui.computedStyle?.top).to.be.approximately(0, 0.0001);
-    });
-
-    it('accommodate min columns with size', () => {
-      const spaces = game.createMany(10, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          columns: { min: 2 },
-          rows: 1,
-          size: { width: 4, height: 5 },
-          scaling: 'fill'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(62.5);
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(50);
-      expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
+      expect(spaces[0]._ui.computedStyle?.width).to.equal(5);
+      expect(spaces[0]._ui.computedStyle?.height).to.equal(4);
+      expect(spaces[0]._ui.computedStyle?.top).to.equal(30);
     });
 
     it('isomorphic', () => {
