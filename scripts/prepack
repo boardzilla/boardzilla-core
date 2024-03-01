@@ -1,0 +1,7 @@
+yarn clean
+yarn build
+rm -r entry
+rm -r assets
+cp -r dist/ui/assets ./assets
+mv dist entry
+

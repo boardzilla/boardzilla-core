@@ -1,12 +1,13 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "AGPL-3.0",
   "scripts": {
     "clean": "rm -rf dist docs",
     "build": "tsc && node esbuild.mjs && rm -rf dist/test",
-    "prepack": "yarn clean && yarn build",
+    "prepack": "./scripts/prepack",
+    "postpack": "./scripts/postpack",
     "build:test": "tsc && node esbuild.mjs",
     "test": "NODE_ENV=test yarn run build:test && mocha src/test/setup.js dist/test/*_test.js",
     "test:debug": "NODE_ENV=test yarn run build:test && mocha --inspect-brk --timeout 3600000 src/test/setup-debug.js dist/test/*_test.js",
@@ -16,15 +17,16 @@
   },
   "type": "module",
   "exports": {
-    ".": "./dist/index.js",
-    "./index.css": "./dist/ui/assets/index.css"
+    ".": "./entry/index.js",
+    "./index.css": "./assets/index.css"
   },
   "files": [
-    "dist/**/*"
+    "entry/**/*",
+    "assets/**/*"
   ],
-  "types": "dist/index.d.ts",
+  "types": "entry/index.d.ts",
   "sideEffects": [
-    "./dist/ui/assets/index.css"
+    "./assets/index.css"
   ],
   "dependencies": {
     "classnames": "^2.3.1",

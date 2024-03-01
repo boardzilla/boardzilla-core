@@ -1,0 +1,4 @@
+rm -r entry
+rm -r assets
+ln -s src entry
+ln -s src/ui/assets assets
