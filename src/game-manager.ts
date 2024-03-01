@@ -50,9 +50,8 @@ export type Message = {
 }
 
 /**
- * Core class for Boardzilla. Each game will create a single instance of this
- * class which will orchestrate the different parts of the game, the {@link
- * Game}, the {@link Player}'s, the {@link Action}'s and the {@link Flow}.
+ * Game manager is used to coordinate other classes, the {@link Game}, the
+ * {@link Player}'s, the {@link Action}'s and the {@link Flow}.
  * @category Core
  */
 export default class GameManager<P extends Player<P, B> = any, B extends Game<P, B> = any> {

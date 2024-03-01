@@ -170,6 +170,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * of the action and value is a function that accepts a player taking the
    * action and returns the result of calling {@link action} and chaining
    * choices, results and messages onto the result
+   * @category Definition
    */
   defineActions(actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>) {
     if (this._ctx.gameManager.phase !== 'new') throw Error('cannot call defineActions once started');
@@ -366,6 +367,8 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    *   '{{player}} has a score of {{score}}',
    *   { player, score: player.score() }
    * );
+   *
+   * @category Game Management
    */
   message(text: string, args?: Record<string, Argument<P>>) {
     this._ctx.gameManager.messages.push({body: n(text, args, true)});
@@ -382,6 +385,8 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    *   '{{player}} has a score of {{score}}',
    *   { player, score: player.score() }
    * );
+   *
+   * @category Game Management
    */
   announce(announcement: string) {
     this._ctx.gameManager.announcements.push(announcement);
