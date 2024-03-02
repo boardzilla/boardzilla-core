@@ -79,7 +79,7 @@ export type GameStore = {
     error?: string;
   }>; // pending moves on board
   disambiguateElement?: { element: GameElement<Player>, moves: UIMove[] };
-  selected: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
+  selected?: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   selectElement: (moves: UIMove[], element: GameElement) => void;
   automove?: number;
   renderedState: Record<string, {
@@ -250,7 +250,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   dismissAnnouncement: () => set(s => ({ announcementIndex: s.announcementIndex + 1 })),
   boardSelections: {},
   pendingMoves: [],
-  selected: [],
   selectElement: (moves: UIMove[], element: GameElement) => set(s => {
     if (moves.length === 0) return {};
     if (moves.length > 1) { // multiple moves are associated with this element (attached by getBoardSelections)
@@ -272,11 +271,11 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
     get().selectMove(move);
     const selected = selection.isMulti() ? (
-      s.selected.includes(element) ?
-        s.selected.filter(s => s !== element) :
-        s.selected.concat([element])
+      s.selected?.includes(element) ?
+        (s.selected ?? []).filter(s => s !== element) :
+        (s.selected ?? []).concat([element])
     ) : (
-      s.selected[0] === element ? [] : [element]
+      s.selected?.[0] === element ? [] : [element]
     );
 
     return updateSelections({

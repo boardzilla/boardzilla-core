@@ -216,10 +216,10 @@ describe('Actions', () => {
     let testAction: Action<any, {r: string, n: number}>;
     beforeEach(() => {
       testAction = new Action({ prompt: 'p' })
-        .chooseFrom('r', ['oil', 'garbage'])
+        .chooseFrom('r', [{ label: 'Oil', choice: 'oil' }, { label: 'Garbage', choice: 'garbage' }])
         .chooseNumber('n', {
           max: ({ r }) => r === 'oil' ? 3 : 1
-        });
+        })
     });
 
     it('shows first selection', () => {
@@ -227,7 +227,7 @@ describe('Actions', () => {
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');
-      expect(moves![0].selections[0].choices).to.deep.equal(['oil', 'garbage']);
+      expect(moves![0].selections[0].choices).to.deep.equal([{ label: 'Oil', choice: 'oil' }, { label: 'Garbage', choice: 'garbage' }]);
     });
 
     it('expands first selection', () => {

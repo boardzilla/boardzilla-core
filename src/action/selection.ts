@@ -1,9 +1,9 @@
 import { range } from '../utils.js';
 import { combinations } from './utils.js';
-import { GameElement, Piece } from '../board/index.js';
+import { GameElement } from '../board/index.js';
+import { Player } from '../player/index.js';
 
 import type { SingleArgument, Argument } from './action.js';
-import type { Player } from '../player/index.js';
 
 export type BoardQuerySingle<P extends Player, T extends GameElement<P>, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = string | T | undefined | ((args: A) => T | undefined)
 export type BoardQueryMulti<P extends Player, T extends GameElement<P>, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = string | T[] | ((args: A) => T[])
@@ -14,10 +14,11 @@ export type BoardSelection<P extends Player, T extends GameElement<P>, A extends
   min?: number | ((args: A) => number);
   max?: number | ((args: A) => number);
   number?: number | ((args: A) => number);
+  initial?: T[] | ((args: A) => T[]);
 }
 
 export type ChoiceSelection<P extends Player, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = {
-  choices: SingleArgument<P>[] | Record<string, SingleArgument<P>> | ((args: A) => SingleArgument<P>[] | Record<string, SingleArgument<P>>);
+  choices: SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[] | ((args: A) => SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[]);
   initial?: Argument<P> | ((args: A) => Argument<P>);
   // min?: number | ((args: A) => number);
   // max?: number | ((args: A) => number);
@@ -92,7 +93,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
 // any lambdas have been resolved to actual values
 export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'skipIf'> & {
   prompt?: string;
-  choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>>;
+  choices?: SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[];
   boardChoices?: GameElement<P>[];
   min?: number;
   max?: number;
@@ -114,7 +115,7 @@ export default class Selection<P extends Player> {
   validation?: ((args: Record<string, Argument<P>>) => string | boolean | undefined);
   clientContext: Record<any, any> = {}; // additional meta info that describes the context for this selection
   skipIf?: 'never' | 'always' | 'only-one' | ((args: Record<string, Argument<P>>) => boolean);
-  choices?: SingleArgument<P>[] | Record<string, SingleArgument<P>> | ((args: Record<string, Argument<P>>) => SingleArgument<P>[] | Record<string, SingleArgument<P>>);
+  choices?: SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[] | ((args: Record<string, Argument<P>>) => SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[]);
   boardChoices?: BoardQueryMulti<P, GameElement<P>>;
   min?: number | ((args: Record<string, Argument<P>>) => number);
   max?: number | ((args: Record<string, Argument<P>>) => number);
@@ -145,6 +146,7 @@ export default class Selection<P extends Player> {
         }
         this.min ??= s.selectOnBoard.min;
         this.max ??= s.selectOnBoard.max;
+        this.initial ??= s.selectOnBoard.initial;
       } else if (s.selectNumber) {
         this.type = 'number';
         this.min = s.selectNumber.min;
@@ -171,6 +173,24 @@ export default class Selection<P extends Player> {
     this.clientContext = s.clientContext ?? {};
   }
 
+  isLabeledChoice(this: ResolvedSelection<P>) {
+    return this.choices && typeof this.choices[0] === 'object' && !(this.choices[0] instanceof GameElement) && !(this.choices[0] instanceof Player);
+  }
+
+  choiceLabels(this: ResolvedSelection<P>) {
+    if (this.isLabeledChoice()) {
+      return this.choices!.map(c => (c as { label: string, choice: SingleArgument<P> }).label)
+    }
+    return (this.choices ?? []) as string[];
+  }
+
+  choiceValues(this: ResolvedSelection<P>) {
+    if (this.isLabeledChoice()) {
+      return this.choices!.map(c => (c as { label: string, choice: SingleArgument<P> }).choice)
+    }
+    return (this.choices ?? []) as string[];
+  }
+
   /**
    * check specific selection with a given arg. evaluates within the context of
    * previous args, so any selection elements that have previous-arg-function
@@ -188,9 +208,7 @@ export default class Selection<P extends Player> {
 
     if (s.type === 'choices' && s.choices) {
       if (arg instanceof Array) return "multi-choice stil unsupported";
-      return (
-        s.choices instanceof Array ? s.choices : Object.keys(s.choices) as SingleArgument<P>[]
-      ).includes(arg) ? undefined : "Not a valid choice";
+      return s.choiceValues().includes(arg) ? undefined : "Not a valid choice";
     }
 
     if (s.type === 'board' && s.boardChoices) {
@@ -224,10 +242,10 @@ export default class Selection<P extends Player> {
   options(this: ResolvedSelection<P>): Argument<P>[] {
     if (this.isUnbounded()) return [];
     if (this.type === 'number') return range(this.min ?? 1, this.max!);
-    const choices = this.choices && (this.choices instanceof Array ? this.choices : Object.keys(this.choices));
-    if (this.isMulti()) return combinations(this.boardChoices || choices || [], this.min ?? 1, this.max ?? Infinity);
+    const choices = this.choiceValues()
+    if (this.isMulti()) return combinations(this.boardChoices || choices, this.min ?? 1, this.max ?? Infinity);
     if (this.boardChoices) return this.boardChoices;
-    if (this.choices) return this.choices instanceof Array ? this.choices : Object.keys(this.choices);
+    if (this.choices) return choices;
     return [];
   }
 
@@ -269,9 +287,7 @@ export default class Selection<P extends Player> {
   }
 
   isPossible(this: ResolvedSelection<P>): boolean {
-    if (this.type === 'choices' && this.choices) return (
-      this.choices instanceof Array ? this.choices : Object.keys(this.choices) as Argument<P>[]
-    ).length > 0
+    if (this.type === 'choices' && this.choices) return this.choices.length > 0
 
     const isInBounds = this.max !== undefined ? (this.min ?? 1) <= this.max : true;
     if (this.type === 'board' && this.boardChoices) return isInBounds && this.boardChoices.length >= (this.min ?? 1);
@@ -293,14 +309,15 @@ export default class Selection<P extends Player> {
       this.min === this.max) {
       return this.min;
     } else if (this.type === 'choices' && this.choices) {
-      const choices = this.choices instanceof Array ? this.choices : Object.keys(this.choices);
-      if (choices.length === 1 || this.skipIf === true) return choices[0];
+      if (this.choices.length === 1 || this.skipIf === true) return this.choiceValues()[0];
     }
   }
 
   overrideOptions(this: ResolvedSelection<P>, options: SingleArgument<P>[]) {
     if (this.type === 'board') {
       this.boardChoices = options as GameElement<P>[];
+    } else if (this.isLabeledChoice()) {
+      this.choices = (this.choices as { label: string, choice: SingleArgument<P> }[]).filter(c => options.includes(c.choice));
     } else {
       this.choices = options as GameElement<P>[];
     }

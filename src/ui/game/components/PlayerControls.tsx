@@ -12,7 +12,7 @@ const PlayerControls = ({onSubmit}: {
   const [position, controls, boardPrompt, error, selected, move] = gameStore(s => [s.position, s.controls, s.boardPrompt, s.error, s.selected, s.move]);
 
   if (!position || !controls) return null;
-  if ((!boardPrompt && controls.moves.length === 0 && !move && selected.length === 0 || boardPrompt === '__missing__') && controls.name !== 'disambiguate-board-selection') return null;
+  if ((!boardPrompt && controls.moves.length === 0 && !move && !selected?.length || boardPrompt === '__missing__') && controls.name !== 'disambiguate-board-selection') return null;
 
   return (
     <div key={controls.name} className={`player-controls ${controls.name.replace(":", "-")}`} style={controls.style}>
@@ -31,7 +31,7 @@ const PlayerControls = ({onSubmit}: {
 
       {error && <div className="error">{error}</div>}
 
-      {(move || selected.length > 0 || controls.name === 'disambiguate-board-selection') && (
+      {(move || selected?.length || controls.name === 'disambiguate-board-selection') && (
         <button onClick={() => onSubmit()}>Cancel</button>
       )}
     </div>

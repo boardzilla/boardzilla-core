@@ -116,7 +116,7 @@ describe('UI', () => {
     state = store.getState();
 
     expect(history.length).to.equal(0);
-    expect(state.selected.length).to.equal(1);
+    expect(state.selected?.length).to.equal(1);
     expect(state.pendingMoves?.[0].name).to.equal('take');
     expect(state.boardPrompt).to.equal('Choose a token');
 
@@ -140,7 +140,7 @@ describe('UI', () => {
     token = state.gameManager.game.first(Token)!;
 
     expect(history.length).to.equal(0);
-    expect(state.selected.length).to.equal(0);
+    expect(state.selected).to.be.undefined;
     expect(state.pendingMoves?.[0].name).to.equal('take');
     expect(state.pendingMoves?.[0].args.token).to.equal(token);
     expect(state.pendingMoves?.[0].requireExplicitSubmit).to.be.false;

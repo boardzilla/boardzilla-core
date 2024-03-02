@@ -1,5 +1,4 @@
 import React from 'react';
-import { serializeArg } from '../../../action/utils.js';
 
 import type { ResolvedSelection } from '../../../action/selection.js';
 import type { Player } from '../../../player/index.js';
@@ -14,18 +13,17 @@ const Selection = ({selection, value, error, onChange} : {
   <div className={`selection ${selection.name}`}>
     {selection.prompt && selection.type !== 'button' && !selection.isBoardChoice() && <span className="prompt">{selection.prompt}</span>}
 
-    {selection.type === 'choices' && selection.choices && (
-      selection.choices instanceof Array ? selection.choices.map(c => ([c, c])) : Object.entries(selection.choices)).map(([k, v]) => (
-        <button
-          type="button"
-          className={k === value ? 'selected' : ''}
-          key={String(serializeArg(k))}
-          onClick={() => onChange(k)}
-        >
-          {v.toString()}
-        </button>
-      )
-      )}
+    {selection.type === 'choices' && selection.choices?.map(choice => (
+      <button
+        type="button"
+        className={(typeof choice === 'object' && 'choice' in choice ? choice.choice : choice) === value ? 'selected' : ''}
+        key={String(choice)}
+        onClick={() => onChange((typeof choice === 'object' && 'choice' in choice ? choice.choice : choice))}
+      >
+        {String(typeof choice === 'object' && 'label' in choice ? choice.label : choice)}
+      </button>
+    )
+    )}
 
     {selection.type === 'number' && (
       <input

@@ -37,7 +37,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
     if (disambiguateElement && disambiguateElement.moves.includes(move)) {
       const selection = move.selections[0];
       if (selection.type === 'board') {
-        allArgs[move.selections[0].name] = selection.isMulti() ? selected : selected[0];
+        allArgs[move.selections[0].name] = selection.isMulti() ? selected : selected?.[0];
       }
     }
     return allArgs;
@@ -95,7 +95,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
     if (!move.requireExplicitSubmit || !action) return undefined;
     if (Object.values(allArgs).some(a => a === undefined)) return undefined;
     for (const s of move.selections) {
-      if (s.type === 'board' && s.isMulti() && (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity))) return undefined;
+      if (s.type === 'board' && s.isMulti() && (!selected || (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity)))) return undefined;
     }
     let confirm = 'Confirm';
     const args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;

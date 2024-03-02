@@ -35,7 +35,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const branch = useMemo(() => element.branch(), [element, boardJSON]);
 
-  const isSelected = mode === 'game' && (selected.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
+  const isSelected = mode === 'game' && (selected?.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.game._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
   // eslint-disable-next-line react-hooks/exhaustive-deps

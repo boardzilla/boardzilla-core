@@ -1,5 +1,5 @@
 import Selection from './selection.js';
-import { GameElement } from '../board/index.js';
+import { GameElement, ElementCollection } from '../board/index.js';
 import { n } from '../utils.js';
 
 import type {
@@ -102,6 +102,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   condition?: ((args: A) => boolean) | boolean;
   messages: {text: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
   order: ('move' | 'message')[] = [];
+  mutated = false;
 
   gameManager: GameManager;
 
@@ -275,6 +276,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
 
   _addSelection(selection: Selection<P>) {
     if (this.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
+    if (this.mutated) throw Error(`Choices may not be added to the ${this.name} action after a do/move. This may need to be split into separate actions.`);
     this.selections.push(selection);
     return selection;
   }
@@ -345,6 +347,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @category Behaviour
    */
   do(move: (args: A) => any): Action<P, A> {
+    this.mutated = true;
     this.moves.push(move);
     this.order.push('move');
     return this;
@@ -395,13 +398,15 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @param name - The name of this choice. This name will be used in all
    * functions that accept the player's choices
    *
-   * @param choices - Either an array of choices or an object with a key-value
-   * pair of choices. Use the object style when you want player text to contain
-   * additional logic that you don't want to reference in the game logic,
-   * similiar to `<option value="key">Some text</option>` in HTML. This can also
-   * be a function that returns the choice array/object. This function will
-   * accept arguments for each choice the player has made up to this point in
-   * the action.
+   * @param choices - An array of choices. This may be an array of simple values
+   * or an array of objects in the form: `{ label: string, choice: value }`
+   * where value is the actual choice that will be passed to the rest of the
+   * action, but label is the text presented to the player that they will be
+   * prompted to click. Use the object style when you want player text to
+   * contain additional logic or differ in some way from the choice, similiar to
+   * `<option value="key">Some text</option>` in HTML. This can also be a
+   * function that returns the choice array. This function will accept arguments
+   * for each choice the player has made up to this point in the action.
    *
    * @param {Object} options
    * @param options.prompt - Prompt displayed to the user for this choice.
@@ -477,7 +482,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   chooseFrom<N extends string, T extends SingleArgument<P>>(
     name: N,
-    choices: T[] | Record<string, T> | ((args: A) => T[] | Record<string, T>),
+    choices: (T & (string | number | boolean))[] | { label: string, choice: T }[] | ((args: A) => (T & (string | number | boolean))[] | { label: string, choice: T }[]),
     options?: {
       prompt?: string | ((args: A) => string)
       confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
@@ -644,6 +649,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
    * function returning a boolean. (Default 'only-one').
    *
+   * @param options.initial - Optional list of game elements to be preselected
+   *
    * <ul>
    * <li>only-one: If there is only valid choice in the choices given, the game
    * will skip this choice, prompting the player for subsequent choices, if any,
@@ -698,6 +705,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     prompt?: string | ((args: A) => string);
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: T}) => string | boolean | undefined);
+    initial?: never;
     min?: never;
     max?: never;
     number?: never;
@@ -707,6 +715,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     prompt?: string | ((args: A) => string);
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T[]}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: T[]}) => string | boolean | undefined);
+    initial?: T[] | ((args: A) => T[]);
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
@@ -716,14 +725,15 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     prompt?: string | ((args: A) => string);
     confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T | T[]}) => Record<string, Argument<P>>) | undefined]
     validate?: ((args: A & {[key in N]: T | T[]}) => string | boolean | undefined);
+    initial?: T[] | ((args: A) => T[]);
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
     skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   }): Action<P, A & {[key in N]: T | T[]}> {
-    const { prompt, confirm, validate, min, max, number, skipIf } = options || {};
+    const { prompt, confirm, validate, initial, min, max, number, skipIf } = options || {};
     this._addSelection(new Selection<P>(
-      name, { prompt, confirm, validation: validate, skipIf, selectOnBoard: { chooseFrom: choices, min, max, number } }
+      name, { prompt, confirm, validation: validate, skipIf, selectOnBoard: { chooseFrom: choices, min, max, number, initial } }
     ));
     if (min !== undefined || max !== undefined || number !== undefined) {
       return this as unknown as Action<P, A & {[key in N]: T[]}>;
@@ -855,15 +865,19 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @category Behaviour
    */
   move(piece: keyof A | Piece, into: keyof A | GameElement) {
-    this.moves.push((args: A) => {
-      const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece;
+    this.do((args: A) => {
+      const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece | Piece[];
       const selectedInto = into instanceof GameElement ? into : args[into] as GameElement;
-      selectedPiece.putInto(selectedInto);
+      if (selectedPiece instanceof Array) {
+        new ElementCollection(...selectedPiece).putInto(selectedInto);
+      } else {
+        selectedPiece.putInto(selectedInto);
+      }
     });
-    this.order.push('move');
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     const intoSelection = typeof into === 'string' ? this.selections.find(s => s.name === into) : undefined;
-    if (pieceSelection) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
+    if (intoSelection?.isMulti()) throw Error("May not move into a multiple choice selection");
+    if (pieceSelection && !pieceSelection.isMulti()) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
     if (intoSelection) intoSelection.clientContext = { dragFrom: pieceSelection ?? piece };
     return this;
   }

@@ -98,10 +98,10 @@ export const starterGameWithCompoundMove = gameFactory(game => {
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
-    ).move(
-      'token', player.my('mat')!
     ).chooseFrom(
       'a', [1,2]
+    ).move(
+      'token', player.my('mat')!
     ),
   });
 });

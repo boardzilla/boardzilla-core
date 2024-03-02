@@ -93,6 +93,11 @@ export function updateSelections(store: GameStore): GameStore {
       };
     }
 
+    if (selection.type === 'board' && selection.initial && state.selected === undefined) {
+      state.selected = selection.initial as GameElement[]
+      state.uncommittedArgs[selection.name] = selection.initial;
+    }
+
     const skipIf = moves[0].selections[0].skipIf;
     // the only selection is skippable - skip and confirm or autoplay if possible
     if (skipIf === true || skipIf === 'always' || (moves[0].selections.length === 1 && (skipIf === 'only-one' || skipIf === false))) {
@@ -274,7 +279,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     name = 'disambiguate-board-selection';
   }
 
-  if (!layout && selected.length === 1) {
+  if (!layout && selected?.length === 1) {
     const clickMoves = boardSelections[selected[0].branch()]?.clickMoves;
     if (clickMoves?.length === 1 && !clickMoves[0].selections[0].isMulti()) {
       layout = { element: selected[0], position: 'beside', gap: 2 };
@@ -299,7 +304,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
 
     if (moves.length === 1) {
       // skip non-board moves if board elements already selected (cant this be more specific? just moves that could apply?)
-      if (!selected.length || moves[0].selections.some(s => s.type !== 'board')) {
+      if (!selected?.length || moves[0].selections.some(s => s.type !== 'board')) {
         const actionLayout = gameManager.game._ui.stepLayouts["action:" + moves[0].name];
         if (actionLayout?.element?._ui?.computedStyle) {
           layout = actionLayout;
@@ -491,7 +496,7 @@ export function clearMove(): Partial<GameStore> {
     error: undefined,
     uncommittedArgs: {},
     disambiguateElement: undefined,
-    selected: [],
+    selected: undefined,
     dragElement: undefined,
     currentDrop: undefined,
   }
