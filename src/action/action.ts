@@ -646,10 +646,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * @param options.max - If supplied, the choice is for a *set* of
    * elements and the maximum allowed is `max`.
    *
+   * @param options.initial - Optional list of game elements to be preselected
+   *
    * @param options.skipIf - One of 'always', 'never' or 'only-one' or a
    * function returning a boolean. (Default 'only-one').
-   *
-   * @param options.initial - Optional list of game elements to be preselected
    *
    * <ul>
    * <li>only-one: If there is only valid choice in the choices given, the game
