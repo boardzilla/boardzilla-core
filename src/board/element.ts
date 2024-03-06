@@ -5,6 +5,7 @@ import {
   cellSizeForArea,
   cellBoxRC,
   getTotalArea,
+  rotateDirection,
 } from './utils.js';
 import { serializeObject, deserializeObject } from '../action/utils.js';
 import random from 'random-seed';
@@ -64,6 +65,8 @@ export type Box = { left: number, top: number, width: number, height: number };
  * @category UI
  */
 export type Vector = { x: number, y: number };
+
+export type Direction = 'left' | 'right' | 'down' | 'up';
 
 export type ElementUI<T extends GameElement> = {
   layouts: {
@@ -247,7 +250,7 @@ export type LayoutAttributes<T extends GameElement> = {
    * can be hidden to save overall space on the playing area.
    */
   drawer?: {
-    closeDirection: 'up' | 'down' | 'left' | 'right',
+    closeDirection: Direction,
     /**
      * JSX to appear in the tab while open
      */
@@ -339,7 +342,13 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
     order?: 'normal' | 'stacking',
     was?: string,
     graph?: UndirectedGraph,
-    setId: (id: number) => void
+    setId: (id: number) => void,
+    size?: {
+      width: number,
+      height: number,
+      shape: string[],
+    },
+    edges?: Record<string, { left?: string, right?: string, up?: string, down?: string }>
   };
 
   _visible?: {
@@ -380,7 +389,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
           this._t.id = id;
           if (this._ctx.sequence < id) this._ctx.sequence = id;
         }
-      }
+      },
     }
   }
 
@@ -596,15 +605,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
       if (this._t.parent!._t.graph.areNeighbors(this._t.id, element._t.id)) return true;
     }
     if (this.row === undefined || this.column === undefined) return false;
-    return element.row !== undefined && element.column !== undefined && (
-      (this.column === element.column && [element.row + 1, element.row - 1].includes(this.row!)) ||
-        (this.row === element.row && [element.column + 1, element.column - 1].includes(this.column!))
-        // this should possibly be Piece#isDiagonal
-        // (diagonally &&
-        //   [element.row + 1, element.row - 1].includes(this.row!) &&
-        //   [element.column + 1, element.column - 1].includes(this.column!)
-        // )
-    );
+    return this._isAdjacentOnGrid(element);
   }
 
   /**
@@ -622,20 +623,33 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
     } else {
       classToSearch = className;
     }
-    if (this._t.parent?._t.graph) {
+    if ('isSpace' in this && this._t.parent?._t.graph) {
       return new ElementCollection<Space<P, B>>(...this._t.parent?._t.graph.mapNeighbors(
         this._t.id,
         node => this._t.parent!._t.graph!.getNodeAttribute(node, 'space')
       ) as Space<P, B>[])._finder(classToSearch, { noRecursive: true }, ...finders);
     }
     if (this.row === undefined || this.column === undefined || !this._t.parent) return new ElementCollection<GameElement<P, B>>();
-    return this._t.parent._t.children.filter(c => (
-      c.row !== undefined && c.column !== undefined && (
-        (this.column === c.column && [c.row + 1, c.row - 1].includes(this.row!)) ||
-          (this.row === c.row && [c.column + 1, c.column - 1].includes(this.column!))
-      )
-    ))._finder(classToSearch, { noRecursive: true }, ...finders);
+    return this._t.parent._t.children.
+      filter(c => this._isAdjacentOnGrid(c)).
+      _finder(classToSearch, { noRecursive: true }, ...finders);
   }
+
+  _isAdjacentOnGrid(el: GameElement<P, B>) {
+    if (!this._t.size && !el._t.size) {
+      return el.row !== undefined && el.column !== undefined && (
+        (this.column === el.column && [el.row + 1, el.row - 1].includes(this.row!)) ||
+          (this.row === el.row && [el.column + 1, el.column - 1].includes(this.column!))
+      );
+    }
+    // this should possibly be Piece#isDiagonal
+    // (diagonally &&
+    //   [element.row + 1, element.row - 1].includes(this.row!) &&
+    //   [element.column + 1, element.column - 1].includes(this.column!)
+    // )
+  }
+
+
 
   _otherFinder<T extends GameElement>(_finders: ElementFinder<T>[]): ElementFinder<GameElement<P, B>> {
     return (el: T) => el !== (this as GameElement);
@@ -921,11 +935,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
    * @category Structure
    */
   get rotation() {
-    if (this._rotation === undefined) return this._rotation;
+    if (this._rotation === undefined) return 0;
     return (this._rotation % 360 + 360) % 360;
   }
 
-  set rotation(r) {
+  set rotation(r: number | undefined) {
     this._rotation = r;
   }
 
@@ -971,12 +985,163 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
     return this._t.children.find(c => c._t.id === id) || this._t.children.find(c => c.atID(id))?.atID(id)
   }
 
-  /**
-   * Returns the element at row and column within this element
-   * @category Queries
-   */
-  atPosition({ column, row }: { column: number, row: number }) {
-    return this._t.children.find(c => c.row === row && c.column === column);
+  _cellAt(pos: Vector): string | undefined {
+    if (!this._t.size) return pos.x === 0 && pos.y === 0 ? '.' : undefined;
+    if (this.rotation === 0) return this._t.size.shape[pos.y]?.[pos.x];
+    if (this.rotation === 90) return this._t.size.shape[this._t.size.height - 1 - pos.x]?.[pos.y];
+    if (this.rotation === 180) return this._t.size.shape[this._t.size.height - 1 - pos.y]?.[this._t.size.width - 1 - pos.x];
+    if (this.rotation === 270) return this._t.size.shape[pos.x]?.[this._t.size.width - 1 - pos.y];
+  }
+
+  _cellsAround(pos: Vector) {
+    return {
+      up: this._cellAt({y: pos.y - 1, x: pos.x}),
+      left: this._cellAt({y: pos.y, x: pos.x - 1}),
+      down: this._cellAt({y: pos.y + 1, x: pos.x}),
+      right: this._cellAt({y: pos.y, x: pos.x + 1})
+    };
+  }
+
+  setShape(...shape: string[]) {
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
+    if (shape.some(s => s.length !== shape[0].length)) throw Error("Each row in shape must be same size. Invalid shape:\n" + shape);
+    this._t.size = {
+      shape,
+      width: shape[0].length,
+      height: shape.length
+    }
+  }
+
+  setEdges(edges: Record<string, { left?: string, right?: string, up?: string, down?: string }> | { left?: string, right?: string, up?: string, down?: string }) {
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
+    if (Object.keys(edges)[0].length === 1) {
+      const missingCell = Object.keys(edges).find(c => this._t.size?.shape.every(s => !s.includes(c)));
+      if (missingCell) throw Error(`No cell '${missingCell}' defined in shape`);
+      this._t.edges = edges as Record<string, { left?: string, right?: string, up?: string, down?: string }>;
+    } else {
+      if (this._t.size) throw Error("setEdges must use the cell characters from setShape as keys");
+      this._t.edges = {'.': edges};
+      this._t.size = {shape: ['.'], width: 1, height: 1};
+    }
+  }
+
+  isOverlapping(element?: GameElement<P, B>): boolean {
+    if (!this._t.parent || this.row === undefined || this.column === undefined || (this._rotation !== undefined && this._rotation % 90 !== 0)) return false;
+    if (!element) {
+      return this._t.parent._t.children.some(c => c !== this && this.isOverlapping(c));
+    }
+    if (element.row === undefined || element.column === undefined || (element._rotation !== undefined && element._rotation % 90 !== 0)) return false;
+    if (!this._t.size && !element._t.size) return element.row === this.row && element.column === this.column;
+    if (!this._t.size) return (element._cellAt({y: this.row - element.row, x: this.column - element.column}) ?? ' ') !== ' ';
+    if (!element._t.size) {
+      return (this._cellAt({y: element.row - this.row, x: element.column - this.column}) ?? ' ') !== ' ';
+    }
+    if (
+      element.row >= this.row + ((this._rotation ?? 0) % 180 ? this._t.size.width : this._t.size.height) ||
+        element.row + ((element._rotation ?? 0) % 180 ? element._t.size.width : element._t.size.height) <= this.row ||
+        element.column >= this.column + ((this._rotation ?? 0) % 180 ? this._t.size.height : this._t.size.width) ||
+        element.column + ((element._rotation ?? 0) % 180 ? element._t.size.height : element._t.size.width) <= this.column
+    ) return false;
+    const size = Math.max(this._t.size.height, this._t.size.width);
+    for (let x = 0; x !== size; x += 1) {
+      for (let y = 0; y !== size; y += 1) {
+        if ((this._cellAt({x, y}) ?? ' ') !== ' ' && (element._cellAt({x: x + this.column - element.column, y: y + this.row - element.row}) ?? ' ') !== ' ') {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  adjacenciesWithCells(element?: GameElement<P, B>): {element: GameElement<P, B>, from: string, to: string}[] {
+    if (!this._t.parent || this.row === undefined || this.column === undefined || (this._rotation !== undefined && this._rotation % 90 !== 0)) return [];
+    if (!element) {
+      return this._t.parent._t.children.reduce(
+        (all, c) => all.concat(c !== this ? this.adjacenciesWithCells(c) : []),
+        [] as {element: GameElement<P, B>, from: string, to: string}[]
+      );
+    }
+    if (element.row === undefined || element.column === undefined || (element._rotation !== undefined && element._rotation % 90 !== 0)) return [];
+
+    if (!this._t.size && !element._t.size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
+    if (!this._t.size) {
+      return Object.values(element._cellsAround({x: this.column - element.column, y: this.row - element.row})).reduce(
+        (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: '.', to: adj}] : []),
+        [] as {element: GameElement<P, B>, from: string, to: string}[]
+      );
+    }
+    if (!element._t.size) {
+      return Object.values(this._cellsAround({x: element.column - this.column, y: element.row - this.row})).reduce(
+        (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: adj, to: '.'}] : []),
+        [] as {element: GameElement<P, B>, from: string, to: string}[]
+      );
+    }
+    if (
+      element.row >= this.row + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.width : this._t.size.height) ||
+        element.row + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.width : element._t.size.height) <= this.row ||
+        element.column >= this.column + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.height : this._t.size.width) ||
+        element.column + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.height : element._t.size.width) <= this.column
+    ) return [];
+    const size = Math.max(this._t.size.height, this._t.size.width);
+    const adjacencies = [] as {element: GameElement<P, B>, from: string, to: string}[];
+    for (let x = 0; x !== size; x += 1) {
+      for (let y = 0; y !== size; y += 1) {
+        // console.log({x, y, p1: this._cellAt({x, y}), p2: element._cellAt({x: x + this.column - element.column, y: y + this.row - element.row})});
+        const thisCell = this._cellAt({x, y});
+        if (thisCell === undefined || thisCell === ' ') continue;
+        for (const cell of Object.values(element._cellsAround({x: x + this.column - element.column, y: y + this.row - element.row}))) {
+          if (cell !== undefined && cell !== ' ') {
+            adjacencies.push({element, from: thisCell, to: cell});
+          }
+        }
+      }
+    }
+    return adjacencies;
+  }
+
+  adjacenciesWithEdges(element?: GameElement<P, B>): {element: GameElement<P, B>, from?: string, to?: string}[] {
+    if (!this._t.parent || this.row === undefined || this.column === undefined || (this._rotation !== undefined && this._rotation % 90 !== 0)) return [];
+    if (!element) {
+      return this._t.parent._t.children.reduce(
+        (all, c) => all.concat(c !== this ? this.adjacenciesWithEdges(c) : []),
+        [] as {element: GameElement<P, B>, from?: string, to?: string}[]
+      );
+    }
+    if (element.row === undefined || element.column === undefined || (element._rotation !== undefined && element._rotation % 90 !== 0)) return [];
+
+    if (!this._t.size && !element._t.size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
+    if (!this._t.size) {
+      return (Object.entries(element._cellsAround({x: this.column - element.column, y: this.row - element.row})) as [Direction, string][]).reduce(
+        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: undefined, to: element._t.edges?.[adj][rotateDirection(dir, 180 - (element._rotation ?? 0))]}] : []),
+        [] as {element: GameElement<P, B>, from?: string, to?: string}[]
+      );
+    }
+    if (!element._t.size) {
+      return (Object.entries(this._cellsAround({x: element.column - this.column, y: element.row - this.row})) as [Direction, string][]).reduce(
+        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: this._t.edges?.[adj][rotateDirection(dir, 180 - (this._rotation ?? 0))], to: undefined}] : []),
+        [] as {element: GameElement<P, B>, from?: string, to?: string}[]
+      );
+    }
+    if (
+      element.row >= this.row + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.width : this._t.size.height) ||
+        element.row + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.width : element._t.size.height) <= this.row ||
+        element.column >= this.column + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.height : this._t.size.width) ||
+        element.column + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.height : element._t.size.width) <= this.column
+    ) return [];
+    const size = Math.max(this._t.size.height, this._t.size.width);
+    const adjacencies = [] as {element: GameElement<P, B>, from?: string, to?: string}[];
+    for (let x = 0; x !== size; x += 1) {
+      for (let y = 0; y !== size; y += 1) {
+        const thisCell = this._cellAt({x, y});
+        if (thisCell === undefined || thisCell === ' ') continue;
+        for (const [dir, cell] of Object.entries(element._cellsAround({x: x + this.column - element.column, y: y + this.row - element.row})) as [Direction, string][]) {
+          if (cell !== undefined && cell !== ' ') {
+            adjacencies.push({element, from: this._t.edges?.[thisCell][rotateDirection(dir, -(this._rotation ?? 0))], to: element._t.edges?.[cell][rotateDirection(dir, 180 - (element._rotation ?? 0))]});
+          }
+        }
+      }
+    }
+    return adjacencies;
   }
 
   /**
@@ -1333,46 +1498,46 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
             }
           }
           switch (fillDirection) {
-        case 'ltr':
-          available = {x: 1, y: 1};
-          advance = {x: 1, y: 0};
-          carriageReturn = {x: -columns, y: 1};
-          break;
-        case 'rtl':
-          available = {x: columns, y: 1};
-          advance = {x: -1, y: 0};
-          carriageReturn = {x: columns, y: 1};
-          break;
-        case 'ttb':
-          available = {x: 1, y: 1};
-          advance = {x: 0, y: 1};
-          carriageReturn = {x: 1, y: -rows};
-          break;
-        case 'btt':
-          available = {x: 1, y: rows};
-          advance = {x: 0, y: -1};
-          carriageReturn = {x: 1, y: rows};
-          break;
-        case 'ltr-btt':
-          available = {x: 1, y: rows};
-          advance = {x: 1, y: 0};
-          carriageReturn = {x: -columns, y: -1};
-          break;
-        case 'rtl-btt':
-          available = {x: columns, y: rows};
-          advance = {x: -1, y: 0};
-          carriageReturn = {x: columns, y: -1};
-          break;
-        case 'ttb-rtl':
-          available = {x: columns, y: 1};
-          advance = {x: 0, y: 1};
-          carriageReturn = {x: -1, y: -rows};
-          break;
-        case 'btt-rtl':
-          available = {x: columns, y: rows};
-          advance = {x: 0, y: -1};
-          carriageReturn = {x: -1, y: rows};
-          break;
+            case 'ltr':
+              available = {x: 1, y: 1};
+              advance = {x: 1, y: 0};
+              carriageReturn = {x: -columns, y: 1};
+              break;
+            case 'rtl':
+              available = {x: columns, y: 1};
+              advance = {x: -1, y: 0};
+              carriageReturn = {x: columns, y: 1};
+              break;
+            case 'ttb':
+              available = {x: 1, y: 1};
+              advance = {x: 0, y: 1};
+              carriageReturn = {x: 1, y: -rows};
+              break;
+            case 'btt':
+              available = {x: 1, y: rows};
+              advance = {x: 0, y: -1};
+              carriageReturn = {x: 1, y: rows};
+              break;
+            case 'ltr-btt':
+              available = {x: 1, y: rows};
+              advance = {x: 1, y: 0};
+              carriageReturn = {x: -columns, y: -1};
+              break;
+            case 'rtl-btt':
+              available = {x: columns, y: rows};
+              advance = {x: -1, y: 0};
+              carriageReturn = {x: columns, y: -1};
+              break;
+            case 'ttb-rtl':
+              available = {x: columns, y: 1};
+              advance = {x: 0, y: 1};
+              carriageReturn = {x: -1, y: -rows};
+              break;
+            case 'btt-rtl':
+              available = {x: columns, y: rows};
+              advance = {x: 0, y: -1};
+              carriageReturn = {x: -1, y: rows};
+              break;
           }
 
           let c = 0;

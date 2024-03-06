@@ -1200,6 +1200,394 @@ describe('Game', () => {
       expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
     });
   });
+
+  describe('shapes', () => {
+    let p1: Piece<Player>;
+    let p2: Piece<Player>;
+
+    beforeEach(() => {
+      p1 = game.create(Piece, 'p1');
+      p2 = game.create(Piece, 'p2');
+
+      p1.setShape(
+        'ABC',
+        'D  ',
+        'E  ',
+      );
+
+      p2.setShape(
+        'abcd',
+        'e f ',
+      );
+    });
+
+    describe("both zero degrees", () => {
+      it('finds overlap 1', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 0;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 2', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 1;
+        p2.row = 1;
+
+        expect(p1.isOverlapping(p2)).to.be.false;
+      });
+
+      it('finds overlap 3', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = -1;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 4', () => {
+        p1.column = 4;
+        p1.row = 2;
+        p2.column = 1;
+        p2.row = 1;
+
+        expect(p1.isOverlapping(p2)).to.be.false;
+      });
+    });
+
+    describe("p1 at 90 degrees", () => {
+      beforeEach(() => p1.rotation = 90);
+      it('finds overlap 5', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 1;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 6', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -2;
+        p2.row = 1;
+
+        expect(p1.isOverlapping(p2)).to.be.false;
+      });
+
+      it('finds overlap 7', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 2;
+        p2.row = 2;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 8', () => {
+        p1.column = 2;
+        p1.row = 4;
+        p2.column = 3;
+        p2.row = 2;
+
+        expect(p1.isOverlapping(p2)).to.be.false;
+      });
+    });
+
+    describe("p2 at 270 degrees", () => {
+      beforeEach(() => p2.rotation = 270);
+      it('finds overlap 9', () => {
+        p1.column = -1;
+        p1.row = 0;
+        p2.column = 1;
+        p2.row = 0;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 10', () => {
+        p1.column = -1;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 1;
+
+        expect(p1.isOverlapping(p2)).to.be.false;
+      });
+
+      it('finds overlap 11', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 2;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 12', () => {
+        p1.column = 1;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 2;
+
+        expect(p1.isOverlapping(p2)).to.be.false;
+      });
+    });
+
+    describe("p1 at 180 degrees, p2 at 270 degrees", () => {
+      beforeEach(() => {p1.rotation = 180; p2.rotation = 270});
+      it('finds overlap 13', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = -1;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 14', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 0;
+        p1.setEdges({
+          C: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          }
+        });
+        p2.setEdges({
+          b: {
+            up: 'up',
+            down: 'down',
+            left: 'left',
+            right: 'right'
+          },
+          f: {
+            up: 'Up',
+            down: 'Down',
+            left: 'Left',
+            right: 'Right'
+          },
+          e: {
+            right: 'stuff'
+          }
+        });
+
+        // d  E
+        // cf D
+        // bCBA
+        // ae
+        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(p1.adjacenciesWithCells(p2)).to.deep.equal([
+          {
+            element: p2,
+            from: 'C',
+            to: 'f'
+          },
+          {
+            element: p2,
+            from: 'C',
+            to: 'b'
+          },
+          {
+            element: p2,
+            from: 'C',
+            to: 'e'
+          }
+        ]);
+        expect(p1.adjacenciesWithEdges(p2)).to.deep.equal([
+          {
+            element: p2,
+            from: 'DOWN',
+            to: 'Left'
+          },
+          {
+            element: p2,
+            from: 'RIGHT',
+            to: 'down'
+          },
+          {
+            element: p2,
+            from: 'UP',
+            to: 'stuff'
+          }
+        ]);
+      });
+
+      it('finds overlap 15', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 1;
+
+        expect(p1.isOverlapping(p2)).to.be.true;
+      });
+
+      it('finds overlap 16', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 2;
+        p1.setEdges({
+          C: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          }
+        });
+        p2.setEdges({
+          d: {
+            up: 'up',
+            down: 'down',
+            left: 'left',
+            right: 'right'
+          },
+          f: {
+            up: 'Up',
+            down: 'Down',
+            left: 'Left',
+            right: 'Right'
+          }
+        });
+
+        //    E
+        //    D
+        // dCBA
+        // cf
+        // b
+        // ae
+        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(p1.adjacenciesWithCells(p2)).to.deep.equal([
+          {
+            element: p2,
+            from: 'C',
+            to: 'd'
+          },
+          {
+            element: p2,
+            from: 'C',
+            to: 'f'
+          }
+        ]);
+        expect(p1.adjacenciesWithEdges(p2)).to.deep.equal([
+          {
+            element: p2,
+            from: 'RIGHT',
+            to: 'down'
+          },
+          {
+            element: p2,
+            from: 'UP',
+            to: 'Right'
+          }
+        ]);
+      });
+
+      it('3 body problem', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 2;
+        const p3 = game.create(Piece, 'p3') // unshaped
+        p3.column = 1;
+        p3.row = 3;
+        p1.setEdges({
+          C: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          },
+          B: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          }
+        });
+        p2.setEdges({
+          d: {
+            up: 'up',
+            down: 'down',
+            left: 'left',
+            right: 'right'
+          },
+          f: {
+            up: 'Up',
+            down: 'Down',
+            left: 'Left',
+            right: 'Right'
+          }
+        });
+
+        //    E
+        //    D
+        // dCBA
+        // cf.
+        // b
+        // ae
+        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(p1.isOverlapping(p3)).to.be.false;
+        expect(p3.isOverlapping(p1)).to.be.false;
+        expect(p3.isOverlapping(p2)).to.be.false;
+        expect(p1.isOverlapping()).to.be.false;
+        expect(p3.isOverlapping()).to.be.false;
+        expect(p1.adjacenciesWithCells()).to.deep.equal([
+          {
+            element: p2,
+            from: 'C',
+            to: 'd'
+          },
+          {
+            element: p2,
+            from: 'C',
+            to: 'f'
+          },
+          {
+            element: p3,
+            from: 'B',
+            to: '.'
+          }
+        ]);
+        expect(p1.adjacenciesWithEdges()).to.deep.equal([
+          {
+            element: p2,
+            from: 'RIGHT',
+            to: 'down'
+          },
+          {
+            element: p2,
+            from: 'UP',
+            to: 'Right'
+          },
+          {
+            element: p3,
+            from: 'UP',
+            to: undefined
+          }
+        ]);
+        expect(p3.adjacenciesWithEdges()).to.deep.equal([
+          {
+            element: p1,
+            from: undefined,
+            to: 'UP'
+          },
+          {
+            element: p2,
+            from: undefined,
+            to: 'Down'
+          },
+        ]);
+      });
+    });
+  });
 });
 
       // console.log('<div style="width: 200; height: 200; position: relative; outline: 1px solid black">');

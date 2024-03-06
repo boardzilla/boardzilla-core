@@ -297,9 +297,15 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     if (!s.placement || s.pendingMoves?.[0].selections[0]?.type !== 'place') {
       return {}
     }
-    if (column !== undefined && row !== undefined && !s.placement?.piece.container()!.atPosition({ column, row })) {
+    if (column !== undefined && row !== undefined) {
+      const oldColumn = s.placement.piece.column;
+      const oldRow = s.placement.piece.row = row;
       s.placement.piece.column = column;
       s.placement.piece.row = row;
+      if (s.placement?.piece.isOverlapping()) {
+        s.placement.piece.column = oldColumn;
+        s.placement.piece.row = oldRow;
+      }
     }
     if (rotation !== undefined) {
       s.placement.piece.rotation = rotation;
