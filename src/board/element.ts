@@ -343,13 +343,14 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
     was?: string,
     graph?: UndirectedGraph,
     setId: (id: number) => void,
-    size?: {
-      width: number,
-      height: number,
-      shape: string[],
-    },
-    edges?: Record<string, { left?: string, right?: string, up?: string, down?: string }>
   };
+
+  _size?: {
+    width: number,
+    height: number,
+    shape: string[],
+    edges?: Record<string, { left?: string, right?: string, up?: string, down?: string }>
+  }
 
   _visible?: {
     default: boolean,
@@ -636,7 +637,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   }
 
   _isAdjacentOnGrid(el: GameElement<P, B>) {
-    if (!this._t.size && !el._t.size) {
+    if (!this._size && !el._size) {
       return el.row !== undefined && el.column !== undefined && (
         (this.column === el.column && [el.row + 1, el.row - 1].includes(this.row!)) ||
           (this.row === el.row && [el.column + 1, el.column - 1].includes(this.column!))
@@ -939,7 +940,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
     return (this._rotation % 360 + 360) % 360;
   }
 
-  set rotation(r: number | undefined) {
+  set rotation(r: number) {
     this._rotation = r;
   }
 
@@ -986,11 +987,11 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   }
 
   _cellAt(pos: Vector): string | undefined {
-    if (!this._t.size) return pos.x === 0 && pos.y === 0 ? '.' : undefined;
-    if (this.rotation === 0) return this._t.size.shape[pos.y]?.[pos.x];
-    if (this.rotation === 90) return this._t.size.shape[this._t.size.height - 1 - pos.x]?.[pos.y];
-    if (this.rotation === 180) return this._t.size.shape[this._t.size.height - 1 - pos.y]?.[this._t.size.width - 1 - pos.x];
-    if (this.rotation === 270) return this._t.size.shape[pos.x]?.[this._t.size.width - 1 - pos.y];
+    if (!this._size) return pos.x === 0 && pos.y === 0 ? '.' : undefined;
+    if (this.rotation === 0) return this._size.shape[pos.y]?.[pos.x];
+    if (this.rotation === 90) return this._size.shape[this._size.height - 1 - pos.x]?.[pos.y];
+    if (this.rotation === 180) return this._size.shape[this._size.height - 1 - pos.y]?.[this._size.width - 1 - pos.x];
+    if (this.rotation === 270) return this._size.shape[pos.x]?.[this._size.width - 1 - pos.y];
   }
 
   _cellsAround(pos: Vector) {
@@ -1002,10 +1003,22 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
     };
   }
 
+  _gridSize() {
+    if (!this._size) return {width: 1, height: 1};
+    if (this.rotation % 180 === 90) return {
+      width: this._size.height,
+      height: this._size.width
+    }
+    return {
+      width: this._size.width,
+      height: this._size.height
+    }
+  }
+
   setShape(...shape: string[]) {
     if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
     if (shape.some(s => s.length !== shape[0].length)) throw Error("Each row in shape must be same size. Invalid shape:\n" + shape);
-    this._t.size = {
+    this._size = {
       shape,
       width: shape[0].length,
       height: shape.length
@@ -1015,34 +1028,36 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   setEdges(edges: Record<string, { left?: string, right?: string, up?: string, down?: string }> | { left?: string, right?: string, up?: string, down?: string }) {
     if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
     if (Object.keys(edges)[0].length === 1) {
-      const missingCell = Object.keys(edges).find(c => this._t.size?.shape.every(s => !s.includes(c)));
+      const missingCell = Object.keys(edges).find(c => this._size?.shape.every(s => !s.includes(c)));
       if (missingCell) throw Error(`No cell '${missingCell}' defined in shape`);
-      this._t.edges = edges as Record<string, { left?: string, right?: string, up?: string, down?: string }>;
+      this._size!.edges = edges as Record<string, { left?: string, right?: string, up?: string, down?: string }>;
     } else {
-      if (this._t.size) throw Error("setEdges must use the cell characters from setShape as keys");
-      this._t.edges = {'.': edges};
-      this._t.size = {shape: ['.'], width: 1, height: 1};
+      if (this._size) throw Error("setEdges must use the cell characters from setShape as keys");
+      this._size = {shape: ['.'], width: 1, height: 1, edges: {'.': edges}};
     }
   }
 
   isOverlapping(element?: GameElement<P, B>): boolean {
-    if (!this._t.parent || this.row === undefined || this.column === undefined || (this._rotation !== undefined && this._rotation % 90 !== 0)) return false;
+    if (!this._t.parent || this.row === undefined || this.column === undefined) return false;
     if (!element) {
-      return this._t.parent._t.children.some(c => c !== this && this.isOverlapping(c));
+      const layout = this._t.parent._ui.computedLayouts?.find(l => l?.children.includes(this));
+      const children = layout?.children ?? this._t.parent._t.children;
+      return children.some(c => c !== this && this.isOverlapping(c));
     }
-    if (element.row === undefined || element.column === undefined || (element._rotation !== undefined && element._rotation % 90 !== 0)) return false;
-    if (!this._t.size && !element._t.size) return element.row === this.row && element.column === this.column;
-    if (!this._t.size) return (element._cellAt({y: this.row - element.row, x: this.column - element.column}) ?? ' ') !== ' ';
-    if (!element._t.size) {
-      return (this._cellAt({y: element.row - this.row, x: element.column - this.column}) ?? ' ') !== ' ';
-    }
+    if (element.row === undefined || element.column === undefined) return false;
+    if (!this._size && !element._size) return element.row === this.row && element.column === this.column;
+    if (this.rotation % 90 !== 0 || element.rotation % 90 !== 0) return false; // unsupported to calculate for irregular shapes at non-orthoganal orientations
+    if (!this._size) return (element._cellAt({y: this.row - element.row, x: this.column - element.column}) ?? ' ') !== ' ';
+    if (!element._size) return (this._cellAt({y: element.row - this.row, x: element.column - this.column}) ?? ' ') !== ' ';
+    const gridSize = this._gridSize();
+    const gridSizeEl = element._gridSize();
     if (
-      element.row >= this.row + ((this._rotation ?? 0) % 180 ? this._t.size.width : this._t.size.height) ||
-        element.row + ((element._rotation ?? 0) % 180 ? element._t.size.width : element._t.size.height) <= this.row ||
-        element.column >= this.column + ((this._rotation ?? 0) % 180 ? this._t.size.height : this._t.size.width) ||
-        element.column + ((element._rotation ?? 0) % 180 ? element._t.size.height : element._t.size.width) <= this.column
+      element.row >= this.row + gridSize.height ||
+      element.row + gridSizeEl.height <= this.row ||
+      element.column >= this.column + gridSize.width ||
+      element.column + gridSizeEl.width <= this.column
     ) return false;
-    const size = Math.max(this._t.size.height, this._t.size.width);
+    const size = Math.max(this._size.height, this._size.width);
     for (let x = 0; x !== size; x += 1) {
       for (let y = 0; y !== size; y += 1) {
         if ((this._cellAt({x, y}) ?? ' ') !== ' ' && (element._cellAt({x: x + this.column - element.column, y: y + this.row - element.row}) ?? ' ') !== ' ') {
@@ -1054,39 +1069,43 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   }
 
   adjacenciesWithCells(element?: GameElement<P, B>): {element: GameElement<P, B>, from: string, to: string}[] {
-    if (!this._t.parent || this.row === undefined || this.column === undefined || (this._rotation !== undefined && this._rotation % 90 !== 0)) return [];
+    if (!this._t.parent || this.row === undefined || this.column === undefined) return [];
     if (!element) {
-      return this._t.parent._t.children.reduce(
+      const layout = this._t.parent._ui.computedLayouts?.find(l => l?.children.includes(this));
+      const children = layout?.children ?? this._t.parent._t.children;
+      return children.reduce(
         (all, c) => all.concat(c !== this ? this.adjacenciesWithCells(c) : []),
         [] as {element: GameElement<P, B>, from: string, to: string}[]
       );
     }
-    if (element.row === undefined || element.column === undefined || (element._rotation !== undefined && element._rotation % 90 !== 0)) return [];
+    if (element.row === undefined || element.column === undefined || element.rotation % 90 !== 0) return [];
 
-    if (!this._t.size && !element._t.size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
-    if (!this._t.size) {
+    if (!this._size && !element._size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
+    if (this.rotation % 90 !== 0 || element.rotation % 90 !== 0) return []; // unsupported to calculate for irregular shapes at non-orthoganal orientations
+    if (!this._size) {
       return Object.values(element._cellsAround({x: this.column - element.column, y: this.row - element.row})).reduce(
         (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: '.', to: adj}] : []),
         [] as {element: GameElement<P, B>, from: string, to: string}[]
       );
     }
-    if (!element._t.size) {
+    if (!element._size) {
       return Object.values(this._cellsAround({x: element.column - this.column, y: element.row - this.row})).reduce(
         (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: adj, to: '.'}] : []),
         [] as {element: GameElement<P, B>, from: string, to: string}[]
       );
     }
+    const gridSize = this._gridSize();
+    const gridSizeEl = element._gridSize();
     if (
-      element.row >= this.row + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.width : this._t.size.height) ||
-        element.row + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.width : element._t.size.height) <= this.row ||
-        element.column >= this.column + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.height : this._t.size.width) ||
-        element.column + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.height : element._t.size.width) <= this.column
+      element.row >= this.row + 1 + gridSize.height ||
+      element.row + 1 + gridSizeEl.height <= this.row ||
+      element.column >= this.column + 1 + gridSize.width ||
+      element.column + 1 + gridSizeEl.width <= this.column
     ) return [];
-    const size = Math.max(this._t.size.height, this._t.size.width);
+    const size = Math.max(this._size.height, this._size.width);
     const adjacencies = [] as {element: GameElement<P, B>, from: string, to: string}[];
     for (let x = 0; x !== size; x += 1) {
       for (let y = 0; y !== size; y += 1) {
-        // console.log({x, y, p1: this._cellAt({x, y}), p2: element._cellAt({x: x + this.column - element.column, y: y + this.row - element.row})});
         const thisCell = this._cellAt({x, y});
         if (thisCell === undefined || thisCell === ' ') continue;
         for (const cell of Object.values(element._cellsAround({x: x + this.column - element.column, y: y + this.row - element.row}))) {
@@ -1100,35 +1119,39 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
   }
 
   adjacenciesWithEdges(element?: GameElement<P, B>): {element: GameElement<P, B>, from?: string, to?: string}[] {
-    if (!this._t.parent || this.row === undefined || this.column === undefined || (this._rotation !== undefined && this._rotation % 90 !== 0)) return [];
+    if (!this._t.parent || this.row === undefined || this.column === undefined || this.rotation % 90 !== 0) return [];
     if (!element) {
-      return this._t.parent._t.children.reduce(
+      const layout = this._t.parent._ui.computedLayouts?.find(l => l?.children.includes(this));
+      const children = layout?.children ?? this._t.parent._t.children;
+      return children.reduce(
         (all, c) => all.concat(c !== this ? this.adjacenciesWithEdges(c) : []),
         [] as {element: GameElement<P, B>, from?: string, to?: string}[]
       );
     }
-    if (element.row === undefined || element.column === undefined || (element._rotation !== undefined && element._rotation % 90 !== 0)) return [];
+    if (element.row === undefined || element.column === undefined || element.rotation % 90 !== 0) return [];
 
-    if (!this._t.size && !element._t.size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
-    if (!this._t.size) {
+    if (!this._size && !element._size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
+    if (!this._size) {
       return (Object.entries(element._cellsAround({x: this.column - element.column, y: this.row - element.row})) as [Direction, string][]).reduce(
-        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: undefined, to: element._t.edges?.[adj][rotateDirection(dir, 180 - (element._rotation ?? 0))]}] : []),
+        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: undefined, to: element._size?.edges?.[adj][rotateDirection(dir, 180 - element.rotation)]}] : []),
         [] as {element: GameElement<P, B>, from?: string, to?: string}[]
       );
     }
-    if (!element._t.size) {
+    if (!element._size) {
       return (Object.entries(this._cellsAround({x: element.column - this.column, y: element.row - this.row})) as [Direction, string][]).reduce(
-        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: this._t.edges?.[adj][rotateDirection(dir, 180 - (this._rotation ?? 0))], to: undefined}] : []),
+        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: this._size?.edges?.[adj][rotateDirection(dir, 180 - this.rotation)], to: undefined}] : []),
         [] as {element: GameElement<P, B>, from?: string, to?: string}[]
       );
     }
+    const gridSize = this._gridSize();
+    const gridSizeEl = element._gridSize();
     if (
-      element.row >= this.row + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.width : this._t.size.height) ||
-        element.row + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.width : element._t.size.height) <= this.row ||
-        element.column >= this.column + 1 + ((this._rotation ?? 0) % 180 ? this._t.size.height : this._t.size.width) ||
-        element.column + 1 + ((element._rotation ?? 0) % 180 ? element._t.size.height : element._t.size.width) <= this.column
+      element.row >= this.row + 1 + gridSize.height ||
+      element.row + 1 + gridSizeEl.height <= this.row ||
+      element.column >= this.column + 1 + gridSize.width ||
+      element.column + 1 + gridSizeEl.width <= this.column
     ) return [];
-    const size = Math.max(this._t.size.height, this._t.size.width);
+    const size = Math.max(this._size.height, this._size.width);
     const adjacencies = [] as {element: GameElement<P, B>, from?: string, to?: string}[];
     for (let x = 0; x !== size; x += 1) {
       for (let y = 0; y !== size; y += 1) {
@@ -1136,7 +1159,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
         if (thisCell === undefined || thisCell === ' ') continue;
         for (const [dir, cell] of Object.entries(element._cellsAround({x: x + this.column - element.column, y: y + this.row - element.row})) as [Direction, string][]) {
           if (cell !== undefined && cell !== ' ') {
-            adjacencies.push({element, from: this._t.edges?.[thisCell][rotateDirection(dir, -(this._rotation ?? 0))], to: element._t.edges?.[cell][rotateDirection(dir, 180 - (element._rotation ?? 0))]});
+            adjacencies.push({element, from: this._size?.edges?.[thisCell][rotateDirection(dir, -this.rotation)], to: element._size?.edges?.[cell][rotateDirection(dir, 180 - element.rotation)]});
           }
         }
       }
@@ -1174,7 +1197,7 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
     // remove hidden attributes
     if (seenBy !== undefined && !this.isVisibleTo(seenBy)) {
       attrs = Object.fromEntries(Object.entries(attrs).filter(
-        ([attr]) => ['_visible', 'row', 'column', '_rotation'].includes(attr) ||
+        ([attr]) => ['_visible', 'row', 'column', '_rotation', '_size'].includes(attr) ||
           (attr !== 'name' && (this.constructor as typeof GameElement).visibleAttributes?.includes(attr))
       )) as typeof attrs;
     }
@@ -1410,12 +1433,13 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
         // find bounding box for any set positions
         for (let c = 0; c != children.length; c++) {
           const child = children[c];
+          const gridSize = child._gridSize();
           if (child.column !== undefined && child.row !== undefined && !child._ui.ghost) {
             cells[c] = [child.column, child.row];
             if (min.column === undefined || child.column < min.column) min.column = child.column;
             if (min.row === undefined || child.row < min.row) min.row = child.row;
-            if (max.column === undefined || child.column > max.column) max.column = child.column;
-            if (max.row === undefined || child.row > max.row) max.row = child.row;
+            if (max.column === undefined || child.column + gridSize.width - 1 > max.column) max.column = child.column + gridSize.width - 1;
+            if (max.row === undefined || child.row + gridSize.height - 1 > max.row) max.row = child.row + gridSize.height - 1;
           }
         }
         min.column ??= 1;
@@ -1475,11 +1499,21 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
             row: Math.min(min.row, max.row, Math.max(1, max.row - rows + 1))
           }
 
-          if (ghostPiecesIgnoredForLayout > 0 && children.length > ghostPiecesIgnoredForLayout) {
-            columns += attributes.extensionMargin! + attributes.extensionMargin!;
-            rows += attributes.extensionMargin! + attributes.extensionMargin!;
-            origin.column -= attributes.extensionMargin!;
-            origin.row -= attributes.extensionMargin!;
+          if (ghostPiecesIgnoredForLayout > 0 && children.length > ghostPiecesIgnoredForLayout && attributes.extensionMargin !== undefined) {
+            if (origin.column === min.column) {
+              columns += attributes.extensionMargin!;
+              origin.column -= attributes.extensionMargin!;
+            }
+            if (origin.column + columns - 1 === max.column) {
+              columns += attributes.extensionMargin!;
+            }
+            if (origin.row === min.row) {
+              rows += attributes.extensionMargin!;
+              origin.row -= attributes.extensionMargin!;
+            }
+            if (origin.row + rows - 1 === max.row) {
+              rows += attributes.extensionMargin!;
+            }
           }
 
           let available: Vector;
@@ -1540,29 +1574,47 @@ export default class GameElement<P extends Player<P, B> = any, B extends Game<P,
               break;
           }
 
+          if (ghostPiecesIgnoredForLayout) {
+            for (let c = 0; c != children.length; c++) {
+              const child = children[c];
+              if (child.column !== undefined && child.row !== undefined && child._ui.ghost) cells[c] = [child.column, child.row];
+            }
+          }
+
+          // place unpositioned elements
           let c = 0;
+          const unpositioned: GameElement<P, B>[] = [];
           while (c != children.length) {
             const child = children[c];
-            if (child.column === undefined || child.row === undefined) {
-              const cell: [number, number] = [available.x + origin.column! - 1, available.y + origin.row! - 1];
-              if (cells.every(([x, y]) => x !== cell[0] || y !== cell[1])) {
-                cells[c] = cell;
-                if (attributes.sticky) {
-                  child.column = cell[0];
-                  child.row = cell[1];
-                }
-                c++;
-              }
-              available.x += advance.x;
-              available.y += advance.y;
-              if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) {
-                available.x += carriageReturn.x;
-                available.y += carriageReturn.y;
-              }
-              if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) break;
-            } else {
-              if (child._ui.ghost) cells[c] = [child.column, child.row];
+            if (child.column !== undefined && child.row !== undefined) {
               c++;
+              continue;
+            }
+            unpositioned.push(child);
+            const cell: [number, number] = [available.x + origin.column! - 1, available.y + origin.row! - 1];
+            child.column = cell[0];
+            child.row = cell[1];
+            const gridSize = child._gridSize();
+            if ((!child._size || (gridSize.width + available.x - 1 <= columns && gridSize.height + available.y - 1 < rows)) && !child.isOverlapping()) {
+              cells[c] = cell;
+              c++;
+            } else {
+              child.column = undefined;
+              child.row = undefined;
+            }
+
+            available.x += advance.x;
+            available.y += advance.y;
+            if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) {
+              available.x += carriageReturn.x;
+              available.y += carriageReturn.y;
+            }
+            if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) break;
+          }
+          if (!attributes.sticky) {
+            for (const child of unpositioned) {
+              child.row = undefined;
+              child.column = undefined;
             }
           }
         }

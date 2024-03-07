@@ -299,7 +299,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     }
     if (column !== undefined && row !== undefined) {
       const oldColumn = s.placement.piece.column;
-      const oldRow = s.placement.piece.row = row;
+      const oldRow = s.placement.piece.row;
       s.placement.piece.column = column;
       s.placement.piece.row = row;
       if (s.placement?.piece.isOverlapping()) {

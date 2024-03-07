@@ -287,15 +287,15 @@ export default class Action<P extends Player, A extends Record<string, Argument<
         args = {...args};
         // temporarily set piece to place to access position properties
         const placePiece = (args[placementSelection.placePiece!] as Piece);
-        const { row, column, rotation } = placePiece;
+        const { row, column, _rotation } = placePiece;
         const [newColumn, newRow, newRotation] = args['__placement__'] as [number, number, number?];
         placePiece.column = newColumn;
         placePiece.row = newRow;
-        placePiece.rotation = newRotation;
+        placePiece.rotation = newRotation ?? 0;
         const result = fn(args);
         placePiece.column = column;
         placePiece.row = row;
-        placePiece.rotation = rotation;
+        placePiece._rotation = _rotation;
         return result;
       }
     }
