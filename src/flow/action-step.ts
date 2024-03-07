@@ -155,9 +155,8 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       }
     } else if (gameManager.followups.length > 0) {
       // validate that this is a proper action list
-      if (gameManager.followups.some(f => !gameManager.actions[f.name])) {
-        throw Error(`Action ${move.name} followup is not a valid action`);
-      }
+      const badFollowup = gameManager.followups.find(f => !gameManager.actions[f.name]);
+      if (badFollowup) throw Error(`Action "${move.name}" followUp "${badFollowup.name}" is not a valid action`);
     }
 
     const followups = ('followups' in this.position && this.position.followups?.length ? this.position.followups.slice(1) : []).concat(gameManager.followups ?? []);

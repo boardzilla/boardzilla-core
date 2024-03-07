@@ -341,7 +341,8 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
           if (submoves !== undefined) {
             possibleActions.push(action.name);
             // no sub-selections to show so just create a prompt selection of this action
-            if (submoves.length === 0) {
+            // if an explcit confirm is required, this would be where to add the logic for it, e.g. playerAction.explicit? => selection[0].confirm
+            if (submoves.length === 0 || skipIf === 'never' || (skipIf === 'only-one' && actions.length > 1)) {
               submoves = [{
                 name: action.name,
                 prompt,

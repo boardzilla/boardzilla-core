@@ -458,6 +458,22 @@ describe('GameManager', () => {
       expect(gameManager.getPendingMoves(gameManager.players[0])?.moves[0].args).to.deep.equal({d: 'Joe'});
     });
 
+    it('unskippable initial playerAction', () => {
+      const { playerActions } = game.flowCommands
+
+      game.defineFlow(
+        () => { game.tokens = 1 },
+        playerActions({
+          player: gameManager.players[0],
+          actions: ['declare'],
+          skipIf: 'never'
+        })
+      );
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.getPendingMoves(gameManager.players[0])?.moves[0].selections[0].type).to.equal('button');
+    });
+
     it('skippable initial playerAction', () => {
       const { playerActions } = game.flowCommands
 
@@ -465,13 +481,12 @@ describe('GameManager', () => {
         () => { game.tokens = 1 },
         playerActions({
           player: gameManager.players[0],
-          actions: ['takeOne'],
-          skipIf: 'never'
+          actions: ['declare'],
         })
       );
       gameManager.start();
       gameManager.play();
-      expect(gameManager.getPendingMoves(gameManager.players[0])?.moves[0].selections[0].type).to.equal('button');
+      expect(gameManager.getPendingMoves(gameManager.players[0])?.moves[0].selections[0].type).to.equal('text');
     });
 
     it('optional actions', () => {
