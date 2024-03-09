@@ -8,7 +8,7 @@ import type Player from '../player/player.js';
  * Pieces are game elements that can move during play
  * @category Board
  */
-export default class Piece<B extends Game, P extends Player = NonNullable<B['player']>> extends GameElement<B, P> {
+export default class Piece<G extends Game, P extends Player = NonNullable<G['player']>> extends GameElement<G, P> {
 
   /**
    * Move this piece into another element. This triggers any {@link

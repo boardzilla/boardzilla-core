@@ -54,7 +54,7 @@ export type Message = {
  * {@link Player}'s, the {@link Action}'s and the {@link Flow}.
  * @category Core
  */
-export default class GameManager<B extends Game<B, P> = Game, P extends Player<B, P> = Player> {
+export default class GameManager<G extends Game<G, P> = Game, P extends Player<G, P> = Player> {
   flow: Flow;
   /**
    * The players in this game. See {@link Player}
@@ -63,7 +63,7 @@ export default class GameManager<B extends Game<B, P> = Game, P extends Player<B
   /**
    * The game. See {@link Game}
    */
-  game: B;
+  game: G;
   settings: Record<string, any>;
   actions: Record<string, (player: P) => Action<Record<string, Argument>>>;
   sequence: number = 0;
@@ -84,7 +84,7 @@ export default class GameManager<B extends Game<B, P> = Game, P extends Player<B
   winner: P[] = [];
   followups: ActionStub[] = [];
 
-  constructor(playerClass: {new(...a: any[]): P}, gameClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
+  constructor(playerClass: {new(...a: any[]): P}, gameClass: ElementClass<G>, elementClasses: ElementClass[] = []) {
     this.players = new PlayerCollection<P>();
     this.players.className = playerClass;
     this.game = new gameClass({ gameManager: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})

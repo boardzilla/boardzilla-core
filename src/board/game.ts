@@ -104,7 +104,7 @@ export type BoardSize = {
  *
  * @category Board
  */
-export default class Game<B extends Game<B, P> = any, P extends Player<B, P> = any> extends Space<B, P> {
+export default class Game<G extends Game<G, P> = any, P extends Player<G, P> = any> extends Space<G, P> {
   /**
    * An element containing all game elements that are not currently in
    * play. When elements are removed from the game, they go here, and can be
@@ -131,10 +131,10 @@ export default class Game<B extends Game<B, P> = any, P extends Player<B, P> = a
 
   constructor(ctx: Partial<ElementContext>) {
     super({ ...ctx, trackMovement: false });
-    this.game = this as unknown as B;
+    this.game = this as unknown as G;
     this.random = ctx.gameManager?.random || Math.random;
     if (ctx.gameManager) this.players = ctx.gameManager.players as unknown as PlayerCollection<P>;
-    this._ctx.removed = this.createElement(Space<B>, 'removed'),
+    this._ctx.removed = this.createElement(Space<G>, 'removed'),
     this.pile = this._ctx.removed;
   }
 
@@ -427,17 +427,17 @@ export default class Game<B extends Game<B, P> = any, P extends Player<B, P> = a
   _ui: ElementUI<this> & {
     boardSize: BoardSize,
     boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
-    setupLayout?: (game: B, player: P, boardSize: string) => void;
+    setupLayout?: (game: G, player: P, boardSize: string) => void;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
     boundingBoxes?: boolean;
     stepLayouts: Record<string, ActionLayout>;
     previousStyles: Record<any, Box>;
-    announcements: Record<string, (game: B) => JSX.Element>;
+    announcements: Record<string, (game: G) => JSX.Element>;
     infoModals: {
       title: string,
-      condition?: (game: B) => boolean,
-      modal: (game: B) => JSX.Element
+      condition?: (game: G) => boolean,
+      modal: (game: G) => JSX.Element
     }[];
   } = {
     boardSize: {name: '_default', aspectRatio: 1},
@@ -466,7 +466,7 @@ export default class Game<B extends Game<B, P> = any, P extends Player<B, P> = a
     return this._ui.boardSizes && this._ui.boardSizes(screenX, screenY, mobile) || { name: '_default', aspectRatio: 1 };
   }
 
-  applyLayouts(this: B, base?: (b: B) => void) {
+  applyLayouts(this: G, base?: (b: G) => void) {
     this.resetUI();
     if (this._ui.setupLayout) {
       this._ui.setupLayout(this, this._ctx.player! as P, this._ui.boardSize.name);

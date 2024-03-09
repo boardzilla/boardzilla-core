@@ -90,14 +90,14 @@ declare global {
  * - {@link game#defineFlow} to define the game's flow
  * @category Core
  */
-export const createGame = <B extends Game>(
+export const createGame = <G extends Game>(
   playerClass: {new(...a: any[]): Player},
-  gameClass: ElementClass<B>,
-  gameCreator: (game: B) => void
-): SetupFunction<B> => (
+  gameClass: ElementClass<G>,
+  gameCreator: (game: G) => void
+): SetupFunction<G> => (
   state: SetupState | GameState,
   options?: {trackMovement?: boolean}
-): GameManager<B> => {
+): GameManager<G> => {
   //console.time('setup');
   const gameManager = new GameManager(playerClass, gameClass);
   const inSetup = !('board' in state);
