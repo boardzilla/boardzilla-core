@@ -13,7 +13,7 @@ import type { ElementFinder, default as ElementCollection } from '../board/eleme
  * is passed to an action for the player taking that action.
  * @category Core
  */
-export default class Player<P extends Player<P, B> = any, B extends Game<P, B> = any> {
+export default class Player<B extends Game<B, P> = any, P extends Player<B, P> = any> {
   /**
    * A player's unique user id
    */

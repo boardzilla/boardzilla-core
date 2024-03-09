@@ -54,18 +54,18 @@ export type Message = {
  * {@link Player}'s, the {@link Action}'s and the {@link Flow}.
  * @category Core
  */
-export default class GameManager<B extends Game = Game> {
+export default class GameManager<B extends Game<B, P> = Game, P extends Player<B, P> = Player> {
   flow: Flow;
   /**
    * The players in this game. See {@link Player}
    */
-  players: PlayerCollection<B['players'][number]> = new PlayerCollection<B['players'][number]>;
+  players: PlayerCollection<P> = new PlayerCollection<P>;
   /**
    * The game. See {@link Game}
    */
   game: B;
   settings: Record<string, any>;
-  actions: Record<string, (player: B['players'][number]) => Action<Record<string, Argument>>>;
+  actions: Record<string, (player: P) => Action<Record<string, Argument>>>;
   sequence: number = 0;
   /**
    * Current game phase
@@ -81,11 +81,11 @@ export default class GameManager<B extends Game = Game> {
    * during development.
    */
   godMode = false;
-  winner: B['players'][number][] = [];
+  winner: P[] = [];
   followups: ActionStub[] = [];
 
-  constructor(gameClass: ElementClass<B>, elementClasses: ElementClass<GameElement>[] = []) {
-    this.players = new PlayerCollection<B['players'][number]>();
+  constructor(gameClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
+    this.players = new PlayerCollection<P>();
     this.game = new gameClass({ gameManager: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})
     this.players.game = this.game;
   }
@@ -123,7 +123,7 @@ export default class GameManager<B extends Game = Game> {
    * @internal
    */
 
-  getState(player?: B['players'][number]): GameState {
+  getState(player?: P): GameState {
     return {
       players: this.players.map(p => p.toJSON() as PlayerAttributes), // TODO scrub for player
       settings: this.settings,
@@ -172,13 +172,13 @@ export default class GameManager<B extends Game = Game> {
     throw Error('unable to initialize game');
   }
 
-  contextualizeBoardToPlayer(player?: B['players'][number]) {
+  contextualizeBoardToPlayer(player?: Player) {
     const prev = this.game._ctx.player;
     this.game._ctx.player = player;
     return prev;
   }
 
-  inContextOfPlayer<T>(player: B['players'][number], fn: () => T): T {
+  inContextOfPlayer<T>(player: Player, fn: () => T): T {
     const prev = this.contextualizeBoardToPlayer(player);
     const results = fn();
     this.contextualizeBoardToPlayer(prev);
@@ -196,7 +196,7 @@ export default class GameManager<B extends Game = Game> {
    * action functions
    */
 
-  getAction(name: string, player: B['players'][number]) {
+  getAction(name: string, player: P) {
     if (this.godMode) {
       const godModeAction = this.godModeActions()[name];
       if (godModeAction) {
@@ -221,23 +221,23 @@ export default class GameManager<B extends Game = Game> {
       _godMove: this.game.action({
         prompt: "Move",
       }).chooseOnBoard(
-        'piece', this.game.all(Piece<B>),
+        'piece', this.game.all(Piece),
       ).chooseOnBoard(
-        'into', this.game.all(GameElement<B>)
+        'into', this.game.all(GameElement)
       ).move(
         'piece', 'into'
       ),
       _godEdit: this.game.action({
         prompt: "Change",
       })
-        .chooseOnBoard('element', this.game.all(GameElement<B>))
+        .chooseOnBoard('element', this.game.all(GameElement))
         .chooseFrom<'property', string>(
           'property',
           ({ element }) => Object.keys(element).filter(a => !GameElement.unserializableAttributes.concat(['_visible', 'mine', 'owner']).includes(a)),
           { prompt: "Change property" }
         ).enterText('value', {
           prompt: ({ property }) => `Change ${property}`,
-          initial: ({ element, property }) => String(element[property as keyof GameElement<B>])
+          initial: ({ element, property }) => String(element[property as keyof GameElement])
         }).do(({ element, property, value }) => {
           let v: any = value
           if (value === 'true') {
@@ -265,7 +265,7 @@ export default class GameManager<B extends Game = Game> {
   processMove({ player, name, args }: Move): string | undefined {
     if (this.phase === 'finished') return 'Game is finished';
     let error: string | undefined;
-    return this.inContextOfPlayer(player, () => {
+    return this.inContextOfPlayer(player as P, () => {
       if (this.godMode && this.godModeActions()[name]) {
         const godModeAction = this.godModeActions()[name];
         error = godModeAction._process(player, args);
@@ -281,7 +281,7 @@ export default class GameManager<B extends Game = Game> {
     });
   }
 
-  allowedActions(player: B['players'][number]): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub[]} {
+  allowedActions(player: P): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub[]} {
     const actions: ActionStub[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
       actions,
@@ -314,7 +314,7 @@ export default class GameManager<B extends Game = Game> {
     };
   }
 
-  getPendingMoves(player: B['players'][number], name?: string, args?: Record<string, Argument>): {step?: string, prompt?: string, moves: PendingMove[]} | undefined {
+  getPendingMoves(player: P, name?: string, args?: Record<string, Argument>): {step?: string, prompt?: string, moves: PendingMove[]} | undefined {
     if (this.phase === 'finished') return;
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;

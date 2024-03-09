@@ -26,23 +26,6 @@ import {
 import type { FlowStep } from '../flow/flow.js';
 import type { Serializable } from '../action/utils.js';
 
-type GameUI<B extends Game> = ElementUI<B> & {
-  boardSize: BoardSize,
-  boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
-  setupLayout?: (game: B, player: NonNullable<B['player']>, boardSize: string) => void;
-  frame?: Box;
-  disabledDefaultAppearance?: boolean;
-  boundingBoxes?: boolean;
-  stepLayouts: Record<string, ActionLayout>;
-  previousStyles: Record<any, Box>;
-  announcements: Record<string, (game: B) => JSX.Element>;
-  infoModals: {
-    title: string,
-    condition?: (game: B) => boolean,
-    modal: (game: B) => JSX.Element
-  }[];
-};
-
 /**
  * Type for layout of player controls
  * @category UI
@@ -121,7 +104,7 @@ export type BoardSize = {
  *
  * @category Board
  */
-export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = any> extends Space<B> {
+export default class Game<B extends Game<B, P> = any, P extends Player<B, P> = any> extends Space<B, P> {
   /**
    * An element containing all game elements that are not currently in
    * play. When elements are removed from the game, they go here, and can be
@@ -137,6 +120,8 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    */
   players: PlayerCollection<P> = new PlayerCollection<P>;
 
+  player?: P;
+
   /**
    * Use instead of Math.random to ensure random number seed is consistent when
    * replaying from history.
@@ -149,7 +134,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
     // this.game = this; // ???
     this.random = ctx.gameManager?.random || Math.random;
     if (ctx.gameManager) this.players = ctx.gameManager.players as unknown as PlayerCollection<P>;
-    this._ctx.removed = this.createElement(Space, 'removed'),
+    this._ctx.removed = this.createElement(Space<B>, 'removed'),
     this.pile = this._ctx.removed;
   }
 
@@ -158,7 +143,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * and Piece class declared in your game.
    * @category Definition
    */
-  registerClasses(...classList: ElementClass<GameElement>[]) {
+  registerClasses(...classList: ElementClass[]) {
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
   }
 
@@ -439,7 +424,22 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
 
   // UI
 
-  _ui: GameUI<this> = {
+  _ui: ElementUI<this> & {
+    boardSize: BoardSize,
+    boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
+    setupLayout?: (game: B, player: P, boardSize: string) => void;
+    frame?: Box;
+    disabledDefaultAppearance?: boolean;
+    boundingBoxes?: boolean;
+    stepLayouts: Record<string, ActionLayout>;
+    previousStyles: Record<any, Box>;
+    announcements: Record<string, (game: B) => JSX.Element>;
+    infoModals: {
+      title: string,
+      condition?: (game: B) => boolean,
+      modal: (game: B) => JSX.Element
+    }[];
+  } = {
     boardSize: {name: '_default', aspectRatio: 1},
     layouts: [],
     appearance: {},
@@ -466,7 +466,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
     return this._ui.boardSizes && this._ui.boardSizes(screenX, screenY, mobile) || { name: '_default', aspectRatio: 1 };
   }
 
-  applyLayouts(base?: (b: this) => void) {
+  applyLayouts(this: B, base?: (b: B) => void) {
     this.resetUI();
     if (this._ui.setupLayout) {
       this._ui.setupLayout(this, this._ctx.player! as P, this._ui.boardSize.name);

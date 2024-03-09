@@ -5,11 +5,11 @@ import {
   Piece
 } from '../../index.js';
 
-export class TestPlayer extends Player<TestPlayer, TestGame> {
+export class TestPlayer extends Player<TestGame, TestPlayer> {
   tokens: number = 0;
 }
 
-export class TestGame extends Game<TestPlayer, TestGame> {
+export class TestGame extends Game<TestGame, TestPlayer> {
   tokens: number = 0;
 }
 

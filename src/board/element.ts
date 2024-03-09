@@ -21,7 +21,7 @@ import type { UndirectedGraph } from 'graphology';
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 
-export type ElementClass<T extends GameElement> = {
+export type ElementClass<T extends GameElement = GameElement> = {
   new(ctx: Partial<ElementContext>): T;
   isGameElement: boolean; // here to help enforce types
   visibleAttributes?: string[];
@@ -50,7 +50,7 @@ export type ElementContext = {
   removed: GameElement;
   sequence: number;
   player?: Player;
-  classRegistry: ElementClass<GameElement>[];
+  classRegistry: ElementClass[];
   moves: Record<string, string>;
   trackMovement: boolean;
 };
@@ -72,7 +72,7 @@ export type Direction = 'left' | 'right' | 'down' | 'up';
 
 export type ElementUI<T extends GameElement> = {
   layouts: {
-    applyTo: ElementClass<GameElement> | GameElement | ElementCollection | string,
+    applyTo: ElementClass | GameElement | ElementCollection | string,
     attributes: LayoutAttributes<T>
   }[],
   appearance: {
@@ -282,7 +282,7 @@ export type LayoutAttributes<T extends GameElement> = {
  * subclassing your own elements.
  * @category Board
  */
-export default class GameElement<B extends Game = Game> {
+export default class GameElement<B extends Game<B, P> = any, P extends Player<B, P> = any, > {
   /**
    * Element name, used to distinguish elements. Elements with the same name are
    * generally considered indistibuishable. Names are also used for easy
@@ -298,7 +298,7 @@ export default class GameElement<B extends Game = Game> {
    * viewed by a given player.).
    * @category Queries
    */
-  player?: B['player'];
+  player?: P;
 
   /**
    * Row of element within its layout grid if specified directly or by a
@@ -326,7 +326,7 @@ export default class GameElement<B extends Game = Game> {
    * A reference to the {@link GameManager}
    * @category Structure
    */
-  // gameManager: GameManager<B>;
+  gameManager: GameManager;
 
   /**
    * ctx shared for all elements in the tree
@@ -339,15 +339,15 @@ export default class GameElement<B extends Game = Game> {
    * @internal
    */
   _t: {
-    children: ElementCollection,
-    parent?: GameElement,
+    children: ElementCollection<GameElement<B, P>>,
+    parent?: GameElement<B, P>,
     id: number,
     order?: 'normal' | 'stacking',
     was?: string,
     graph?: UndirectedGraph,
     setId: (id: number) => void,
   } = {
-    children: new ElementCollection(),
+    children: new ElementCollection<GameElement<B, P>>(),
     id: 0,
     setId: () => {}
   };
@@ -387,7 +387,7 @@ export default class GameElement<B extends Game = Game> {
       this._ctx.namedSpaces = {};
     }
 
-    // this.gameManager = this._ctx.gameManager as GameManager<B>;
+    this.gameManager = this._ctx.gameManager;
 
     this._t = {
       children: new ElementCollection(),
@@ -625,7 +625,7 @@ export default class GameElement<B extends Game = Game> {
   adjacencies<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
   adjacencies(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
   adjacencies<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
-    let classToSearch: ElementClass<GameElement> = GameElement;
+    let classToSearch: ElementClass = GameElement;
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
     } else {
@@ -706,8 +706,8 @@ export default class GameElement<B extends Game = Game> {
    * Sorts the elements directly contained within this element by some {@link Sorter}.
    * @category Structure
    */
-  sortBy(key: GenericSorter | GenericSorter[], direction?: "asc" | "desc") {
-    return this._t.children.sortBy(key as Sorter<GameElement> | Sorter<GameElement>[], direction)
+  sortBy(key: GenericSorter | GenericSorter[], direction?: "asc" | "desc"): ElementCollection<GameElement<B, P>> {
+    return this._t.children.sortBy(key as Sorter<GameElement<B, P>> | Sorter<GameElement<B, P>>[], direction)
   }
 
   /**
@@ -715,8 +715,7 @@ export default class GameElement<B extends Game = Game> {
    * @category Structure
    */
   shuffle() {
-    shuffleArray(this._t.children, // this._ctx.gameManager?.random ||
-      Math.random);
+    shuffleArray(this._t.children, this._ctx.gameManager?.random || Math.random);
   }
 
   /**
@@ -728,7 +727,7 @@ export default class GameElement<B extends Game = Game> {
    * card.owner() will equal the player in whose hand the card is placed.
    * @category Structure
    */
-  get owner(): B['player'] | undefined {
+  get owner(): P | undefined {
     return this.player !== undefined ? this.player : this._t.parent?.owner;
   }
 
@@ -745,7 +744,7 @@ export default class GameElement<B extends Game = Game> {
    */
   get mine() {
     if (!this._ctx.player) return false; // throw?
-    // return this.owner === this._ctx.player;
+    return this.owner === this._ctx.player;
   }
 
   /**
@@ -868,7 +867,7 @@ export default class GameElement<B extends Game = Game> {
    * deck.create(Card, 'ace-of-hearts', { suit: 'H', value: '1' });
    */
   create<T extends GameElement>(className: ElementClass<T>, name: string, attributes?: ElementAttributes<T>): T {
-    // if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be created once game has started.');
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be created once game has started.');
     const el = this.createElement(className, name, attributes);
     el._t.parent = this;
     if (this._t.order === 'stacking') {
@@ -934,7 +933,7 @@ export default class GameElement<B extends Game = Game> {
    * @category Structure
    */
   destroy() {
-    // if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be destroy once game has started.');
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be destroy once game has started.');
     const position = this._t.parent!._t.children.indexOf(this);
     this._t.parent!._t.children.splice(position, 1);
   }
@@ -1024,7 +1023,7 @@ export default class GameElement<B extends Game = Game> {
   }
 
   setShape(...shape: string[]) {
-    // if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
     if (shape.some(s => s.length !== shape[0].length)) throw Error("Each row in shape must be same size. Invalid shape:\n" + shape);
     this._size = {
       shape,
@@ -1034,7 +1033,7 @@ export default class GameElement<B extends Game = Game> {
   }
 
   setEdges(edges: Record<string, { left?: string, right?: string, up?: string, down?: string }> | { left?: string, right?: string, up?: string, down?: string }) {
-    // if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
     if (Object.keys(edges)[0].length === 1) {
       const missingCell = Object.keys(edges).find(c => this._size?.shape.every(s => !s.includes(c)));
       if (missingCell) throw Error(`No cell '${missingCell}' defined in shape`);
@@ -1269,7 +1268,7 @@ export default class GameElement<B extends Game = Game> {
     }
   }
 
-  cloneInto<T extends GameElement>(this: T, into: GameElement) {
+  cloneInto<T extends GameElement>(this: T, into: GameElement): T {
     let attrs = this.attributeList();
 
     const clone = into.createElement(this.constructor as ElementClass<T>, this.name, attrs);
@@ -1884,8 +1883,8 @@ export default class GameElement<B extends Game = Game> {
       if (a.applyTo instanceof Array) aVal = 1
       if (b.applyTo instanceof Array) bVal = 1
       if (aVal !== 0 || bVal !== 0) return aVal - bVal;
-      const ac = a.applyTo as ElementClass<GameElement>;
-      const bc = b.applyTo as ElementClass<GameElement>;
+      const ac = a.applyTo as ElementClass;
+      const bc = b.applyTo as ElementClass;
       return ac.prototype instanceof bc ? 1 : (bc.prototype instanceof ac ? -1 : 0);
     }).reverse();
 

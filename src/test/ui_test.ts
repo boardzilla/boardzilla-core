@@ -1,14 +1,13 @@
 import chai from 'chai';
 
 import {
-  Player,
   Game,
   times,
   createGame,
 } from '../index.js';
 import { createGameStore } from '../ui/index.js';
 
-import type { default as GameManager, SerializedMove } from '../game-manager.js';
+import type { SerializedMove } from '../game-manager.js';
 
 import {
   starterGame,
@@ -265,7 +264,7 @@ describe('UI', () => {
 
 function getGameStore(gameCreator: (game: Game) => void) {
   const store = createGameStore();
-  const setup = createGame(Player, Game, gameCreator);
+  const setup = createGame(Game, gameCreator);
   store.getState().setSetup(setup);
   return store;
 }
@@ -292,7 +291,7 @@ function updateStore(store: ReturnType<typeof createGameStore>, players: number,
 
   gameManager.play();
 
-  let state = (gameManager as GameManager<Player, Game>).getPlayerStates()[0].state;
+  let state = gameManager.getPlayerStates()[0].state;
   if (state instanceof Array) state = state[state.length - 1];
 
   updateState({

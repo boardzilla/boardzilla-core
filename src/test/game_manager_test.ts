@@ -21,31 +21,31 @@ describe('GameManager', () => {
     { id: 'jin', name: 'Jin', color: 'purple', position: 4, tokens: 0, avatar: '', host: false, },
   ];
 
-  class TestPlayer extends Player<TestPlayer, TestGame> {
+  class TestPlayer extends Player<TestGame, TestPlayer> {
     tokens: number = 0;
     rival?: TestPlayer;
     general?: General;
   }
 
-  class TestGame extends Game<TestPlayer, TestGame> {
+  class TestGame extends Game<TestGame, TestPlayer> {
     tokens: number = 0;
   }
 
-  class Card extends Piece<Game> {
+  class Card extends Piece<TestGame> {
     suit: string;
     value: number;
     flipped: boolean;
   }
 
-  class Country extends Space<Game> {
+  class Country extends Space<TestGame> {
     general?: General;
   }
 
-  class General extends Piece<Game> {
+  class General extends Piece<TestGame> {
     country?: Country;
   }
 
-  let gameManager: GameManager<TestGame>;
+  let gameManager: GameManager<TestGame, TestPlayer>;
   let game: TestGame;
   const spendSpy = chai.spy();
 

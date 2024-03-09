@@ -59,7 +59,7 @@ export class TestRunner<B extends Game> {
   server: {
     interface: GameInterface;
     state?: GameUpdate;
-    gameManager: GameManager<B>;
+    gameManager: GameManager;
     game: B
   };
 
@@ -123,7 +123,7 @@ export class TestRunner<B extends Game> {
   }
 
   getCurrentGame() {
-    this.server.gameManager = globalThis.window.serverGameManager as GameManager<B>;
+    this.server.gameManager = globalThis.window.serverGameManager as GameManager;
     this.server.game = this.server.gameManager.game as B;
   }
 
@@ -151,7 +151,7 @@ export class TestRunner<B extends Game> {
       }
       const { gameManager } = player.store.getState();
       player.game = gameManager.game as B;
-      player.player = gameManager.players.atPosition(player.position);
+      player.player = gameManager.players.atPosition(player.position)!;
     }
   }
 }
