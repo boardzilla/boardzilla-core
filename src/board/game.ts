@@ -131,7 +131,7 @@ export default class Game<B extends Game<B, P> = any, P extends Player<B, P> = a
 
   constructor(ctx: Partial<ElementContext>) {
     super({ ...ctx, trackMovement: false });
-    // this.game = this; // ???
+    this.game = this as unknown as B;
     this.random = ctx.gameManager?.random || Math.random;
     if (ctx.gameManager) this.players = ctx.gameManager.players as unknown as PlayerCollection<P>;
     this._ctx.removed = this.createElement(Space<B>, 'removed'),

@@ -50,7 +50,7 @@ describe('GameManager', () => {
   const spendSpy = chai.spy();
 
   beforeEach(() => {
-    gameManager = new GameManager(TestGame, [ Card, Country, General ]);
+    gameManager = new GameManager(TestPlayer, TestGame, [ Card, Country, General ]);
     game = gameManager.game;
 
     const {
@@ -351,7 +351,7 @@ describe('GameManager', () => {
 
   describe('action for multiple players', () => {
     beforeEach(() => {
-      gameManager = new GameManager(TestGame, [ Card ]);
+      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
       game = gameManager.game;
 
       game.defineActions({
@@ -688,7 +688,7 @@ describe('GameManager', () => {
   describe('action followups', () => {
     const actionSpy = chai.spy();
     beforeEach(() => {
-      gameManager = new GameManager(TestGame, [ Card ]);
+      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
       game = gameManager.game;
       const {
         loop,
@@ -772,7 +772,7 @@ describe('GameManager', () => {
     });
 
     it('multi followup', () => {
-      gameManager = new GameManager(TestGame, [ Card ]);
+      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
       game = gameManager.game;
       const {
         loop,
@@ -821,7 +821,7 @@ describe('GameManager', () => {
 
   describe('each player', () => {
     beforeEach(() => {
-      gameManager = new GameManager(TestGame, [ Card ]);
+      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
       game = gameManager.game;
 
       game.defineActions({

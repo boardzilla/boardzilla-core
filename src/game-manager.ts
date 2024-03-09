@@ -84,8 +84,9 @@ export default class GameManager<B extends Game<B, P> = Game, P extends Player<B
   winner: P[] = [];
   followups: ActionStub[] = [];
 
-  constructor(gameClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
+  constructor(playerClass: {new(...a: any[]): P}, gameClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
     this.players = new PlayerCollection<P>();
+    this.players.className = playerClass;
     this.game = new gameClass({ gameManager: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})
     this.players.game = this.game;
   }

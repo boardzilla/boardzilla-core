@@ -323,12 +323,6 @@ export default class GameElement<B extends Game<B, P> = any, P extends Player<B,
   game: B;
 
   /**
-   * A reference to the {@link GameManager}
-   * @category Structure
-   */
-  gameManager: GameManager;
-
-  /**
    * ctx shared for all elements in the tree
    * @internal
    */
@@ -386,8 +380,6 @@ export default class GameElement<B extends Game<B, P> = any, P extends Player<B,
       this._ctx.uniqueNames = {};
       this._ctx.namedSpaces = {};
     }
-
-    this.gameManager = this._ctx.gameManager;
 
     this._t = {
       children: new ElementCollection(),

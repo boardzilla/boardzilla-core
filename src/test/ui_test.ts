@@ -2,6 +2,7 @@ import chai from 'chai';
 
 import {
   Game,
+  Player,
   times,
   createGame,
 } from '../index.js';
@@ -264,7 +265,7 @@ describe('UI', () => {
 
 function getGameStore(gameCreator: (game: Game) => void) {
   const store = createGameStore();
-  const setup = createGame(Game, gameCreator);
+  const setup = createGame(Player, Game, gameCreator);
   store.getState().setSetup(setup);
   return store;
 }

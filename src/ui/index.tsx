@@ -5,6 +5,7 @@ import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
 import GameManager from '../game-manager.js'
 import { Game, GameElement, Piece } from '../board/index.js'
+import { Player } from '../index.js'
 import {
   updateSelections,
   UIMove,
@@ -126,7 +127,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   setUserID: userID => set({ userID }),
   setDev: dev => set({ dev }),
   setSetup: setup => set({ setup }),
-  gameManager: new GameManager(Game),
+  gameManager: new GameManager(Player, Game),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
   boardJSON: [],
   updateState: (update, readOnly=false) => set(s => {

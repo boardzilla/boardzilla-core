@@ -91,6 +91,7 @@ declare global {
  * @category Core
  */
 export const createGame = <B extends Game>(
+  playerClass: {new(...a: any[]): Player},
   gameClass: ElementClass<B>,
   gameCreator: (game: B) => void
 ): SetupFunction<B> => (
@@ -98,7 +99,7 @@ export const createGame = <B extends Game>(
   options?: {trackMovement?: boolean}
 ): GameManager<B> => {
   //console.time('setup');
-  const gameManager = new GameManager(gameClass);
+  const gameManager = new GameManager(playerClass, gameClass);
   const inSetup = !('board' in state);
 
   globalThis.$ = gameManager.game._ctx.namedSpaces;

@@ -216,7 +216,7 @@ describe('Actions', () => {
     let testAction: Action<{r: string, n: number}>;
     beforeEach(() => {
       testAction = new Action({ prompt: 'p' })
-        .chooseFrom('r', [{ label: 'Oil', choice: 'oil' }])
+        .chooseFrom('r', [{ label: 'Oil', choice: 'oil' }, { label: 'Garbage', choice: 'garbage' }])
         .chooseNumber('n', {
           max: ({ r }) => r === 'oil' ? 3 : 1
         })
