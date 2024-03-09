@@ -1,12 +1,12 @@
 import Selection from './selection.js';
-import { GameElement, ElementCollection } from '../board/index.js';
+import { GameElement, Piece, ElementCollection } from '../board/index.js';
 import { n } from '../utils.js';
 
 import type {
   ResolvedSelection,
   BoardQueryMulti,
 } from './selection.js';
-import { Piece } from '../board/index.js';
+import type { Game } from '../board/index.js';
 import type { Player } from '../player/index.js';
 import type { default as GameManager, PendingMove } from '../game-manager.js';
 
@@ -14,7 +14,7 @@ import type { default as GameManager, PendingMove } from '../game-manager.js';
  * A single argument
  * @category Actions
  */
-export type SingleArgument<P extends Player> = string | number | boolean | GameElement<P> | P;
+export type SingleArgument = string | number | boolean | GameElement | Player;
 
 /**
  * An argument that can be added to an {@link Action}. Each value is chosen by
@@ -27,13 +27,13 @@ export type SingleArgument<P extends Player> = string | number | boolean | GameE
  * - an array of one these in the case of a multi-choice selection
  * @category Actions
  */
-export type Argument<P extends Player> = SingleArgument<P> | SingleArgument<P>[];
+export type Argument = SingleArgument | SingleArgument[];
 
 /**
  * A follow-up action
  * @category Actions
  */
-export type ActionStub<P extends Player> = {
+export type ActionStub = {
   /**
    * The name of the action, as defined in `{@link Game#defineactions}`.
    */
@@ -41,7 +41,7 @@ export type ActionStub<P extends Player> = {
   /**
    * The player to take this action, if different than the current player
    */
-  player?: P,
+  player?: Player,
   /**
    * Action prompt. If specified, overrides the `action.prompt` in `{@link
    * Game#defineactions}`.
@@ -59,19 +59,19 @@ export type ActionStub<P extends Player> = {
    * is useful if there are multiple ways to trigger this follow-up that have
    * variations.
    */
-  args?: Record<string, Argument<P>>
+  args?: Record<string, Argument>
 }
 
-type Group<P extends Player> = Record<string,
-  ['number', Parameters<Action<P, any>['chooseNumber']>[1]?] |
-  ['select', Parameters<Action<P, any>['chooseFrom']>[1], Parameters<Action<P, any>['chooseFrom']>[2]?] |
-  ['text', Parameters<Action<P, any>['enterText']>[1]?]
+type Group = Record<string,
+  ['number', Parameters<Action['chooseNumber']>[1]?] |
+  ['select', Parameters<Action['chooseFrom']>[1], Parameters<Action['chooseFrom']>[2]?] |
+  ['text', Parameters<Action['enterText']>[1]?]
 >
 
-type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R extends Group<P>> = A & {[K in keyof R]:
+type ExpandGroup<A extends Record<string, Argument>, R extends Group> = A & {[K in keyof R]:
   R[K][0] extends 'number' ? number :
   R[K][0] extends 'text' ? string :
-  R[K][0] extends 'select' ? (R[K][1] extends Parameters<typeof Action.prototype.chooseFrom<any, infer E>>[1] ? E : never) :
+  R[K][0] extends 'select' ? (R[K][1] extends Parameters<typeof Action.prototype.chooseFrom<any, infer E extends SingleArgument>>[1] ? E : never) :
   never
 }
 
@@ -91,14 +91,14 @@ type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R exte
  *
  * @category Actions
  */
-export default class Action<P extends Player, A extends Record<string, Argument<P>> = NonNullable<unknown>> {
+export default class Action<A extends Record<string, Argument> = NonNullable<unknown>> {
   name?: string;
   prompt?: string;
   description?: string;
-  selections: Selection<P>[] = [];
-  moves: ((args: Record<string, Argument<P>>) => any)[] = [];
+  selections: Selection[] = [];
+  moves: ((args: Record<string, Argument>) => any)[] = [];
   condition?: ((args: A) => boolean) | boolean;
-  messages: {text: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)}[] = [];
+  messages: {text: string, args?: Record<string, Argument> | ((a: A) => Record<string, Argument>)}[] = [];
   order: ('move' | 'message')[] = [];
   mutated = false;
 
@@ -124,18 +124,18 @@ export default class Action<P extends Player, A extends Record<string, Argument<
   // return array of follow-up selections if incomplete
   // skipping/expanding is very complex and this method runs all the rules for what should/must be combined, either as additional selections or as forced args
   // skippable options will still appear in order to present the choices to the user to select that tree. This will be the final selection if no other selection turned skipping off
-  _getPendingMoves(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
+  _getPendingMoves(args: Record<string, Argument>): PendingMove[] | undefined {
     const moves = this._getPendingMovesInner(args);
     // resolve any combined selections now with only args up until first choice
     if (moves?.length) {
       for (const move of moves) {
         const combineWith = move.selections[0].clientContext?.combineWith; // guaranteed single selection
-        let confirm: Selection<P>['confirm'] | undefined = move.selections[0].confirm;
-        let validation: Selection<P>['validation'] | undefined = move.selections[0].validation;
+        let confirm: Selection['confirm'] | undefined = move.selections[0].confirm;
+        let validation: Selection['validation'] | undefined = move.selections[0].validation;
         // look ahead for any selections that can/should be combined
         for (let i = this.selections.findIndex(s => s.name === move.selections[0].name) + 1; i !== this.selections.length; i++) {
           if (confirm) break; // do not skip an explicit confirm
-          let selection: Selection<P> | ResolvedSelection<P> = this.selections[i];
+          let selection: Selection | ResolvedSelection = this.selections[i];
           if (combineWith?.includes(selection.name)) selection = selection.resolve(move.args);
           if (!selection.isResolved()) break;
           const arg = selection.isForced();
@@ -156,7 +156,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return moves;
   }
 
-  _getPendingMovesInner(args: Record<string, Argument<P>>): PendingMove<P>[] | undefined {
+  _getPendingMovesInner(args: Record<string, Argument>): PendingMove[] | undefined {
     let selection = this._nextSelection(args);
     if (!selection) return [];
 
@@ -170,9 +170,9 @@ export default class Action<P extends Player, A extends Record<string, Argument<
 
     if (!selection.isPossible()) return;
     if (!selection.isUnbounded()) {
-      let possibleOptions: Argument<P>[] = [];
+      let possibleOptions: Argument[] = [];
       let pruned = false;
-      let pendingMoves: PendingMove<P>[] = [];
+      let pendingMoves: PendingMove[] = [];
       let hasCompleteMove = false
       for (const option of selection.options()) {
         const allArgs = {...args, [selection.name]: option};
@@ -195,7 +195,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       }
       if (!possibleOptions.length) return undefined;
       if (pruned && !selection.isMulti()) {
-        selection.overrideOptions(possibleOptions as SingleArgument<P>[]);
+        selection.overrideOptions(possibleOptions as SingleArgument[]);
       }
 
       // return the next selection(s) if skipIf, provided it exists for all possible choices
@@ -215,8 +215,8 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * given a partial arg list, returns a selection object for continuation if one exists.
    * @internal
    */
-  _nextSelection(args: Record<string, Argument<P>>): ResolvedSelection<P> | undefined {
-    let nextSelection: ResolvedSelection<P> | undefined = undefined;
+  _nextSelection(args: Record<string, Argument>): ResolvedSelection | undefined {
+    let nextSelection: ResolvedSelection | undefined = undefined;
     for (const s of this.selections) {
       const selection = s.resolve(args);
       if (selection.skipIf === true) continue;
@@ -232,7 +232,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * process this action with supplied args. returns error if any
    * @internal
    */
-  _process(player: P, args: Record<string, Argument<P>>): string | undefined {
+  _process(player: Player, args: Record<string, Argument>): string | undefined {
     // truncate invalid args - is this needed?
     let error: string | undefined = undefined;
     if (!this.isPossible(args as A)) return `${this.name} action not possible`;
@@ -272,7 +272,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     }
   }
 
-  _addSelection(selection: Selection<P>) {
+  _addSelection(selection: Selection) {
     if (this.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
     if (this.mutated) throw Error(`Choices may not be added to the ${this.name} action after a do/move. This may need to be split into separate actions.`);
     this.selections.push(selection);
@@ -286,7 +286,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       if (placementSelection && args[placementSelection.placePiece!]) {
         args = {...args};
         // temporarily set piece to place to access position properties
-        const placePiece = (args[placementSelection.placePiece!] as Piece);
+        const placePiece = (args[placementSelection.placePiece!] as Piece<Game>);
         const { row, column, _rotation } = placePiece;
         const [newColumn, newRow, newRotation] = args['__placement__'] as [number, number, number?];
         placePiece.column = newColumn;
@@ -302,11 +302,11 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     return fn(args);
   }
 
-  _getError(selection: ResolvedSelection<P>, args: A) {
+  _getError(selection: ResolvedSelection, args: A) {
     return this._withDecoratedArgs(args, args => selection.error(args));
   }
 
-  _getConfirmation(selection: ResolvedSelection<P>, args: A) {
+  _getConfirmation(selection: ResolvedSelection, args: A) {
     if (!selection.confirm) return;
     const argList = selection.confirm[1];
     return n(
@@ -344,7 +344,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * })
    * @category Behaviour
    */
-  do(move: (args: A) => any): Action<P, A> {
+  do(move: (args: A) => any): Action<A> {
     this.mutated = true;
     this.moves.push(move);
     this.order.push('move');
@@ -383,7 +383,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * )
    * @category Behaviour
    */
-  message(text: string, args?: Record<string, Argument<P>> | ((a: A) => Record<string, Argument<P>>)) {
+  message(text: string, args?: Record<string, Argument> | ((a: A) => Record<string, Argument>)) {
     this.messages.push({text, args});
     this.order.push('message');
     return this;
@@ -478,25 +478,25 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * )
    * @category Choices
    */
-  chooseFrom<N extends string, T extends SingleArgument<P>>(
+  chooseFrom<N extends string, T extends SingleArgument>(
     name: N,
     choices: (T & (string | number | boolean))[] | { label: string, choice: T }[] | ((args: A) => (T & (string | number | boolean))[] | { label: string, choice: T }[]),
     options?: {
       prompt?: string | ((args: A) => string)
-      confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
+      confirm?: string | [string, Record<string, Argument> | ((args: A & {[key in N]: T}) => Record<string, Argument>) | undefined]
       validate?: ((args: A & {[key in N]: T}) => string | boolean | undefined)
       // initial?: T | ((...arg: A) => T), // needed for select-boxes?
       skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
     }
-  ): Action<P, A & {[key in N]: T}> {
-    this._addSelection(new Selection<P>(name, {
+  ): Action<A & {[key in N]: T}> {
+    this._addSelection(new Selection(name, {
       prompt: options?.prompt,
       validation: options?.validate,
       confirm: options?.confirm,
       skipIf: options?.skipIf,
       selectFromChoices: { choices }
     }));
-    return this as unknown as Action<P, A & {[key in N]: T}>;
+    return this as unknown as Action<A & {[key in N]: T}>;
   }
 
   /**
@@ -533,10 +533,10 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     validate?: ((args: A & {[key in N]: string}) => string | boolean | undefined),
     regexp?: RegExp,
     initial?: string | ((args: A) => string)
-  }): Action<P, A & {[key in N]: string}> {
+  }): Action<A & {[key in N]: string}> {
     const { prompt, validate, regexp, initial } = options || {}
-    this._addSelection(new Selection<P>(name, { prompt, validation: validate, enterText: { regexp, initial }}));
-    return this as unknown as Action<P, A & {[key in N]: string}>;
+    this._addSelection(new Selection(name, { prompt, validation: validate, enterText: { regexp, initial }}));
+    return this as unknown as Action<A & {[key in N]: string}>;
   }
 
   /**
@@ -607,14 +607,14 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     min?: number | ((args: A) => number),
     max?: number | ((args: A) => number),
     prompt?: string | ((args: A) => string),
-    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: number}) => Record<string, Argument<P>>) | undefined]
+    confirm?: string | [string, Record<string, Argument> | ((args: A & {[key in N]: number}) => Record<string, Argument>) | undefined]
     validate?: ((args: A & {[key in N]: number}) => string | boolean | undefined),
     initial?: number | ((args: A) => number),
     skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
-  } = {}): Action<P, A & {[key in N]: number}> {
+  } = {}): Action<A & {[key in N]: number}> {
     const { min, max, prompt, confirm, validate, initial, skipIf } = options;
-    this._addSelection(new Selection<P>(name, { prompt, confirm, validation: validate, skipIf, selectNumber: { min, max, initial } }));
-    return this as unknown as Action<P, A & {[key in N]: number}>;
+    this._addSelection(new Selection(name, { prompt, confirm, validation: validate, skipIf, selectNumber: { min, max, initial } }));
+    return this as unknown as Action<A & {[key in N]: number}>;
   }
 
   /**
@@ -699,80 +699,80 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * )
    * @category Choices
    */
-  chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
+  chooseOnBoard<T extends GameElement, N extends string>(name: N, choices: BoardQueryMulti<T, A>, options?: {
     prompt?: string | ((args: A) => string);
-    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T}) => Record<string, Argument<P>>) | undefined]
+    confirm?: string | [string, Record<string, Argument> | ((args: A & {[key in N]: T}) => Record<string, Argument>) | undefined]
     validate?: ((args: A & {[key in N]: T}) => string | boolean | undefined);
     initial?: never;
     min?: never;
     max?: never;
     number?: never;
     skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
-  }): Action<P, A & {[key in N]: T}>;
-  chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
+  }): Action<A & {[key in N]: T}>;
+  chooseOnBoard<T extends GameElement, N extends string>(name: N, choices: BoardQueryMulti<T, A>, options?: {
     prompt?: string | ((args: A) => string);
-    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T[]}) => Record<string, Argument<P>>) | undefined]
+    confirm?: string | [string, Record<string, Argument> | ((args: A & {[key in N]: T[]}) => Record<string, Argument>) | undefined]
     validate?: ((args: A & {[key in N]: T[]}) => string | boolean | undefined);
     initial?: T[] | ((args: A) => T[]);
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
     skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
-  }): Action<P, A & {[key in N]: T[]}>;
-  chooseOnBoard<T extends GameElement<P>, N extends string>(name: N, choices: BoardQueryMulti<P, T, A>, options?: {
+  }): Action<A & {[key in N]: T[]}>;
+  chooseOnBoard<T extends GameElement, N extends string>(name: N, choices: BoardQueryMulti<T, A>, options?: {
     prompt?: string | ((args: A) => string);
-    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in N]: T | T[]}) => Record<string, Argument<P>>) | undefined]
+    confirm?: string | [string, Record<string, Argument> | ((args: A & {[key in N]: T | T[]}) => Record<string, Argument>) | undefined]
     validate?: ((args: A & {[key in N]: T | T[]}) => string | boolean | undefined);
     initial?: T[] | ((args: A) => T[]);
     min?: number | ((args: A) => number);
     max?: number | ((args: A) => number);
     number?: number | ((args: A) => number);
     skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
-  }): Action<P, A & {[key in N]: T | T[]}> {
+  }): Action<A & {[key in N]: T | T[]}> {
     const { prompt, confirm, validate, initial, min, max, number, skipIf } = options || {};
-    this._addSelection(new Selection<P>(
+    this._addSelection(new Selection(
       name, { prompt, confirm, validation: validate, skipIf, selectOnBoard: { chooseFrom: choices, min, max, number, initial } }
     ));
     if (min !== undefined || max !== undefined || number !== undefined) {
-      return this as unknown as Action<P, A & {[key in N]: T[]}>;
+      return this as unknown as Action<A & {[key in N]: T[]}>;
     }
-    return this as unknown as Action<P, A & {[key in N]: T}>;
+    return this as unknown as Action<A & {[key in N]: T}>;
   }
 
   choose<N extends string, S extends 'number'>(
     name: N,
     type: S,
     options?: Parameters<this['chooseNumber']>[1]
-  ): Action<P, A & {[key in N]: number}>;
+  ): Action<A & {[key in N]: number}>;
   choose<N extends string, S extends 'text'>(
     name: N,
     type: S,
     options?: Parameters<this['enterText']>[1]
-  ): Action<P, A & {[key in N]: string}>;
-  choose<N extends string, S extends 'select', T extends SingleArgument<P>>(
+  ): Action<A & {[key in N]: string}>;
+  choose<N extends string, S extends 'select', T extends SingleArgument>(
     name: N,
     type: S,
     choices: T[] | Record<string, T> | ((args: A) => T[] | Record<string, T>),
     options?: Parameters<this['chooseFrom']>[2]
-  ): Action<P, A & {[key in N]: T}>;
-  choose<N extends string, S extends 'board', T extends GameElement<P>>(
+  ): Action<A & {[key in N]: T}>;
+  choose<N extends string, S extends 'board', T extends GameElement>(
     name: N,
     type: S,
-    choices: BoardQueryMulti<P, T, A>,
+    choices: BoardQueryMulti<T, A>,
     options?: Parameters<this['chooseOnBoard']>[2] & { min: never, max: never, number: never }
-  ): Action<P, A & {[key in N]: T}>;
-  choose<N extends string, S extends 'board', T extends GameElement<P>>(
+  ): Action<A & {[key in N]: T}>;
+  choose<N extends string, S extends 'board', T extends GameElement>(
     name: N,
     type: S,
-    choices: BoardQueryMulti<P, T, A>,
+    choices: BoardQueryMulti<T, A>,
     options?: Parameters<this['chooseOnBoard']>[2]
-  ): Action<P, A & {[key in N]: T[]}>;
+  ): Action<A & {[key in N]: T[]}>;
   choose<N extends string, S extends 'select' | 'number' | 'text' | 'board'>(
     name: N,
     type: S,
     choices?: any,
     options?: Record<string, any>
-  ): Action<P, A & {[key in N]: Argument<P>}> {
+  ): Action<A & {[key in N]: Argument}> {
     if (type === 'number') return this.chooseNumber(name, choices as Parameters<this['chooseNumber']>[1]);
     if (type === 'text') return this.enterText(name, choices as Parameters<this['enterText']>[1]);
     if (type === 'select') return this.chooseFrom(name, choices as Parameters<this['chooseFrom']>[1], options as Parameters<this['chooseFrom']>[2]);
@@ -818,13 +818,13 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * });
    * @category Choices
    */
-  chooseGroup<R extends Group<P>>(
+  chooseGroup<R extends Group>(
     choices: R,
     options?: {
-      validate?: (args: ExpandGroup<P, A, R>) => string | boolean | undefined,
-      confirm?: string | [string, Record<string, Argument<P>> | ((args: ExpandGroup<P, A, R>) => Record<string, Argument<P>>) | undefined]
+      validate?: (args: ExpandGroup<A, R>) => string | boolean | undefined,
+      confirm?: string | [string, Record<string, Argument> | ((args: ExpandGroup<A, R>) => Record<string, Argument>) | undefined]
     }
-  ): Action<P, ExpandGroup<P, A, R>> {
+  ): Action<ExpandGroup<A, R>> {
     for (const [name, choice] of Object.entries(choices)) {
       if (choice[0] === 'number') this.chooseNumber(name, choice[1]);
       if (choice[0] === 'select') this.chooseFrom(name, choice[1], choice[2]);
@@ -835,7 +835,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     for (let i = 1; i < Object.values(choices).length; i++) {
       this.selections[this.selections.length - 1 - i].clientContext = {combineWith: this.selections.slice(-i).map(s => s.name)};
     }
-    return this as unknown as Action<P, ExpandGroup<P, A, R>>;
+    return this as unknown as Action<ExpandGroup<A, R>>;
   }
 
   /**
@@ -857,9 +857,9 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    * )
    * @category Behaviour
    */
-  move(piece: keyof A | Piece, into: keyof A | GameElement) {
+  move(piece: keyof A | Piece<Game>, into: keyof A | GameElement) {
     this.do((args: A) => {
-      const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece | Piece[];
+      const selectedPiece = piece instanceof Piece ? piece : args[piece] as Piece<Game> | Piece<Game>[];
       const selectedInto = into instanceof GameElement ? into : args[into] as GameElement;
       if (selectedPiece instanceof Array) {
         new ElementCollection(...selectedPiece).putInto(selectedInto);
@@ -921,7 +921,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
    */
   placePiece<T extends keyof A & string>(piece: T, into: GameElement, options?: {
     prompt?: string | ((args: A) => string),
-    confirm?: string | [string, Record<string, Argument<P>> | ((args: A & {[key in T]: { column: number, row: number }}) => Record<string, Argument<P>>) | undefined]
+    confirm?: string | [string, Record<string, Argument> | ((args: A & {[key in T]: { column: number, row: number }}) => Record<string, Argument>) | undefined]
     validate?: ((args: A & {[key in T]: { column: number, row: number }}) => string | boolean | undefined),
     rotationChoices?: number[],
   }) {
@@ -929,7 +929,7 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only place one piece");
     const pieceSelection = this.selections.find(s => s.name === piece);
     if (!pieceSelection) throw (`No selection named ${String(piece)} for placePiece`)
-    const positionSelection = this._addSelection(new Selection<P>(
+    const positionSelection = this._addSelection(new Selection(
       '__placement__', { prompt, confirm, validation: validate, selectPlaceOnBoard: {piece, rotationChoices: options?.rotationChoices} }
     ));
     positionSelection.clientContext = { placement: { piece, into } };
@@ -943,6 +943,6 @@ export default class Action<P extends Player, A extends Record<string, Argument<
     });
     this.order.push('move');
     if (pieceSelection) pieceSelection.clientContext = { dragInto: into };
-    return this as unknown as Action<P, A & {__placement__: number[]} & {[key in T]: { column: number, row: number }}>;
+    return this as unknown as Action<A & {__placement__: number[]} & {[key in T]: { column: number, row: number }}>;
   }
 }

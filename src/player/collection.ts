@@ -24,9 +24,9 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
   /**
    * A reference to the {@link Game} class
    */
-  game: Game<P>
+  game: P['game']
 
-  addPlayer(attrs: PlayerAttributes<P>) {
+  addPlayer(attrs: PlayerAttributes & Record<string, any>) {
     const player = new this.className(attrs);
     Object.assign(player, attrs, {_players: this});
     this.push(player);
@@ -190,11 +190,11 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
     this.splice(0, this.length);
 
     for (const p of players) {
-      this.addPlayer({position: p.position} as unknown as PlayerAttributes<P>);
+      this.addPlayer({position: p.position} as unknown as PlayerAttributes);
     }
   }
 
-  assignAttributesFromJSON(players: PlayerAttributes<P>[]) {
+  assignAttributesFromJSON(players: PlayerAttributes[]) {
     for (let p = 0; p !== players.length; p++) {
       Object.assign(this[p], deserializeObject(players[p], this.game));
     }

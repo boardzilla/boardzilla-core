@@ -6,7 +6,8 @@ import GameManager, { PlayerAttributes } from '../game-manager.js'
 import {
   Player,
   Game,
-  createGameClasses,
+  Piece,
+  Space,
 } from '../index.js';
 
 chai.use(spies);
@@ -30,28 +31,26 @@ describe('GameManager', () => {
     tokens: number = 0;
   }
 
-  const { Space, Piece } = createGameClasses<TestPlayer, TestGame>();
-
-  class Card extends Piece {
+  class Card extends Piece<Game> {
     suit: string;
     value: number;
     flipped: boolean;
   }
 
-  class Country extends Space {
+  class Country extends Space<Game> {
     general?: General;
   }
 
-  class General extends Piece {
+  class General extends Piece<Game> {
     country?: Country;
   }
 
-  let gameManager: GameManager<TestPlayer, TestGame>;
+  let gameManager: GameManager<TestGame>;
   let game: TestGame;
   const spendSpy = chai.spy();
 
   beforeEach(() => {
-    gameManager = new GameManager(TestPlayer, TestGame, [ Card, Country, General ]);
+    gameManager = new GameManager(TestGame, [ Card, Country, General ]);
     game = gameManager.game;
 
     const {
@@ -352,7 +351,7 @@ describe('GameManager', () => {
 
   describe('action for multiple players', () => {
     beforeEach(() => {
-      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
+      gameManager = new GameManager(TestGame, [ Card ]);
       game = gameManager.game;
 
       game.defineActions({
@@ -689,7 +688,7 @@ describe('GameManager', () => {
   describe('action followups', () => {
     const actionSpy = chai.spy();
     beforeEach(() => {
-      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
+      gameManager = new GameManager(TestGame, [ Card ]);
       game = gameManager.game;
       const {
         loop,
@@ -773,7 +772,7 @@ describe('GameManager', () => {
     });
 
     it('multi followup', () => {
-      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
+      gameManager = new GameManager(TestGame, [ Card ]);
       game = gameManager.game;
       const {
         loop,
@@ -822,7 +821,7 @@ describe('GameManager', () => {
 
   describe('each player', () => {
     beforeEach(() => {
-      gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
+      gameManager = new GameManager(TestGame, [ Card ]);
       game = gameManager.game;
 
       game.defineActions({

@@ -26,6 +26,23 @@ import {
 import type { FlowStep } from '../flow/flow.js';
 import type { Serializable } from '../action/utils.js';
 
+type GameUI<B extends Game> = ElementUI<B> & {
+  boardSize: BoardSize,
+  boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
+  setupLayout?: (game: B, player: NonNullable<B['player']>, boardSize: string) => void;
+  frame?: Box;
+  disabledDefaultAppearance?: boolean;
+  boundingBoxes?: boolean;
+  stepLayouts: Record<string, ActionLayout>;
+  previousStyles: Record<any, Box>;
+  announcements: Record<string, (game: B) => JSX.Element>;
+  infoModals: {
+    title: string,
+    condition?: (game: B) => boolean,
+    modal: (game: B) => JSX.Element
+  }[];
+};
+
 /**
  * Type for layout of player controls
  * @category UI
@@ -104,7 +121,7 @@ export type BoardSize = {
  *
  * @category Board
  */
-export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = any> extends Space<P, B> {
+export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = any> extends Space<B> {
   /**
    * An element containing all game elements that are not currently in
    * play. When elements are removed from the game, they go here, and can be
@@ -112,7 +129,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * e.g. `game.pile.first('removed-element').putInto('destination-area')`.
    * @category Structure
    */
-  pile: GameElement<P>;
+  pile: GameElement;
 
   /**
    * The players in this game. See {@link Player}
@@ -127,12 +144,12 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    */
   random: () => number;
 
-  constructor(ctx: Partial<ElementContext<P, B>>) {
+  constructor(ctx: Partial<ElementContext>) {
     super({ ...ctx, trackMovement: false });
-    this.game = this as unknown as B; // ???
+    // this.game = this; // ???
     this.random = ctx.gameManager?.random || Math.random;
-    if (ctx.gameManager) this.players = ctx.gameManager.players;
-    this._ctx.removed = this.createElement(Space<P, B>, 'removed'),
+    if (ctx.gameManager) this.players = ctx.gameManager.players as unknown as PlayerCollection<P>;
+    this._ctx.removed = this.createElement(Space, 'removed'),
     this.pile = this._ctx.removed;
   }
 
@@ -141,7 +158,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * and Piece class declared in your game.
    * @category Definition
    */
-  registerClasses(...classList: ElementClass[]) {
+  registerClasses(...classList: ElementClass<GameElement>[]) {
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
   }
 
@@ -158,7 +175,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * - {@link switchCase}
    * @category Definition
    */
-  defineFlow(...flow: FlowStep<P>[]) {
+  defineFlow(...flow: FlowStep[]) {
     if (this._ctx.gameManager.phase !== 'new') throw Error('cannot call defineFlow once started');
     this._ctx.gameManager.flow = new Flow({ do: flow });
     this._ctx.gameManager.flow.gameManager = this._ctx.gameManager;
@@ -172,7 +189,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * choices, results and messages onto the result
    * @category Definition
    */
-  defineActions(actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>) {
+  defineActions(actions: Record<string, (player: P) => Action<Record<string, Argument>>>) {
     if (this._ctx.gameManager.phase !== 'new') throw Error('cannot call defineActions once started');
     this._ctx.gameManager.actions = actions;
   }
@@ -236,12 +253,12 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    *
    * @category Definition
    */
-  action<A extends Record<string, Argument<P>> = NonNullable<unknown>>(definition: {
+  action<A extends Record<string, Argument> = NonNullable<unknown>>(definition: {
     prompt?: string,
     description?: string,
-    condition?: Action<P, A>['condition'],
+    condition?: Action<A>['condition'],
   } = {}) {
-    return new Action<P, A>(definition);
+    return new Action<A>(definition);
   }
 
   /**
@@ -271,7 +288,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    *     )
    * @category Game Management
    */
-  followUp(action: ActionStub<P>) {
+  followUp(action: ActionStub) {
     this._ctx.gameManager.followups.push(action);
   }
 
@@ -296,15 +313,15 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    * @category Definition
    */
   flowCommands = {
-    playerActions: (options: ConstructorParameters<typeof ActionStep<P>>[0]) => this.flowGuard() && new ActionStep<P>(options),
-    loop: (...block: FlowStep<P>[]) => this.flowGuard() && new WhileLoop<P>({do: block, while: () => true}),
-    whileLoop: (options: ConstructorParameters<typeof WhileLoop<P>>[0]) => this.flowGuard() && new WhileLoop<P>(options),
-    forEach: <T extends Serializable<P>>(options: ConstructorParameters<typeof ForEach<P, T>>[0]) => this.flowGuard() && new ForEach<P, T>(options),
-    forLoop: <T = Serializable<P>>(options: ConstructorParameters<typeof ForLoop<P, T>>[0]) => this.flowGuard() && new ForLoop<P, T>(options),
-    eachPlayer: (options: ConstructorParameters<typeof EachPlayer<P>>[0]) => this.flowGuard() && new EachPlayer<P>(options),
-    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => this.flowGuard() && new EveryPlayer<P>(options),
-    ifElse: (options: ConstructorParameters<typeof IfElse<P>>[0]) => this.flowGuard() && new IfElse<P>(options),
-    switchCase: <T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => this.flowGuard() && new SwitchCase<P, T>(options),
+    playerActions: (options: ConstructorParameters<typeof ActionStep>[0]) => this.flowGuard() && new ActionStep(options),
+    loop: (...block: FlowStep[]) => this.flowGuard() && new WhileLoop({do: block, while: () => true}),
+    whileLoop: (options: ConstructorParameters<typeof WhileLoop>[0]) => this.flowGuard() && new WhileLoop(options),
+    forEach: <T extends Serializable>(options: ConstructorParameters<typeof ForEach<T>>[0]) => this.flowGuard() && new ForEach<T>(options),
+    forLoop: <T = Serializable>(options: ConstructorParameters<typeof ForLoop<T>>[0]) => this.flowGuard() && new ForLoop<T>(options),
+    eachPlayer: (options: ConstructorParameters<typeof EachPlayer>[0]) => this.flowGuard() && new EachPlayer(options),
+    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer>[0]) => this.flowGuard() && new EveryPlayer(options),
+    ifElse: (options: ConstructorParameters<typeof IfElse>[0]) => this.flowGuard() && new IfElse(options),
+    switchCase: <T extends Serializable>(options: ConstructorParameters<typeof SwitchCase<T>>[0]) => this.flowGuard() && new SwitchCase<T>(options),
   };
 
   /**
@@ -370,7 +387,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
    *
    * @category Game Management
    */
-  message(text: string, args?: Record<string, Argument<P>>) {
+  message(text: string, args?: Record<string, Argument>) {
     this._ctx.gameManager.messages.push({body: n(text, args, true)});
   }
 
@@ -422,22 +439,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
 
   // UI
 
-  _ui: ElementUI<this> & {
-    boardSize: BoardSize,
-    boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
-    setupLayout?: (game: B, player: P, boardSize: string) => void;
-    frame?: Box;
-    disabledDefaultAppearance?: boolean;
-    boundingBoxes?: boolean;
-    stepLayouts: Record<string, ActionLayout>;
-    previousStyles: Record<any, Box>;
-    announcements: Record<string, (game: B) => JSX.Element>;
-    infoModals: {
-      title: string,
-      condition?: (game: B) => boolean,
-      modal: (game: B) => JSX.Element
-    }[];
-  } = {
+  _ui: GameUI<this> = {
     boardSize: {name: '_default', aspectRatio: 1},
     layouts: [],
     appearance: {},
@@ -454,7 +456,7 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
     this._ui.previousStyles ||= {};
   }
 
-  setBoardSize(this: B, boardSize: BoardSize) {
+  setBoardSize(boardSize: BoardSize) {
     if (boardSize.name !== this._ui.boardSize.name) {
       this._ui.boardSize = boardSize;
     }
@@ -464,10 +466,10 @@ export default class Game<P extends Player<P, B> = any, B extends Game<P, B> = a
     return this._ui.boardSizes && this._ui.boardSizes(screenX, screenY, mobile) || { name: '_default', aspectRatio: 1 };
   }
 
-  applyLayouts(this: B, base?: (b: B) => void) {
+  applyLayouts(base?: (b: this) => void) {
     this.resetUI();
     if (this._ui.setupLayout) {
-      this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
+      this._ui.setupLayout(this, this._ctx.player! as P, this._ui.boardSize.name);
     }
     if (base) base(this);
 

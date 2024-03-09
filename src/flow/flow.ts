@@ -52,7 +52,7 @@ export type FlowArguments = Record<string, any>;
  * - one of the {@link Game#flowCommands}
  * @category Flow
  */
-export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => any);
+export type FlowStep = Flow | ((args: FlowArguments) => any);
 
 /**
  * FlowDefinition's are provided to the game and to all flow function to provide
@@ -62,13 +62,13 @@ export type FlowStep<P extends Player> = Flow<P> | ((args: FlowArguments) => any
  * - an array of any combination of the above
  * @category Flow
  */
-export type FlowDefinition<P extends Player> = FlowStep<P> | FlowStep<P>[]
+export type FlowDefinition = FlowStep | FlowStep[]
 
-export type FlowBranchNode<P extends Player> = ({
+export type FlowBranchNode = ({
   type: 'main',
 } | {
   type: 'action',
-  position: ActionStepPosition<P>
+  position: ActionStepPosition
 } | {
   type: 'parallel',
   position: EveryPlayerPosition,
@@ -97,8 +97,8 @@ export type FlowBranchJSON = ({
   sequence?: number,
 }
 
-export type Position<P extends Player> = (
-  ActionStepPosition<P> | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any> | EveryPlayerPosition
+export type Position = (
+  ActionStepPosition | ForLoopPosition<any> | WhileLoopPosition | ForEachPosition<any> | SwitchCasePostion<any> | EveryPlayerPosition
 )
 
 export type FlowVisualization = {
@@ -113,18 +113,18 @@ export type FlowVisualization = {
 }
 
 /** internal */
-export default class Flow<P extends Player> {
+export default class Flow {
   name?: string;
-  position?: Position<P>;
+  position?: Position;
   sequence?: number; // if block is an array, indicates the index of execution
-  type: FlowBranchNode<P>['type'] = 'main';
-  step?: FlowStep<P>; // cached by setPositionFromJSON
-  block?: FlowDefinition<P>;
-  top: Flow<P>;
-  parent?: Flow<P>;
-  gameManager: GameManager<P, Game<P>>;
+  type: FlowBranchNode['type'] = 'main';
+  step?: FlowStep; // cached by setPositionFromJSON
+  block?: FlowDefinition;
+  top: Flow;
+  parent?: Flow;
+  gameManager: GameManager;
 
-  constructor({ name, do: block }: { name?: string, do?: FlowDefinition<P> }) {
+  constructor({ name, do: block }: { name?: string, do?: FlowDefinition }) {
     this.name = name;
     this.block = block;
     // each subflow can set itself as top because they will be copied later by each parent as it loads its subflows
@@ -140,7 +140,7 @@ export default class Flow<P extends Player> {
 
   flowStepArgs(): FlowArguments {
     const args: FlowArguments = {};
-    let flow: FlowStep<P> | undefined = this.top;
+    let flow: FlowStep | undefined = this.top;
     while (flow instanceof Flow) {
       if ('position' in flow && flow.position) {
         // want to remove
@@ -148,8 +148,8 @@ export default class Flow<P extends Player> {
           const position = flow.position as {
             player: number,
             name: string,
-            args: Record<string, Argument<P>>,
-            followups?: ActionStub<P>[]
+            args: Record<string, Argument>,
+            followups?: ActionStub[]
           };
           args[position!.name] = position!.args;
         }
@@ -213,12 +213,12 @@ export default class Flow<P extends Player> {
     this.setPosition(this.fromJSON(positionJSON), sequence, false);
   }
 
-  currentLoop(name?: string): WhileLoop<P> | undefined {
-    if ('interrupt' in this && (!name || name === this.name)) return this as unknown as WhileLoop<P>;
+  currentLoop(name?: string): WhileLoop | undefined {
+    if ('interrupt' in this && (!name || name === this.name)) return this as unknown as WhileLoop;
     return this.parent?.currentLoop();
   }
 
-  currentProcessor(): Flow<P> | undefined {
+  currentProcessor(): Flow | undefined {
     if (this.step instanceof Flow) return this.step.currentProcessor();
     if (this.type === 'action' || this.type === 'parallel') return this;
   }
@@ -227,19 +227,19 @@ export default class Flow<P extends Player> {
     step?: string,
     prompt?: string,
     description?: string,
-    actions: ActionStub<P>[],
+    actions: ActionStub[],
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
     return this.currentProcessor()?.actionNeeded(player);
   }
 
-  processMove(move: Exclude<ActionStepPosition<P>, undefined>): string | undefined {
+  processMove(move: NonNullable<ActionStepPosition>): string | undefined {
     const step = this.currentProcessor();
     if (!step) throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);
     return step.processMove(move);
   }
 
-  getStep(name: string): Flow<P> | undefined {
+  getStep(name: string): Flow | undefined {
     if (this.name === name) {
       this.validateNoDuplicate();
       return this;
@@ -268,7 +268,7 @@ export default class Flow<P extends Player> {
       result = FlowControl.complete;
       if (loopInterrupt[0]) result = loopInterrupt.shift();
     } else if (step instanceof Flow) {
-      if ('awaitingAction' in step && (step as ActionStep<P>).awaitingAction()) return; // awaiting action
+      if ('awaitingAction' in step && (step as ActionStep).awaitingAction()) return; // awaiting action
       result = step.playOneStep();
     }
     if (result === FlowControl.ok || !result) return result;
@@ -315,7 +315,7 @@ export default class Flow<P extends Player> {
   }
 
   // must override. must rely solely on this.position
-  currentBlock(): FlowDefinition<P> | undefined {
+  currentBlock(): FlowDefinition | undefined {
     return this.block;
   }
 
@@ -335,7 +335,7 @@ export default class Flow<P extends Player> {
   }
 
   // override return all subflows
-  allSteps(): FlowDefinition<P> | undefined {
+  allSteps(): FlowDefinition | undefined {
     return this.block;
   }
 
@@ -361,7 +361,7 @@ export default class Flow<P extends Player> {
 
   visualizeBlocks({ type, blocks, name, block, position }: {
     type: string,
-    blocks: Record<string, FlowStep<P>[] | undefined>,
+    blocks: Record<string, FlowStep[] | undefined>,
     name?: string,
     block?: string,
     position?: any,

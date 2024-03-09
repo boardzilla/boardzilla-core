@@ -9,7 +9,6 @@ import { bfsFromNode } from 'graphology-traversal';
 import type Game from './game.js';
 import type { ElementClass, ElementAttributes } from './element.js';
 import type { ElementFinder } from './element-collection.js';
-import type Player from '../player/player.js';
 
 export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => void} & Record<any, any>;
 
@@ -18,7 +17,7 @@ export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => v
  * setup in {@link createGame} and never change during play.
  * @category Board
  */
-export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = any> extends GameElement<P, B> {
+export default class Space<B extends Game> extends GameElement<B> {
   _eventHandlers: {
     enter: ElementEventHandler<GameElement>[],
     exit: ElementEventHandler<GameElement>[],
@@ -32,7 +31,7 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
     return el;
   }
 
-  addEventHandler<T extends GameElement>(type: keyof Space['_eventHandlers'], handler: ElementEventHandler<T>) {
+  addEventHandler<T extends GameElement>(type: keyof Space<B>['_eventHandlers'], handler: ElementEventHandler<T>) {
     if (this._ctx.gameManager?.phase === 'started') throw Error('Event handlers cannot be added once game has started.');
     this._eventHandlers[type].push(handler);
   }
@@ -69,7 +68,7 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
     this.addEventHandler<T>("exit", { callback, type });
   }
 
-  triggerEvent(event: keyof Space['_eventHandlers'], element: GameElement) {
+  triggerEvent(event: keyof Space<B>['_eventHandlers'], element: GameElement) {
     for (const handler of this._eventHandlers[event]) {
       if (event === 'enter' && !(element instanceof handler.type)) continue;
       if (event === 'exit' && !(element instanceof handler.type)) continue;
@@ -100,7 +99,7 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
    *
    * @category Structure
    */
-  createGrid<T extends Space<P>>(
+  createGrid<T extends Space<Game>>(
     gridConfig: {
       rows: number,
       columns: number,
@@ -143,11 +142,11 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
    * @param distance - Add a custom distance to this connection for the purposes
    * of distance-measuring.
    */
-  connectTo(space: Space<P, B>, distance: number = 1) {
+  connectTo(space: Space<B>, distance: number = 1) {
     if (!this._t.parent || this._t.parent !== space._t.parent) throw Error("Cannot connect two spaces that are not in the same parent space");
 
     if (!this._t.parent._t.graph) {
-      this._t.parent._t.graph = new graphology.UndirectedGraph<{space: Space<P, B>}, {distance: number}>();
+      this._t.parent._t.graph = new graphology.UndirectedGraph<{space: Space<B>}, {distance: number}>();
     }
     const graph = this._t.parent._t.graph;
     if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {space: this});
@@ -165,7 +164,7 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
    * @returns shortest distance measured by the `distance` values added to each
    * connection in {@link connectTo}
    */
-  distanceTo(space: Space<P, B>) {
+  distanceTo(space: Space<B>) {
     if (!this._t.parent?._t.graph) return undefined;
     try {
       const graph = this._t.parent._t.graph;
@@ -185,10 +184,10 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
    * the same parameters as {@link GameElement#first}
    * @category Queries
    */
-  closest<F extends Space<P, B>>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  closest(className?: ElementFinder<Space<P, B>>, ...finders: ElementFinder<Space<P, B>>[]): Space<P, B> | undefined;
-  closest<F extends Space<P, B>>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | Space<P, B> | undefined {
-    let classToSearch: ElementClass<Space<P, B>> = Space<P, B>;
+  closest<F extends Space<B>>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
+  closest(className?: ElementFinder<Space<B>>, ...finders: ElementFinder<Space<B>>[]): Space<B> | undefined;
+  closest<F extends Space<B>>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | Space<B> | undefined {
+    let classToSearch: ElementClass<Space<B>> = Space;
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
     } else {
@@ -209,7 +208,7 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
    * @category Queries
    */
   withinDistance(distance: number) {
-    const c = new ElementCollection<Space<P, B>>();
+    const c = new ElementCollection<Space<B>>();
     try {
       const graph = this._t.parent!._t.graph!;
       bfsFromNode(graph, this._t.id, node => {
@@ -231,12 +230,12 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
       if (typeof finder === 'object') {
         if (finder.adjacent !== undefined) {
           const adj = finder.adjacent;
-          otherFinder = (el: Space<P, B>) => this.isAdjacentTo(el) === adj && el !== (this as GameElement)
+          otherFinder = (el: Space<B>) => this.isAdjacentTo(el) === adj && el !== (this as GameElement)
           delete(finder.adjacent);
         }
         if (finder.withinDistance !== undefined) {
           const distance = finder.withinDistance;
-          otherFinder = (el: Space<P, B>) => {
+          otherFinder = (el: Space<B>) => {
             const d = this.distanceTo(el);
             if (d === undefined) return false;
             return d <= distance && el !== (this as GameElement);

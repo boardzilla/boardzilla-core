@@ -1,7 +1,8 @@
 import {
   Game,
   Player,
-  createGameClasses,
+  Space,
+  Piece
 } from '../../index.js';
 
 export class TestPlayer extends Player<TestPlayer, TestGame> {
@@ -12,9 +13,7 @@ export class TestGame extends Game<TestPlayer, TestGame> {
   tokens: number = 0;
 }
 
-const { Space, Piece } = createGameClasses<TestPlayer, TestGame>();
-
-export class Token extends Piece {
+export class Token extends Piece<TestGame> {
   color: 'red' | 'blue';
 }
 

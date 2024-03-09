@@ -3,14 +3,13 @@ import { gameStore } from '../../index.js';
 import { n } from '../../../utils.js';
 import Selection from './Selection.js';
 
-import type { Player } from '../../../player/index.js';
 import type { UIMove } from '../../lib.js';
 import type { Argument } from '../../../action/action.js';
 
 const ActionForm = ({ move, stepName, onSubmit }: {
   move: UIMove,
   stepName: string,
-  onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
+  onSubmit: (move?: UIMove, args?: Record<string, Argument>) => void,
   children?: React.ReactNode,
 }) => {
   const [gameManager, position, uncommittedArgs, selected, disambiguateElement] = gameStore(s => [s.gameManager, s.position, s.uncommittedArgs, s.selected, s.disambiguateElement]);
@@ -19,14 +18,14 @@ const ActionForm = ({ move, stepName, onSubmit }: {
   const action = useMemo(() => move.name === '__pass__' ? undefined : gameManager.getAction(move.name, gameManager.players.atPosition(position!)!), [gameManager, position, move]);
 
   const initial = useCallback(() => {
-    const args: Record<string, Argument<Player> | undefined> = {...move.args};
+    const args: Record<string, Argument | undefined> = {...move.args};
     for (const s of move.selections) {
       if (s.name !== '__action__' && s.name !== '__confirm__' && !s.isBoardChoice()) args[s.name] = s.initial;
     }
     return args;
   }, [move]);
 
-  const [args, setArgs] = useState<Record<string, Argument<Player> | undefined>>(initial());
+  const [args, setArgs] = useState<Record<string, Argument | undefined>>(initial());
 
   useEffect(() => setArgs(initial()), [initial, move]);
 
@@ -42,14 +41,14 @@ const ActionForm = ({ move, stepName, onSubmit }: {
     return allArgs;
   }, [args, move, selected, uncommittedArgs, disambiguateElement]);
 
-  const submitForm = useCallback((args: Record<string, Argument<Player> | undefined>) => {
-    onSubmit(move, args as Record<string, Argument<Player>>);
+  const submitForm = useCallback((args: Record<string, Argument | undefined>) => {
+    onSubmit(move, args as Record<string, Argument>);
     setArgs(initial());
     setErrors({});
   }, [onSubmit, initial, move])
 
   // return set of errors per selection from validation rules
-  const validationErrors = useCallback((args: Record<string, Argument<Player> | undefined>) => {
+  const validationErrors = useCallback((args: Record<string, Argument | undefined>) => {
     if (!action) return {};
     return Object.fromEntries(
       move.selections.filter(
@@ -64,7 +63,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
   }, [action, move.selections]);
 
   // display errors
-  const validate = useCallback((args: Record<string, Argument<Player> | undefined>) => {
+  const validate = useCallback((args: Record<string, Argument | undefined>) => {
     const errors = validationErrors(args);
     setErrors(errors);
 
@@ -77,7 +76,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
     setArgs(initial());
   }, [allArgs, validate, submitForm, initial])
 
-  const handleChange = useCallback((name: string, arg: Argument<Player>) => {
+  const handleChange = useCallback((name: string, arg: Argument) => {
     let newArgs = allArgs;
     if (name !== '__action__' && name !== '__confirm__') newArgs[name] = arg;
 
@@ -97,7 +96,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       if (s.type === 'board' && s.isMulti() && (!selected || (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity)))) return undefined;
     }
     let confirm = 'Confirm';
-    const args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
+    const args: Record<string, Argument> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument>;
     confirm = action._getConfirmation(move.selections[0], args) ?? confirm;
     return n(confirm, args)
   }, [move, action, allArgs, selected, validationErrors]);
@@ -122,7 +121,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
           key={s.name}
           value={allArgs[s.name]}
           error={errors[s.name]}
-          onChange={(value: Argument<Player>) => handleChange(s.name, value)}
+          onChange={(value: Argument) => handleChange(s.name, value)}
           selection={s}
         />
       ))}

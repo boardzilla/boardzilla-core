@@ -11,7 +11,7 @@ const DieComponent = ({ die }: { die: Die }) => {
   const [flip, setFlip] = useState<boolean>(false);
 
   useEffect(() => {
-    if (die.rollSequence === die.game.sequence - 1 && lastRollSequence.current !== die.rollSequence) {
+    if (die.rollSequence === die._ctx.gameManager.sequence - 1 && lastRollSequence.current !== die.rollSequence) {
       diceAudio.current?.play();
       lastRollSequence.current = die.rollSequence;
       setFlip(!flip);

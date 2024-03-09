@@ -13,16 +13,15 @@ import { serialize } from '../../../action/utils.js'
 
 import type { ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../lib.js';
-import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 
-const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
+const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
 const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
-  element: GameElement<Player>,
+  element: GameElement,
   json: ElementJSON,
   mode: 'game' | 'info' | 'zoom'
-  onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
+  onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
 }) => {
   const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, boardJSON] =
@@ -376,8 +375,8 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     const lines: React.JSX.Element[] = [];
     const labels: React.JSX.Element[] = [];
     element._t.graph.forEachEdge((...args) => {
-      const source = args[4].space as GameElement<Player>;
-      const target = args[5].space as GameElement<Player>;
+      const source = args[4].space as GameElement;
+      const target = args[5].space as GameElement;
 
       if (source._ui.computedStyle && target._ui.computedStyle) {
         const origin = {

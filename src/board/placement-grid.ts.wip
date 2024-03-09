@@ -1,0 +1,150 @@
+import Space from "./space.js";
+
+import type Game from './game.js'
+import type Player from '../player/player.js';
+import type { default as GameElement, Vector } from "./element.js";
+
+export default class PlacementGrid<P extends Player<P, B> = any, B extends Game<P, B> = any> extends Space<P, B> {
+  _isAdjacentOnGrid(el: GameElement<P, B>) {
+    if (!this._size && !el._size) {
+      return el.row !== undefined && el.column !== undefined && (
+        (this.column === el.column && [el.row + 1, el.row - 1].includes(this.row!)) ||
+          (this.row === el.row && [el.column + 1, el.column - 1].includes(this.column!))
+      );
+    }
+    // this should possibly be Piece#isDiagonal
+    // (diagonally &&
+    //   [element.row + 1, element.row - 1].includes(this.row!) &&
+    //   [element.column + 1, element.column - 1].includes(this.column!)
+    // )
+  }
+
+  isOverlapping(element: GameElement<P, B>, other?: GameElement<P, B>): boolean {
+    if (!other) {
+      return this._t.children.some(c => c !== element && this.isOverlapping(element, c));
+    }
+    const c1: Vector = {x: element.column!, y: element.row!};
+    const c2: Vector = {x: other.column!, y: other.row!};
+    if (!element._size && !other._size) return c2.y === c1.y && c2.x === c1.x;
+    if (element.rotation % 90 !== 0 || other.rotation % 90 !== 0) return false; // unsupported to calculate for irregular shapes at non-orthoganal orientations
+    if (!element._size) return (other._cellAt({y: c1.y - c2.y, x: c1.x - c2.x}) ?? ' ') !== ' ';
+    if (!other._size) return (element._cellAt({y: c2.y - c1.y, x: c2.x - c1.x}) ?? ' ') !== ' ';
+    const gridSize = element._gridSize();
+    const gridSizeEl = other._gridSize();
+    if (
+      c2.y >= c1.y + gridSize.height ||
+      c2.y + gridSizeEl.height <= c1.y ||
+      c2.x >= c1.x + gridSize.width ||
+      c2.x + gridSizeEl.width <= c1.x
+    ) return false;
+    const size = Math.max(element._size.height, element._size.width);
+    for (let x = 0; x !== size; x += 1) {
+      for (let y = 0; y !== size; y += 1) {
+        if ((element._cellAt({x, y}) ?? ' ') !== ' ' && (other._cellAt({x: x + c1.x - c2.x, y: y + c1.y - c2.y}) ?? ' ') !== ' ') {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  adjacenciesByCell(element: GameElement<P, B>, other?: GameElement<P, B>): {element: GameElement<P, B>, from: string, to: string}[] {
+    if (!other) {
+      return this._t.children.reduce(
+        (all, c) => all.concat(c !== element ? this.adjacenciesByCell(c) : []),
+        [] as {element: GameElement<P, B>, from: string, to: string}[]
+      );
+    }
+    const c1: Vector = {x: element.column!, y: element.row!};
+    const c2: Vector = {x: other.column!, y: other.row!};
+    if (c2.y === undefined || c2.x === undefined || other.rotation % 90 !== 0) return [];
+
+    if (!element._size && !other._size) return element.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
+    if (element.rotation % 90 !== 0 || other.rotation % 90 !== 0) return []; // unsupported to calculate for irregular shapes at non-orthoganal orientations
+    if (!element._size) {
+      return Object.values(other._cellsAround({x: c1.x - c2.x, y: c1.y - c2.y})).reduce(
+        (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: '.', to: adj}] : []),
+        [] as {element: GameElement<P, B>, from: string, to: string}[]
+      );
+    }
+    if (!other._size) {
+      return Object.values(element._cellsAround({x: c2.x - c1.x, y: c2.y - c1.y})).reduce(
+        (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: adj, to: '.'}] : []),
+        [] as {element: GameElement<P, B>, from: string, to: string}[]
+      );
+    }
+    const gridSize = element._gridSize();
+    const gridSizeEl = other._gridSize();
+    if (
+      c2.y >= c1.y + 1 + gridSize.height ||
+      c2.y + 1 + gridSizeEl.height <= c1.y ||
+      c2.x >= c1.x + 1 + gridSize.width ||
+      c2.x + 1 + gridSizeEl.width <= c1.x
+    ) return [];
+    const size = Math.max(element._size.height, element._size.width);
+    const adjacencies = [] as {element: GameElement<P, B>, from: string, to: string}[];
+    for (let x = 0; x !== size; x += 1) {
+      for (let y = 0; y !== size; y += 1) {
+        const thisCell = element._cellAt({x, y});
+        if (thisCell === undefined || thisCell === ' ') continue;
+        for (const cell of Object.values(other._cellsAround({x: x + c1.x - c2.x, y: y + c1.y - c2.y}))) {
+          if (cell !== undefined && cell !== ' ') {
+            adjacencies.push({element, from: thisCell, to: cell});
+          }
+        }
+      }
+    }
+    return adjacencies;
+  }
+
+  adjacenciesByEdge(element?: GameElement<P, B>): {element: GameElement<P, B>, from?: string, to?: string}[] {
+    if (!element._t.parent || c1.y === undefined || c1.x === undefined || element.rotation % 90 !== 0) return [];
+    if (!element) {
+      const layout = element._t.parent._ui.computedLayouts?.find(l => l?.children.includes(this));
+      const children = layout?.children ?? element._t.parent._t.children;
+      return children.reduce(
+        (all, c) => all.concat(c !== this ? element.adjacenciesByEdge(c) : []),
+        [] as {element: GameElement<P, B>, from?: string, to?: string}[]
+      );
+    }
+    const c1: Vector = {x: element.column!, y: element.row!};
+    const c2: Vector = {x: other.column!, y: other.row!};
+    if (c2.y === undefined || c2.x === undefined || other.rotation % 90 !== 0) return [];
+
+    if (!element._size && !other._size) return element.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
+    if (!element._size) {
+      return (Object.entries(other._cellsAround({x: c1.x - c2.x, y: c1.y - c2.y})) as [Direction, string][]).reduce(
+        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: undefined, to: other._size?.edges?.[adj][rotateDirection(dir, 180 - other.rotation)]}] : []),
+        [] as {element: GameElement<P, B>, from?: string, to?: string}[]
+      );
+    }
+    if (!other._size) {
+      return (Object.entries(element._cellsAround({x: c2.x - c1.x, y: c2.y - c1.y})) as [Direction, string][]).reduce(
+        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: element._size?.edges?.[adj][rotateDirection(dir, 180 - element.rotation)], to: undefined}] : []),
+        [] as {element: GameElement<P, B>, from?: string, to?: string}[]
+      );
+    }
+    const gridSize = element._gridSize();
+    const gridSizeEl = other._gridSize();
+    if (
+      c2.y >= c1.y + 1 + gridSize.height ||
+      c2.y + 1 + gridSizeEl.height <= c1.y ||
+      c2.x >= c1.x + 1 + gridSize.width ||
+      c2.x + 1 + gridSizeEl.width <= c1.x
+    ) return [];
+    const size = Math.max(element._size.height, element._size.width);
+    const adjacencies = [] as {element: GameElement<P, B>, from?: string, to?: string}[];
+    for (let x = 0; x !== size; x += 1) {
+      for (let y = 0; y !== size; y += 1) {
+        const thisCell = element._cellAt({x, y});
+        if (thisCell === undefined || thisCell === ' ') continue;
+        for (const [dir, cell] of Object.entries(other._cellsAround({x: x + c1.x - c2.x, y: y + c1.y - c2.y})) as [Direction, string][]) {
+          if (cell !== undefined && cell !== ' ') {
+            adjacencies.push({element, from: element._size?.edges?.[thisCell][rotateDirection(dir, -element.rotation)], to: other._size?.edges?.[cell][rotateDirection(dir, 180 - other.rotation)]});
+          }
+        }
+      }
+    }
+    return adjacencies;
+  }
+}

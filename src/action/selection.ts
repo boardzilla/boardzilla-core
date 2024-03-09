@@ -5,47 +5,47 @@ import { Player } from '../player/index.js';
 
 import type { SingleArgument, Argument } from './action.js';
 
-export type BoardQuerySingle<P extends Player, T extends GameElement<P>, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = string | T | undefined | ((args: A) => T | undefined)
-export type BoardQueryMulti<P extends Player, T extends GameElement<P>, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = string | T[] | ((args: A) => T[])
-export type BoardQuery<P extends Player, T extends GameElement<P>, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = BoardQuerySingle<P, T, A> | BoardQueryMulti<P, T, A>
+export type BoardQuerySingle<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = string | T | undefined | ((args: A) => T | undefined)
+export type BoardQueryMulti<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = string | T[] | ((args: A) => T[])
+export type BoardQuery<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = BoardQuerySingle<T, A> | BoardQueryMulti<T, A>
 
-export type BoardSelection<P extends Player, T extends GameElement<P>, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = {
-  chooseFrom: BoardQueryMulti<P, T, A>;
+export type BoardSelection<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = {
+  chooseFrom: BoardQueryMulti<T, A>;
   min?: number | ((args: A) => number);
   max?: number | ((args: A) => number);
   number?: number | ((args: A) => number);
   initial?: T[] | ((args: A) => T[]);
 }
 
-export type ChoiceSelection<P extends Player, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = {
-  choices: SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[] | ((args: A) => SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[]);
-  initial?: Argument<P> | ((args: A) => Argument<P>);
+export type ChoiceSelection<A extends Record<string, Argument> = Record<string, Argument>> = {
+  choices: SingleArgument[] | { label: string, choice: SingleArgument }[] | ((args: A) => SingleArgument[] | { label: string, choice: SingleArgument }[]);
+  initial?: Argument | ((args: A) => Argument);
   // min?: number | ((args: A) => number);
   // max?: number | ((args: A) => number);
   // number?: number | ((args: A) => number);
 }
 
-export type NumberSelection<P extends Player, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = {
+export type NumberSelection<A extends Record<string, Argument> = Record<string, Argument>> = {
   min?: number | ((args: A) => number);
   max?: number | ((args: A) => number);
   initial?: number | ((args: A) => number);
 }
 
-export type TextSelection<P extends Player, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = {
+export type TextSelection<A extends Record<string, Argument> = Record<string, Argument>> = {
   regexp?: RegExp;
   initial?: string | ((args: A) => string);
 }
 
-export type ButtonSelection<P extends Player> = Argument<P>;
+export type ButtonSelection = Argument;
 
-export type SelectionDefinition<P extends Player, A extends Record<string, Argument<P>> = Record<string, Argument<P>>> = {
+export type SelectionDefinition<A extends Record<string, Argument> = Record<string, Argument>> = {
   prompt?: string | ((args: A) => string);
-  confirm?: string | [string, Record<string, Argument<P>> | ((args: A) => Record<string, Argument<P>>) | undefined]
+  confirm?: string | [string, Record<string, Argument> | ((args: A) => Record<string, Argument>) | undefined]
   validation?: ((args: A) => string | boolean | undefined);
   clientContext?: Record<any, any>; // additional meta info that describes the context for this selection
 } & ({
   skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
-  selectOnBoard: BoardSelection<P, GameElement<P>>;
+  selectOnBoard: BoardSelection<GameElement>;
   selectPlaceOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
@@ -55,7 +55,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
   skipIf?: 'never' | 'always' | 'only-one' | ((args: A) => boolean);
   selectOnBoard?: never;
   selectPlaceOnBoard?: never;
-  selectFromChoices: ChoiceSelection<P>;
+  selectFromChoices: ChoiceSelection;
   selectNumber?: never;
   enterText?: never;
   value?: never;
@@ -64,7 +64,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
   selectOnBoard?: never;
   selectPlaceOnBoard?: never;
   selectFromChoices?: never;
-  selectNumber: NumberSelection<P>;
+  selectNumber: NumberSelection;
   enterText?: never;
   value?: never;
 } | {
@@ -72,7 +72,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
   selectPlaceOnBoard?: never;
   selectFromChoices?: never;
   selectNumber?: never;
-  enterText: TextSelection<P>;
+  enterText: TextSelection;
   value?: never;
 } | {
   selectOnBoard?: never;
@@ -80,7 +80,7 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
   selectFromChoices?: never;
   selectNumber?: never;
   enterText?: never;
-  value: ButtonSelection<P>;
+  value: ButtonSelection;
 } | {
   selectOnBoard?: never;
   selectPlaceOnBoard: {piece: string, rotationChoices?: number[]};
@@ -91,13 +91,13 @@ export type SelectionDefinition<P extends Player, A extends Record<string, Argum
 });
 
 // any lambdas have been resolved to actual values
-export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'skipIf'> & {
+export type ResolvedSelection = Omit<Selection, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'skipIf'> & {
   prompt?: string;
-  choices?: SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[];
-  boardChoices?: GameElement<P>[];
+  choices?: SingleArgument[] | { label: string, choice: SingleArgument }[];
+  boardChoices?: GameElement[];
   min?: number;
   max?: number;
-  initial?: Argument<P>;
+  initial?: Argument;
   skipIf?: 'never' | 'always' | 'only-one' | boolean;
 }
 
@@ -107,26 +107,26 @@ export type ResolvedSelection<P extends Player> = Omit<Selection<P>, 'prompt' | 
  * players at runtime
  * @internal
  */
-export default class Selection<P extends Player> {
+export default class Selection {
   type: 'board' | 'choices' | 'text' | 'number' | 'button' | 'place';
   name: string;
-  prompt?: string | ((args: Record<string, Argument<P>>) => string);
-  confirm?: [string, Record<string, Argument<P>> | ((args: Record<string, Argument<P>>) => Record<string, Argument<P>>) | undefined]
-  validation?: ((args: Record<string, Argument<P>>) => string | boolean | undefined);
+  prompt?: string | ((args: Record<string, Argument>) => string);
+  confirm?: [string, Record<string, Argument> | ((args: Record<string, Argument>) => Record<string, Argument>) | undefined]
+  validation?: ((args: Record<string, Argument>) => string | boolean | undefined);
   clientContext: Record<any, any> = {}; // additional meta info that describes the context for this selection
-  skipIf?: 'never' | 'always' | 'only-one' | ((args: Record<string, Argument<P>>) => boolean);
-  choices?: SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[] | ((args: Record<string, Argument<P>>) => SingleArgument<P>[] | { label: string, choice: SingleArgument<P> }[]);
-  boardChoices?: BoardQueryMulti<P, GameElement<P>>;
-  min?: number | ((args: Record<string, Argument<P>>) => number);
-  max?: number | ((args: Record<string, Argument<P>>) => number);
-  initial?: Argument<P> | ((args: Record<string, Argument<P>>) => Argument<P>);
+  skipIf?: 'never' | 'always' | 'only-one' | ((args: Record<string, Argument>) => boolean);
+  choices?: SingleArgument[] | { label: string, choice: SingleArgument }[] | ((args: Record<string, Argument>) => SingleArgument[] | { label: string, choice: SingleArgument }[]);
+  boardChoices?: BoardQueryMulti<GameElement>;
+  min?: number | ((args: Record<string, Argument>) => number);
+  max?: number | ((args: Record<string, Argument>) => number);
+  initial?: Argument | ((args: Record<string, Argument>) => Argument);
   regexp?: RegExp;
   placePiece?: string;
   rotationChoices?: number[];
-  value?: Argument<P>;
-  invalidOptions: {option: Argument<P>, error: string}[] = [];
+  value?: Argument;
+  invalidOptions: {option: Argument, error: string}[] = [];
 
-  constructor(name: string, s: SelectionDefinition<P> | Selection<P>) {
+  constructor(name: string, s: SelectionDefinition | Selection) {
     this.name = name;
     if (s instanceof Selection) {
       Object.assign(this, s);
@@ -173,20 +173,20 @@ export default class Selection<P extends Player> {
     this.clientContext = s.clientContext ?? {};
   }
 
-  isLabeledChoice(this: ResolvedSelection<P>) {
+  isLabeledChoice(this: ResolvedSelection) {
     return this.choices && typeof this.choices[0] === 'object' && !(this.choices[0] instanceof GameElement) && !(this.choices[0] instanceof Player);
   }
 
-  choiceLabels(this: ResolvedSelection<P>) {
+  choiceLabels(this: ResolvedSelection) {
     if (this.isLabeledChoice()) {
-      return this.choices!.map(c => (c as { label: string, choice: SingleArgument<P> }).label)
+      return this.choices!.map(c => (c as { label: string, choice: SingleArgument }).label)
     }
     return (this.choices ?? []) as string[];
   }
 
-  choiceValues(this: ResolvedSelection<P>) {
+  choiceValues(this: ResolvedSelection) {
     if (this.isLabeledChoice()) {
-      return this.choices!.map(c => (c as { label: string, choice: SingleArgument<P> }).choice)
+      return this.choices!.map(c => (c as { label: string, choice: SingleArgument }).choice)
     }
     return (this.choices ?? []) as string[];
   }
@@ -197,7 +197,7 @@ export default class Selection<P extends Player> {
    * forms are here evaluated with the previous args. returns new selection and
    * error if any
    */
-  error(args: Record<string, Argument<P>>): string | undefined {
+  error(args: Record<string, Argument>): string | undefined {
     const arg = args[this.name];
     const s = this.resolve(args);
 
@@ -216,11 +216,11 @@ export default class Selection<P extends Player> {
       if (!results) console.warn('Attempted to validate an impossible move', s);
       if (this.isMulti()) {
         if (!(arg instanceof Array)) throw Error("Required multi select");
-        if (results && arg.some(a => !results.includes(a as GameElement<P>))) return "Selected elements are not valid";
+        if (results && arg.some(a => !results.includes(a as GameElement))) return "Selected elements are not valid";
         if (s.min !== undefined && arg.length < s.min) return "Below minimum";
         if (s.max !== undefined && arg.length > s.max) return "Above maximum";
       } else {
-        return (results && results.includes(arg as GameElement<P>)) ? undefined : "Selected element is not valid";
+        return (results && results.includes(arg as GameElement)) ? undefined : "Selected element is not valid";
       }
     }
 
@@ -239,7 +239,7 @@ export default class Selection<P extends Player> {
   }
 
   // All possible valid Arguments to this selection. Have to make some assumptions here to tree shake possible moves
-  options(this: ResolvedSelection<P>): Argument<P>[] {
+  options(this: ResolvedSelection): Argument[] {
     if (this.isUnbounded()) return [];
     if (this.type === 'number') return range(this.min ?? 1, this.max!);
     const choices = this.choiceValues()
@@ -249,12 +249,12 @@ export default class Selection<P extends Player> {
     return [];
   }
 
-  isUnbounded(this: ResolvedSelection<P>): boolean {
+  isUnbounded(this: ResolvedSelection): boolean {
     if (this.type === 'number') return this.max === undefined || this.max - (this.min ?? 1) > 100;
     return this.type === 'text' || this.type === 'button' || this.type === 'place';
   }
 
-  isResolved(): this is ResolvedSelection<P> {
+  isResolved(): this is ResolvedSelection {
     return typeof this.prompt !== 'function' &&
       typeof this.min !== 'function' &&
       typeof this.max !== 'function' &&
@@ -272,8 +272,8 @@ export default class Selection<P extends Player> {
     return this.type === 'board' || this.type ==='place';
   }
 
-  resolve(args: Record<string, Argument<P>>): ResolvedSelection<P> {
-    const resolved = new Selection(this.name, this) as ResolvedSelection<P>;
+  resolve(args: Record<string, Argument>): ResolvedSelection {
+    const resolved = new Selection(this.name, this) as ResolvedSelection;
     if (typeof this.boardChoices === 'string') throw Error("not impl");
     if (typeof this.prompt === 'function') resolved.prompt = this.prompt(args);
     if (typeof this.min === 'function') resolved.min = this.min(args)
@@ -286,7 +286,7 @@ export default class Selection<P extends Player> {
     return resolved;
   }
 
-  isPossible(this: ResolvedSelection<P>): boolean {
+  isPossible(this: ResolvedSelection): boolean {
     if (this.type === 'choices' && this.choices) return this.choices.length > 0
 
     const isInBounds = this.max !== undefined ? (this.min ?? 1) <= this.max : true;
@@ -296,7 +296,7 @@ export default class Selection<P extends Player> {
     return true;
   }
 
-  isForced(this: ResolvedSelection<P>): Argument<P> | undefined {
+  isForced(this: ResolvedSelection): Argument | undefined {
     if (this.skipIf === 'never') return;
     if (this.type === 'button') {
       return this.value;
@@ -313,13 +313,13 @@ export default class Selection<P extends Player> {
     }
   }
 
-  overrideOptions(this: ResolvedSelection<P>, options: SingleArgument<P>[]) {
+  overrideOptions(this: ResolvedSelection, options: SingleArgument[]) {
     if (this.type === 'board') {
-      this.boardChoices = options as GameElement<P>[];
+      this.boardChoices = options as GameElement[];
     } else if (this.isLabeledChoice()) {
-      this.choices = (this.choices as { label: string, choice: SingleArgument<P> }[]).filter(c => options.includes(c.choice));
+      this.choices = (this.choices as { label: string, choice: SingleArgument }[]).filter(c => options.includes(c.choice));
     } else {
-      this.choices = options as GameElement<P>[];
+      this.choices = options as GameElement[];
     }
   }
 

@@ -18,9 +18,9 @@ chai.use(spies);
 const { expect } = chai;
 
 describe('Game', () => {
-  let game: Game<Player>;
+  let game: Game;
 
-  const players = new PlayerCollection<Player>;
+  const players = new PlayerCollection;
   players.className = Player;
   players.addPlayer({
     id: 'joe',
@@ -137,9 +137,9 @@ describe('Game', () => {
   });
 
   it('preserves serializable attributes from json', () => {
-    class Country extends Space<Player> {
+    class Country extends Space<Game> {
       rival: Country;
-      general: Piece<Player>;
+      general: Piece<Game>;
     }
     game._ctx.classRegistry = [Space, Piece, GameElement, Country];
 
@@ -156,10 +156,10 @@ describe('Game', () => {
   });
 
   it('handles cyclical serializable attributes', () => {
-    class Country extends Space<Player> {
+    class Country extends Space<Game> {
       general?: General;
     }
-    class General extends Piece<Player> {
+    class General extends Piece<Game> {
       country?: Country;
     }
     game._ctx.classRegistry = [Space, Piece, GameElement, Country, General];
@@ -220,7 +220,7 @@ describe('Game', () => {
   });
 
   describe("Element subclasses", () => {
-    class Card extends Piece<Player> {
+    class Card extends Piece<Game> {
       suit: string;
       pip: number = 1;
       flipped?: boolean = false;
@@ -686,7 +686,7 @@ describe('Game', () => {
   });
 
   describe('grids', () => {
-    class Cell extends Space<Player> { color: string }
+    class Cell extends Space<Game> { color: string }
 
     it('creates squares', () => {
       game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
@@ -1079,7 +1079,7 @@ describe('Game', () => {
     });
 
     it('specificity', () => {
-      class Country extends Space<Player> { }
+      class Country extends Space<Game> { }
       game = new Game({ classRegistry: [Space, Piece, GameElement, Country] });
 
       const spaces = game.createMany(4, Space, 'space');
@@ -1202,8 +1202,8 @@ describe('Game', () => {
   });
 
   describe('shapes', () => {
-    let p1: Piece<Player>;
-    let p2: Piece<Player>;
+    let p1: Piece<Game>;
+    let p2: Piece<Game>;
 
     beforeEach(() => {
       p1 = game.create(Piece, 'p1');

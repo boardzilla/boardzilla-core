@@ -11,7 +11,6 @@ import classnames from 'classnames';
 
 import type { UIMove } from '../lib.js';
 import type { Argument } from '../../action/action.js';
-import type { Player } from '../../player/index.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
@@ -24,7 +23,7 @@ export default () => {
   const player = gameManager.players.atPosition(position);
   if (!player) return null;
 
-  const handleSubmitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => {
+  const handleSubmitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument>) => {
     clickAudio.current?.play();
     clearMove();
     selectMove(pendingMove, args);

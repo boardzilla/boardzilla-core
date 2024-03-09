@@ -1,5 +1,4 @@
 import {
-  Player,
   Game,
   SetupFunction,
   times,
@@ -17,15 +16,15 @@ declare global {
   }
 }
 
-class TestRunnerPlayer<P extends Player, B extends Game> {
-  runner: TestRunner<P, B>
+class TestRunnerPlayer<B extends Game> {
+  runner: TestRunner<B>
   store: ReturnType<typeof createGameStore>
-  playerAttrs: PlayerAttributes<P>
-  player: P
+  playerAttrs: PlayerAttributes
+  player: NonNullable<B['player']>
   game: B
   position: number
 
-  constructor(runner: TestRunner<P, B>, position: number, store: ReturnType<typeof createGameStore>, playerAttrs: PlayerAttributes<P>, game: B) {
+  constructor(runner: TestRunner<B>, position: number, store: ReturnType<typeof createGameStore>, playerAttrs: PlayerAttributes, game: B) {
     this.runner = runner
     this.position = position
     this.store = store
@@ -33,7 +32,7 @@ class TestRunnerPlayer<P extends Player, B extends Game> {
     this.game = game
   }
 
-  move(name: string, args: Record<string, Argument<Player>>) {
+  move(name: string, args: Record<string, Argument>) {
     if (!this.runner.server.state) throw Error("Must call TestRunner#start first");
     if (this.runner.server.state!.game.phase === 'finished') throw Error("Cannot take a move on a finished game");
     if (!this.runner.server.state!.game.currentPlayers.includes(this.position)) throw Error("This player cannot take a move");
@@ -50,23 +49,23 @@ class TestRunnerPlayer<P extends Player, B extends Game> {
   }
 
   actions() {
-    const pendingMoves = this.game.gameManager.getPendingMoves(this.game.gameManager.players[this.position - 1]);
+    const pendingMoves = this.game._ctx.gameManager.getPendingMoves(this.game._ctx.gameManager.players[this.position - 1]);
     if (!pendingMoves) return [];
     return pendingMoves.moves.map(m => m.name);
   }
 }
 
-export class TestRunner<P extends Player, B extends Game> {
+export class TestRunner<B extends Game> {
   server: {
-    interface: GameInterface<Player>;
-    state?: GameUpdate<Player>;
-    gameManager: GameManager<P, B>;
+    interface: GameInterface;
+    state?: GameUpdate;
+    gameManager: GameManager<B>;
     game: B
   };
 
   currentPosition: number = 1;
 
-  players: TestRunnerPlayer<P, B>[]
+  players: TestRunnerPlayer<B>[]
 
   constructor(private setup: SetupFunction) {
     const iface = createInterface(setup)
@@ -96,7 +95,7 @@ export class TestRunner<P extends Player, B extends Game> {
   start({players, settings}: {
     players: number,
     settings: Record<string, any>
-  }): TestRunnerPlayer<P, B>[] {
+  }): TestRunnerPlayer<B>[] {
     const playerAttrs = times(players, p => ({
       id: String(p),
       name: String(p),
@@ -117,15 +116,15 @@ export class TestRunner<P extends Player, B extends Game> {
       const store = createGameStore()
       const {setSetup, gameManager} = store.getState();
       setSetup(this.setup);
-      return new TestRunnerPlayer(this, i + 1, store, p as unknown as PlayerAttributes<P>, gameManager.game as B)
+      return new TestRunnerPlayer(this, i + 1, store, p as unknown as PlayerAttributes, gameManager.game as B)
     });
     this.updatePlayers(); // initial
     return this.players
   }
 
   getCurrentGame() {
-    this.server.gameManager = globalThis.window.serverGameManager as GameManager<P, B>;
-    this.server.game = this.server.gameManager.game;
+    this.server.gameManager = globalThis.window.serverGameManager as GameManager<B>;
+    this.server.game = this.server.gameManager.game as B;
   }
 
   updatePlayers() {
@@ -152,7 +151,7 @@ export class TestRunner<P extends Player, B extends Game> {
       }
       const { gameManager } = player.store.getState();
       player.game = gameManager.game as B;
-      player.player = gameManager.players.atPosition(player.position) as P;
+      player.player = gameManager.players.atPosition(player.position);
     }
   }
 }

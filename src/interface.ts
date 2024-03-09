@@ -4,21 +4,20 @@ import { colors } from './index.js';
 import random from 'random-seed';
 
 import type { ElementJSON } from './board/element.js';
-import type Game from './board/game.js';
 import type { default as GameManager, PlayerAttributes, Message, SerializedMove } from './game-manager.js';
 import type Player from './player/player.js';
 import type { FlowBranchJSON } from './flow/flow.js';
 import type { SetupFunction } from './index.js';
 import type { SerializedArg } from './action/utils.js';
 
-export type SetupState<P extends Player> = {
-  players: (PlayerAttributes<P> & Record<string, any>)[],
+export type SetupState = {
+  players: (PlayerAttributes & Record<string, any>)[],
   settings: Record<string, any>,
   rseed: string,
 }
 
-export type GameState<P extends Player> = {
-  players: PlayerAttributes<P>[],
+export type GameState = {
+  players: PlayerAttributes[],
   settings: Record<string, any>,
   position: FlowBranchJSON[],
   board: ElementJSON[],
@@ -28,40 +27,40 @@ export type GameState<P extends Player> = {
   announcements: string[],
 }
 
-type GameStartedState<P extends Player> = {
+type GameStartedState = {
   phase: 'started',
   currentPlayers: number[],
-  state: GameState<P>,
+  state: GameState,
 }
 
-type GameFinishedState<P extends Player> = {
+type GameFinishedState = {
   phase: 'finished',
   winners: number[],
-  state: GameState<P>,
+  state: GameState,
 }
 
-export type PlayerState<P extends Player> = {
+export type PlayerState = {
   position: number
-  state: GameState<P> | GameState<P>[] // Game state, scrubbed
+  state: GameState | GameState[] // Game state, scrubbed
   summary?: string
   score?: number
 }
 
-export type GameUpdate<P extends Player> = {
-  game: GameStartedState<P> | GameFinishedState<P>
-  players: PlayerState<P>[]
+export type GameUpdate = {
+  game: GameStartedState | GameFinishedState
+  players: PlayerState[]
   messages: Message[]
 }
 
-export type GameInterface<P extends Player> = {
-  initialState: (state: SetupState<P>, rseed: string) => GameUpdate<P>
+export type GameInterface = {
+  initialState: (state: SetupState, rseed: string) => GameUpdate
   processMove: (
-    previousState: GameStartedState<P>,
+    previousState: GameStartedState,
     move: {
       position: number
       data: SerializedMove
     },
-  ) => GameUpdate<P>
+  ) => GameUpdate
   seatPlayer(players: Player[], seatCount: number): {position: number, color: string, settings: any} | null
 }
 
@@ -75,16 +74,16 @@ function advanceRseed(rseed?: string) {
   return rseed;
 }
 
-function cacheGameOnWindow(game: GameManager, update: GameUpdate<Player>) {
+function cacheGameOnWindow(game: GameManager, update: GameUpdate) {
   // @ts-ignore
   if (globalThis.window) window.serverGameManager = game;
   // @ts-ignore
   if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
 }
 
-export const createInterface = (setup: SetupFunction<Player, Game<Player>>): GameInterface<Player> => {
+export const createInterface = (setup: SetupFunction): GameInterface => {
   return {
-    initialState: (state: SetupState<Player>): GameUpdate<Player> => {
+    initialState: (state: SetupState): GameUpdate => {
       if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev
         let fixedRseed = sessionStorage.getItem('rseed') as string;
         if (!fixedRseed) {
@@ -101,14 +100,14 @@ export const createInterface = (setup: SetupFunction<Player, Game<Player>>): Gam
       return update;
     },
     processMove: (
-      previousState: GameStartedState<Player>,
+      previousState: GameStartedState,
       move: {
         position: number,
         data: SerializedMove | SerializedMove[]
       },
-    ): GameUpdate<Player> => {
+    ): GameUpdate => {
       //console.time('processMove');
-      let cachedGame: GameManager<Player, Game<Player>> | undefined = undefined;
+      let cachedGame: GameManager | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.serverGame && window.lastGame > new Date() - 20 && window.json === JSON.stringify(previousState)) cachedGame = window.serverGameManager;
       const rseed = advanceRseed(cachedGame?.rseed || previousState.state.rseed);

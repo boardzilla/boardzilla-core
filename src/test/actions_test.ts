@@ -213,10 +213,10 @@ describe('Actions', () => {
   });
 
   describe('getPendingMoves with skip strategies', () => {
-    let testAction: Action<any, {r: string, n: number}>;
+    let testAction: Action<{r: string, n: number}>;
     beforeEach(() => {
       testAction = new Action({ prompt: 'p' })
-        .chooseFrom('r', [{ label: 'Oil', choice: 'oil' }, { label: 'Garbage', choice: 'garbage' }])
+        .chooseFrom('r', [{ label: 'Oil', choice: 'oil' }])
         .chooseNumber('n', {
           max: ({ r }) => r === 'oil' ? 3 : 1
         })
@@ -281,7 +281,7 @@ describe('Actions', () => {
   });
 
   describe('validation rules', () => {
-    let testAction: Action<any, {r: string, n: number}>;
+    let testAction: Action<{r: string, n: number}>;
     beforeEach(() => {
       testAction = new Action({ prompt: 'p' })
         .chooseFrom(

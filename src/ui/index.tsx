@@ -5,7 +5,6 @@ import { shallow } from 'zustand/shallow';
 import Main from './Main.js'
 import GameManager from '../game-manager.js'
 import { Game, GameElement, Piece } from '../board/index.js'
-import Player from '../player/player.js'
 import {
   updateSelections,
   UIMove,
@@ -44,18 +43,18 @@ export type GameStore = {
   setUserID: (userID: string) => void;
   dev?: boolean;
   setDev: (dev?: boolean) => void;
-  setup?: SetupFunction<Player, Game<Player>>;
-  setSetup: (s: SetupFunction<Player, Game<Player>>) => void;
-  gameManager: GameManager<Player, Game<Player>>;
+  setup?: SetupFunction;
+  setSetup: (s: SetupFunction) => void;
+  gameManager: GameManager;
   isMobile: boolean;
   boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with gameManager.sequence
-  updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}, readOnly?: boolean) => void;
+  updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState}, readOnly?: boolean) => void;
   position?: number; // this player
   move?: UIMove; // move in progress
   cancellable: boolean;
-  selectMove: (move?: UIMove, args?: Record<string, Argument<Player>>) => void; // commit the choice and find new choices or process the choice
+  selectMove: (move?: UIMove, args?: Record<string, Argument>) => void; // commit the choice and find new choices or process the choice
   clearMove: () => void; // clear all move inputs
-  uncommittedArgs: Record<string, Argument<Player>>; // all current args that are submittable, including uncommitted board selections
+  uncommittedArgs: Record<string, Argument>; // all current args that are submittable, including uncommitted board selections
   controls?: {
     style: React.CSSProperties;
     name: string;
@@ -75,11 +74,11 @@ export type GameStore = {
     clickMoves: UIMove[];
     dragMoves: {
       move: UIMove;
-      drag: Selection<Player> | ResolvedSelection<Player>;
+      drag: Selection | ResolvedSelection;
     }[];
     error?: string;
   }>; // pending moves on board
-  disambiguateElement?: { element: GameElement<Player>, moves: UIMove[] };
+  disambiguateElement?: { element: GameElement, moves: UIMove[] };
   selected?: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   selectElement: (moves: UIMove[], element: GameElement) => void;
   automove?: number;
@@ -106,10 +105,10 @@ export type GameStore = {
   setCurrentDrop: (el?: GameElement) => void;
   placement?: { // placing a piece inside a grid as part of the current move
     selected?: { row: number, column: number }; // player indicated choice, ready for validation/confirmation
-    piece: Piece; // temporary ghost piece
+    piece: Piece<Game> ; // temporary ghost piece
     invalid?: boolean
     into: GameElement;
-    layout: Exclude<GameElement['_ui']['computedLayouts'], undefined>[number];
+    layout: NonNullable<GameElement['_ui']['computedLayouts']>[number];
     rotationChoices?: number[];
   };
   setPlacement: (placement: {column?: number, row?: number, rotation?: number}) => void; // select placement. not committed, analagous to input state in a controlled form
@@ -127,7 +126,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   setUserID: userID => set({ userID }),
   setDev: dev => set({ dev }),
   setSetup: setup => set({ setup }),
-  gameManager: new GameManager(Player, Game),
+  gameManager: new GameManager(Game),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
   boardJSON: [],
   updateState: (update, readOnly=false) => set(s => {
@@ -204,7 +203,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   }),
 
   // pendingMove we're trying to complete, args are the ones we're committing to, pass no move/args for move cancellation
-  selectMove: (pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => set(s => {
+  selectMove: (pendingMove?: UIMove, args?: Record<string, Argument>) => set(s => {
     let state: GameStore = { ...s, cancellable: true };
     if (pendingMove) {
       args = { ...pendingMove.args, ...args };
@@ -453,16 +452,16 @@ export type SetupComponentProps = {
  *
  * @category UI
  */
-export const render = <P extends Player, B extends Game>(setup: SetupFunction<P, B>, options: {
+export const render = <B extends Game>(setup: SetupFunction<B>, options: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize,
-  layout?: (game: B, player: P, boardSize: string) => void,
+  layout?: (game: B, player: NonNullable<B['player']>, boardSize: string) => void,
   announcements?: Record<string, (game: B) => JSX.Element>
   infoModals?: {title: string, modal: (game: B) => JSX.Element}[]
 }): void => {
   const { settings, boardSizes, layout, announcements, infoModals } = options;
   const state = gameStore.getState();
-  const setupGame: SetupFunction = state => {
+  const setupGame: SetupFunction<B> = state => {
     const gameManager = setup(state);
     gameManager.game._ui.boardSizes = boardSizes;
     gameManager.game._ui.setupLayout = layout;

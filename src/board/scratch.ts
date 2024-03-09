@@ -36,7 +36,7 @@ export type LayoutAttributes<T extends GameElement> = {
 
 export type ElementUI<T extends GameElement> = {
   layouts: {
-    applyTo: ElementClass<GameElement<T['game']>> | GameElement | ElementCollection<GameElement> | string,
+    applyTo: ElementClass<GameElement> | GameElement | ElementCollection<GameElement> | string,
     attributes: LayoutAttributes<T>
   }[],
   appearance: {
@@ -50,7 +50,7 @@ export type ElementUI<T extends GameElement> = {
       style?: 'solid' | 'double',
       color?: string,
       fill?: string,
-      label?: ({distance, to, from}: {distance: number, to: Space, from: Space }) => React.ReactNode,
+      label?: ({distance, to, from}: {distance: number, to: Space<Game>, from: Space<Game> }) => React.ReactNode,
       labelScale?: number,
     },
   },
@@ -84,11 +84,11 @@ export type ElementAttributes<T extends GameElement> =
 export type ElementContext = {
   // gameManager: GameManager<B>;
   top: GameElement;
-  namedSpaces: Record<string, Space>
+  namedSpaces: Record<string, Space<Game>>
   uniqueNames: Record<string, boolean>
   removed: GameElement;
   sequence: number;
-  player?: Player;
+  player: Player;
   classRegistry: ElementClass<GameElement>[];
   moves: Record<string, string>;
   trackMovement: boolean;
@@ -107,12 +107,12 @@ export type PlayerAttributes<T extends Player = Player> = {
   ]: InstanceType<{new(...args: any[]): T}>[K]
 }
 
-class Player {
+export class Player<P extends Player<P, B> = any, B extends Game<P, B> = any> {
   name: string;
-  game: Game
+  game: B;
 }
 
-class PlayerCollection<P extends Player> extends Array<P> {
+export class PlayerCollection<P extends Player = Player> extends Array<P> {
   game: Game
   className: {new(...a: any[]): P};
   addPlayer(attrs: any) {
@@ -125,8 +125,9 @@ class PlayerCollection<P extends Player> extends Array<P> {
   }
 }
 
-class GameElement<B extends Game = Game> {
+export class GameElement<B extends Game = Game> {
   game: B
+  player?: B['player']
   _ctx: ElementContext;
   _t: {
     children: ElementCollection<GameElement>,
@@ -134,7 +135,6 @@ class GameElement<B extends Game = Game> {
     order?: 'normal' | 'stacking',
   }
   name: string;
-  space: Space = new Space<B>({});
   static isGameElement = true;
 
   constructor(ctx: Partial<ElementContext>) {
@@ -167,7 +167,7 @@ class GameElement<B extends Game = Game> {
         delete this._ctx.namedSpaces[name];
         this._ctx.uniqueNames[name] = false
       } else {
-        this._ctx.namedSpaces[name] = el as unknown as Space<B>;
+        this._ctx.namedSpaces[name] = el as unknown as Space<Game>;
         this._ctx.uniqueNames[name] = true;
       }
     }
@@ -220,12 +220,15 @@ class GameElement<B extends Game = Game> {
   }
 }
 
-class Space<B extends Game = Game> extends GameElement<B> {
+export class Space<B extends Game> extends GameElement<B> {
 }
 
-class Game<P extends Player = Player> extends Space {
-  player: P
-  pile: GameElement;
+export class Piece<B extends Game> extends GameElement<B> {
+}
+
+export class Game<P extends Player<P, B> = any, B extends Game<P, B> = any> extends Space<B> {
+  player?: P;
+  pile: GameElement<B>;
   players: PlayerCollection<P> = new PlayerCollection<P>;
 
   constructor() {
@@ -233,5 +236,18 @@ class Game<P extends Player = Player> extends Space {
   }
 }
 
-export default class ElementCollection<T extends GameElement> extends Array<T> {
+export class ElementCollection<T extends GameElement> extends Array<T> {
 }
+
+class MyPlayer extends Player<MyPlayer, MyGame> {
+}
+
+class MyGame extends Game<MyPlayer, MyGame> {
+}
+
+class MySpace extends Space<MyGame> {
+};
+
+const game = new MyGame()
+
+const s = game.create(Space , '')

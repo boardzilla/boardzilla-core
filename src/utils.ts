@@ -13,7 +13,7 @@ export const shuffleArray = (array: any[], random: () => number) => {
 export const times = <T>(n: number, fn: (n: number) => T): T[] => Array.from(Array(n)).map((_, i) => fn(i + 1));
 export const range = (min: number, max: number, step = 1) => times(Math.floor((max - min) / step) + 1, i => (i - 1) * step + min);
 
-export const n = <P extends Player = Player>(message: string, args?: Record<string, Argument<P>>, escaped: boolean = false) => {
+export const n = (message: string, args?: Record<string, Argument>, escaped: boolean = false) => {
   Object.entries(args || {}).forEach(([k, v]) => {
     message = message.replace(new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`), escaped ? escapeArgument(v) : v.toString());
   })

@@ -2,12 +2,11 @@ import React from 'react';
 import { gameStore } from '../../index.js';
 import ActionForm from './ActionForm.js';
 
-import type { Player } from '../../../player/index.js';
 import type { UIMove } from '../../lib.js';
 import type { Argument } from '../../../action/action.js';
 
 const PlayerControls = ({onSubmit}: {
-  onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
+  onSubmit: (move?: UIMove, args?: Record<string, Argument>) => void,
 }) => {
   const [position, controls, boardPrompt, error, disambiguateElement, cancellable] = gameStore(s => [s.position, s.controls, s.boardPrompt, s.error, s.disambiguateElement, s.cancellable]);
 

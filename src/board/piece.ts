@@ -2,13 +2,12 @@ import GameElement from './element.js'
 import Space from './space.js'
 
 import type Game from './game.js'
-import type Player from '../player/player.js';
 
 /**
  * Pieces are game elements that can move during play
  * @category Board
  */
-export default class Piece<P extends Player<P, B> = any, B extends Game<P, B> = any> extends GameElement<P, B> {
+export default class Piece<B extends Game> extends GameElement<B> {
 
   /**
    * Move this piece into another element. This triggers any {@link
@@ -32,7 +31,7 @@ export default class Piece<P extends Player<P, B> = any, B extends Game<P, B> = 
     if (options?.fromBottom !== undefined) pos = to._t.children.length - options.fromBottom;
     const previousParent = this._t.parent;
     const position = this._t.parent!._t.children.indexOf(this);
-    if (this.hasChangedParent()) this.game.addDelay();
+    // if (this.hasChangedParent()) this.game.addDelay();
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);

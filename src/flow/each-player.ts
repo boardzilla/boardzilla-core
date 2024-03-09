@@ -4,7 +4,7 @@ import { serializeSingleArg, deserializeSingleArg } from '../action/utils.js';
 
 import type { FlowArguments, FlowDefinition } from './flow.js';
 
-export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
+export default class EachPlayer<P extends Player> extends ForLoop<P> {
   continueUntil?: (p: P) => boolean;
   turns?: number;
 
@@ -14,15 +14,15 @@ export default class EachPlayer<P extends Player> extends ForLoop<P, P> {
     nextPlayer?: (p: P) => P,
     turns?: number,
     continueUntil?: (p: P) => boolean,
-    do: FlowDefinition<P>,
+    do: FlowDefinition,
   }) {
     let initial: (r: Record<any, any>) => P
     if (startingPlayer) {
       initial = () => startingPlayer instanceof Function ? startingPlayer(this.flowStepArgs()) : startingPlayer
     } else {
-      initial = () => this.gameManager.players[0];
+      initial = () => this.gameManager.players[0] as P;
     }
-    let next = (player: P) => (nextPlayer ? nextPlayer(player) : this.gameManager.players.after(player));
+    let next = (player: P) => (nextPlayer ? nextPlayer(player) : this.gameManager.players.after(player)) as P;
 
     super({
       name,

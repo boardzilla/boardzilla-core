@@ -1,13 +1,12 @@
 import Piece from "./piece.js";
 
 import type Game from './game.js'
-import type Player from '../player/player.js';
 
 /**
  * Specialized piece for represnting 6-sided dice
  * @category Board
  */
-export default class Die<P extends Player<P, B> = any, B extends Game<P, B> = any> extends Piece<P, B> {
+export default class Die<B extends Game = Game> extends Piece<B> {
   sides: number = 6;
 
   /**
@@ -21,6 +20,6 @@ export default class Die<P extends Player<P, B> = any, B extends Game<P, B> = an
    */
   roll() {
     this.current = Math.ceil((this._ctx.gameManager?.random || Math.random)() * this.sides);
-    this.rollSequence = this.gameManager.sequence;
+    this.rollSequence = this._ctx.gameManager.sequence;
   }
 }
