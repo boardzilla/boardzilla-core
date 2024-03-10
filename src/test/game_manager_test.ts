@@ -687,6 +687,7 @@ describe('GameManager', () => {
   });
 
   describe('action followups', () => {
+    const actionSpy = chai.spy();
     beforeEach(() => {
       gameManager = new GameManager(TestPlayer, TestGame, [ Card ]);
       game = gameManager.game;
@@ -721,28 +722,34 @@ describe('GameManager', () => {
       game.defineFlow(loop(eachPlayer({
         name: 'player',
         do: playerActions({
-          actions: ['takeOne']
+          actions: [{name: 'takeOne', do: actionSpy}]
         }),
       })));
     });
 
-    it('allows followup', () => {
+    it('allows followup do', () => {
       gameManager.game.tokens = 11;
       gameManager.start();
       gameManager.play();
 
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
       gameManager.play();
+      expect(actionSpy).to.have.been.called.once
       expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(0);
       expect(gameManager.allowedActions(gameManager.players[1]).actions.length).to.equal(1);
 
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
       gameManager.play();
+      expect(actionSpy).to.have.been.called.once
       expect(gameManager.allowedActions(gameManager.players[1]).actions.length).to.equal(1);
       expect(gameManager.allowedActions(gameManager.players[1]).actions[0].name).to.equal('declare');
       expect(gameManager.allowedActions(gameManager.players[1]).actions[0].player).to.equal(gameManager.players[1]);
       expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(0);
       expect(gameManager.allowedActions(gameManager.players[1]).actions[0].prompt).to.equal('follow');
+
+      gameManager.processMove({ name: 'declare', args: {d: 'follow'}, player: gameManager.players[1] });
+      gameManager.play();
+      expect(actionSpy).to.have.been.called.twice
     });
 
     it('allows followup for other player', () => {
@@ -750,15 +757,19 @@ describe('GameManager', () => {
       gameManager.start();
       gameManager.play();
 
+      expect(gameManager.players.currentPosition).to.deep.equal([1]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
       gameManager.play();
+      expect(gameManager.players.currentPosition).to.deep.equal([2]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
       gameManager.play();
+      expect(gameManager.players.currentPosition).to.deep.equal([3]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[2] });
       gameManager.play();
+      expect(gameManager.players.currentPosition).to.deep.equal([2]);
       expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(0);
-      expect(gameManager.allowedActions(gameManager.players[2]).actions.length).to.equal(0);
       expect(gameManager.allowedActions(gameManager.players[1]).actions.length).to.equal(1);
+      expect(gameManager.allowedActions(gameManager.players[2]).actions.length).to.equal(0);
     });
 
     it('multi followup', () => {

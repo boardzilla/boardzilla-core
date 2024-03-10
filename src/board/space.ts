@@ -33,6 +33,7 @@ export default class Space<P extends Player<P, B> = any, B extends Game<P, B> = 
   }
 
   addEventHandler<T extends GameElement>(type: keyof Space['_eventHandlers'], handler: ElementEventHandler<T>) {
+    if (this._ctx.gameManager?.phase === 'started') throw Error('Event handlers cannot be added once game has started.');
     this._eventHandlers[type].push(handler);
   }
 
