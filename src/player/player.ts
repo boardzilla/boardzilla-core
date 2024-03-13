@@ -2,7 +2,7 @@ import { serializeObject } from '../action/utils.js';
 
 import type PlayerCollection from './collection.js';
 import type GameElement from '../board/element.js';
-import type { default as Game, BaseGame } from '../board/game.js';
+import type { BaseGame } from '../board/game.js';
 import type { ElementClass } from '../board/element.js';
 import type { ElementFinder, default as ElementCollection } from '../board/element-collection.js';
 
@@ -34,7 +34,7 @@ export interface BasePlayer {
  * is passed to an action for the player taking that action.
  * @category Core
  */
-export default class Player<B extends Game<B, P> = any, P extends BasePlayer = BasePlayer> implements BasePlayer {
+export default class Player<B extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> implements BasePlayer {
   /**
    * A player's unique user id
    */
@@ -86,16 +86,16 @@ export default class Player<B extends Game<B, P> = any, P extends BasePlayer = B
   /**
    * Returns an array of all other players.
    */
-  others(this: P) {
-    return Array.from(this._players).filter(p => p !== this);
+  others(): P[] {
+    return Array.from(this._players).filter(p => p as Player !== this);
   }
 
   /**
    * Returns the other player. Only allowed in 2 player games
    */
-  other(this: P) {
+  other(): P {
     if (this._players.length !== 2) throw Error('Can only use `other` for 2 player games');
-    return this._players.find(p => p !== this)!;
+    return this._players.find(p => p as Player !== this)!;
   }
 
   /**
