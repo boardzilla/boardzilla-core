@@ -1,14 +1,12 @@
-import {
-  Game,
-  SetupFunction,
-  times,
-} from './index.js';
+import Game from './board/game.js';
+import { createGameStore } from './ui/store.js';
+import { createInterface } from './interface.js';
+import { times } from './utils.js';
+
+import type { GameInterface, GameUpdate } from './interface.js';
+import type { Argument } from './action/action.js';
+import type { SetupFunction } from './index.js';
 import type { default as GameManager, PlayerAttributes } from './game-manager.js';
-
-import { createGameStore } from './ui/index.js';
-
-import { GameInterface, GameUpdate, createInterface } from './interface.js';
-import { Argument } from './action/action.js';
 
 declare global {
   interface Window {

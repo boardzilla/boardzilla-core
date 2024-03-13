@@ -2,7 +2,8 @@ import {
   Game,
   Player,
   Space,
-  Piece
+  Piece,
+  PieceGrid,
 } from '../../index.js';
 
 export class TestPlayer extends Player<TestGame, TestPlayer> {
@@ -17,9 +18,12 @@ export class Token extends Piece<TestGame> {
   color: 'red' | 'blue';
 }
 
+let tiles: PieceGrid<Game>;
+
 const gameFactory = (creator: (game: TestGame) => void) => (game: TestGame) => {
   const { playerActions, loop, eachPlayer } = game.flowCommands;
-  game.registerClasses(Token);
+  game.registerClasses(Token, PieceGrid);
+  tiles = game.create(PieceGrid, 'tiles');
 
   for (const player of game.players) {
     const mat = game.create(Space, 'mat', { player });
@@ -112,7 +116,7 @@ export const starterGameWithTiles = gameFactory(game => {
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!
+      'token', tiles
     ),
   });
 });
@@ -124,7 +128,7 @@ export const starterGameWithTilesConfirm = gameFactory(game => {
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!,
+      'token', tiles,
       { confirm: "confirm placement?" }
     ),
   });
@@ -137,7 +141,7 @@ export const starterGameWithTilesValidate = gameFactory(game => {
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!,
+      'token', tiles,
       { validate: ({ token }) => (token.column + token.row) % 2 !== 0 ? 'must be black square' : undefined, }
     ),
   });
@@ -150,7 +154,7 @@ export const starterGameWithTilesCompound = gameFactory(game => {
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!,
+      'token', tiles,
     ).chooseFrom(
       'a', [1,2]
     ),

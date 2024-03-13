@@ -6,7 +6,7 @@ import {
   times,
   createGame,
 } from '../index.js';
-import { createGameStore } from '../ui/index.js';
+import { createGameStore } from '../ui/store.js';
 
 import type { SerializedMove } from '../game-manager.js';
 
@@ -178,10 +178,11 @@ describe('UI', () => {
     expect(token.row).to.be.undefined;
 
     state.selectPlacement({ column: 2, row: 2 });
+
     expect(history.length).to.equal(1);
     expect(history[0].name).to.equal('take');
     expect(history[0].args.__placement__).to.deep.equal([2, 2]);
-    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1);
+    expect(state.gameManager.game.first('tiles')!.all(Token).length).to.equal(1);
     expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(3);
   });
 
@@ -206,7 +207,7 @@ describe('UI', () => {
     expect(state.pendingMoves?.[0].requireExplicitSubmit).to.be.true;
     expect(token.column).to.equal(2);
     expect(token.row).to.equal(2);
-    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1); // ghost piece
+    expect(state.gameManager.game.first('tiles')!.all(Token).length).to.equal(1); // ghost piece
     expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(4);
   });
 
@@ -258,7 +259,7 @@ describe('UI', () => {
 
     state.selectMove(state.pendingMoves?.[0], {a: 1});
     expect(history.length).to.equal(1);
-    expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1);
+    expect(state.gameManager.game.first('tiles')!.all(Token).length).to.equal(1);
     expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(3);
   });
 });

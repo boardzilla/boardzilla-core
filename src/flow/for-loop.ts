@@ -1,4 +1,3 @@
-import type { Player } from '../player/index.js';
 import type { Serializable } from '../action/utils.js';
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
 import WhileLoop from './while-loop.js';

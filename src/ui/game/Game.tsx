@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { gameStore } from '../index.js';
+import { gameStore } from '../store.js';
 
 import Element from './components/Element.js';
 import PlayerControls from './components/PlayerControls.js';

@@ -5,7 +5,6 @@ import {
   cellSizeForArea,
   cellBoxRC,
   getTotalArea,
-  rotateDirection,
 } from './utils.js';
 import { serializeObject, deserializeObject } from '../action/utils.js';
 import random from 'random-seed';
@@ -14,10 +13,10 @@ import type GameManager from '../game-manager.js';
 import type Player from '../player/player.js';
 import type Game from './game.js';
 import type Space from './space.js';
+import type ConnectedSpaceMap from './connected-space-map.js';
 import type { ElementFinder, Sorter } from './element-collection.js';
 import type { Argument } from '../action/action.js';
-
-import type { UndirectedGraph } from 'graphology';
+import type AdjacencySpace from './adjacency-space.js';
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 
@@ -338,7 +337,6 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
     id: number,
     order?: 'normal' | 'stacking',
     was?: string,
-    graph?: UndirectedGraph,
     setId: (id: number) => void,
   } = {
     children: new ElementCollection<GameElement>(),
@@ -360,9 +358,17 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
 
   static isGameElement = true;
 
-  static unserializableAttributes = ['_ctx', '_t', '_ui', '_eventHandlers', 'game', 'pile', 'flowCommands', 'flowGuard', 'players', 'random'];
+  static unserializableAttributes = ['_ctx', '_t', '_ui', 'game'];
 
   static visibleAttributes: string[] | undefined;
+
+  static _baseLayout: LayoutAttributes<GameElement> = {
+    margin: 0,
+    scaling: 'fit',
+    alignment: 'center',
+    gap: 0,
+    direction: 'square'
+  };
 
   /**
    * Do not use the constructor directly. Instead Call {@link
@@ -420,12 +426,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    * provided.
    */
   all<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
-  all(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
-  all<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children.all(GameElement, ...finders);
-    }
+  all(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
+  all(className?: any, ...finders: ElementFinder[]) {
     return this._t.children.all(className, ...finders);
   }
 
@@ -437,12 +439,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   first<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): Gamify<G, F> | undefined;
   first(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  first<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children._finder(GameElement, {limit: 1}, ...finders)[0];
-    }
-    return this._t.children._finder(className, {limit: 1}, ...finders)[0];
+  first(className?: any, ...finders: ElementFinder[]) {
+    return this._t.children.first(className, ...finders);
   }
 
   /**
@@ -457,13 +455,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   firstN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
   firstN(n: number, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
-  firstN<F extends GameElement>(n: number, className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
-    if (typeof n !== 'number') throw Error('first argument must be number of matches');
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children._finder<GameElement>(GameElement, {limit: n}, ...finders);
-    }
-    return this._t.children._finder(className, {limit: n}, ...finders);
+  firstN(n: number, className?: any, ...finders: ElementFinder[]) {
+    return this._t.children.firstN(n, className, ...finders);
   }
 
   /**
@@ -474,12 +467,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   last<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): Gamify<G, F> | undefined;
   last(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  last<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children._finder<GameElement>(GameElement, {limit: 1, order: 'desc'}, ...finders)[0];
-    }
-    return this._t.children._finder(className, {limit: 1, order: 'desc'}, ...finders)[0];
+  last(className?: any, ...finders: ElementFinder[]) {
+    return this._t.children.last(className, ...finders);
   }
 
   /**
@@ -494,12 +483,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   lastN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
   lastN(n: number, className: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
-  lastN<F extends GameElement>(n: number, className: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
-    if (typeof n !== 'number') throw Error('first argument must be number of matches');
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      return this._t.children._finder<GameElement>(GameElement, {limit: n, order: 'desc'}, className, ...finders);
-    }
-    return this._t.children._finder(className, {limit: n, order: 'desc'}, ...finders);
+  lastN(n: number, className: any, ...finders: ElementFinder[]) {
+    return this._t.children.lastN(n, className, ...finders);
   }
 
 
@@ -509,12 +494,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   top<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): Gamify<G, F> | undefined;
   top(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  top<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children._finder<GameElement>(GameElement, {limit: 1}, ...finders)[0];
-    }
-    return this._t.children.all<F>(className, ...finders)[0];
+  top(className?: any, ...finders: ElementFinder[]) {
+    return this._t.children.top(className, ...finders);
   }
 
   /**
@@ -523,13 +504,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   topN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
   topN(n: number, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
-  topN<F extends GameElement>(n: number, className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
-    if (typeof n !== 'number') throw Error('first argument must be number of matches');
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children._finder<GameElement>(GameElement, {limit: n}, ...finders);
-    }
-    return this._t.children._finder(className, {limit: n}, ...finders);
+  topN(n: number, className?: any, ...finders: ElementFinder[]) {
+    return this._t.children.topN(n, className, ...finders);
   }
 
   /**
@@ -538,12 +514,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   bottom<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): Gamify<G, F> | undefined;
   bottom(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  bottom<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children._finder<GameElement>(GameElement, {limit: 1, order: 'desc'}, ...finders)[0];
-    }
-    return this._t.children._finder(className, {limit: 1, order: 'desc'}, ...finders)[0];
+  bottom(className?: any, ...finders: ElementFinder[]) {
+    return this._t.children.bottom(className, ...finders);
   }
 
   /**
@@ -552,13 +524,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   bottomN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
   bottomN(n: number, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
-  bottomN<F extends GameElement>(n: number, className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
-    if (typeof n !== 'number') throw Error('first argument must be number of matches');
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this._t.children._finder<GameElement>(GameElement, {limit: n, order: 'desc'}, ...finders);
-    }
-    return this._t.children._finder(className, {limit: n, order: 'desc'}, ...finders);
+  bottomN(n: number, className?: any, ...finders: ElementFinder[]) {
+    return this._t.children.bottomN(n, className, ...finders);
   }
 
   /**
@@ -568,15 +535,9 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   others<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
   others(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
-  others<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
+  others(className?: any, ...finders: ElementFinder[]) {
     if (!this._t.parent) new ElementCollection();
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      const otherFinder = this._otherFinder(finders);
-      return this._t.parent!._t.children._finder<GameElement>(GameElement, {}, otherFinder, ...finders);
-    }
-    const otherFinder = this._otherFinder(finders);
-    return this._t.parent!._t.children._finder(className, {}, otherFinder, ...finders);
+    return this._t.parent!._t.children.all(className, (el: GameElement) => el !== this, ...finders);
   }
 
   /**
@@ -586,7 +547,7 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    */
   has<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): boolean;
   has(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): boolean;
-  has<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | boolean {
+  has(className?: any, ...finders: ElementFinder[]) {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
       return !!this.first(GameElement, ...finders);
@@ -595,17 +556,26 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
   }
 
   /**
-   * If this element is adjacent to some other element, based on row/column
-   * placement or based on this element having a connection created by
-   * Space#connectTo.
+   * If this element is adjacent to some other element, using the nearest
+   * containing space that has an adjacency map.
    * @category Structure
    */
-  isAdjacentTo(element: GameElement) {
-    if ('isSpace' in this && this._t.parent?._t.graph) {
-      if (this._t.parent!._t.graph.areNeighbors(this._t.id, element._t.id)) return true;
-    }
-    if (this.row === undefined || this.column === undefined) return false;
-    return this._isAdjacentOnGrid(element);
+  isAdjacentTo(element: GameElement): boolean {
+    const graph = this.containerWithProperty('isAdjacent');
+    if (!graph) return false;
+    return (graph as AdjacencySpace<G>).isAdjacent(this, element);
+  }
+
+  /**
+   * Finds the shortest distance between two spaces
+   * @category Structure
+   *
+   * @param element - {@link element} to measure distance to
+   */
+  distanceTo(element: GameElement): number {
+    const graph = this.containerWithProperty('distanceBetween');
+    if (!graph) return Infinity;
+    return (graph as ConnectedSpaceMap<G>).distanceBetween(this, element);
   }
 
   /**
@@ -615,42 +585,25 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    * @category Queries
    */
   adjacencies<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
-  adjacencies(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
-  adjacencies<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection {
-    let classToSearch: ElementClass = GameElement;
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-    } else {
-      classToSearch = className;
-    }
-    if ('isSpace' in this && this._t.parent?._t.graph) {
-      return new ElementCollection(...this._t.parent?._t.graph.mapNeighbors(
-        this._t.id,
-        node => this._t.parent!._t.graph!.getNodeAttribute(node, 'space')
-      ))._finder(classToSearch, { noRecursive: true }, ...finders);
-    }
-    if (this.row === undefined || this.column === undefined || !this._t.parent) return new ElementCollection();
-    return this._t.parent._t.children.
-      filter(c => this._isAdjacentOnGrid(c)).
-      _finder(classToSearch, { noRecursive: true }, ...finders);
+  adjacencies(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
+  adjacencies(className?: any, ...finders: ElementFinder[]) {
+    const graph = this.containerWithProperty('isAdjacent') as AdjacencySpace<G> | undefined;
+    if (!graph) return false;
+    return graph._t.children.filter(c => graph.isAdjacent(this, c)).all(className, ...finders);
   }
 
-  _isAdjacentOnGrid(el: GameElement) {
-    if (!this._size && !el._size) {
-      return el.row !== undefined && el.column !== undefined && (
-        (this.column === el.column && [el.row + 1, el.row - 1].includes(this.row!)) ||
-          (this.row === el.row && [el.column + 1, el.column - 1].includes(this.column!))
-      );
-    }
-    // this should possibly be Piece#isDiagonal
-    // (diagonally &&
-    //   [element.row + 1, element.row - 1].includes(this.row!) &&
-    //   [element.column + 1, element.column - 1].includes(this.column!)
-    // )
-  }
-
-  _otherFinder<T extends GameElement>(_finders: ElementFinder<T>[]): ElementFinder<GameElement> {
-    return (el: T) => el !== (this as GameElement);
+  /**
+   * Finds all spaces connected to this space by a distance no more than
+   * `distance`
+   *
+   * @category Queries
+   */
+  withinDistance<F extends GameElement>(distance: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
+  withinDistance(distance: number, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
+  withinDistance(distance: number, className?: any, ...finders: ElementFinder[]) {
+    const graph = this.containerWithProperty('allWithinDistanceOf');
+    if (!graph) return new ElementCollection();
+    return (graph as ConnectedSpaceMap<G>).allWithinDistanceOf(this, distance, className, ...finders);
   }
 
   /**
@@ -658,12 +611,12 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
    * @category Structure
    * @param order - ordering style
    * - "normal": Elements placed into this element are put at the end of the
-       list (default)
+   *   list (default)
    * - "stacking": Elements placed into this element are put at the beginning of
-       the list. This is prefered for elements that stack. E.g. if a stack of
-       cards has `order` set to `stacking` the {@link first} method will return
-       the last card placed in the stack, rather than the first one placed in
-       the stack.
+   *   the list. This is prefered for elements that stack. E.g. if a stack of
+   *   cards has `order` set to `stacking` the {@link first} method will return
+   *   the last card placed in the stack, rather than the first one placed in
+   *   the stack.
    */
   setOrder(order: typeof this._t.order) {
     this._t.order = order;
@@ -682,6 +635,17 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
     if (this._t.parent) return this._t.parent instanceof className ?
       this._t.parent as T:
       this._t.parent.container(className);
+  }
+
+  /**
+   * Returns this elements containing element that also has a given property.
+   * @category Queries
+   */
+  containerWithProperty(property: string, value?: any): GameElement<G, P> | undefined {
+    const parent = this._t.parent;
+    if (parent) return property in parent && (value === undefined || parent[property as keyof typeof parent] === value) ?
+      parent:
+      parent.containerWithProperty(property, value);
   }
 
   /**
@@ -912,6 +876,7 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
     el.game = this.game;
     el.name = name;
     Object.assign(el, attrs);
+    if ('afterCreation' in el) (el.afterCreation as Function)();
     return el;
   }
 
@@ -1000,16 +965,8 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
     };
   }
 
-  _gridSize() {
-    if (!this._size) return {width: 1, height: 1};
-    if (this.rotation % 180 === 90) return {
-      width: this._size.height,
-      height: this._size.width
-    }
-    return {
-      width: this._size.width,
-      height: this._size.height
-    }
+  _sizeNeededFor(_element: GameElement) {
+    return {width: 1, height: 1};
   }
 
   setShape(...shape: string[]) {
@@ -1034,136 +991,6 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
     }
   }
 
-  isOverlapping(element?: GameElement): boolean {
-    if (!this._t.parent || this.row === undefined || this.column === undefined) return false;
-    if (!element) {
-      const layout = this._t.parent._ui.computedLayouts?.find(l => l?.children.includes(this));
-      const children = layout?.children ?? this._t.parent._t.children;
-      return children.some(c => c !== this && this.isOverlapping(c));
-    }
-    if (element.row === undefined || element.column === undefined) return false;
-    if (!this._size && !element._size) return element.row === this.row && element.column === this.column;
-    if (this.rotation % 90 !== 0 || element.rotation % 90 !== 0) return false; // unsupported to calculate for irregular shapes at non-orthoganal orientations
-    if (!this._size) return (element._cellAt({y: this.row - element.row, x: this.column - element.column}) ?? ' ') !== ' ';
-    if (!element._size) return (this._cellAt({y: element.row - this.row, x: element.column - this.column}) ?? ' ') !== ' ';
-    const gridSize = this._gridSize();
-    const gridSizeEl = element._gridSize();
-    if (
-      element.row >= this.row + gridSize.height ||
-      element.row + gridSizeEl.height <= this.row ||
-      element.column >= this.column + gridSize.width ||
-      element.column + gridSizeEl.width <= this.column
-    ) return false;
-    const size = Math.max(this._size.height, this._size.width);
-    for (let x = 0; x !== size; x += 1) {
-      for (let y = 0; y !== size; y += 1) {
-        if ((this._cellAt({x, y}) ?? ' ') !== ' ' && (element._cellAt({x: x + this.column - element.column, y: y + this.row - element.row}) ?? ' ') !== ' ') {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  adjacenciesWithCells(element?: GameElement): {element: GameElement, from: string, to: string}[] {
-    if (!this._t.parent || this.row === undefined || this.column === undefined) return [];
-    if (!element) {
-      const layout = this._t.parent._ui.computedLayouts?.find(l => l?.children.includes(this));
-      const children = layout?.children ?? this._t.parent._t.children;
-      return children.reduce(
-        (all, c) => all.concat(c !== this ? this.adjacenciesWithCells(c) : []),
-        [] as {element: GameElement, from: string, to: string}[]
-      );
-    }
-    if (element.row === undefined || element.column === undefined || element.rotation % 90 !== 0) return [];
-
-    if (!this._size && !element._size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
-    if (this.rotation % 90 !== 0 || element.rotation % 90 !== 0) return []; // unsupported to calculate for irregular shapes at non-orthoganal orientations
-    if (!this._size) {
-      return Object.values(element._cellsAround({x: this.column - element.column, y: this.row - element.row})).reduce(
-        (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: '.', to: adj}] : []),
-        [] as {element: GameElement, from: string, to: string}[]
-      );
-    }
-    if (!element._size) {
-      return Object.values(this._cellsAround({x: element.column - this.column, y: element.row - this.row})).reduce(
-        (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: adj, to: '.'}] : []),
-        [] as {element: GameElement, from: string, to: string}[]
-      );
-    }
-    const gridSize = this._gridSize();
-    const gridSizeEl = element._gridSize();
-    if (
-      element.row >= this.row + 1 + gridSize.height ||
-      element.row + 1 + gridSizeEl.height <= this.row ||
-      element.column >= this.column + 1 + gridSize.width ||
-      element.column + 1 + gridSizeEl.width <= this.column
-    ) return [];
-    const size = Math.max(this._size.height, this._size.width);
-    const adjacencies = [] as {element: GameElement, from: string, to: string}[];
-    for (let x = 0; x !== size; x += 1) {
-      for (let y = 0; y !== size; y += 1) {
-        const thisCell = this._cellAt({x, y});
-        if (thisCell === undefined || thisCell === ' ') continue;
-        for (const cell of Object.values(element._cellsAround({x: x + this.column - element.column, y: y + this.row - element.row}))) {
-          if (cell !== undefined && cell !== ' ') {
-            adjacencies.push({element, from: thisCell, to: cell});
-          }
-        }
-      }
-    }
-    return adjacencies;
-  }
-
-  adjacenciesWithEdges(element?: GameElement): {element: GameElement, from?: string, to?: string}[] {
-    if (!this._t.parent || this.row === undefined || this.column === undefined || this.rotation % 90 !== 0) return [];
-    if (!element) {
-      const layout = this._t.parent._ui.computedLayouts?.find(l => l?.children.includes(this));
-      const children = layout?.children ?? this._t.parent._t.children;
-      return children.reduce(
-        (all, c) => all.concat(c !== this ? this.adjacenciesWithEdges(c) : []),
-        [] as {element: GameElement, from?: string, to?: string}[]
-      );
-    }
-    if (element.row === undefined || element.column === undefined || element.rotation % 90 !== 0) return [];
-
-    if (!this._size && !element._size) return this.isAdjacentTo(element) ? [{element, from: '.', to: '.'}] : [];
-    if (!this._size) {
-      return (Object.entries(element._cellsAround({x: this.column - element.column, y: this.row - element.row})) as [Direction, string][]).reduce(
-        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: undefined, to: element._size?.edges?.[adj][rotateDirection(dir, 180 - element.rotation)]}] : []),
-        [] as {element: GameElement, from?: string, to?: string}[]
-      );
-    }
-    if (!element._size) {
-      return (Object.entries(this._cellsAround({x: element.column - this.column, y: element.row - this.row})) as [Direction, string][]).reduce(
-        (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{element, from: this._size?.edges?.[adj][rotateDirection(dir, 180 - this.rotation)], to: undefined}] : []),
-        [] as {element: GameElement, from?: string, to?: string}[]
-      );
-    }
-    const gridSize = this._gridSize();
-    const gridSizeEl = element._gridSize();
-    if (
-      element.row >= this.row + 1 + gridSize.height ||
-      element.row + 1 + gridSizeEl.height <= this.row ||
-      element.column >= this.column + 1 + gridSize.width ||
-      element.column + 1 + gridSizeEl.width <= this.column
-    ) return [];
-    const size = Math.max(this._size.height, this._size.width);
-    const adjacencies = [] as {element: GameElement, from?: string, to?: string}[];
-    for (let x = 0; x !== size; x += 1) {
-      for (let y = 0; y !== size; y += 1) {
-        const thisCell = this._cellAt({x, y});
-        if (thisCell === undefined || thisCell === ' ') continue;
-        for (const [dir, cell] of Object.entries(element._cellsAround({x: x + this.column - element.column, y: y + this.row - element.row})) as [Direction, string][]) {
-          if (cell !== undefined && cell !== ' ') {
-            adjacencies.push({element, from: this._size?.edges?.[thisCell][rotateDirection(dir, -this.rotation)], to: element._size?.edges?.[cell][rotateDirection(dir, 180 - element.rotation)]});
-          }
-        }
-      }
-    }
-    return adjacencies;
-  }
-
   /**
    * Whether this element has the given element in its parent hierarchy
    * @category Structure
@@ -1175,7 +1002,7 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
   attributeList<T extends GameElement>(this: T): ElementAttributes<T> {
     let attrs: Record<string, any>;
     ({ ...attrs } = this);
-    for (const attr of GameElement.unserializableAttributes) delete attrs[attr];
+    for (const attr of (this.constructor as typeof GameElement).unserializableAttributes as string[]) delete attrs[attr];
 
     // remove methods
     return Object.fromEntries(Object.entries(attrs).filter(
@@ -1286,13 +1113,7 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
   resetUI() {
     this._ui.layouts = [{
       applyTo: GameElement,
-      attributes: {
-        margin: 0,
-        scaling: 'fit',
-        alignment: 'center',
-        gap: 0,
-        direction: 'square',
-      }
+      attributes: (this.constructor as typeof GameElement)._baseLayout
     }];
     this._ui.appearance = {};
     this._ui.computedStyle = undefined;
@@ -1430,7 +1251,7 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
         // find bounding box for any set positions
         for (let c = 0; c != children.length; c++) {
           const child = children[c];
-          const gridSize = child._gridSize();
+          const gridSize = this._sizeNeededFor(child);
           if (child.column !== undefined && child.row !== undefined && !child._ui.ghost) {
             cells[c] = [child.column, child.row];
             if (min.column === undefined || child.column < min.column) min.column = child.column;
@@ -1580,26 +1401,21 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
 
           // place unpositioned elements
           let c = 0;
-          const unpositioned: GameElement[] = [];
           while (c != children.length) {
             const child = children[c];
             if (child.column !== undefined && child.row !== undefined) {
               c++;
               continue;
             }
-            unpositioned.push(child);
             const cell: [number, number] = [available.x + origin.column! - 1, available.y + origin.row! - 1];
-            child.column = cell[0];
-            child.row = cell[1];
-            const gridSize = child._gridSize();
-            if ((!child._size || (gridSize.width + available.x - 1 <= columns && gridSize.height + available.y - 1 < rows)) && !child.isOverlapping()) {
+            if (cells.every(([x, y]) => x !== cell[0] || y !== cell[1])) {
               cells[c] = cell;
+              if (attributes.sticky) {
+                child.column = cell[0];
+                child.row = cell[1];
+              }
               c++;
-            } else {
-              child.column = undefined;
-              child.row = undefined;
             }
-
             available.x += advance.x;
             available.y += advance.y;
             if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) {
@@ -1607,12 +1423,6 @@ export default class GameElement<G extends Game<G, P> = any, P extends Player<G,
               available.y += carriageReturn.y;
             }
             if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) break;
-          }
-          if (!attributes.sticky) {
-            for (const child of unpositioned) {
-              child.row = undefined;
-              child.column = undefined;
-            }
           }
         }
 

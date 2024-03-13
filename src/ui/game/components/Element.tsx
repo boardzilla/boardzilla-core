@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 import uuid from 'uuid-random';
 import Drawer from './Drawer.js';
 
@@ -14,6 +14,7 @@ import { serialize } from '../../../action/utils.js'
 import type { ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../lib.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
+import type { DirectedGraph } from 'graphology';
 
 const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
@@ -363,7 +364,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
   }
 
-  if (element._ui.appearance.connections && element._t.graph) {
+  if (element._ui.appearance.connections && '_graph' in element) {
     let { thickness, style, color, fill, label, labelScale } = element._ui.appearance.connections;
     if (!thickness) thickness = .1;
     if (!style) style = 'solid';
@@ -374,7 +375,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     let i = 0;
     const lines: React.JSX.Element[] = [];
     const labels: React.JSX.Element[] = [];
-    element._t.graph.forEachEdge((...args) => {
+    (element._graph as DirectedGraph).forEachEdge((...args) => {
       const source = args[4].space as GameElement;
       const target = args[5].space as GameElement;
 

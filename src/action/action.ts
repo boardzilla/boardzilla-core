@@ -1,12 +1,14 @@
 import Selection from './selection.js';
-import { GameElement, Piece, ElementCollection } from '../board/index.js';
+import GameElement from '../board/element.js';
+import Piece from '../board/piece.js';
+import ElementCollection from '../board/element-collection.js';
 import { n } from '../utils.js';
 
 import type {
   ResolvedSelection,
   BoardQueryMulti,
 } from './selection.js';
-import type { Game } from '../board/index.js';
+import type { Game, PieceGrid } from '../board/index.js';
 import type { Player } from '../player/index.js';
 import type { default as GameManager, PendingMove } from '../game-manager.js';
 
@@ -919,7 +921,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
    * })
    * @category Choices
    */
-  placePiece<T extends keyof A & string>(piece: T, into: GameElement, options?: {
+  placePiece<T extends keyof A & string>(piece: T, into: PieceGrid<Game>, options?: {
     prompt?: string | ((args: A) => string),
     confirm?: string | [string, Record<string, Argument> | ((args: A & {[key in T]: { column: number, row: number }}) => Record<string, Argument>) | undefined]
     validate?: ((args: A & {[key in T]: { column: number, row: number }}) => string | boolean | undefined),

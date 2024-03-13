@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 import Element from './Element.js';
 
 const InfoOverlay = ({ setMode }: {

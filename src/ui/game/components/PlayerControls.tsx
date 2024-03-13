@@ -1,5 +1,5 @@
 import React from 'react';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 import ActionForm from './ActionForm.js';
 
 import type { UIMove } from '../../lib.js';

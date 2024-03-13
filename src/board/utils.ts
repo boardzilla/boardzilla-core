@@ -1,25 +1,4 @@
-import { GameElement, ElementCollection } from './index.js';
-
 import type { Box, Vector, Direction } from './element.js';
-
-/**
- * Returns an {@link ElementCollection} by combining a list of {@link
- * GameElement}'s or {@link ElementCollection}'s,
- * @category Flow
- */
-export function union(...queries: (GameElement | ElementCollection | undefined)[]): ElementCollection {
-  let c = new ElementCollection();
-  for (const q of queries) {
-    if (q) {
-      if ('forEach' in q) {
-        q.forEach(e => c.includes(e) || c.push(e));
-      } else if (!c.includes(q)) {
-        c.push(q);
-      }
-    }
-  }
-  return c;
-}
 
 export function translate(original: Box, transform: Box): Box {
   return shift(

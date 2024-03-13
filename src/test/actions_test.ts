@@ -5,7 +5,7 @@ import spies from 'chai-spies';
 
 import { Action } from '../action/index.js';
 import Player from '../player/player.js';
-import { Game } from '../index.js';
+import { Game, PieceGrid } from '../index.js';
 import Space from '../board/space.js';
 import Piece from '../board/piece.js';
 
@@ -315,7 +315,7 @@ describe('Actions', () => {
       }).chooseOnBoard(
         'token', game.all(Space),
       ).placePiece(
-        'token', game,
+        'token', game as unknown as PieceGrid<Game>,
         {
           rotationChoices: [0, 90, 180, 270],
         }
@@ -338,7 +338,7 @@ describe('Actions', () => {
       }).chooseOnBoard(
         'token', game.all(Space),
       ).placePiece(
-        'token', game,
+        'token', game as unknown as PieceGrid<Game>,
         {
           rotationChoices: [0, 90, 180, 270],
         }
@@ -386,7 +386,7 @@ describe('Actions', () => {
 
     it('places', () => {
       const boardAction = new Action({
-      }).chooseOnBoard('piece', game.all(Piece)).placePiece('piece', game.first('space-2')!);
+      }).chooseOnBoard('piece', game.all(Piece)).placePiece('piece', game.first('space-2') as PieceGrid<Game>);
       boardAction._process(player, {piece: game.first('piece-1')!, "__placement__": [3, 2]});
       expect(game.first('space-1')!.all(Piece).length).to.equal(1);
       expect(game.first('space-2')!.all(Piece).length).to.equal(1);

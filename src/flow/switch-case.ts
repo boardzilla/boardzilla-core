@@ -6,7 +6,6 @@ import type { FlowArguments, FlowDefinition, FlowBranchNode, FlowStep } from './
 import type { Serializable } from '../action/utils.js';
 
 export type SwitchCasePostion<T> = { index?: number, value?: T, default?: boolean }
-
 export type SwitchCaseCases<T> = ({eq: T, do: FlowDefinition} | {test: (a: T) => boolean, do: FlowDefinition})[];
 
 export default class SwitchCase<T extends Serializable> extends Flow {

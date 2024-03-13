@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 
 import type { Argument } from '../../../action/action.js';
 import type { Box } from '../../../board/element.js';

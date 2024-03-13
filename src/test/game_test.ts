@@ -7,6 +7,10 @@ import {
   Space,
   Piece,
   GameElement,
+  ConnectedSpaceMap,
+  SquareGrid,
+  HexGrid,
+  PieceGrid
 } from '../board/index.js';
 
 import {
@@ -18,7 +22,7 @@ chai.use(spies);
 const { expect } = chai;
 
 describe('Game', () => {
-  let game: Game;
+  let game: Game<Game, Player>;
 
   const players = new PlayerCollection;
   players.className = Player;
@@ -121,9 +125,9 @@ describe('Game', () => {
   it('builds from json', () => {
     const map = game.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});
-    const piece3 = map.create(Piece, 'token3');
-    const england = map.create(Space, 'england', {});
-    const play = game.create(Space, 'play', {});
+    map.create(Piece, 'token3');
+    map.create(Space, 'england', {});
+    game.create(Space, 'play', {});
     const piece1 = france.create(Piece, 'token1', { player: players[0] });
     const piece2 = france.create(Piece, 'token2', { player: players[1] });
     const json = game.allJSON();
@@ -179,7 +183,7 @@ describe('Game', () => {
   it('understands branches', () => {
     const map = game.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});
-    const england = map.create(Space, 'england', {});
+    map.create(Space, 'england', {});
     const play = game.create(Space, 'play', {});
     const piece1 = france.create(Piece, 'token1', { player: players[0] });
     const piece2 = france.create(Piece, 'token2', { player: players[1] });
@@ -195,7 +199,7 @@ describe('Game', () => {
   it('assigns and finds IDs', () => {
     const map = game.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});
-    const england = map.create(Space, 'england', {});
+    map.create(Space, 'england', {});
     const play = game.create(Space, 'play', {});
     const piece1 = france.create(Piece, 'token1', { player: players[0] });
     const piece2 = france.create(Piece, 'token2', { player: players[1] });
@@ -625,72 +629,75 @@ describe('Game', () => {
   });
 
   describe("graph", () => {
+    let map: ConnectedSpaceMap<Game>;
+    beforeEach(() => {
+      game._ctx.classRegistry.push(ConnectedSpaceMap);
+      map = game.create(ConnectedSpaceMap, 'map');
+    });
+
     it("adjacency", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      a.connectTo(b);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      map.connect(a, b);
       expect(a.isAdjacentTo(b)).to.equal(true);
       expect(a.isAdjacentTo(c)).to.equal(false);
-      expect(a.others({ adjacent: true }).includes(b)).to.equal(true);
-      expect(a.others({ adjacent: true }).includes(c)).to.not.equal(true);
     })
 
     it("calculates distance", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
       expect(a.distanceTo(c)).to.equal(5);
     })
 
     it("calculates closest", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
-      expect(a.closest()).to.equal(b);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      expect(map.closestTo(a)).to.equal(b);
     })
 
     it("finds adjacencies", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
-      c.connectTo(d, 1);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      const d = map.create(Space, 'd');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      map.connect(c, d, 1);
       expect(a.adjacencies()).to.deep.equal([b, c]);
-      expect(a.others({ adjacent: true })).to.deep.equal([b, c]);
       expect(c.adjacencies()).to.deep.equal([a, b, d]);
-      expect(c.others({ adjacent: true })).to.deep.equal([a, b, d]);
     })
 
     it("searches by distance", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
-      c.connectTo(d, 1);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      const d = map.create(Space, 'd');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      map.connect(c, d, 1);
       expect(a.withinDistance(5).all(Space)).to.deep.equal([b,c]);
-      expect(a.others({ withinDistance: 5}).length).to.equal(2);
     })
   });
 
   describe('grids', () => {
     class Cell extends Space<Game> { color: string }
+    beforeEach(() => {
+      game._ctx.classRegistry.push(SquareGrid, HexGrid, Cell);
+    });
 
     it('creates squares', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
+      game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -698,15 +705,14 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2]]);
 
       const middle = game.first(Cell, {row: 2, column: 2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2], [3,2], [2,3]]);
     });
 
     it('creates squares with diagonals', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3, diagonalDistance: 1.5 }, Cell, 'cell');
+      const square = game.create(SquareGrid, 'square', { rows: 3, columns: 3, diagonalDistance: 1.5, space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -714,15 +720,14 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2], [2,2]]);
 
       const knight = game.first(Cell, {row: 3, column: 2})!;
-      expect(corner.distanceTo(knight)).to.equal(2.5);
+      expect(square.distanceBetween(corner, knight)).to.equal(2.5);
     });
 
     it('creates hexes', () => {
-      game = new Game({ classRegistry:  [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3, style: 'hex' }, Cell, 'cell');
+      game.create(HexGrid, 'hex', { rows: 3, columns: 3, space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -730,15 +735,14 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2], [2,2]]);
 
       const middle = game.first(Cell, {row: 2, column: 2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [1,2], [2,1], [2,3], [3,2], [3,3]]);
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [2,1], [1,2], [3,2], [2,3], [3,3]]);
     });
 
     it('creates inverse hexes', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3, style: 'hex-inverse' }, Cell, 'cell');
+      game.create(HexGrid, 'hex', { rows: 3, columns: 3, inverseColumns: true, space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -746,40 +750,33 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2]]);
 
       const middle = game.first(Cell, {row: 2, column: 2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [3,1], [1,2], [3,2], [1,3], [2,3]]);
     });
 
     it('adjacencies', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
+      game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
       for (const cell of game.all(Cell, {row: 2})) cell.color = 'red';
       const center = game.first(Cell, {row: 2, column: 2})!;
-      expect(center.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[1, 2], [2, 1], [2, 3], [3, 2]]);
+      expect(center.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [1, 2], [3, 2], [2, 3]]);
       expect(center.adjacencies(Cell, {color: 'red'}).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [2, 3]]);
       expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 2})!)).to.be.true;
       expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 1})!)).to.be.false;
     });
-  });
 
-  describe('placement', () => {
-    it('creates squares', () => {
-      game = new Game({ classRegistry: [Space, Piece] });
-      const piece1 = game.create(Piece, 'piece-1', { row: 1, column: 1 });
-      const piece2 = game.create(Piece, 'piece-2', { row: 1, column: 2 });
-      const piece3 = game.create(Piece, 'piece-3', { row: 2, column: 2 });
-
-      expect(piece1.adjacencies(Piece).length).to.equal(1);
-      expect(piece1.adjacencies(Piece)[0]).to.equal(piece2);
-      expect(piece2.adjacencies(Piece).length).to.equal(2);
-      expect(piece2.adjacencies(Piece)).includes(piece1);
-      expect(piece2.adjacencies(Piece)).includes(piece3);
-
-      expect(piece2.isAdjacentTo(piece1)).to.equal(true);
-      expect(piece2.isAdjacentTo(piece3)).to.equal(true);
-      expect(piece1.isAdjacentTo(piece3)).to.equal(false);
+    it('deep adjacencies', () => {
+      game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
+      const topLeft = game.first(Cell, {row: 1, column: 1})!;
+      const topCenter = game.first(Cell, {row: 1, column: 2})!;
+      const center = game.first(Cell, {row: 2, column: 2})!;
+      const p1 = topLeft.create(Piece, 'p1');
+      const p2 = topCenter.create(Piece, 'p2');
+      const p3 = center.create(Piece, 'p3');
+      expect(p2.adjacencies(Piece)).to.deep.equal([p1, p3]);
+      expect(p1.adjacencies(Piece)).to.deep.equal([p2]);
+      expect(p3.adjacencies(Piece)).to.deep.equal([p2]);
     });
   });
 
@@ -807,10 +804,10 @@ describe('Game', () => {
     });
 
     it('applies overlaps', () => {
-      const s1 = game.create(Space, 's1');
-      const s2 = game.create(Space, 's2');
-      const s3 = game.create(Space, 's3');
-      const s4 = game.create(Space, 's4');
+      game.create(Space, 's1');
+      game.create(Space, 's2');
+      game.create(Space, 's3');
+      game.create(Space, 's4');
       const p1 = game.create(Piece, 'p1');
       const p2 = game.create(Piece, 'p2');
       const p3 = game.create(Piece, 'p3');
@@ -1204,10 +1201,13 @@ describe('Game', () => {
   describe('shapes', () => {
     let p1: Piece<Game>;
     let p2: Piece<Game>;
+    let map: PieceGrid<Game>;
 
     beforeEach(() => {
-      p1 = game.create(Piece, 'p1');
-      p2 = game.create(Piece, 'p2');
+      game._ctx.classRegistry.push(PieceGrid);
+      map = game.create(PieceGrid, 'map');
+      p1 = map.create(Piece, 'p1');
+      p2 = map.create(Piece, 'p2');
 
       p1.setShape(
         'ABC',
@@ -1228,7 +1228,7 @@ describe('Game', () => {
         p2.column = 0;
         p2.row = 0;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 2', () => {
@@ -1237,7 +1237,7 @@ describe('Game', () => {
         p2.column = 1;
         p2.row = 1;
 
-        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(map.isOverlapping(p1, p2)).to.be.false;
       });
 
       it('finds overlap 3', () => {
@@ -1246,7 +1246,7 @@ describe('Game', () => {
         p2.column = -1;
         p2.row = -1;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 4', () => {
@@ -1255,7 +1255,7 @@ describe('Game', () => {
         p2.column = 1;
         p2.row = 1;
 
-        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(map.isOverlapping(p1, p2)).to.be.false;
       });
     });
 
@@ -1267,7 +1267,7 @@ describe('Game', () => {
         p2.column = -1;
         p2.row = 1;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 6', () => {
@@ -1276,7 +1276,7 @@ describe('Game', () => {
         p2.column = -2;
         p2.row = 1;
 
-        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(map.isOverlapping(p1, p2)).to.be.false;
       });
 
       it('finds overlap 7', () => {
@@ -1285,7 +1285,7 @@ describe('Game', () => {
         p2.column = 2;
         p2.row = 2;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 8', () => {
@@ -1294,7 +1294,7 @@ describe('Game', () => {
         p2.column = 3;
         p2.row = 2;
 
-        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(map.isOverlapping(p1, p2)).to.be.false;
       });
     });
 
@@ -1306,7 +1306,7 @@ describe('Game', () => {
         p2.column = 1;
         p2.row = 0;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 10', () => {
@@ -1315,7 +1315,7 @@ describe('Game', () => {
         p2.column = 0;
         p2.row = 1;
 
-        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(map.isOverlapping(p1, p2)).to.be.false;
       });
 
       it('finds overlap 11', () => {
@@ -1324,7 +1324,7 @@ describe('Game', () => {
         p2.column = 0;
         p2.row = 2;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 12', () => {
@@ -1333,7 +1333,7 @@ describe('Game', () => {
         p2.column = 0;
         p2.row = 2;
 
-        expect(p1.isOverlapping(p2)).to.be.false;
+        expect(map.isOverlapping(p1, p2)).to.be.false;
       });
     });
 
@@ -1345,7 +1345,7 @@ describe('Game', () => {
         p2.column = -1;
         p2.row = -1;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 14', () => {
@@ -1383,37 +1383,37 @@ describe('Game', () => {
         // cf D
         // bCBA
         // ae
-        expect(p1.isOverlapping(p2)).to.be.false;
-        expect(p1.adjacenciesWithCells(p2)).to.deep.equal([
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+        expect(map.adjacenciesByCell(p1, p2)).to.deep.equal([
           {
-            element: p2,
+            piece: p2,
             from: 'C',
             to: 'f'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'C',
             to: 'b'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'C',
             to: 'e'
           }
         ]);
-        expect(p1.adjacenciesWithEdges(p2)).to.deep.equal([
+        expect(map.adjacenciesByEdge(p1, p2)).to.deep.equal([
           {
-            element: p2,
+            piece: p2,
             from: 'DOWN',
             to: 'Left'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'RIGHT',
             to: 'down'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'UP',
             to: 'stuff'
           }
@@ -1426,7 +1426,7 @@ describe('Game', () => {
         p2.column = -1;
         p2.row = 1;
 
-        expect(p1.isOverlapping(p2)).to.be.true;
+        expect(map.isOverlapping(p1, p2)).to.be.true;
       });
 
       it('finds overlap 16', () => {
@@ -1463,27 +1463,27 @@ describe('Game', () => {
         // cf
         // b
         // ae
-        expect(p1.isOverlapping(p2)).to.be.false;
-        expect(p1.adjacenciesWithCells(p2)).to.deep.equal([
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+        expect(map.adjacenciesByCell(p1, p2)).to.deep.equal([
           {
-            element: p2,
+            piece: p2,
             from: 'C',
             to: 'd'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'C',
             to: 'f'
           }
         ]);
-        expect(p1.adjacenciesWithEdges(p2)).to.deep.equal([
+        expect(map.adjacenciesByEdge(p1, p2)).to.deep.equal([
           {
-            element: p2,
+            piece: p2,
             from: 'RIGHT',
             to: 'down'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'UP',
             to: 'Right'
           }
@@ -1495,7 +1495,7 @@ describe('Game', () => {
         p1.row = 0;
         p2.column = -1;
         p2.row = 2;
-        const p3 = game.create(Piece, 'p3') // unshaped
+        const p3 = map.create(Piece, 'p3') // unshaped
         p3.column = 1;
         p3.row = 3;
         p1.setEdges({
@@ -1533,54 +1533,54 @@ describe('Game', () => {
         // cf.
         // b
         // ae
-        expect(p1.isOverlapping(p2)).to.be.false;
-        expect(p1.isOverlapping(p3)).to.be.false;
-        expect(p3.isOverlapping(p1)).to.be.false;
-        expect(p3.isOverlapping(p2)).to.be.false;
-        expect(p1.isOverlapping()).to.be.false;
-        expect(p3.isOverlapping()).to.be.false;
-        expect(p1.adjacenciesWithCells()).to.deep.equal([
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+        expect(map.isOverlapping(p1, p3)).to.be.false;
+        expect(map.isOverlapping(p3, p1)).to.be.false;
+        expect(map.isOverlapping(p3, p2)).to.be.false;
+        expect(map.isOverlapping(p1)).to.be.false;
+        expect(map.isOverlapping(p3)).to.be.false;
+        expect(map.adjacenciesByCell(p1)).to.deep.equal([
           {
-            element: p2,
+            piece: p2,
             from: 'C',
             to: 'd'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'C',
             to: 'f'
           },
           {
-            element: p3,
+            piece: p3,
             from: 'B',
             to: '.'
           }
         ]);
-        expect(p1.adjacenciesWithEdges()).to.deep.equal([
+        expect(map.adjacenciesByEdge(p1)).to.deep.equal([
           {
-            element: p2,
+            piece: p2,
             from: 'RIGHT',
             to: 'down'
           },
           {
-            element: p2,
+            piece: p2,
             from: 'UP',
             to: 'Right'
           },
           {
-            element: p3,
+            piece: p3,
             from: 'UP',
             to: undefined
           }
         ]);
-        expect(p3.adjacenciesWithEdges()).to.deep.equal([
+        expect(map.adjacenciesByEdge(p3)).to.deep.equal([
           {
-            element: p1,
+            piece: p1,
             from: undefined,
             to: 'UP'
           },
           {
-            element: p2,
+            piece: p2,
             from: undefined,
             to: 'Down'
           },

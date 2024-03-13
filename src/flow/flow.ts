@@ -1,9 +1,9 @@
-import { Player } from '../index.js';
-import { Game } from '../board/index.js';
 import { LoopInterruptControl, loopInterrupt, FlowControl } from './enums.js';
 import { Do } from './enums.js';
 
 import type GameManager from '../game-manager.js';
+import type { Game } from '../board/index.js';
+import type { Player } from '../index.js';
 import type { WhileLoopPosition } from './while-loop.js';
 import type { ForLoopPosition } from './for-loop.js';
 import type { ForEachPosition } from './for-each.js';

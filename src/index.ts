@@ -4,16 +4,19 @@ import {
   Game,
   Piece,
   Space,
+  SquareGrid,
+  HexGrid,
+  PieceGrid,
   Die,
   GameElement,
 } from './board/index.js';
 
 export { Game, union } from './board/index.js';
-export { Space, Piece, Die, GameElement };
+export { Space, Piece, SquareGrid, HexGrid, PieceGrid, Die, GameElement };
 
 export { Do } from './flow/index.js';
 
-export { createInterface } from './interface.js';
+export { createInterface, colors } from './interface.js';
 export { times, range, shuffleArray } from './utils.js';
 export { Player };
 export {
@@ -51,13 +54,6 @@ export type SetupFunction<B extends Game = Game> = (
   state: SetupState | GameState,
   options?: {trackMovement?: boolean}
 ) => GameManager<B>
-
-export const colors = [
-  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
-  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
-  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
-  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'
-];
 
 declare global {
   /**

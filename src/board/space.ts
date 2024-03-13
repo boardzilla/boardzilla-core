@@ -1,15 +1,8 @@
 import GameElement from './element.js'
-import ElementCollection from './element-collection.js'
-import { times } from '../utils.js';
-
-import graphology from 'graphology';
-import { dijkstra } from 'graphology-shortest-path';
-import { bfsFromNode } from 'graphology-traversal';
 
 import type Game from './game.js';
 import type Player from '../player/player.js';
 import type { ElementClass, ElementAttributes, Gamify } from './element.js';
-import type { ElementFinder } from './element-collection.js';
 
 export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => void} & Record<any, any>;
 
@@ -23,6 +16,8 @@ export default class Space<G extends Game, P extends Player = NonNullable<G['pla
     enter: ElementEventHandler<GameElement>[],
     exit: ElementEventHandler<GameElement>[],
   } = { enter: [], exit: [] };
+
+  static unserializableAttributes = [...GameElement.unserializableAttributes, '_eventHandlers'];
 
   isSpace() { return true; }
 
@@ -100,151 +95,35 @@ export default class Space<G extends Game, P extends Player = NonNullable<G['pla
    *
    * @category Structure
    */
-  createGrid<T extends Space<G, P>>(
-    gridConfig: {
-      rows: number,
-      columns: number,
-      style?: 'square' | 'hex' | 'hex-inverse',
-      diagonalDistance?: number
-    },
-    className: ElementClass<T>,
-    name: string,
-    attributes?: ElementAttributes<T>
-  ): ElementCollection<T> {
-    const {rows, columns, style, diagonalDistance} = gridConfig;
-    if (diagonalDistance !== undefined && (style ?? 'square') !== 'square') throw Error("Hex grids cannot have diagonals");
-    const grid = new ElementCollection<T>();
-    times(rows, row =>
-      times(columns, column => {
-        const el = this.create(className, name, {row, column, ...attributes} as ElementAttributes<T>);
-        grid[(row - 1) * columns + column - 1] = el;
-        if (row > 1) el.connectTo(grid[(row - 2) * columns + column - 1]);
-        if (column > 1) el.connectTo(grid[(row - 1) * columns + column - 2]);
-        if ((diagonalDistance !== undefined || style === 'hex') && row > 1 && column > 1) {
-          el.connectTo(grid[(row - 2) * columns + column - 2], diagonalDistance);
-        }
-        if ((diagonalDistance !== undefined || style === 'hex-inverse') && row > 1 && column < columns) {
-          el.connectTo(grid[(row - 2) * columns + column], diagonalDistance);
-        }
-        return el;
-      })
-    );
-    return grid;
-  }
-
-  /**
-   * Make this space adjacent with another space for the purposes of adjacency
-   * and path-finding functions. Using `connectTo` on a space creates a custom
-   * graph of adjacency for the container of this space that overrides the
-   * standard adjacency based on the built-in row/column placement.
-   * @category Structure
-   *
-   * @param space - {@link Space} to connect to
-   * @param distance - Add a custom distance to this connection for the purposes
-   * of distance-measuring.
-   */
-  connectTo(space: Space<G, P>, distance: number = 1) {
-    if (!this._t.parent || this._t.parent !== space._t.parent) throw Error("Cannot connect two spaces that are not in the same parent space");
-
-    if (!this._t.parent._t.graph) {
-      this._t.parent._t.graph = new graphology.UndirectedGraph<{space: Space<G, P>}, {distance: number}>();
-    }
-    const graph = this._t.parent._t.graph;
-    if (!graph.hasNode(this._t.id)) graph.addNode(this._t.id, {space: this});
-    if (!graph.hasNode(space._t.id)) graph.addNode(space._t.id, {space});
-    graph.addEdge(this._t.id, space._t.id, {distance});
-    return this;
-  }
-
-  /**
-   * Finds the shortest distance to another space, traveling thru multiple
-   * connections
-   * @category Structure
-   *
-   * @param space - {@link Space} to measure distance to
-   * @returns shortest distance measured by the `distance` values added to each
-   * connection in {@link connectTo}
-   */
-  distanceTo(space: Space<G, P>) {
-    if (!this._t.parent?._t.graph) return undefined;
-    try {
-      const graph = this._t.parent._t.graph;
-      const path = dijkstra.bidirectional(graph, this._t.id, space._t.id, 'distance');
-      let distance = 0;
-      for (let n = 1; n != path.length; n++) {
-        distance += graph.getEdgeAttributes(graph.edge(path[n - 1], path[n])).distance;
-      }
-      return distance;
-    } catch(e) {
-      return undefined;
-    }
-  }
-
-  /**
-   * Finds the nearest space connected to this space, measured by distance. Uses
-   * the same parameters as {@link GameElement#first}
-   * @category Queries
-   */
-  closest<F extends Space<G>>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): Gamify<G, F> | undefined;
-  closest(className?: ElementFinder<Space<G>>, ...finders: ElementFinder<Space<G>>[]): Space<G> | undefined;
-  closest<F extends Space<G>>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | Space<G> | undefined {
-    let classToSearch: ElementClass<Space<G>> = Space;
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-    } else {
-      classToSearch = className;
-    }
-    if (!this._t.parent?._t.graph) return undefined;
-    const others = this.others(classToSearch, ...finders);
-    return others.sortBy(el => {
-      const distance =  this.distanceTo(el);
-      return distance === undefined ? Infinity : distance;
-    })[0];
-  }
-
-  /**
-   * Finds all spaces connected to this space by a distance no more than
-   * `distance`
-   *
-   * @category Queries
-   */
-  withinDistance(distance: number): ElementCollection<Space<G, P>> {
-    const c = new ElementCollection<Space<G, P>>();
-    try {
-      const graph = this._t.parent!._t.graph!;
-      bfsFromNode(graph, this._t.id, node => {
-        const el = graph.getNodeAttributes(node).space;
-        const d = this.distanceTo(el);
-        if (d === undefined) return false;
-        if (d > distance) return true;
-        if (el !== this) c.push(el);
-      });
-    } catch(e) {
-      throw Error("No connections on this space");
-    }
-    return c;
-  }
-
-  _otherFinder<T extends GameElement>(this: Space<G>, finders: ElementFinder<T>[]): ElementFinder<GameElement> {
-    let otherFinder: ElementFinder<Space<G, P>> = el => el !== (this as GameElement);
-    for (const finder of finders) {
-      if (typeof finder === 'object') {
-        if (finder.adjacent !== undefined) {
-          const adj = finder.adjacent;
-          otherFinder = (el: Space<G, P>) => this.isAdjacentTo(el) === adj && el !== (this as GameElement)
-          delete(finder.adjacent);
-        }
-        if (finder.withinDistance !== undefined) {
-          const distance = finder.withinDistance;
-          otherFinder = (el: Space<G, P>) => {
-            const d = this.distanceTo(el);
-            if (d === undefined) return false;
-            return d <= distance && el !== (this as GameElement);
-          }
-          delete(finder.withinDistance);
-        }
-      }
-    }
-    return otherFinder
-  }
+  // createGrid<T extends Space<G, P>>(
+  //   gridConfig: {
+  //     rows: number,
+  //     columns: number,
+  //     style?: 'square' | 'hex' | 'hex-inverse',
+  //     diagonalDistance?: number
+  //   },
+  //   className: ElementClass<T>,
+  //   name: string,
+  //   attributes?: ElementAttributes<T>
+  // ): ElementCollection<T> {
+  //   const {rows, columns, style, diagonalDistance} = gridConfig;
+  //   if (diagonalDistance !== undefined && (style ?? 'square') !== 'square') throw Error("Hex grids cannot have diagonals");
+  //   const grid = new ElementCollection<T>();
+  //   times(rows, row =>
+  //     times(columns, column => {
+  //       const el = this.create(className, name, {row, column, ...attributes} as ElementAttributes<T>);
+  //       grid[(row - 1) * columns + column - 1] = el;
+  //       if (row > 1) el.connectTo(grid[(row - 2) * columns + column - 1]);
+  //       if (column > 1) el.connectTo(grid[(row - 1) * columns + column - 2]);
+  //       if ((diagonalDistance !== undefined || style === 'hex') && row > 1 && column > 1) {
+  //         el.connectTo(grid[(row - 2) * columns + column - 2], diagonalDistance);
+  //       }
+  //       if ((diagonalDistance !== undefined || style === 'hex-inverse') && row > 1 && column < columns) {
+  //         el.connectTo(grid[(row - 2) * columns + column], diagonalDistance);
+  //       }
+  //       return el;
+  //     })
+  //   );
+  //   return grid;
+  // }
 }

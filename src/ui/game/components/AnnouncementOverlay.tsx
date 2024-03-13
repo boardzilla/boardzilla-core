@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 
 const AnnouncementOverlay = ({ announcement, onDismiss }: {
   announcement: string,

@@ -1,5 +1,4 @@
 import type { Argument } from './action/action.js';
-import type Player from './player/player.js';
 import { escapeArgument } from './action/utils.js';
 
 export const shuffleArray = (array: any[], random: () => number) => {

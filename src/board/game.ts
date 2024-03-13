@@ -3,16 +3,7 @@ import { Action, Argument, ActionStub } from '../action/index.js';
 import { deserializeObject } from '../action/utils.js';
 import Flow from '../flow/flow.js';
 import { n } from '../utils.js';
-
-import type {
-  default as GameElement,
-  ElementJSON,
-  ElementClass,
-  ElementContext,
-  Box,
-  ElementUI,
-} from './element.js';
-import { Player, PlayerCollection } from '../player/index.js';
+import { PlayerCollection } from '../player/index.js';
 import {
   ActionStep,
   WhileLoop,
@@ -23,6 +14,16 @@ import {
   IfElse,
   SwitchCase,
 } from '../flow/index.js';
+
+import type { Player } from '../player/index.js';
+import type {
+  default as GameElement,
+  ElementJSON,
+  ElementClass,
+  ElementContext,
+  Box,
+  ElementUI,
+} from './element.js';
 import type { FlowStep } from '../flow/flow.js';
 import type { Serializable } from '../action/utils.js';
 
@@ -128,6 +129,8 @@ export default class Game<G extends Game<G, P> = any, P extends Player<G, P> = a
    * @category Definition
    */
   random: () => number;
+
+  static unserializableAttributes = [...Space.unserializableAttributes, 'pile', 'flowCommands', 'flowGuard', 'players', 'random'];
 
   constructor(ctx: Partial<ElementContext>) {
     super({ ...ctx, trackMovement: false });
@@ -407,7 +410,7 @@ export default class Game<G extends Game<G, P> = any, P extends Player<G, P> = a
     let { className, children, _id, order, ...rest } = boardJSON[0];
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
 
-    // reset all on self
+    // reset all on self - think this is unnecessary? if it is, need to figure out how to use unserializableAttributes
     for (const key of Object.keys(this)) {
       if (!Game.unserializableAttributes.includes(key) && !(key in rest))
         rest[key] = undefined;

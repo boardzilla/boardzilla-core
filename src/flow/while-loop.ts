@@ -1,5 +1,5 @@
 import Flow from './flow.js';
-import { FlowControl } from './index.js';
+import { FlowControl } from './enums.js';
 
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
 import { LoopInterruptControl } from './enums.js';

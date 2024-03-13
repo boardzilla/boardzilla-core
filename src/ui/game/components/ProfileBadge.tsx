@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { Player } from '../../../index.js';
-import { gameStore } from '../../index.js';
+import Player from '../../../player/player.js';
+import { gameStore } from '../../store.js';
 import classNames from 'classnames';
 
 /**

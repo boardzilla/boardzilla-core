@@ -1,6 +1,5 @@
 import { deserializeArg } from './action/utils.js';
 import { range } from './utils.js';
-import { colors } from './index.js';
 import random from 'random-seed';
 
 import type { ElementJSON } from './board/element.js';
@@ -63,6 +62,13 @@ export type GameInterface = {
   ) => GameUpdate
   seatPlayer(players: Player[], seatCount: number): {position: number, color: string, settings: any} | null
 }
+
+export const colors = [
+  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
+  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
+  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
+  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'
+];
 
 function advanceRseed(rseed?: string) {
   if (!rseed) {

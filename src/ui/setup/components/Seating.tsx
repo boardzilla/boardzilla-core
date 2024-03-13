@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 
-import { times, colors } from '../../../index.js';
+import { times } from '../../../utils.js';
+import { colors } from '../../../interface.js';
 import * as ReactColor from 'react-color';
 const { GithubPicker } = ReactColor;
 

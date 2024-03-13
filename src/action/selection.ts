@@ -1,7 +1,7 @@
 import { range } from '../utils.js';
 import { combinations } from './utils.js';
-import { GameElement } from '../board/index.js';
-import { Player } from '../player/index.js';
+import GameElement from '../board/element.js';
+import Player from '../player/player.js';
 
 import type { SingleArgument, Argument } from './action.js';
 

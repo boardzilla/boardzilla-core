@@ -1,7 +1,7 @@
-import { GameElement } from '../board/index.js';
 import { serializeObject } from '../action/utils.js';
 
 import type PlayerCollection from './collection.js';
+import type { GameElement } from '../board/index.js';
 import type { Game } from '../index.js';
 import type { ElementClass } from '../board/element.js';
 import type { ElementFinder, default as ElementCollection } from '../board/element-collection.js';
@@ -49,6 +49,8 @@ export default class Player<B extends Game<B, P> = any, P extends Player<B, P> =
   game: B;
   _players: PlayerCollection<P>;
 
+  static isPlayer = true;
+
   isCurrent() {
     return this._players.currentPosition.includes(this.position);
   }
@@ -81,14 +83,9 @@ export default class Player<B extends Game<B, P> = any, P extends Player<B, P> =
    * search terms. Also see {@link GameElement#owner}.
    */
   allMy<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  allMy(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection<GameElement>;
-  allMy<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F> | ElementCollection<GameElement> {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this.game.all({owner: this}, ...finders);
-    }
-
-    return this.game.all<GameElement>(className, {owner: this}, ...finders);
+  allMy(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
+  allMy(className?: any, ...finders: ElementFinder[]) {
+    return this.game.all(className, {owner: this}, ...finders);
   }
 
   /**
@@ -97,14 +94,9 @@ export default class Player<B extends Game<B, P> = any, P extends Player<B, P> =
    * the search terms. Also see {@link GameElement#owner}.
    */
   my<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  my(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
-  my<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): F | GameElement | undefined {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this.game.first({owner: this}, ...finders);
-    }
-
-    return this.game.first<GameElement>(className, {owner: this}, ...finders);
+  my(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
+  my(className?: any, ...finders: ElementFinder[]) {
+    return this.game.first(className, {owner: this}, ...finders);
   }
 
   /**
@@ -113,14 +105,9 @@ export default class Player<B extends Game<B, P> = any, P extends Player<B, P> =
    * the search terms. Also see {@link GameElement#owner}.
    */
   has<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): boolean;
-  has(className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): boolean;
-  has<F extends GameElement>(className?: ElementFinder<F> | ElementClass<F>, ...finders: ElementFinder<F>[]): boolean {
-    if ((typeof className !== 'function') || !('isGameElement' in className)) {
-      if (className) finders = [className, ...finders];
-      return this.game.has<GameElement>(GameElement, {owner: this}, ...finders);
-    }
-
-    return this.game.has<GameElement>(className, {owner: this}, ...finders);
+  has(className?: ElementFinder, ...finders: ElementFinder[]): boolean;
+  has(className?: any, ...finders: ElementFinder[]): boolean {
+    return this.game.has(className, {owner: this}, ...finders);
   }
 
   toJSON() {

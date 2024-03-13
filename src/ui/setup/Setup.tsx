@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import Seating from './components/Seating.js';
-import { gameStore } from '../index.js';
+import { gameStore } from '../store.js';
 
 import { SetupComponentProps } from '../index.js';
 import type { User, UpdatePlayersMessage, GameSettings } from '../Main.js';
