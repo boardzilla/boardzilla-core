@@ -28,7 +28,6 @@ import type {
   GenericSorter,
   ElementAttributes,
   LayoutAttributes,
-  Gamify,
 } from './element.js';
 import type { ElementEventHandler } from './space.js';
 import type { FlowStep } from '../flow/flow.js';

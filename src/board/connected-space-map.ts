@@ -7,7 +7,7 @@ import { bfsFromNode } from 'graphology-traversal';
 import ElementCollection from './element-collection.js';
 
 import type { Game, Space } from '../index.js';
-import type { ElementContext, ElementClass, Gamify } from './element.js';
+import type { ElementContext, ElementClass } from './element.js';
 import type { ElementFinder } from './element-collection.js';
 
 export default class ConnectedSpaceMap<G extends Game> extends AdjacencySpace<G> {
@@ -77,7 +77,7 @@ export default class ConnectedSpaceMap<G extends Game> extends AdjacencySpace<G>
   }
 
   // does not include element but may include others on same space as element
-  allWithinDistanceOf<F extends GameElement>(element: GameElement, distance: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<Gamify<G, F>>;
+  allWithinDistanceOf<F extends GameElement>(element: GameElement, distance: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
   allWithinDistanceOf(element: GameElement, distance: number, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
   allWithinDistanceOf(element: GameElement, distance: number, className?: any, ...finders: ElementFinder[]) {
     const source = String(this._positionedParentOf(element)._t.id);
@@ -90,7 +90,7 @@ export default class ConnectedSpaceMap<G extends Game> extends AdjacencySpace<G>
     return nodes.all(className, (el: GameElement) => el !== element, ...finders);
   }
 
-  closestTo<F extends GameElement>(element: GameElement, className: ElementClass<F>, ...finders: ElementFinder<F>[]): Gamify<G, F> | undefined;
+  closestTo<F extends GameElement>(element: GameElement, className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
   closestTo(element: GameElement, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
   closestTo<F extends GameElement>(element: GameElement, className?: any, ...finders: ElementFinder[]): F | GameElement | undefined {
     const source = this._positionedParentOf(element);

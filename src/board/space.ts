@@ -2,7 +2,7 @@ import GameElement from './element.js'
 
 import type Game from './game.js';
 import type Player from '../player/player.js';
-import type { ElementClass, ElementAttributes, Gamify } from './element.js';
+import type { ElementClass, ElementAttributes } from './element.js';
 
 export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => void} & Record<any, any>;
 
@@ -21,7 +21,7 @@ export default class Space<G extends Game, P extends Player = NonNullable<G['pla
 
   isSpace() { return true; }
 
-  create<T extends GameElement>(className: ElementClass<T>, name: string, attributes?: ElementAttributes<T>): Gamify<G, T> {
+  create<T extends GameElement>(className: ElementClass<T>, name: string, attributes?: ElementAttributes<T>): T {
     const el = super.create(className, name, attributes);
     this.triggerEvent("enter", el);
     return el;
