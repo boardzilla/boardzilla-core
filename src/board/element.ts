@@ -631,8 +631,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * Tableau. calling `token.container(Tableau)` can be used to find the
    * grandparent.
    */
-  container<T extends GameElement>(className?: ElementClass<T>): GameElement | undefined {
-    if (!className) return this._t.parent;
+  container<T extends GameElement>(className?: ElementClass<T>): T | undefined {
+    if (!className) return this._t.parent as T;
     if (this._t.parent) return this._t.parent instanceof className ?
       this._t.parent as T:
       this._t.parent.container(className);

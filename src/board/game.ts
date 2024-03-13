@@ -147,7 +147,7 @@ export interface BaseGame {
   adjacencies(className?: any, ...finders: ElementFinder[]): ElementCollection;
   withinDistance(distance: number, className?: any, ...finders: ElementFinder[]): ElementCollection;
   setOrder(order: 'normal' | 'stacking'): void;
-  container<T extends GameElement>(className?: ElementClass<T>): GameElement | undefined;
+  container<T extends GameElement>(className?: ElementClass<T>): T | undefined;
   containerWithProperty(property: string, value?: any): GameElement | undefined;
   isEmpty(): boolean;
   sortBy(key: GenericSorter | GenericSorter[], direction?: "asc" | "desc"): ElementCollection;
@@ -471,8 +471,8 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     whileLoop: (options: ConstructorParameters<typeof WhileLoop>[0]) => this.flowGuard() && new WhileLoop(options),
     forEach: <T extends Serializable>(options: ConstructorParameters<typeof ForEach<T>>[0]) => this.flowGuard() && new ForEach<T>(options),
     forLoop: <T = Serializable>(options: ConstructorParameters<typeof ForLoop<T>>[0]) => this.flowGuard() && new ForLoop<T>(options),
-    eachPlayer: (options: ConstructorParameters<typeof EachPlayer>[0]) => this.flowGuard() && new EachPlayer(options),
-    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer>[0]) => this.flowGuard() && new EveryPlayer(options),
+    eachPlayer: (options: ConstructorParameters<typeof EachPlayer<P>>[0]) => this.flowGuard() && new EachPlayer<P>(options),
+    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => this.flowGuard() && new EveryPlayer<P>(options),
     ifElse: (options: ConstructorParameters<typeof IfElse>[0]) => this.flowGuard() && new IfElse(options),
     switchCase: <T extends Serializable>(options: ConstructorParameters<typeof SwitchCase<T>>[0]) => this.flowGuard() && new SwitchCase<T>(options),
   };
