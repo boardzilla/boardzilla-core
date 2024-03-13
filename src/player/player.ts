@@ -1,10 +1,31 @@
 import { serializeObject } from '../action/utils.js';
 
 import type PlayerCollection from './collection.js';
-import type { GameElement } from '../board/index.js';
-import type { Game } from '../index.js';
+import type GameElement from '../board/element.js';
+import type { default as Game, BaseGame } from '../board/game.js';
 import type { ElementClass } from '../board/element.js';
 import type { ElementFinder, default as ElementCollection } from '../board/element-collection.js';
+
+export interface BasePlayer {
+  id: string;
+  name: string;
+  color: string;
+  avatar: string;
+  host: boolean;
+  position: number;
+  settings?: any;
+  game: BaseGame;
+  _players: PlayerCollection<BasePlayer>;
+  isCurrent(): boolean
+  setCurrent(): void
+  others(): BasePlayer[]
+  other(): BasePlayer
+  allMy(className?: any, ...finders: ElementFinder[]): ElementCollection
+  my(className?: any, ...finders: ElementFinder[]): GameElement | undefined
+  has(className?: any, ...finders: ElementFinder[]): boolean
+  toJSON(): any
+  toString(): string
+}
 
 /**
  * Base player class. Each game must declare a single player class that extends
@@ -13,7 +34,7 @@ import type { ElementFinder, default as ElementCollection } from '../board/eleme
  * is passed to an action for the player taking that action.
  * @category Core
  */
-export default class Player<B extends Game<B, P> = any, P extends Player<B, P> = any> {
+export default class Player<B extends Game<B, P> = any, P extends BasePlayer = BasePlayer> implements BasePlayer {
   /**
    * A player's unique user id
    */

@@ -16,16 +16,24 @@ import {
 } from '../flow/index.js';
 
 import type { Player } from '../player/index.js';
+import type { BasePlayer } from '../player/player.js';
 import type {
   default as GameElement,
   ElementJSON,
   ElementClass,
   ElementContext,
   Box,
+  Vector,
   ElementUI,
+  GenericSorter,
+  ElementAttributes,
+  LayoutAttributes,
+  Gamify,
 } from './element.js';
+import type { ElementEventHandler } from './space.js';
 import type { FlowStep } from '../flow/flow.js';
 import type { Serializable } from '../action/utils.js';
+import type { default as ElementCollection, ElementFinder } from './element-collection.js';
 
 /**
  * Type for layout of player controls
@@ -97,6 +105,163 @@ export type BoardSize = {
   fixed?: 'landscape' | 'portrait'
 };
 
+export interface BaseGame {
+  name: string;
+  row?: number;
+  column?: number;
+  _rotation?: number; // degrees
+  game: BaseGame;
+  _ctx: ElementContext;
+  _t: {
+    children: ElementCollection,
+    parent?: GameElement,
+    id: number,
+    order?: 'normal' | 'stacking',
+    was?: string,
+    setId: (id: number) => void,
+  };
+  _size?: {
+    width: number,
+    height: number,
+    shape: string[],
+    edges?: Record<string, { left?: string, right?: string, up?: string, down?: string }>
+  };
+  _visible?: {
+    default: boolean,
+    except?: number[]
+  };
+  toString(): string;
+  all(className?: any, ...finders: ElementFinder[]): ElementCollection;
+  first(className?: any, ...finders: ElementFinder[]): GameElement | undefined;
+  firstN(n: number, className?: any, ...finders: ElementFinder[]): ElementCollection;
+  last(className?: any, ...finders: ElementFinder[]): GameElement | undefined;
+  lastN(n: number, className?: any, ...finders: ElementFinder[]): ElementCollection;
+  bottom(className?: any, ...finders: ElementFinder[]): GameElement | undefined;
+  bottomN(n: number, className?: any, ...finders: ElementFinder[]): ElementCollection;
+  top(className?: any, ...finders: ElementFinder[]): GameElement | undefined;
+  topN(n: number, className?: any, ...finders: ElementFinder[]): ElementCollection;
+  others(className?: any, ...finders: ElementFinder[]): ElementCollection
+  has(className?: any, ...finders: ElementFinder[]): boolean;
+  isAdjacentTo(element: GameElement): boolean;
+  distanceTo(element: GameElement): number;
+  adjacencies(className?: any, ...finders: ElementFinder[]): ElementCollection;
+  withinDistance(distance: number, className?: any, ...finders: ElementFinder[]): ElementCollection;
+  setOrder(order: 'normal' | 'stacking'): void;
+  container<T extends GameElement>(className?: ElementClass<T>): GameElement | undefined;
+  containerWithProperty(property: string, value?: any): GameElement | undefined;
+  isEmpty(): boolean;
+  sortBy(key: GenericSorter | GenericSorter[], direction?: "asc" | "desc"): ElementCollection;
+  shuffle(): void;
+  owner: BasePlayer | undefined;
+  mine: boolean;
+  showToAll(): void;
+  showOnlyTo(player: Player | number): void;
+  showTo(...player: Player[] | number[]): void;
+  hideFromAll(): void;
+  hideFrom(...player: Player[] | number[]): void;
+  isVisibleTo(player: Player | number): boolean;
+  isVisible(): boolean;
+  create<T extends GameElement>(className: ElementClass<T>, name: string, attributes?: ElementAttributes<T>): T
+  createMany<T extends GameElement>(n: number, className: ElementClass<T>, name: string, attributes?: ElementAttributes<T> | ((n: number) => ElementAttributes<T>)): ElementCollection<T>;
+  createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T;
+  destroy(): void;
+  rotation: number;
+  branch(): string;
+  atBranch(b: string): GameElement;
+  atID(id: number): GameElement | undefined;
+  _cellAt(pos: Vector): string | undefined;
+  _cellsAround(pos: Vector): any
+  _sizeNeededFor(_element: GameElement): {width: number, height: number};
+  setShape(...shape: string[]): void;
+  setEdges(edges: Record<string, { left?: string, right?: string, up?: string, down?: string }> | { left?: string, right?: string, up?: string, down?: string }): void;
+  isDescendantOf(el: GameElement): boolean;
+  attributeList<T extends GameElement>(this: T): ElementAttributes<T>;
+  toJSON(seenBy?: number): ElementJSON;
+  createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string): void;
+  assignAttributesFromJSON(childrenJSON: ElementJSON[], branch: string): void;
+  cloneInto<T extends GameElement>(this: T, into: GameElement): T;
+  absoluteTransform(preComputedRelativeTransform?: Box): Box;
+  relativeTransformToBoard(): Box;
+  layout(
+    applyTo: typeof this._ui.layouts[number]['applyTo'],
+    attributes: Partial<LayoutAttributes<GameElement>>
+  ): void;
+  applyLayouts(): void;
+  getLayoutItems(): (GameElement[] | undefined)[];
+  getArea(attributes: { margin?: number | { top: number, bottom: number, left: number, right: number }, area?: Box }): Box;
+  appearance(appearance: ElementUI<GameElement>['appearance']): void;
+  resetMovementTracking(): void;
+  hasChangedParent(): boolean;
+  _eventHandlers: {
+    enter: ElementEventHandler<GameElement>[],
+    exit: ElementEventHandler<GameElement>[],
+  };
+  isSpace(): boolean;
+  addEventHandler<T extends GameElement>(type: keyof BaseGame['_eventHandlers'], handler: ElementEventHandler<T>): void;
+  onEnter<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void): void;
+  onExit<T extends GameElement>(type: ElementClass<T>, callback: (el: T) => void): void;
+  triggerEvent(event: keyof BaseGame['_eventHandlers'], element: GameElement): void;
+
+  pile: GameElement;
+  players: PlayerCollection<BasePlayer>;
+  player?: BasePlayer;
+  random: () => number;
+  registerClasses(...classList: ElementClass[]): void;
+  defineFlow(...flow: FlowStep[]): void;
+  defineActions(actions: Record<string, (player: BasePlayer) => Action<Record<string, Argument>>>): void;
+  setting(key: string): any;
+  action<A extends Record<string, Argument> = NonNullable<unknown>>(definition: {
+    prompt?: string,
+    description?: string,
+    condition?: Action<A>['condition'],
+  }): Action<A>;
+  followUp(action: ActionStub): void;
+  flowGuard: () => true;
+  flowCommands: {
+    playerActions: (options: ConstructorParameters<typeof ActionStep>[0]) => ActionStep,
+    loop: (...block: FlowStep[]) => WhileLoop;
+    whileLoop: (options: ConstructorParameters<typeof WhileLoop>[0]) => WhileLoop;
+    forEach: (options: ConstructorParameters<typeof ForEach<any>>[0]) => ForEach<any>;
+    forLoop: (options: ConstructorParameters<typeof ForLoop<any>>[0]) => ForLoop<any>;
+    eachPlayer: (options: ConstructorParameters<typeof EachPlayer>[0]) => EachPlayer<Player>;
+    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer>[0]) => EveryPlayer<Player>;
+    ifElse: (options: ConstructorParameters<typeof IfElse>[0]) => IfElse;
+    switchCase: (options: ConstructorParameters<typeof SwitchCase<any>>[0]) => SwitchCase<any>;
+  };
+  finish(winner?: BasePlayer | BasePlayer[], announcement?: string): void;
+  getWinners(): BasePlayer[] | undefined;
+  addDelay(): void;
+  message(text: string, args?: Record<string, Argument>): void;
+  announce(announcement: string): void;
+  allJSON(seenBy?: number): ElementJSON[];
+  fromJSON(boardJSON: ElementJSON[]): void;
+  _ui: ElementUI<GameElement> & {
+    boardSize: BoardSize,
+    boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
+    setupLayout?: (game: BaseGame, player: BasePlayer, boardSize: string) => void;
+    frame?: Box;
+    disabledDefaultAppearance?: boolean;
+    boundingBoxes?: boolean;
+    stepLayouts: Record<string, ActionLayout>;
+    previousStyles: Record<any, Box>;
+    announcements: Record<string, (game: BaseGame) => JSX.Element>;
+    infoModals: {
+      title: string,
+      condition?: (game: BaseGame) => boolean,
+      modal: (game: BaseGame) => JSX.Element
+    }[];
+  };
+  resetUI(): void;
+  setBoardSize(boardSize: BoardSize): void;
+  getBoardSize(screenX: number, screenY: number, mobile: boolean): BoardSize
+  applyLayouts(base?: (b: BaseGame) => void): void;
+  layoutControls(attributes: ActionLayout): void;
+  layoutStep(step: string, attributes: ActionLayout): void;
+  layoutAction(action: string, attributes: ActionLayout): void;
+  disableDefaultAppearance(): void;
+  showLayoutBoundingBoxes(): void;
+}
+
 /**
  * Base class for the game. Represents the current state of the game and
  * contains all game elements (spaces and pieces). All games contain a single
@@ -105,7 +270,7 @@ export type BoardSize = {
  *
  * @category Board
  */
-export default class Game<G extends Game<G, P> = any, P extends Player<G, P> = any> extends Space<G, P> {
+export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> extends Space<G, P> implements BaseGame{
   /**
    * An element containing all game elements that are not currently in
    * play. When elements are removed from the game, they go here, and can be
@@ -137,7 +302,7 @@ export default class Game<G extends Game<G, P> = any, P extends Player<G, P> = a
     this.game = this as unknown as G;
     this.random = ctx.gameManager?.random || Math.random;
     if (ctx.gameManager) this.players = ctx.gameManager.players as unknown as PlayerCollection<P>;
-    this._ctx.removed = this.createElement(Space<G>, 'removed'),
+    this._ctx.removed = this.createElement(Space<this>, 'removed'),
     this.pile = this._ctx.removed;
   }
 
@@ -452,7 +617,7 @@ export default class Game<G extends Game<G, P> = any, P extends Player<G, P> = a
     infoModals: [],
   };
 
-  // restore default layout rules before running setupLayout
+  // // restore default layout rules before running setupLayout
   resetUI() {
     super.resetUI();
     this._ui.stepLayouts = {};

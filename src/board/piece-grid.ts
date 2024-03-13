@@ -4,7 +4,7 @@ import Space from '../board/space.js';
 
 import type Game from './game.js'
 import type Piece from './piece.js'
-import type { default as GameElement, Vector, Direction } from "./element.js";
+import type { default as GameElement, Vector, Direction, LayoutAttributes } from "./element.js";
 import type { ElementContext } from './element.js';
 
 export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
@@ -16,6 +16,13 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
 
   isAdjacent(el1: GameElement, el2: GameElement): boolean {
     return this.adjacenciesByCell(el1 as Piece<G>, el2 as Piece<G>).length > 0;
+  }
+
+  configureLayout(layoutConfiguration: Partial<LayoutAttributes<GameElement>>) {
+    if ('margin' in layoutConfiguration || 'offsetRow' in layoutConfiguration || 'offsetColumn' in layoutConfiguration) {
+      throw Error("PieceGrid cannot have margin or offsets");
+    }
+    super.configureLayout(layoutConfiguration);
   }
 
   _sizeNeededFor(element: GameElement) {

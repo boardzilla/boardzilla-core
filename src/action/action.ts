@@ -928,7 +928,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     rotationChoices?: number[],
   }) {
     const { prompt, confirm, validate } = options || {};
-    if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only place one piece");
+    if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only have one placePiece");
     const pieceSelection = this.selections.find(s => s.name === piece);
     if (!pieceSelection) throw (`No selection named ${String(piece)} for placePiece`)
     const positionSelection = this._addSelection(new Selection(
@@ -938,9 +938,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     this.moves.push((args: A & {__placement__: number[]}) => {
       const selectedPiece = args[piece];
       if (!(selectedPiece instanceof Piece)) throw Error(`Cannot place piece selection named ${String(piece)}. Returned ${selectedPiece} instead of a piece`);
-      selectedPiece.putInto(into);
-      selectedPiece.column = args['__placement__'][0];
-      selectedPiece.row = args['__placement__'][1];
+      selectedPiece.putInto(into, { column: args['__placement__'][0], row: args['__placement__'][1] });
       selectedPiece.rotation = args['__placement__'][2];
     });
     this.order.push('move');

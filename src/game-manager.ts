@@ -11,6 +11,8 @@ import Flow from './flow/flow.js';
 
 import random from 'random-seed';
 
+import type { BaseGame } from './board/game.js';
+import type { BasePlayer } from './player/player.js';
 import type { ElementClass } from './board/element.js';
 import type { PlayerState, GameUpdate, GameState } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
@@ -54,7 +56,7 @@ export type Message = {
  * {@link Player}'s, the {@link Action}'s and the {@link Flow}.
  * @category Core
  */
-export default class GameManager<G extends Game<G, P> = Game, P extends Player<G, P> = Player> {
+export default class GameManager<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> {
   flow: Flow;
   /**
    * The players in this game. See {@link Player}
