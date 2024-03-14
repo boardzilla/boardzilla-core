@@ -1,6 +1,6 @@
 import GameElement from './element.js'
 
-import type Game from './game.js';
+import type { BaseGame } from './game.js';
 import type Player from '../player/player.js';
 import type { ElementClass, ElementAttributes } from './element.js';
 
@@ -11,7 +11,7 @@ export type ElementEventHandler<T extends GameElement> = {callback: (el: T) => v
  * setup in {@link createGame} and never change during play.
  * @category Board
  */
-export default class Space<G extends Game, P extends Player = NonNullable<G['player']>> extends GameElement<G, P> {
+export default class Space<G extends BaseGame, P extends Player = NonNullable<G['player']>> extends GameElement<G, P> {
   _eventHandlers: {
     enter: ElementEventHandler<GameElement>[],
     exit: ElementEventHandler<GameElement>[],

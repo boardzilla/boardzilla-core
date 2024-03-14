@@ -17,12 +17,13 @@ import {
   Player,
   PlayerCollection,
 } from '../player/index.js';
+import type { BaseGame } from '../board/game.js';
 
 chai.use(spies);
 const { expect } = chai;
 
 describe('Game', () => {
-  let game: Game<Game, Player>;
+  let game: BaseGame;
 
   const players = new PlayerCollection;
   players.className = Player;
@@ -629,7 +630,7 @@ describe('Game', () => {
   });
 
   describe("graph", () => {
-    let map: ConnectedSpaceMap<Game>;
+    let map: ConnectedSpaceMap<BaseGame>;
     beforeEach(() => {
       game._ctx.classRegistry.push(ConnectedSpaceMap);
       map = game.create(ConnectedSpaceMap, 'map');

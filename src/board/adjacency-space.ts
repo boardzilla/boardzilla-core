@@ -1,10 +1,10 @@
 import Space from './space.js';
 import GameElement from './element.js';
 
-import type Game from './game.js';
+import type { BaseGame } from './game.js';
 import type { LayoutAttributes } from './element.js';
 
-export default abstract class AdjacencySpace<G extends Game> extends Space<G> {
+export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G> {
 
   static _baseLayout: LayoutAttributes<GameElement> = {
     margin: 0,

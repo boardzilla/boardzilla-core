@@ -1,8 +1,8 @@
-import Game from './board/game.js';
 import { createGameStore } from './ui/store.js';
 import { createInterface } from './interface.js';
 import { times } from './utils.js';
 
+import type { BaseGame } from './board/game.js';
 import type { GameInterface, GameUpdate } from './interface.js';
 import type { Argument } from './action/action.js';
 import type { SetupFunction } from './index.js';
@@ -14,15 +14,15 @@ declare global {
   }
 }
 
-class TestRunnerPlayer<B extends Game> {
-  runner: TestRunner<B>
+class TestRunnerPlayer<G extends BaseGame> {
+  runner: TestRunner<G>
   store: ReturnType<typeof createGameStore>
   playerAttrs: PlayerAttributes
-  player: NonNullable<B['player']>
-  game: B
+  player: NonNullable<G['player']>
+  game: G
   position: number
 
-  constructor(runner: TestRunner<B>, position: number, store: ReturnType<typeof createGameStore>, playerAttrs: PlayerAttributes, game: B) {
+  constructor(runner: TestRunner<G>, position: number, store: ReturnType<typeof createGameStore>, playerAttrs: PlayerAttributes, game: G) {
     this.runner = runner
     this.position = position
     this.store = store
@@ -53,17 +53,17 @@ class TestRunnerPlayer<B extends Game> {
   }
 }
 
-export class TestRunner<B extends Game> {
+export class TestRunner<G extends BaseGame> {
   server: {
     interface: GameInterface;
     state?: GameUpdate;
     gameManager: GameManager;
-    game: B
+    game: G
   };
 
   currentPosition: number = 1;
 
-  players: TestRunnerPlayer<B>[]
+  players: TestRunnerPlayer<G>[]
 
   constructor(private setup: SetupFunction) {
     const iface = createInterface(setup)
@@ -73,7 +73,8 @@ export class TestRunner<B extends Game> {
     } as typeof this['server'];
 
     globalThis.window = {
-      clearTimeout: () => {},
+      setTimeout,
+      clearTimeout,
       top: {
         postMessage: ({ data }: { data: any }) => {
           if (this.server.state!.game.phase === 'finished') throw Error(`Game already finished. Cannot process move ${data.move}`);
@@ -93,7 +94,7 @@ export class TestRunner<B extends Game> {
   start({players, settings}: {
     players: number,
     settings: Record<string, any>
-  }): TestRunnerPlayer<B>[] {
+  }): TestRunnerPlayer<G>[] {
     const playerAttrs = times(players, p => ({
       id: String(p),
       name: String(p),
@@ -106,15 +107,15 @@ export class TestRunner<B extends Game> {
     this.server.state = this.server.interface.initialState({
       players: playerAttrs,
       settings,
-      rseed: 'test-rseed'
-    }, 'test-rseed');
+      randomSeed: 'test-rseed'
+    });
 
     this.getCurrentGame();
     this.players = playerAttrs.map((p, i) => {
       const store = createGameStore()
       const {setSetup, gameManager} = store.getState();
       setSetup(this.setup);
-      return new TestRunnerPlayer(this, i + 1, store, p as unknown as PlayerAttributes, gameManager.game as B)
+      return new TestRunnerPlayer(this, i + 1, store, p as unknown as PlayerAttributes, gameManager.game as G)
     });
     this.updatePlayers(); // initial
     return this.players
@@ -122,7 +123,7 @@ export class TestRunner<B extends Game> {
 
   getCurrentGame() {
     this.server.gameManager = globalThis.window.serverGameManager as GameManager;
-    this.server.game = this.server.gameManager.game as B;
+    this.server.game = this.server.gameManager.game as G;
   }
 
   updatePlayers() {
@@ -148,7 +149,7 @@ export class TestRunner<B extends Game> {
         });
       }
       const { gameManager } = player.store.getState();
-      player.game = gameManager.game as B;
+      player.game = gameManager.game as G;
       player.player = gameManager.players.atPosition(player.position)!;
     }
   }

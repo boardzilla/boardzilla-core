@@ -6,11 +6,12 @@ import GameElement from './element.js';
 import { bfsFromNode } from 'graphology-traversal';
 import ElementCollection from './element-collection.js';
 
-import type { Game, Space } from '../index.js';
+import type { BaseGame } from './game.js';
+import type Space from './space.js';
 import type { ElementContext, ElementClass } from './element.js';
 import type { ElementFinder } from './element-collection.js';
 
-export default class ConnectedSpaceMap<G extends Game> extends AdjacencySpace<G> {
+export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpace<G> {
   _graph: DirectedGraph;
 
   static unserializableAttributes = [...AdjacencySpace.unserializableAttributes, '_graph'];

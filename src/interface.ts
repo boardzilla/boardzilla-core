@@ -12,7 +12,7 @@ import type { SerializedArg } from './action/utils.js';
 export type SetupState = {
   players: (PlayerAttributes & Record<string, any>)[],
   settings: Record<string, any>,
-  rseed: string,
+  randomSeed: string,
 }
 
 export type GameState = {
@@ -52,7 +52,7 @@ export type GameUpdate = {
 }
 
 export type GameInterface = {
-  initialState: (state: SetupState, rseed: string) => GameUpdate
+  initialState: (state: SetupState) => GameUpdate
   processMove: (
     previousState: GameStartedState,
     move: {
@@ -90,16 +90,19 @@ function cacheGameOnWindow(game: GameManager, update: GameUpdate) {
 export const createInterface = (setup: SetupFunction): GameInterface => {
   return {
     initialState: (state: SetupState): GameUpdate => {
-      if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev
-        let fixedRseed = sessionStorage.getItem('rseed') as string;
-        if (!fixedRseed) {
-          fixedRseed = String(Math.random());
-          sessionStorage.setItem('rseed', fixedRseed);
+      let rseed = state.randomSeed;
+      if (!rseed) {
+        if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev
+          let fixedRseed = sessionStorage.getItem('rseed') as string;
+          if (!fixedRseed) {
+            fixedRseed = String(Math.random());
+            sessionStorage.setItem('rseed', fixedRseed);
+          }
+          rseed = fixedRseed;
         }
-        state.rseed = fixedRseed;
+        if (!rseed) rseed = advanceRseed(); // set the seed first because createGame may call random()
       }
-      if (!state.rseed) state.rseed = advanceRseed(); // set the seed first because createGame may call random()
-      const gameManager = setup(state, {trackMovement: true});
+      const gameManager = setup(state, {rseed, trackMovement: true});
       if (gameManager.phase !== 'finished') gameManager.play();
       const update = gameManager.getUpdate();
       cacheGameOnWindow(gameManager, update);

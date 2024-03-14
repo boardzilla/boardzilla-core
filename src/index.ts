@@ -52,7 +52,7 @@ export type { GameManager, Action, ElementClass };
 
 export type SetupFunction<B extends Game = Game> = (
   state: SetupState | GameState,
-  options?: {trackMovement?: boolean}
+  options?: {rseed?: string, trackMovement?: boolean}
 ) => GameManager<B>
 
 declare global {
@@ -92,7 +92,7 @@ export const createGame = <G extends Game>(
   gameCreator: (game: G) => void
 ): SetupFunction<G> => (
   state: SetupState | GameState,
-  options?: {trackMovement?: boolean}
+  options?: {rseed?: string, trackMovement?: boolean}
 ): GameManager<G> => {
   //console.time('setup');
   const gameManager = new GameManager(playerClass, gameClass);
@@ -100,7 +100,7 @@ export const createGame = <G extends Game>(
 
   globalThis.$ = gameManager.game._ctx.namedSpaces;
 
-  gameManager.setRandomSeed(state.rseed);
+  if (options?.rseed) gameManager.setRandomSeed(options.rseed);
   gameManager.setSettings(state.settings);
   gameManager.players.fromJSON(state.players);
 

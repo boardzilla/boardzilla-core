@@ -1,6 +1,6 @@
 import type { Argument, SingleArgument } from './action.js';
 import type { Player } from '../player/index.js';
-import type Game from '../board/game.js';
+import type { BaseGame } from '../board/game.js';
 import type GameElement from '../board/element.js';
 
 export type SerializedSingleArg = string | number | boolean;
@@ -45,12 +45,12 @@ export const escapeArgument = (arg: Argument): string => {
   return String(arg);
 }
 
-export const deserializeArg = (arg: SerializedArg, game: Game): Argument => {
+export const deserializeArg = (arg: SerializedArg, game: BaseGame): Argument => {
   if (arg instanceof Array) return arg.map(a => deserializeSingleArg(a, game)) as GameElement[];
   return deserializeSingleArg(arg, game);
 }
 
-export const deserializeSingleArg = (arg: SerializedSingleArg, game: Game): SingleArgument => {
+export const deserializeSingleArg = (arg: SerializedSingleArg, game: BaseGame): SingleArgument => {
   if (typeof arg === 'number' || typeof arg === 'boolean') return arg;
   let deser: SingleArgument | undefined;
   if (arg.slice(0, 3) === '$p[') {
@@ -66,11 +66,11 @@ export const deserializeSingleArg = (arg: SerializedSingleArg, game: Game): Sing
   return deser;
 }
 
-export const deserializeObject = (obj: Record<string, any>, game: Game) => {
+export const deserializeObject = (obj: Record<string, any>, game: BaseGame) => {
   return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, deserialize(v, game)]));
 }
 
-export const deserialize = (arg: any, game: Game): Serializable => {
+export const deserialize = (arg: any, game: BaseGame): Serializable => {
   if (arg === undefined) return undefined;
   if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => deserialize(a, game));

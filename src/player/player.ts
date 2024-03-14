@@ -20,9 +20,12 @@ export interface BasePlayer {
   setCurrent(): void
   others(): BasePlayer[]
   other(): BasePlayer
-  allMy(className?: any, ...finders: ElementFinder[]): ElementCollection
-  my(className?: any, ...finders: ElementFinder[]): GameElement | undefined
-  has(className?: any, ...finders: ElementFinder[]): boolean
+  allMy<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
+  allMy(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
+  my<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
+  my(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
+  has<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): boolean;
+  has(className?: ElementFinder, ...finders: ElementFinder[]): boolean;
   toJSON(): any
   toString(): string
 }
@@ -34,7 +37,7 @@ export interface BasePlayer {
  * is passed to an action for the player taking that action.
  * @category Core
  */
-export default class Player<B extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> implements BasePlayer {
+export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> implements BasePlayer {
   /**
    * A player's unique user id
    */
@@ -67,7 +70,7 @@ export default class Player<B extends BaseGame = BaseGame, P extends BasePlayer 
    */
   position: number;
   settings?: any;
-  game: B;
+  game: G;
   _players: PlayerCollection<P>;
 
   static isPlayer = true;

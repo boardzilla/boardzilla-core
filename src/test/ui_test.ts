@@ -288,7 +288,7 @@ function updateStore(store: ReturnType<typeof createGameStore>, players: number,
   const gameManager = setup!({
     players: playerAttrs,
     settings,
-    rseed: 'rseed',
+    randomSeed: 'rseed',
   })
 
   gameManager.play();
