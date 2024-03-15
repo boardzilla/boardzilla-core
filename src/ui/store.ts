@@ -280,7 +280,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   }),
 
   setPlacement: ({ column, row, rotation }) => set(s => {
-    const state: Partial<GameStore> = {};
     if (!s.placement || s.pendingMoves?.[0].selections[0]?.type !== 'place') return {};
 
     const oldColumn = s.placement.piece.column;
@@ -327,7 +326,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         '__placement__': [s.placement.piece.column ?? 1, s.placement.piece.row ?? 1, s.placement.piece.rotation]
       }
     );
-    return {... state, ...updateBoard(s.gameManager, s.position!) };
+    return { cancellable: true, ...updateBoard(s.gameManager, s.position!) };
   }),
 
   selectPlacement: ({ column, row, rotation }) => set(s => {
