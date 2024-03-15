@@ -9,7 +9,7 @@ import type { Argument } from '../../../action/action.js';
 const PlayerControls = ({onSubmit}: {
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
 }) => {
-  const [position, controls, boardPrompt, error, selected, move] = gameStore(s => [s.position, s.controls, s.boardPrompt, s.error, s.selected, s.move]);
+  const [position, controls, boardPrompt, error, selected, move, cancellable] = gameStore(s => [s.position, s.controls, s.boardPrompt, s.error, s.selected, s.move, s.cancellable]);
 
   if (!position || !controls) return null;
   if ((!boardPrompt && controls.moves.length === 0 && !move && !selected?.length || boardPrompt === '__missing__') && controls.name !== 'disambiguate-board-selection') return null;
@@ -31,7 +31,7 @@ const PlayerControls = ({onSubmit}: {
 
       {error && <div className="error">{error}</div>}
 
-      {(move || selected?.length || controls.name === 'disambiguate-board-selection') && (
+      {cancellable && (
         <button onClick={() => onSubmit()}>Cancel</button>
       )}
     </div>

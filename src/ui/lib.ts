@@ -132,6 +132,7 @@ export function updateSelections(store: GameStore): GameStore {
     if (move) {
       const player = gameManager.players.atPosition(position);
       if (player) {
+        state.cancellable = false;
 
         // serialize now before we alter our state to ensure proper references
         const serializedMove: SerializedMove = {
@@ -493,6 +494,7 @@ export function decorateUIMove(move: PendingMove<Player> | UIMove): UIMove {
 export function clearMove(): Partial<GameStore> {
   return {
     move: undefined,
+    cancellable: false,
     error: undefined,
     uncommittedArgs: {},
     disambiguateElement: undefined,

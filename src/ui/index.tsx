@@ -52,6 +52,7 @@ export type GameStore = {
   updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState<Player>}, readOnly?: boolean) => void;
   position?: number; // this player
   move?: UIMove; // move in progress
+  cancellable: boolean;
   selectMove: (move?: UIMove, args?: Record<string, Argument<Player>>) => void; // commit the choice and find new choices or process the choice
   clearMove: () => void; // clear all move inputs
   uncommittedArgs: Record<string, Argument<Player>>; // all current args that are submittable, including uncommitted board selections
@@ -204,7 +205,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
   // pendingMove we're trying to complete, args are the ones we're committing to, pass no move/args for move cancellation
   selectMove: (pendingMove?: UIMove, args?: Record<string, Argument<Player>>) => set(s => {
-    let state: GameStore = { ...s };
+    let state: GameStore = { ...s, cancellable: true };
     if (pendingMove) {
       args = { ...pendingMove.args, ...args };
       state.move = { ...pendingMove, args };
@@ -242,6 +243,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     return state;
   }),
 
+  cancellable: false,
   clearMove: () => set(clearMove()),
   uncommittedArgs: {},
   setError: error => set({ error }),
@@ -250,8 +252,10 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   dismissAnnouncement: () => set(s => ({ announcementIndex: s.announcementIndex + 1 })),
   boardSelections: {},
   pendingMoves: [],
+
   selectElement: (moves: UIMove[], element: GameElement) => set(s => {
     if (moves.length === 0) return {};
+    s.cancellable = true;
     if (moves.length > 1) { // multiple moves are associated with this element (attached by getBoardSelections)
       return updateSelections({
         ...s,
@@ -290,7 +294,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   }),
 
   setPlacement: ({ column, row, rotation }) => set(s => {
-    const state: Partial<GameStore> = {};
     if (!s.placement || s.pendingMoves?.[0].selections[0]?.type !== 'place') {
       return {}
     }
@@ -308,7 +311,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         '__placement__': [s.placement.piece.column ?? 1, s.placement.piece.row ?? 1, s.placement.piece.rotation]
       }
     );
-    return {... state, ...updateBoard(s.gameManager, s.position!) };
+    return { cancellable: true, ...updateBoard(s.gameManager, s.position!) };
   }),
 
   selectPlacement: ({ column, row, rotation }) => set(s => {
