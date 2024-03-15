@@ -940,15 +940,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     if (this.rotation === 270) return this._size.shape[pos.x]?.[this._size.width - 1 - pos.y];
   }
 
-  _cellsAround(pos: Vector) {
-    return {
-      up: this._cellAt({y: pos.y - 1, x: pos.x}),
-      left: this._cellAt({y: pos.y, x: pos.x - 1}),
-      down: this._cellAt({y: pos.y + 1, x: pos.x}),
-      right: this._cellAt({y: pos.y, x: pos.x + 1})
-    };
-  }
-
   _sizeNeededFor(_element: GameElement) {
     return {width: 1, height: 1};
   }
@@ -1307,23 +1298,25 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
           if (ghostPiecesIgnoredForLayout.length) {
             const extension = Math.max(...ghostPiecesIgnoredForLayout.map(p => Math.max(p._size?.width ?? 1, p._size?.height ?? 1)));
-            if (children.length === ghostPiecesIgnoredForLayout.length) {
-              columns = extension;
-              rows = extension;
-            } else {
-              if (origin.column - extension < min.column) {
-                columns += extension!;
-                origin.column -= extension!;
-              }
-              if (origin.column + columns + extension > max.column) {
-                columns += extension!;
-              }
-              if (origin.row - extension < min.row) {
-                rows += extension!;
-                origin.row -= extension!;
-              }
-              if (origin.row + rows + extension > max.row) {
-                rows += extension!;
+            if (extension > 0) {
+              if (children.length === ghostPiecesIgnoredForLayout.length) {
+                columns = Math.max(columns, extension);
+                rows = Math.max(rows, extension);
+              } else {
+                if (min.column - extension < origin.column) {
+                  columns += extension - min.column + origin.column;
+                  origin.column = min.column - extension;
+                }
+                if (max.column + extension >= origin.column + columns) {
+                  columns = max.column + extension - origin.column + 1;
+                }
+                if (min.row - extension < origin.row) {
+                  rows += extension - min.row + origin.row;
+                  origin.row = min.row - extension;
+                }
+                if (max.row + extension >= origin.row + rows) {
+                  rows = max.row + extension - origin.row + 1;
+                }
               }
             }
           }

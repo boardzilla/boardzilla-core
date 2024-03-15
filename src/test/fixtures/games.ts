@@ -23,7 +23,7 @@ let tiles: PieceGrid<Game>;
 const gameFactory = (creator: (game: TestGame) => void) => (game: TestGame) => {
   const { playerActions, loop, eachPlayer } = game.flowCommands;
   game.registerClasses(Token, PieceGrid);
-  tiles = game.create(PieceGrid, 'tiles');
+  tiles = game.create(PieceGrid, 'tiles', { rows: 3, columns: 3});
 
   for (const player of game.players) {
     const mat = game.create(Space, 'mat', { player });

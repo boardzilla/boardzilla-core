@@ -1640,14 +1640,14 @@ describe('Game', () => {
       map.rows = 5;
       map.columns = 5;
       map._fitPieceInFreePlace(p2, 5, 5, {column: 1, row: 1});
-      // abcd.
-      // e.fE.
-      // ...D.
-      // .CBA.
       // .....
+      // d..E.
+      // cf.D.
+      // bCBA.
+      // ae...
       expect(p2.column).equal(1);
-      expect(p2.row).equal(1);
-      expect(p2.rotation).equal(0);
+      expect(p2.row).equal(2);
+      expect(p2.rotation).equal(270);
     });
   });
 });

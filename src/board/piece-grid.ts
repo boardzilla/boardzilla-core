@@ -53,6 +53,15 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     }
   }
 
+  cellsAround(piece: Piece<G>, pos: Vector) {
+    return {
+      up: piece._cellAt({y: pos.y - 1, x: pos.x}),
+      left: piece._cellAt({y: pos.y, x: pos.x - 1}),
+      down: piece._cellAt({y: pos.y + 1, x: pos.x}),
+      right: piece._cellAt({y: pos.y, x: pos.x + 1})
+    };
+  }
+
   isOverlapping(piece: Piece<G>, other?: Piece<G>): boolean {
     if (!other) {
       return this._t.children.some(p => p !== piece && this.isOverlapping(piece, p as Piece<G>));
@@ -98,12 +107,12 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     }
 
     let gridSize = this._sizeNeededFor(piece);
-    piece.rotation ??= 0;
+    piece._rotation ??= 0;
     const row = piece.row === undefined ? Math.floor((rows - gridSize.height) / 2) : piece.row - origin.row;
     const column = piece.column === undefined ? Math.floor((columns - gridSize.width) / 2) : piece.column - origin.column;
-    let possibleRotations = [piece.rotation, ...(piece._size ? [0, 90, 180, 270].filter(r => r !== piece.rotation) : [])];
+    let possibleRotations = [piece._rotation, ...(piece._size ? [piece._rotation + 90, piece._rotation + 180, piece._rotation + 270] : [])];
     while (possibleRotations.length) {
-      piece.rotation = possibleRotations.shift()!;
+      piece._rotation = possibleRotations.shift()!;
       gridSize = this._sizeNeededFor(piece);
       for (let distance = 0; distance < rows || distance < columns; distance += 1) {
         if (column - distance > 0 && column - distance + gridSize.width - 1 <= columns) {
@@ -142,13 +151,13 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     if (p1.y === undefined || p1.x === undefined || piece.rotation % 90 !== 0 || p2.y === undefined || p2.x === undefined || other.rotation % 90 !== 0) return [];
 
     if (!piece._size) {
-      return Object.values(other._cellsAround({x: p1.x - p2.x, y: p1.y - p2.y})).reduce(
+      return Object.values(this.cellsAround(other, {x: p1.x - p2.x, y: p1.y - p2.y})).reduce(
         (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{piece: other, from: '.', to: adj}] : []),
         [] as {piece: Piece<G>, from: string, to: string}[]
       );
     }
     if (!other._size) {
-      return Object.values(piece._cellsAround({x: p2.x - p1.x, y: p2.y - p1.y})).reduce(
+      return Object.values(this.cellsAround(piece, {x: p2.x - p1.x, y: p2.y - p1.y})).reduce(
         (all, adj) => all.concat(adj !== undefined && adj !== ' ' ? [{piece: other, from: adj, to: '.'}] : []),
         [] as {piece: Piece<G>, from: string, to: string}[]
       );
@@ -167,7 +176,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
       for (let y = 0; y !== size; y += 1) {
         const thisCell = piece._cellAt({x, y});
         if (thisCell === undefined || thisCell === ' ') continue;
-        for (const cell of Object.values(other._cellsAround({x: x + p1.x - p2.x, y: y + p1.y - p2.y}))) {
+        for (const cell of Object.values(this.cellsAround(other, {x: x + p1.x - p2.x, y: y + p1.y - p2.y}))) {
           if (cell !== undefined && cell !== ' ') {
             adjacencies.push({piece: other, from: thisCell, to: cell});
           }
@@ -193,13 +202,13 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
 
     if (piece.rotation % 90 !== 0 || other.rotation % 90 !== 0) return []; // unsupported to calculate at non-orthoganal orientations
     if (!piece._size) {
-      return (Object.entries(other._cellsAround({x: p1.x - p2.x, y: p1.y - p2.y})) as [Direction, string][]).reduce(
+      return (Object.entries(this.cellsAround(other, {x: p1.x - p2.x, y: p1.y - p2.y})) as [Direction, string][]).reduce(
         (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{piece: other, from: undefined, to: other._size?.edges?.[adj][rotateDirection(dir, 180 - other.rotation)]}] : []),
         [] as {piece: Piece<G>, from?: string, to?: string}[]
       );
     }
     if (!other._size) {
-      return (Object.entries(piece._cellsAround({x: p2.x - p1.x, y: p2.y - p1.y})) as [Direction, string][]).reduce(
+      return (Object.entries(this.cellsAround(piece, {x: p2.x - p1.x, y: p2.y - p1.y})) as [Direction, string][]).reduce(
         (all, [dir, adj]) => all.concat(adj !== undefined && adj !== ' ' ? [{piece: other, from: piece._size?.edges?.[adj][rotateDirection(dir, 180 - piece.rotation)], to: undefined}] : []),
         [] as {piece: Piece<G>, from?: string, to?: string}[]
       );
@@ -218,7 +227,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
       for (let y = 0; y !== size; y += 1) {
         const thisCell = piece._cellAt({x, y});
         if (thisCell === undefined || thisCell === ' ') continue;
-        for (const [dir, cell] of Object.entries(other._cellsAround({x: x + p1.x - p2.x, y: y + p1.y - p2.y})) as [Direction, string][]) {
+        for (const [dir, cell] of Object.entries(this.cellsAround(other, {x: x + p1.x - p2.x, y: y + p1.y - p2.y})) as [Direction, string][]) {
           if (cell !== undefined && cell !== ' ') {
             adjacencies.push({
               piece: other,

@@ -187,16 +187,16 @@ html, body { height: 100% }
         transform-origin: center;
         > div {
           position: absolute;
-          width: 30%;
-          height: 30%;
-          top: 5%;
+          width: 1em;
+          height: 1em;
+          top: .2em;
           visibility: visible;
           &.left {
-            left: 5%;
+            left: .2em;
             cursor: sw-resize;
           }
           &.right {
-            right: 5%;
+            right: .2em;
             cursor: se-resize;
           }
           path {

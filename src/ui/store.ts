@@ -98,7 +98,7 @@ export type GameStore = {
     layout: NonNullable<GameElement['_ui']['computedLayouts']>[number];
     rotationChoices?: number[];
   };
-  setPlacement: (placement: {column?: number, row?: number, rotation?: number}) => void; // select placement. not committed, analagous to input state in a controlled form
+  setPlacement: (placement: {column: number, row: number, rotation?: number}) => void; // select placement. not committed, analagous to input state in a controlled form
   selectPlacement: (placement: {column: number, row: number, rotation?: number}) => void; // commit placement
   infoElement?: {info: JSX.Element | boolean, element: GameElement };
   setInfoElement: (el?: {info: JSX.Element | boolean, element: GameElement }) => void;
@@ -281,29 +281,45 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
   setPlacement: ({ column, row, rotation }) => set(s => {
     const state: Partial<GameStore> = {};
-    if (!s.placement || s.pendingMoves?.[0].selections[0]?.type !== 'place') {
-      return {}
+    if (!s.placement || s.pendingMoves?.[0].selections[0]?.type !== 'place') return {};
+
+    const oldColumn = s.placement.piece.column;
+    const oldRow = s.placement.piece.row;
+    const oldRotation = s.placement.piece._rotation ?? 0;
+    const grid = s.placement.layout.grid!;
+    if (rotation !== undefined && oldRotation !== rotation) {
+      s.placement.piece._rotation = rotation;
     }
-    if (column !== undefined && row !== undefined) {
-      const oldColumn = s.placement.piece.column;
-      const oldRow = s.placement.piece.row;
-      const oldRotation = s.placement.piece.rotation;
-      s.placement.piece.column = column;
-      s.placement.piece.row = row;
-      if (rotation !== undefined && oldRotation !== rotation) {
-        s.placement.piece.rotation = rotation;
-      }
-      if (s.placement?.into.isOverlapping(s.placement.piece)) {
-        s.placement.piece.column = oldColumn;
-        s.placement.piece.row = oldRow;
-        if (oldRotation !== rotation || oldColumn === undefined || oldRow === undefined) {
-          // we have to try to fit
-          return {};
-        } else {
+    const gridSize = s.placement.into._sizeNeededFor(s.placement.piece);
+    s.placement.piece.column = Math.max(grid.origin.column,
+      Math.min(grid.origin.column + grid.columns - gridSize.width,
+        Math.floor(column)
+      )
+    );
+    s.placement.piece.row = Math.max(grid.origin.row,
+      Math.min(grid.origin.row + grid.rows - gridSize.height,
+        Math.floor(row)
+      )
+    );
+    if (s.placement?.into.isOverlapping(s.placement.piece)) {
+      if ((rotation !== undefined && oldRotation !== rotation) || oldColumn === undefined || oldRow === undefined) {
+        // we have to try to fit
+        s.placement.into._fitPieceInFreePlace(s.placement.piece, grid.columns, grid.rows, grid.origin);
+        if (s.placement.piece.column === undefined) {
+          s.placement.piece.column = oldColumn;
+          s.placement.piece.row = oldRow;
+          s.placement.piece._rotation = oldRotation;
           return {};
         }
+      } else {
+        s.placement.piece.column = oldColumn;
+        s.placement.piece.row = oldRow;
+        s.placement.piece._rotation = oldRotation;
+        return {};
       }
     }
+    if (s.placement.piece.column === oldColumn && s.placement.piece.row === oldRow && s.placement.piece._rotation === oldRotation) return {};
+
     s.placement.invalid = !!s.gameManager.getAction(s.pendingMoves?.[0].name, s.gameManager.players.atPosition(s.position!)!)._getError(
       s.pendingMoves?.[0].selections[0],
       {

@@ -53,6 +53,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
   const gridSizeNeeded = useMemo(() => (
     placement?.into._sizeNeededFor(placement.piece) ?? {width: 1, height: 1}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
   const previousRender = useMemo(() => {
@@ -202,13 +203,14 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       row: ((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y + grid.origin.row
     };
 
-    let newPlacement = {column: placement.piece.column, row: placement.piece.row};
+    let newPlacement: {column: number, row: number};
     if (placement.piece.row === undefined || placement.piece.column === undefined) {
       newPlacement = {
         column: Math.round(pointer.column - gridSizeNeeded.width / 2),
         row: Math.round(pointer.row - gridSizeNeeded.height / 2),
       }
     } else {
+      newPlacement = {column: placement.piece.column, row: placement.piece.row};
       if (pointer.column < placement.piece.column) {
         newPlacement.column = Math.max(grid.origin.column, Math.floor(pointer.column));
       } else if (pointer.column - gridSizeNeeded.width + 1 > placement.piece.column) {
@@ -225,6 +227,20 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
           Math.floor(pointer.row - gridSizeNeeded.height + 1)
         );
       }
+    }
+    if (newPlacement.column !== undefined) {
+      newPlacement.column = Math.max(grid.origin.column,
+        Math.min(grid.origin.column + grid.columns - gridSizeNeeded.width,
+          Math.floor(newPlacement.column)
+        )
+      );
+    }
+    if (newPlacement.row !== undefined) {
+      newPlacement.row = Math.max(grid.origin.row,
+        Math.min(grid.origin.row + grid.rows - gridSizeNeeded.height,
+          Math.floor(newPlacement.row)
+        )
+      );
     }
     if (newPlacement.column !== placement.piece.column || newPlacement.row !== placement.piece.row) {
       setPlacement(newPlacement);
@@ -512,10 +528,13 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     </div>
   );
   if (placing && placement?.rotationChoices) {
+    const widthStretch = gridSizeNeeded.width / (element._size?.width ?? 1);
+    const minSquare = Math.min(absoluteTransform.width, absoluteTransform.height);
+
     contents = (
       <>
         {contents}
-        <div className="rotator" style={{...style, transform: undefined }}>
+        <div className="rotator" style={{...style, width: (element._ui.computedStyle!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
           <div className="left" onClick={() => handleRotate(-1)}>
             <svg
               viewBox="0 0 254.2486 281.95978"
