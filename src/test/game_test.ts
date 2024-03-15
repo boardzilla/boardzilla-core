@@ -689,6 +689,21 @@ describe('Game', () => {
       map.connect(c, d, 1);
       expect(a.withinDistance(5).all(Space)).to.deep.equal([b,c]);
     })
+
+    it("searches contiguous", () => {
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      const d = map.create(Space, 'd');
+      const e = map.create(Space, 'e');
+      const f = map.create(Space, 'f');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      map.connect(c, d, 1);
+      map.connect(e, f, 1);
+      expect(map.allConnectedTo(a).all(Space)).to.deep.equal([a,b,c,d]);
+    })
   });
 
   describe('grids', () => {

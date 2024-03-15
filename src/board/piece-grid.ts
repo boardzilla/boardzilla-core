@@ -108,8 +108,8 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
 
     let gridSize = this._sizeNeededFor(piece);
     piece._rotation ??= 0;
-    const row = piece.row === undefined ? Math.floor((rows - gridSize.height) / 2) : piece.row - origin.row;
-    const column = piece.column === undefined ? Math.floor((columns - gridSize.width) / 2) : piece.column - origin.column;
+    const row = piece.row === undefined ? Math.floor((rows - gridSize.height) / 2) : piece.row - origin.row + 1;
+    const column = piece.column === undefined ? Math.floor((columns - gridSize.width) / 2) : piece.column - origin.column + 1;
     let possibleRotations = [piece._rotation, ...(piece._size ? [piece._rotation + 90, piece._rotation + 180, piece._rotation + 270] : [])];
     while (possibleRotations.length) {
       piece._rotation = possibleRotations.shift()!;

@@ -91,6 +91,18 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
     return nodes.all(className, (el: GameElement) => el !== element, ...finders);
   }
 
+  // includes element
+  allConnectedTo<F extends GameElement>(element: GameElement, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
+  allConnectedTo(element: GameElement, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
+  allConnectedTo(element: GameElement, className?: any, ...finders: ElementFinder[]) {
+    const source = String(this._positionedParentOf(element)._t.id);
+    const nodes = new ElementCollection();
+    bfsFromNode(this._graph, source, target => {
+      nodes.push(this._graph.getNodeAttributes(target).space);
+    });
+    return nodes.all(className, ...finders);
+  }
+
   closestTo<F extends GameElement>(element: GameElement, className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
   closestTo(element: GameElement, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): GameElement | undefined;
   closestTo<F extends GameElement>(element: GameElement, className?: any, ...finders: ElementFinder[]): F | GameElement | undefined {
