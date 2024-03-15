@@ -51,6 +51,9 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const draggable = mode === 'game' && !invalidSelectionError && !!selections?.dragMoves?.length; // ???
   const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
   const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
+  const gridSizeNeeded = useMemo(() => (
+    placement?.into._sizeNeededFor(placement.piece) ?? {width: 1, height: 1}
+  ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
   const previousRender = useMemo(() => {
     if (element.hasChangedParent()) {
@@ -193,28 +196,41 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     if (!layout) return;
     const {area, grid} = layout;
     if (!grid || !area) return;
+
     const pointer = {
-      column: Math.max(
-        grid.origin.column,
-        Math.min(
-          grid.origin.column + grid.columns - 1,
-          Math.floor(((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x) + grid.origin.column
-        )
-      ),
-      row: Math.max(
-        grid.origin.row,
-        Math.min(
-          grid.origin.row + grid.rows - 1,
-          Math.floor(((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y) + grid.origin.row
-        )
-      ),
+      column: ((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x + grid.origin.column,
+      row: ((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y + grid.origin.row
     };
 
-    if (placement.piece.row !== pointer.row || placement.piece.column !== pointer.column) {
-      setPlacement(pointer);
+    let newPlacement = {column: placement.piece.column, row: placement.piece.row};
+    if (placement.piece.row === undefined || placement.piece.column === undefined) {
+      newPlacement = {
+        column: Math.round(pointer.column - gridSizeNeeded.width / 2),
+        row: Math.round(pointer.row - gridSizeNeeded.height / 2),
+      }
+    } else {
+      if (pointer.column < placement.piece.column) {
+        newPlacement.column = Math.max(grid.origin.column, Math.floor(pointer.column));
+      } else if (pointer.column - gridSizeNeeded.width + 1 > placement.piece.column) {
+        newPlacement.column = Math.min(
+          grid.origin.column + grid.columns - gridSizeNeeded.width,
+          Math.floor(pointer.column - gridSizeNeeded.width + 1)
+        );
+      }
+      if (pointer.row < placement.piece.row) {
+        newPlacement.row = Math.max(grid.origin.row, Math.floor(pointer.row));
+      } else if (pointer.row - gridSizeNeeded.height + 1 > placement.piece.row) {
+        newPlacement.row = Math.min(
+          grid.origin.row + grid.rows - gridSizeNeeded.height,
+          Math.floor(pointer.row - gridSizeNeeded.height + 1)
+        );
+      }
+    }
+    if (newPlacement.column !== placement.piece.column || newPlacement.row !== placement.piece.row) {
+      setPlacement(newPlacement);
     }
 
-  }, [placement, setPlacement])
+  }, [placement, setPlacement, gridSizeNeeded])
 
   const handleRotate = useCallback((direction: number) => {
     const choices = placement?.rotationChoices;
@@ -243,7 +259,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     const { computedStyle } = element._ui;
 
     if (computedStyle) {
-      styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])));
+      styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, typeof val === 'number' ? `${val}%` : val])));
     }
 
     if (dragging) {

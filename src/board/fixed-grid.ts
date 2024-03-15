@@ -2,13 +2,25 @@ import ConnectedSpaceMap from "./connected-space-map.js";
 
 import type Game from './game.js';
 import type Space from './space.js';
-import type { default as GameElement, ElementClass } from "./element.js";
+import type { default as GameElement, ElementClass, ElementUI } from "./element.js";
 
 export default abstract class FixedGrid<G extends Game> extends ConnectedSpaceMap<G> {
 
   rows: number;
   columns: number;
   space: ElementClass<Space<G>>
+
+  _ui: ElementUI<this> = {
+    layouts: [],
+    appearance: {},
+    getBaseLayout: () => ({
+      rows: this.rows,
+      columns: this.columns,
+      sticky: true,
+      alignment: 'center',
+      direction: 'square'
+    })
+  };
 
   static unserializableAttributes = [...ConnectedSpaceMap.unserializableAttributes, 'space'];
 

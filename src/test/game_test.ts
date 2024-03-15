@@ -1588,6 +1588,67 @@ describe('Game', () => {
         ]);
       });
     });
+
+    it('can place shapes', () => {
+      p1.column = 0;
+      p1.row = 0;
+      p2.column = -1;
+      p2.row = -1;
+
+      game.applyLayouts();
+      expect(p1._ui.computedStyle).to.deep.equal({ left: 25, top: 25, width: 75, height: 75 })
+      expect(p2._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 50 })
+    });
+
+    it('can place shapes rotated', () => {
+      p1.column = 0;
+      p1.row = 0;
+      p1.rotation = 180;
+      p2.column = 1;
+      p2.row = 1;
+      p2.rotation = 90;
+
+      game.applyLayouts();
+      expect(p1._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 60, height: 60 })
+      expect(p2._ui.computedStyle).to.deep.equal({ left: 40, top: 20, width: 80, height: 40, transformOrigin: '25% 50%' })
+    });
+
+    it('can find place for shapes', () => {
+      p1.column = 4;
+      p1.row = 5;
+      p1.rotation = 0;
+      p2.column = 5;
+      p2.row = 5;
+      p2.rotation = 90;
+      map._fitPieceInFreePlace(p2, 4, 4, {column: 4, row: 4});
+      // ..ea
+      // ABCb
+      // D.fc
+      // E..d
+      expect(p2.column).equal(6);
+      expect(p2.row).equal(4);
+      expect(p2.rotation).equal(90);
+    });
+
+    it('can find place for shapes even if rotation is forced', () => {
+      p1.column = 2;
+      p1.row = 2;
+      p1.rotation = 180;
+      p2.column = 2;
+      p2.row = 2;
+      p2.rotation = 90;
+      map.rows = 5;
+      map.columns = 5;
+      map._fitPieceInFreePlace(p2, 5, 5, {column: 1, row: 1});
+      // abcd.
+      // e.fE.
+      // ...D.
+      // .CBA.
+      // .....
+      expect(p2.column).equal(1);
+      expect(p2.row).equal(1);
+      expect(p2.rotation).equal(0);
+    });
   });
 });
 

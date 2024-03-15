@@ -15,6 +15,7 @@ import {
 
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
 import type { Box, ElementJSON } from '../board/element.js'
+import type { BaseGame } from '../board/game.js'
 import type { GameElement, Piece, PieceGrid } from '../board/index.js'
 import type Selection from '../action/selection.js'
 import type { Argument } from '../action/action.js'
@@ -91,9 +92,9 @@ export type GameStore = {
   setCurrentDrop: (el?: GameElement) => void;
   placement?: { // placing a piece inside a grid as part of the current move
     selected?: { row: number, column: number }; // player indicated choice, ready for validation/confirmation
-    piece: Piece<Game> ; // temporary ghost piece
+    piece: Piece<BaseGame> ; // temporary ghost piece
     invalid?: boolean
-    into: PieceGrid<Game>;
+    into: PieceGrid<BaseGame>;
     layout: NonNullable<GameElement['_ui']['computedLayouts']>[number];
     rotationChoices?: number[];
   };
@@ -286,15 +287,22 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     if (column !== undefined && row !== undefined) {
       const oldColumn = s.placement.piece.column;
       const oldRow = s.placement.piece.row;
+      const oldRotation = s.placement.piece.rotation;
       s.placement.piece.column = column;
       s.placement.piece.row = row;
+      if (rotation !== undefined && oldRotation !== rotation) {
+        s.placement.piece.rotation = rotation;
+      }
       if (s.placement?.into.isOverlapping(s.placement.piece)) {
         s.placement.piece.column = oldColumn;
         s.placement.piece.row = oldRow;
+        if (oldRotation !== rotation || oldColumn === undefined || oldRow === undefined) {
+          // we have to try to fit
+          return {};
+        } else {
+          return {};
+        }
       }
-    }
-    if (rotation !== undefined) {
-      s.placement.piece.rotation = rotation;
     }
     s.placement.invalid = !!s.gameManager.getAction(s.pendingMoves?.[0].name, s.gameManager.players.atPosition(s.position!)!)._getError(
       s.pendingMoves?.[0].selections[0],

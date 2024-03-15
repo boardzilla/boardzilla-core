@@ -5,13 +5,29 @@ import Space from '../board/space.js';
 import type Game from './game.js'
 import type Piece from './piece.js'
 import type { default as GameElement, Vector, Direction, LayoutAttributes } from "./element.js";
-import type { ElementContext } from './element.js';
+import type { ElementContext, ElementUI } from './element.js';
 
 export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
 
+  extendableGrid: boolean = true;
+  rows: number = 1;
+  columns: number = 1;
+
+  _ui: ElementUI<this> = {
+    layouts: [],
+    appearance: {},
+    getBaseLayout: () => ({
+      rows: this.rows,
+      columns: this.columns,
+      aspectRatio: 1,
+      alignment: 'center',
+      direction: 'square'
+    })
+  };
+
   constructor(ctx: ElementContext) {
     super(ctx);
-    this.onEnter(Space, () => { throw Error(`Only pieces can be added to the PieceGrid ${this.name}`); });
+    this.onEnter(Space, () => { throw Error(`Only pieces can be added to the PieceGrid ${this.name}`) });
   }
 
   isAdjacent(el1: GameElement, el2: GameElement): boolean {
@@ -64,6 +80,52 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
       }
     }
     return false;
+  }
+
+  _fitPieceInFreePlace(piece: Piece<G>, rows: number, columns: number, origin: {column: number, row: number}) {
+    const tryLaterally = (vertical: boolean, d: number): boolean => {
+      for (let lateral = 0; lateral < d + (vertical ? 0 : 1); lateral = -lateral + (lateral < 1 ? 1 : 0)) {
+        if (vertical) {
+          if (row + lateral <= 0 || row + lateral + gridSize.height - 1 > rows) continue;
+          piece.row = row + lateral + origin.row - 1;
+        } else {
+          if (column + lateral <= 0 || column + lateral + gridSize.width - 1 > columns) continue;
+          piece.column = column + lateral + origin.column - 1;
+        }
+        if (!this.isOverlapping(piece)) return true;
+      }
+      return false;
+    }
+
+    let gridSize = this._sizeNeededFor(piece);
+    piece.rotation ??= 0;
+    const row = piece.row === undefined ? Math.floor((rows - gridSize.height) / 2) : piece.row - origin.row;
+    const column = piece.column === undefined ? Math.floor((columns - gridSize.width) / 2) : piece.column - origin.column;
+    let possibleRotations = [piece.rotation, ...(piece._size ? [0, 90, 180, 270].filter(r => r !== piece.rotation) : [])];
+    while (possibleRotations.length) {
+      piece.rotation = possibleRotations.shift()!;
+      gridSize = this._sizeNeededFor(piece);
+      for (let distance = 0; distance < rows || distance < columns; distance += 1) {
+        if (column - distance > 0 && column - distance + gridSize.width - 1 <= columns) {
+          piece.column = column - distance + origin.column - 1;
+          if (tryLaterally(true, distance || 1)) return;
+        }
+        if (distance && column + distance > 0 && column + distance + gridSize.width - 1 <= columns) {
+          piece.column = column + distance + origin.column - 1;
+          if (tryLaterally(true, distance)) return;
+        }
+        if (distance && row - distance > 0 && row - distance + gridSize.height - 1 <= rows) {
+          piece.row = row - distance + origin.row - 1;
+          if (tryLaterally(false, distance)) return;
+        }
+        if (distance && row + distance > 0 && row + distance + gridSize.height - 1 <= rows) {
+          piece.row = row + distance + origin.row - 1;
+          if (tryLaterally(false, distance)) return;
+        }
+      }
+    };
+    piece.row = undefined;
+    piece.column = undefined;
   }
 
   adjacenciesByCell(piece: Piece<G>, other?: Piece<G>): {piece: Piece<G>, from: string, to: string}[] {

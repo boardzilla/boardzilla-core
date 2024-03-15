@@ -87,7 +87,7 @@ export type ElementUI<T extends GameElement> = {
       labelScale?: number,
     },
   },
-  computedStyle?: Box,
+  computedStyle?: Box & { transformOrigin?: string },
   computedLayouts?: {
     area: Box,
     grid?: {
@@ -102,6 +102,7 @@ export type ElementUI<T extends GameElement> = {
     children: GameElement[],
     drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
   }[],
+  getBaseLayout: () => LayoutAttributes<T>,
   ghost?: boolean,
 };
 
@@ -136,14 +137,6 @@ export type LayoutAttributes<T extends GameElement> = {
    * Columns, as per `rows`
    */
   columns?: number | {min: number, max?: number} | {min?: number, max: number},
-  /**
-   * If supplied, creates an empty margin in the row/column grid of this size
-   * around the contents while placing new elements. It is common to set
-   * `extensionMargin` to 1 to allow players to place new tiles into the space
-   * around the existing tiles, thereby extending the grid. Otherwise new tiles
-   * can only be placed in the existing grid.
-   */
-  extensionMargin?: number,
   /**
    * If supplied, this overrides all other attributes to define a set of
    * strictly defined boxes for placing each element. Any elements that exceed
@@ -358,14 +351,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   static unserializableAttributes = ['_ctx', '_t', '_ui', 'game'];
 
   static visibleAttributes: string[] | undefined;
-
-  static _baseLayout: LayoutAttributes<GameElement> = {
-    margin: 0,
-    scaling: 'fit',
-    alignment: 'center',
-    gap: 0,
-    direction: 'square'
-  };
 
   /**
    * Do not use the constructor directly. Instead Call {@link
@@ -857,7 +842,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * single number argument will be passed with the number of the added element,
    * starting with 1.
    */
-  createMany<T extends GameElement>(n: number, className: ElementClass<T>, name: string, attributes?: ElementAttributes<T> | ((n: number) => ElementAttributes<T>)) {
+  createMany<T extends GameElement>(n: number, className: ElementClass<T>, name: string, attributes?: ElementAttributes<T> | ((n: number) => ElementAttributes<T>)): ElementCollection<T> {
     return new ElementCollection<T>(...times(n, i => this.create(className, name, typeof attributes === 'function' ? attributes(i) : attributes)));
   }
 
@@ -1104,16 +1089,19 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @internal
    */
 
-  _ui: ElementUI<this>
- = {
+  _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
+    getBaseLayout: () => ({
+      alignment: 'center',
+      direction: 'square'
+    })
   };
 
   resetUI() {
     this._ui.layouts = [{
       applyTo: GameElement,
-      attributes: (this.constructor as typeof GameElement)._baseLayout
+      attributes: this._ui.getBaseLayout()
     }];
     this._ui.appearance = {};
     this._ui.computedStyle = undefined;
@@ -1244,7 +1232,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       children ??= [];
 
       if (!slots) {
-        const cells: [number, number][] = [];
+        const cells: [number?, number?][] = [];
         const min: {column?: number, row?: number} = {};
         const max: {column?: number, row?: number} = {};
 
@@ -1279,8 +1267,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
           top: alignment.includes('top') ? 0 : (alignment.includes('bottom') ? 1 : 0.5),
         };
 
-        const ghostPiecesIgnoredForLayout = (attributes.extensionMargin ?? 0) > 0 ? children.filter(c => c._ui.ghost).length : 0;
-        const elements = children.length - ghostPiecesIgnoredForLayout;
+        const ghostPiecesIgnoredForLayout = ('extendableGrid' in this && this.extendableGrid) ? children.filter(c => c._ui.ghost) : [];
+        const elements = children.length - ghostPiecesIgnoredForLayout.length;
 
         // expand grid as needed for children in direction specified
         if (children.length) {
@@ -1317,20 +1305,26 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
             row: Math.min(min.row, max.row, Math.max(1, max.row - rows + 1))
           }
 
-          if (ghostPiecesIgnoredForLayout > 0 && children.length > ghostPiecesIgnoredForLayout && attributes.extensionMargin !== undefined) {
-            if (origin.column === min.column) {
-              columns += attributes.extensionMargin!;
-              origin.column -= attributes.extensionMargin!;
-            }
-            if (origin.column + columns - 1 === max.column) {
-              columns += attributes.extensionMargin!;
-            }
-            if (origin.row === min.row) {
-              rows += attributes.extensionMargin!;
-              origin.row -= attributes.extensionMargin!;
-            }
-            if (origin.row + rows - 1 === max.row) {
-              rows += attributes.extensionMargin!;
+          if (ghostPiecesIgnoredForLayout.length) {
+            const extension = Math.max(...ghostPiecesIgnoredForLayout.map(p => Math.max(p._size?.width ?? 1, p._size?.height ?? 1)));
+            if (children.length === ghostPiecesIgnoredForLayout.length) {
+              columns = extension;
+              rows = extension;
+            } else {
+              if (origin.column - extension < min.column) {
+                columns += extension!;
+                origin.column -= extension!;
+              }
+              if (origin.column + columns + extension > max.column) {
+                columns += extension!;
+              }
+              if (origin.row - extension < min.row) {
+                rows += extension!;
+                origin.row -= extension!;
+              }
+              if (origin.row + rows + extension > max.row) {
+                rows += extension!;
+              }
             }
           }
 
@@ -1403,7 +1397,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
           let c = 0;
           while (c != children.length) {
             const child = children[c];
-            if (child.column !== undefined && child.row !== undefined) {
+            if (cells[c]) {
               c++;
               continue;
             }
@@ -1587,10 +1581,12 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         //console.log('size, area after fit/fill adj', size, area, scale, cellGap)
         for (let c = 0; c < children.length && c < cells.length; c++) {
           let [column, row] = cells[c];
-          column -= origin.column - 1;
-          row -= origin.row - 1;
-          const box = cellBoxRC(column, row, area, size!, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
-          if (box) cellBoxes[c] = box;
+          if (column !== undefined && row !== undefined) {
+            column -= origin.column - 1;
+            row -= origin.row - 1;
+            const box = cellBoxRC(column, row, area, size!, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
+            if (box) cellBoxes[c] = box;
+          }
         }
 
         this._ui.computedLayouts[l].grid = {
@@ -1609,19 +1605,33 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         const box = cellBoxes[i];
         if (!box) continue;
         const child = children[i];
-        let aspectRatio = child._ui.appearance.aspectRatio;
-        if (aspectRatio) aspectRatio *= absoluteTransform.height / absoluteTransform.width;
+        let { width, height, left, top } = box;
+        let transformOrigin: string | undefined = undefined;
+        const gridSize = this._sizeNeededFor(child);
+        if (gridSize.width !== 1 || gridSize.height !== 1) {
+          height *= (child._size!.height ?? 1);
+          width *= (child._size!.width ?? 1);
+          if (child.rotation === 90) {
+            transformOrigin = `${50 * child._size!.height / child._size!.width}% 50%`;
+          }
+          if (child.rotation === 270) {
+            transformOrigin = `50% ${50 * child._size!.width / child._size!.height}%`;
+          }
+        } else {
+          if (child._ui.appearance.aspectRatio || child._size) {
+            const aspectRatio = (child._ui.appearance.aspectRatio ?? 1) * (child._size?.width ?? 1) / (child._size?.height ?? 1) * absoluteTransform.height / absoluteTransform.width;
 
-        let { width, height } = box;
-        if (aspectRatio && aspectRatio !== width / height) {
-          if (aspectRatio > width / height) {
-            height = width / aspectRatio;
-          } else {
-            width = aspectRatio * height;
+            if (aspectRatio && aspectRatio !== width / height) {
+              if (aspectRatio > width / height) {
+                height = width / aspectRatio;
+              } else {
+                width = aspectRatio * height;
+              }
+            }
+            left = box.left + (box.width - width) / 2;
+            top = box.top + (box.height - height) / 2;
           }
         }
-        let left = box.left + (box.width - width) / 2;
-        let top = box.top + (box.height - height) / 2;
 
         if (haphazardly) {
           let wiggle = {x: 0, y: 0};
@@ -1664,6 +1674,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
           top += wiggle.y
         }
         child._ui.computedStyle = { width, height, left, top };
+        if (transformOrigin) child._ui.computedStyle.transformOrigin = transformOrigin;
 
         child.applyLayouts();
       }

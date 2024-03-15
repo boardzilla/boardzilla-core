@@ -8,7 +8,8 @@ import type { GameStore } from './store.js';
 import type { default as GameManager, SerializedMove, PendingMove } from '../game-manager.js'
 import type { Box, ElementJSON } from '../board/element.js'
 import type { ResolvedSelection } from '../action/selection.js';
-import type { ActionLayout, Game, Piece, PieceGrid } from '../board/index.js'
+import type { BaseGame } from '../board/game.js'
+import type { ActionLayout, Piece, PieceGrid } from '../board/index.js'
 
 type GamePendingMoves = ReturnType<GameManager['getPendingMoves']>;
 
@@ -61,9 +62,9 @@ export function updateSelections(store: GameStore): GameStore {
 
     const selection = moves[0].selections[0];
     if (selection.type === 'place' && !placement) {
-      let piece = selection.clientContext.placement.piece as string | Piece<Game>;
-      if (typeof piece === 'string') piece = moves[0].args[piece] as Piece<Game>;
-      const into = selection.clientContext.placement.into as PieceGrid<Game>;
+      let piece = selection.clientContext.placement.piece as string | Piece<BaseGame>;
+      if (typeof piece === 'string') piece = moves[0].args[piece] as Piece<BaseGame>;
+      const into = selection.clientContext.placement.into as PieceGrid<BaseGame>;
       const clone = piece.cloneInto(into);
       clone._ui.ghost = true;
       if (selection.rotationChoices) {

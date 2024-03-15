@@ -6,29 +6,7 @@ import type { BaseGame } from '../board/game.js';
 import type { ElementClass } from '../board/element.js';
 import type { ElementFinder, default as ElementCollection } from '../board/element-collection.js';
 
-export interface BasePlayer {
-  id: string;
-  name: string;
-  color: string;
-  avatar: string;
-  host: boolean;
-  position: number;
-  settings?: any;
-  game: BaseGame;
-  _players: PlayerCollection<BasePlayer>;
-  isCurrent(): boolean
-  setCurrent(): void
-  others(): BasePlayer[]
-  other(): BasePlayer
-  allMy<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  allMy(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
-  my<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  my(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
-  has<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): boolean;
-  has(className?: ElementFinder, ...finders: ElementFinder[]): boolean;
-  toJSON(): any
-  toString(): string
-}
+export interface BasePlayer extends Player<BaseGame, BasePlayer> {}
 
 /**
  * Base player class. Each game must declare a single player class that extends
@@ -37,7 +15,7 @@ export interface BasePlayer {
  * is passed to an action for the player taking that action.
  * @category Core
  */
-export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> implements BasePlayer {
+export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> {
   /**
    * A player's unique user id
    */

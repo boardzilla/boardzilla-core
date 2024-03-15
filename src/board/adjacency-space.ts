@@ -2,17 +2,18 @@ import Space from './space.js';
 import GameElement from './element.js';
 
 import type { BaseGame } from './game.js';
-import type { LayoutAttributes } from './element.js';
+import type { ElementUI, LayoutAttributes } from './element.js';
 
 export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G> {
 
-  static _baseLayout: LayoutAttributes<GameElement> = {
-    margin: 0,
-    scaling: 'fit',
-    sticky: true,
-    alignment: 'center',
-    gap: 0,
-    direction: 'square'
+  _ui: ElementUI<this> = {
+    layouts: [],
+    appearance: {},
+    getBaseLayout: () => ({
+      sticky: true,
+      alignment: 'center',
+      direction: 'square'
+    })
   };
 
   isAdjacent(_el1: GameElement, _el2: GameElement): boolean {
@@ -41,7 +42,7 @@ export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G
     this._ui.layouts = [{
       applyTo: GameElement,
       attributes: {
-        ...(this.constructor as typeof GameElement)._baseLayout,
+        ...this._ui.getBaseLayout(),
         ...layoutConfiguration,
       }
     }]
