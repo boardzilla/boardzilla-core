@@ -1409,13 +1409,13 @@ describe('Game', () => {
           {
             piece: p2,
             from: 'C',
-            to: 'b'
+            to: 'e'
           },
           {
             piece: p2,
             from: 'C',
-            to: 'e'
-          }
+            to: 'b'
+          },
         ]);
         expect(map.adjacenciesByEdge(p1, p2)).to.deep.equal([
           {
@@ -1425,14 +1425,14 @@ describe('Game', () => {
           },
           {
             piece: p2,
-            from: 'RIGHT',
-            to: 'down'
+            from: 'UP',
+            to: 'stuff'
           },
           {
             piece: p2,
-            from: 'UP',
-            to: 'stuff'
-          }
+            from: 'RIGHT',
+            to: 'down'
+          },
         ]);
       });
 
@@ -1484,24 +1484,24 @@ describe('Game', () => {
           {
             piece: p2,
             from: 'C',
-            to: 'd'
+            to: 'f'
           },
           {
             piece: p2,
             from: 'C',
-            to: 'f'
-          }
+            to: 'd'
+          },
         ]);
         expect(map.adjacenciesByEdge(p1, p2)).to.deep.equal([
           {
             piece: p2,
-            from: 'RIGHT',
-            to: 'down'
+            from: 'UP',
+            to: 'Right'
           },
           {
             piece: p2,
-            from: 'UP',
-            to: 'Right'
+            from: 'RIGHT',
+            to: 'down'
           }
         ]);
       });
@@ -1559,12 +1559,12 @@ describe('Game', () => {
           {
             piece: p2,
             from: 'C',
-            to: 'd'
+            to: 'f'
           },
           {
             piece: p2,
             from: 'C',
-            to: 'f'
+            to: 'd'
           },
           {
             piece: p3,
@@ -1575,13 +1575,13 @@ describe('Game', () => {
         expect(map.adjacenciesByEdge(p1)).to.deep.equal([
           {
             piece: p2,
-            from: 'RIGHT',
-            to: 'down'
+            from: 'UP',
+            to: 'Right'
           },
           {
             piece: p2,
-            from: 'UP',
-            to: 'Right'
+            from: 'RIGHT',
+            to: 'down'
           },
           {
             piece: p3,

@@ -4,7 +4,7 @@ import Space from '../board/space.js';
 
 import type Game from './game.js'
 import type Piece from './piece.js'
-import type { default as GameElement, Vector, Direction, LayoutAttributes } from "./element.js";
+import type { default as GameElement, Vector, Direction, LayoutAttributes, DirectionWithDiagonals } from "./element.js";
 import type { ElementContext, ElementUI } from './element.js';
 
 export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
@@ -12,6 +12,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
   extendableGrid: boolean = true;
   rows: number = 1;
   columns: number = 1;
+  diagonalAdjacency: boolean = false
 
   _ui: ElementUI<this> = {
     layouts: [],
@@ -54,12 +55,19 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
   }
 
   cellsAround(piece: Piece<G>, pos: Vector) {
-    return {
+    const adjacencies: Partial<Record<DirectionWithDiagonals, string>> = {
       up: piece._cellAt({y: pos.y - 1, x: pos.x}),
-      left: piece._cellAt({y: pos.y, x: pos.x - 1}),
       down: piece._cellAt({y: pos.y + 1, x: pos.x}),
+      left: piece._cellAt({y: pos.y, x: pos.x - 1}),
       right: piece._cellAt({y: pos.y, x: pos.x + 1})
     };
+    if (this.diagonalAdjacency) {
+      adjacencies.upleft = piece._cellAt({y: pos.y - 1, x: pos.x - 1});
+      adjacencies.upright = piece._cellAt({y: pos.y - 1, x: pos.x + 1});
+      adjacencies.downleft = piece._cellAt({y: pos.y + 1, x: pos.x - 1});
+      adjacencies.downright = piece._cellAt({y: pos.y + 1, x: pos.x + 1});
+    }
+    return adjacencies;
   }
 
   isOverlapping(piece: Piece<G>, other?: Piece<G>): boolean {

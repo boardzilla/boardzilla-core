@@ -65,7 +65,8 @@ export type Box = { left: number, top: number, width: number, height: number };
  */
 export type Vector = { x: number, y: number };
 
-export type Direction = 'left' | 'right' | 'down' | 'up';
+export type Direction = 'up' | 'down' | 'left' | 'right'
+export type DirectionWithDiagonals = Direction | 'upleft' | 'upright' | 'downleft' | 'downright';
 
 export type ElementUI<T extends GameElement> = {
   layouts: {
@@ -242,7 +243,7 @@ export type LayoutAttributes<T extends GameElement> = {
    * can be hidden to save overall space on the playing area.
    */
   drawer?: {
-    closeDirection: Direction,
+    closeDirection: 'left' | 'right' | 'down' | 'up',
     /**
      * JSX to appear in the tab while open
      */
@@ -338,7 +339,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     width: number,
     height: number,
     shape: string[],
-    edges?: Record<string, { left?: string, right?: string, up?: string, down?: string }>
+    edges?: Record<string, Partial<Record<Direction, string>>>
   }
 
   _visible?: {
@@ -954,12 +955,12 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     }
   }
 
-  setEdges(edges: Record<string, { left?: string, right?: string, up?: string, down?: string }> | { left?: string, right?: string, up?: string, down?: string }) {
+  setEdges(edges: Record<string, Partial<Record<Direction, string>>> | Partial<Record<Direction, string>>) {
     if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
     if (Object.keys(edges)[0].length === 1) {
       const missingCell = Object.keys(edges).find(c => this._size?.shape.every(s => !s.includes(c)));
       if (missingCell) throw Error(`No cell '${missingCell}' defined in shape`);
-      this._size!.edges = edges as Record<string, { left?: string, right?: string, up?: string, down?: string }>;
+      this._size!.edges = edges as Record<string, Record<Direction, string>>;
     } else {
       if (this._size) throw Error("setEdges must use the cell characters from setShape as keys");
       this._size = {shape: ['.'], width: 1, height: 1, edges: {'.': edges}};
