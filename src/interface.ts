@@ -51,16 +51,22 @@ export type GameUpdate = {
   messages: Message[]
 }
 
+type ReprocessHistoryResult = {
+  initialState: GameUpdate
+  updates: GameUpdate[]
+  error?: string
+}
+
+type SerializedInterfaceMove = {
+  position: number
+  data: SerializedMove | SerializedMove[]
+}
+
 export type GameInterface = {
   initialState: (state: SetupState) => GameUpdate
-  processMove: (
-    previousState: GameStartedState,
-    move: {
-      position: number
-      data: SerializedMove
-    },
-  ) => GameUpdate
+  processMove: (previousState: GameStartedState, move: SerializedInterfaceMove) => GameUpdate
   seatPlayer(players: Player[], seatCount: number): {position: number, color: string, settings: any} | null
+  reprocessHistory(setup: SetupState, moves: SerializedInterfaceMove[]): ReprocessHistoryResult
 }
 
 export const colors = [
@@ -110,10 +116,7 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
     },
     processMove: (
       previousState: GameStartedState,
-      move: {
-        position: number,
-        data: SerializedMove | SerializedMove[]
-      },
+      move: SerializedInterfaceMove,
     ): GameUpdate => {
       //console.time('processMove');
       let cachedGame: GameManager | undefined = undefined;
@@ -150,10 +153,10 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
         if (error) {
           throw Error(`Unable to process move: ${error}`);
         }
-        //console.timeLog('processMove', 'process');
-        if (gameManager.phase !== 'finished') gameManager.play();
-        //console.timeLog('processMove', 'play');
         if (gameManager.phase === 'finished') break;
+        //console.timeLog('processMove', 'process');
+        gameManager.play();
+        //console.timeLog('processMove', 'play');
       }
 
       const update = gameManager.getUpdate();
@@ -162,6 +165,7 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
       //console.timeEnd('processMove');
       return update;
     },
+
     seatPlayer: (players: Player[], seatCount: number): {position: number, color: string, settings: any} | null => {
       let usedPositions = range(1, seatCount);
       let usedColors = [...colors];
@@ -177,6 +181,41 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
         };
       }
       return null;
+    },
+
+    reprocessHistory(state: SetupState, moves: SerializedInterfaceMove[]): ReprocessHistoryResult {
+      let rseed = state.randomSeed;
+      const gameManager = setup(state, {rseed});
+      if (gameManager.phase !== 'finished') gameManager.play();
+      const initialState = gameManager.getUpdate();
+      let error = undefined;
+      const updates: GameUpdate[] = [];
+
+      for (const move of moves) {
+        rseed = advanceRseed(rseed);
+        gameManager.messages = [];
+        gameManager.announcements = [];
+        const player = gameManager.players.atPosition(move.position)!;
+        if (!(move.data instanceof Array)) move.data = [move.data];
+
+        for (let i = 0; i !== move.data.length; i++) {
+          error = gameManager.processMove({
+            player,
+            name: move.data[i].name,
+            args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, gameManager.game)]))
+          });
+          if (error) break;
+          if (gameManager.phase === 'finished') break;
+          gameManager.play();
+        }
+        updates.push(gameManager.getUpdate());
+      }
+
+      return {
+        initialState,
+        updates,
+        error
+      };
     }
   };
 }
