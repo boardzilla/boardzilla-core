@@ -7,7 +7,7 @@ export type SerializedSingleArg = string | number | boolean;
 export type SerializedArg = SerializedSingleArg | SerializedSingleArg[];
 export type Serializable = SingleArgument | null | undefined | Serializable[] | { [key: string]: Serializable };
 
-export const serialize = (arg: Serializable, forPlayer=true): any => {
+export const serialize = (arg: Serializable, forPlayer=true, name?: string): any => {
   if (arg === undefined) return undefined;
   if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => serialize(a, forPlayer));
@@ -16,7 +16,7 @@ export const serialize = (arg: Serializable, forPlayer=true): any => {
   }
   if (typeof arg === 'object') return serializeObject(arg, forPlayer);
   if (typeof arg === 'number' || typeof arg === 'string' || typeof arg === 'boolean') return serializeSingleArg(arg, forPlayer);
-  throw Error(`unable to serialize ${arg}`);
+  throw Error(`Unable to serialize the property ${name ? '"' + name + '": ' : ''} ${arg}. Only primitives, Player's, GameElement's or arrays/objects containing such can be used.`);
 }
 
 export const serializeArg = (arg: Argument, forPlayer=true): SerializedArg => {
@@ -33,7 +33,7 @@ export const serializeSingleArg = (arg: SingleArgument, forPlayer=true): Seriali
 }
 
 export const serializeObject = (obj: Record<string, any>, forPlayer=true) => {
-  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, serialize(v, forPlayer)]));
+  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, serialize(v, forPlayer, k)]));
 }
 
 export const escapeArgument = (arg: Argument): string => {

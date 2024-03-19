@@ -721,10 +721,10 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
 
       const middle = game.first(Cell, {row: 2, column: 2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2], [3,2], [2,3]]);
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,3], [3,2]]);
     });
 
     it('creates squares with diagonals', () => {
@@ -736,7 +736,7 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2], [2,2]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
 
       const knight = game.first(Cell, {row: 3, column: 2})!;
       expect(square.distanceBetween(corner, knight)).to.equal(2.5);
@@ -751,14 +751,14 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2], [2,2]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
 
       const middle = game.first(Cell, {row: 2, column: 2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [2,1], [1,2], [3,2], [2,3], [3,3]]);
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [1,2], [2,1], [2,3], [3,2], [3,3]]);
     });
 
     it('creates inverse hexes', () => {
-      game.create(HexGrid, 'hex', { rows: 3, columns: 3, inverseColumns: true, space: Cell });
+      game.create(HexGrid, 'hex', { rows: 3, columns: 3, axes: 'east-by-southeast', space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -766,17 +766,53 @@ describe('Game', () => {
       expect(game.last(Cell)!.column).to.equal(3);
 
       const corner = game.first(Cell, {row: 1, column: 1})!;
-      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [1,2]]);
+      expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1]]);
 
       const middle = game.first(Cell, {row: 2, column: 2})!;
-      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[2,1], [3,1], [1,2], [3,2], [1,3], [2,3]]);
+      expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
+    });
+
+    it('creates hex-shaped hexes', () => {
+      game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'hex', space: Cell });
+      expect(game.all(Cell).length).to.equal(16);
+      expect(game.all(Cell, {row: 1}).length).to.equal(3);
+      expect(game.all(Cell, {row: 2}).length).to.equal(4);
+      expect(game.all(Cell, {row: 3}).length).to.equal(5);
+      expect(game.all(Cell, {row: 4}).length).to.equal(4);
+
+      const cell = game.first(Cell, {row: 2, column: 4})!;
+      expect(cell.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,3], [2,3], [3,4], [3,5]]);
+    });
+
+    it('creates inverse hex-shaped hexes', () => {
+      game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'hex', axes: 'east-by-southeast', space: Cell });
+      expect(game.all(Cell).length).to.equal(16);
+      expect(game.all(Cell, {row: 1}).length).to.equal(3);
+      expect(game.all(Cell, {row: 2}).length).to.equal(4);
+      expect(game.all(Cell, {row: 3}).length).to.equal(5);
+      expect(game.all(Cell, {row: 4}).length).to.equal(4);
+
+      const cell = game.first(Cell, {row: 2, column: 2})!;
+      expect(cell.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,3], [2,3], [3,1], [3,2]]);
+    });
+
+    it('creates square-shaped hexes', () => {
+      const h = game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'square', axes: 'east-by-southeast', space: Cell });
+      expect(game.all(Cell).length).to.equal(18);
+      expect(game.all(Cell, {row: 1}).length).to.equal(5);
+      expect(game.all(Cell, {row: 2}).length).to.equal(4);
+      expect(game.all(Cell, {row: 3}).length).to.equal(5);
+      expect(game.all(Cell, {row: 4}).length).to.equal(4);
+
+      const cell = game.first(Cell, {row: 2, column: 1})!;
+      expect(cell.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [1,2], [2,2], [3,0], [3,1]]);
     });
 
     it('adjacencies', () => {
       game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
       for (const cell of game.all(Cell, {row: 2})) cell.color = 'red';
       const center = game.first(Cell, {row: 2, column: 2})!;
-      expect(center.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [1, 2], [3, 2], [2, 3]]);
+      expect(center.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[1, 2], [2, 1], [2, 3], [3, 2]]);
       expect(center.adjacencies(Cell, {color: 'red'}).map(c => [c.row, c.column])).to.deep.equal([[2, 1], [2, 3]]);
       expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 2})!)).to.be.true;
       expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 1})!)).to.be.false;

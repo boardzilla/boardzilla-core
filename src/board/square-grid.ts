@@ -11,25 +11,25 @@ export default class SquareGrid<G extends Game> extends FixedGrid<G> {
     if (column > 1) {
       positions.push([column - 1, row]);
       if (this.diagonalDistance !== undefined) {
-        if (row > 1) positions.push([column - 1, row - 1, this.diagonalDistance]);
-        if (row < this.rows) positions.push([column - 1, row + 1, this.diagonalDistance]);
+        positions.push([column - 1, row - 1, this.diagonalDistance]);
+        positions.push([column - 1, row + 1, this.diagonalDistance]);
       }
     }
     if (column < this.columns) {
       positions.push([column + 1, row]);
       if (this.diagonalDistance !== undefined) {
-        if (row > 1) positions.push([column + 1, row - 1, this.diagonalDistance]);
-        if (row < this.rows) positions.push([column + 1, row + 1, this.diagonalDistance]);
+        positions.push([column + 1, row - 1, this.diagonalDistance]);
+        positions.push([column + 1, row + 1, this.diagonalDistance]);
       }
     }
-    if (row > 1) positions.push([column, row - 1]);
-    if (row < this.rows) positions.push([column, row + 1]);
+    positions.push([column, row - 1]);
+    positions.push([column, row + 1]);
     return positions;
   }
 
   _gridPositions(): [number, number][] {
     const positions: [number, number][] = [];
-    times(this.columns, col => times(this.rows, row => positions.push([col, row])));
+    times(this.rows, row => times(this.columns, col => positions.push([col, row])));
     return positions;
   }
 }

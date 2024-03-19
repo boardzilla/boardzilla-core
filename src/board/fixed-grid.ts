@@ -1,14 +1,14 @@
 import ConnectedSpaceMap from "./connected-space-map.js";
+import Space from './space.js';
 
 import type Game from './game.js';
-import type Space from './space.js';
 import type { default as GameElement, ElementClass, ElementUI } from "./element.js";
 
 export default abstract class FixedGrid<G extends Game> extends ConnectedSpaceMap<G> {
 
-  rows: number;
-  columns: number;
-  space: ElementClass<Space<G>>
+  rows: number = 1;
+  columns: number = 1;
+  space: ElementClass<Space<G>> = Space<G>;
 
   _ui: ElementUI<this> = {
     layouts: [],

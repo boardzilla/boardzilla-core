@@ -2,25 +2,56 @@ import FixedGrid from "./fixed-grid.js";
 import { times } from '../utils.js';
 
 import type Game from './game.js';
+import type { ElementUI } from "./element.js";
 
 export default class HexGrid<G extends Game> extends FixedGrid<G> {
-  /**
-   * If set to 'true', inverts the column lines to go NW-SE instead of NE-SW.
-   */
-  inverseColumns?: boolean = false;
-  shape: 'square' | 'hex' | 'rhomboid'
 
-  _adjacentGridPositionsTo(column: number, row: number): [number, number, number?][] {
-    const positions: [number, number, number?][] = [];
+  axes: 'east-by-southwest' | 'east-by-southeast' | 'southeast-by-south' | 'northeast-by-south' = 'east-by-southwest';
+  shape: 'square' | 'hex' | 'rhomboid' = 'rhomboid';
+
+  _ui: ElementUI<this> = {
+    layouts: [],
+    appearance: {},
+    getBaseLayout: () => ({
+      rows: this.rows,
+      columns: this.columns,
+      sticky: true,
+      alignment: 'center',
+      direction: 'square',
+      offsetColumn: {
+        'east-by-southwest': {x: 100, y: 0},
+        'east-by-southeast': {x: 100, y: 0},
+        'southeast-by-south': {x: 100, y: 50},
+        'northeast-by-south': {x: 100, y: -50}
+      }[this.axes],
+      offsetRow: {
+        'east-by-southwest': {x: -50, y: 100},
+        'east-by-southeast': {x: 50, y: 100},
+        'southeast-by-south': {x: 0, y: 100},
+        'northeast-by-south': {x: 0, y: 100}
+      }[this.axes]
+    })
+  };
+
+  _adjacentGridPositionsTo(column: number, row: number): [number, number][] {
+    const positions: [number, number][] = [];
     if (column > 1) {
       positions.push([column - 1, row]);
-      if (!this.inverseColumns && row > 1) positions.push([column - 1, row - 1]);
-      if (this.inverseColumns && row < this.rows) positions.push([column - 1, row + 1]);
+      if (['east-by-southwest', 'northeast-by-south'].includes(this.axes)) {
+        positions.push([column - 1, row - 1]);
+      }
+      if (['east-by-southeast', 'southeast-by-south'].includes(this.axes)) {
+        positions.push([column - 1, row + 1]);
+      }
     }
     if (column < this.columns) {
       positions.push([column + 1, row]);
-      if (this.inverseColumns && row > 1) positions.push([column + 1, row - 1]);
-      if (!this.inverseColumns && row < this.rows) positions.push([column + 1, row + 1]);
+      if (['east-by-southeast', 'southeast-by-south'].includes(this.axes)) {
+        positions.push([column + 1, row - 1]);
+      }
+      if (['east-by-southwest', 'northeast-by-south'].includes(this.axes)) {
+        positions.push([column + 1, row + 1]);
+      }
     }
     if (row > 1) positions.push([column, row - 1]);
     if (row < this.rows) positions.push([column, row + 1]);
@@ -29,7 +60,89 @@ export default class HexGrid<G extends Game> extends FixedGrid<G> {
 
   _gridPositions(): [number, number][] {
     const positions: [number, number][] = [];
-    times(this.columns, col => times(this.rows, row => positions.push([col, row])));
+    if (this.shape === 'hex') {
+      const topCorner = Math.ceil((Math.min(this.rows, this.columns) - 1) / 2);
+      const bottomCorner = Math.floor((Math.min(this.rows, this.columns) - 1) / 2);
+      const topRight = ['east-by-southwest', 'northeast-by-south'].includes(this.axes);
+      times(this.rows, row => times(this.columns - Math.max(topCorner + 1 - row, 0) - Math.max(row - this.rows + bottomCorner, 0), col => {
+        positions.push([col + Math.max(topRight ? bottomCorner + row - this.rows : topCorner - row + 1, 0), row]);
+      }));
+    } else if (this.shape === 'square') {
+      const squished = ['east-by-southeast', 'southeast-by-south'].includes(this.axes);
+      if (['east-by-southwest', 'east-by-southeast'].includes(this.axes)) {
+        times(this.rows, row => times(this.columns - (row % 2 ? 0 : 1), col => {
+          positions.push([col + (squished ? 1 - Math.ceil(row / 2) : Math.floor(row / 2)), row])
+        }));
+      } else {
+        times(this.columns, col => times(this.rows - (col % 2 ? 0 : 1), row => {
+          positions.push([col, row + (squished ? Math.floor(col / 2) : 1 - Math.ceil(col / 2))])
+        }));
+      }
+    } else {
+      times(this.rows, row => times(this.columns, col => positions.push([col, row])));
+    }
     return positions;
+  }
+
+  _cornerPositions(): [number, number][] {
+    if (this.shape === 'hex') {
+      const topCorner = Math.ceil((Math.min(this.rows, this.columns) - 1) / 2);
+      const bottomCorner = Math.floor((Math.min(this.rows, this.columns) - 1) / 2);
+      if (['east-by-southwest', 'northeast-by-south'].includes(this.axes)) {
+        return [
+          [1, 1],
+          [this.columns - topCorner, 1],
+          [1, Math.floor(this.rows / 2) + 1],
+          [this.columns, Math.floor(this.rows / 2) + 1],
+          [1 + bottomCorner, this.rows],
+          [this.columns, this.rows],
+        ];
+      } else {
+        return [
+          [1 + topCorner, 1],
+          [this.columns, 1],
+          [1, Math.floor(this.rows / 2) + 1],
+          [this.columns, Math.floor(this.rows / 2) + 1],
+          [1, this.rows],
+          [this.columns - bottomCorner, this.rows],
+        ];
+      }
+    } else if (this.shape === 'square') {
+      if (['east-by-southwest'].includes(this.axes)) {
+        return [
+          [1, 1],
+          [this.columns, 1],
+          [1 + Math.floor(this.rows / 2), this.rows],
+          [this.columns - 1 + Math.ceil(this.rows / 2), this.rows],
+        ];
+      } else if (['east-by-southeast'].includes(this.axes)) {
+        return [
+          [1, 1],
+          [this.columns, 1],
+          [2 - Math.ceil(this.rows / 2), this.rows],
+          [this.columns - Math.floor(this.rows / 2), this.rows],
+        ];
+      } else if (['southeast-by-south'].includes(this.axes)) {
+        return [
+          [1, 1],
+          [1, this.rows],
+          [this.columns, 2 - Math.ceil(this.columns / 2)],
+          [this.columns, this.rows - Math.floor(this.columns / 2)],
+        ];
+      } else {
+        return [
+          [1, 1],
+          [1, this.rows],
+          [this.columns, 1 + Math.floor(this.columns / 2)],
+          [this.columns, this.rows - 1 + Math.ceil(this.columns / 2)],
+        ];
+      }
+    }
+    return [
+      [1, 1],
+      [this.columns, 1],
+      [1, this.rows],
+      [this.columns, this.rows],
+    ];
   }
 }

@@ -861,7 +861,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     el.game = this.game;
     el.name = name;
     Object.assign(el, attrs);
-    if ('afterCreation' in el) (el.afterCreation as Function)();
+    if ('afterCreation' in el) (el.afterCreation as Function).bind(el)();
     return el;
   }
 
@@ -1177,12 +1177,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       console.warn('Both `size` and `scaling` supplied in layout. `scaling` is ignored');
       delete attributes.scaling;
     }
-    if (!size && !scaling) scaling = 'fit';
     if (gap && (offsetColumn || offsetRow)) {
       console.warn('Both `gap` and `offset` supplied in layout. `gap` is ignored');
       delete attributes.gap;
     }
-    if (!margin && !area) attributes.margin = 0;
     this._ui.layouts.push({ applyTo, attributes: { alignment: 'center', direction: 'square', ...attributes} });
   }
 
@@ -1203,11 +1201,15 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       const { attributes } = this._ui.layouts[l];
       let children = layoutItems[l];
 
-      const { slots, direction, gap, scaling, alignment, maxOverlap } = attributes;
-      let { size, aspectRatio, haphazardly } = attributes;
+      const { slots, direction, gap, alignment, maxOverlap } = attributes;
+      let { size, scaling, aspectRatio, haphazardly } = attributes;
+      if (!size && !scaling) scaling = 'fit';
+
       const area = this.getArea(attributes);
 
       let cellBoxes = slots || [];
+      let sizes: number[] = []; // relative sizes of children so they retain scaling against each other
+      let maxSize: number = 0;
 
       if (!this._ui.computedLayouts) this._ui.computedLayouts = [];
       this._ui.computedLayouts[l] = {
@@ -1418,6 +1420,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         let cellGap: Vector | undefined = undefined;
         let offsetRow: Vector | undefined = undefined;
         let offsetColumn: Vector | undefined = undefined;
+        let effecitveRowsWithOffsets = '_gridPositions' in this && 'rows' in this ? this.rows as number : rows;
+        let effecitveColumnsWithOffsets = '_gridPositions' in this && 'columns' in this ? this.columns as number : columns;
+        let rhomboid = !('_gridPositions' in this) || !('shape' in this) || this.shape === 'rhomboid';
 
         if (attributes.offsetColumn || attributes.offsetRow) {
           offsetColumn = typeof attributes.offsetColumn === 'number' ? {x: attributes.offsetColumn, y: 0} : attributes.offsetColumn;
@@ -1434,11 +1439,13 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
         if (!size) {
           // start with largest size needed to accommodate
-          size = cellSizeForArea(rows, columns, area, cellGap, offsetColumn, offsetRow);
-          //console.log('cellSizeForArea', size, area)
+          size = cellSizeForArea(
+            effecitveRowsWithOffsets, effecitveColumnsWithOffsets,
+            area, cellGap, offsetColumn, offsetRow, rhomboid
+          );
 
+          // find all aspect ratios and sizes of child elements and choose best fit
           if (!aspectRatio) {
-            // find all aspect ratios of child elements and choose best fit
             let minRatio = Infinity;
             let maxRatio = 0;
             for (const c of children) {
@@ -1447,6 +1454,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
                 if (r < minRatio) minRatio = r;
                 if (r > maxRatio) maxRatio = r;
               }
+              const largestDimension = c._size ? Math.max(c._size.width, c._size.height) : 1;
+              sizes.push(largestDimension);
+              if (largestDimension > maxSize) maxSize = largestDimension;
             }
             if (minRatio < Infinity || maxRatio > 0) {
               if (maxRatio > 1 && minRatio < 1) aspectRatio = 1;
@@ -1488,7 +1498,14 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
         const startingOffset = {x: 0, y: 0};
 
-        let totalAreaNeeded = getTotalArea(area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
+        const corners = '_cornerPositions' in this ? (this._cornerPositions as () => [number, number][])() : [
+          [1, 1],
+          [columns, 1],
+          [1, rows],
+          [columns, rows],
+        ] as [number, number][];
+
+        let totalAreaNeeded = getTotalArea(corners, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
 
         let scale: Vector = {x: 1, y: 1};
 
@@ -1504,7 +1521,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
           }
 
           // reduce scale if necessary to keep size below amount needed for min rows/cols
-          const largestCellSize = cellSizeForArea(minRows, minColumns, area, cellGap, offsetColumn, offsetRow);
+          const largestCellSize = cellSizeForArea(
+            Math.min(minRows, effecitveRowsWithOffsets), Math.min(minColumns, effecitveColumnsWithOffsets),
+            area, cellGap, offsetColumn, offsetRow, rhomboid
+          );
           if (maxOverlap !== undefined) {
             const largestCellSize2 = cellSizeForArea(rows, columns, area, undefined,
               { x: Math.min(100 - maxOverlap, offsetColumn?.x ?? 100), y: Math.min(100 - maxOverlap, offsetColumn?.y ?? 0) },
@@ -1550,7 +1570,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
               }
             }
 
-            totalAreaNeeded = getTotalArea(area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
+            totalAreaNeeded = getTotalArea(corners, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
           }
           // align in reduced area
           startingOffset.x += area.left - totalAreaNeeded.left * scale.x + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
@@ -1624,6 +1644,13 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
             }
             left = box.left + (box.width - width) / 2;
             top = box.top + (box.height - height) / 2;
+          }
+          if (maxSize && maxSize > 0 && sizes[i] && sizes[i] !== maxSize) {
+            const scale = sizes[i]! / maxSize;
+            left += width * 0.5 * (1 - scale);
+            top += height * 0.5 * (1 - scale);
+            height *= scale;
+            width *= scale;
           }
         }
 

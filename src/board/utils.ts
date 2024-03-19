@@ -63,7 +63,8 @@ export function cellSizeForArea(
   area: { width: number, height: number },
   gap?: Vector,
   offsetColumn?: Vector,
-  offsetRow?: Vector
+  offsetRow?: Vector,
+  rhomboid?: boolean
 ) {
   let width: number;
   let height: number;
@@ -73,12 +74,12 @@ export function cellSizeForArea(
     height = (area.height - (gap!.y || 0) * (rows - 1)) / rows;
   } else {
     width = area.width / (
-      (rows - 1) * Math.abs(offsetRow!.x / 100) + 1 +
-        (columns - 1) * Math.abs(offsetColumn.x / 100)
+      (rhomboid ? (rows - 1) * Math.abs(offsetRow!.x / 100) : 0) +
+        1 + (columns - 1) * Math.abs(offsetColumn.x / 100)
     )
     height = area.height / (
-      (columns - 1) * Math.abs(offsetColumn.y / 100) + 1 +
-        (rows - 1) * Math.abs(offsetRow!.y / 100)
+      (rhomboid ? (columns - 1) * Math.abs(offsetColumn.y / 100) : 0) +
+        1 + (rows - 1) * Math.abs(offsetRow!.y / 100)
     )
   }
 
@@ -88,6 +89,7 @@ export function cellSizeForArea(
 // find the edge boxes and calculate the total size needed
 // @internal
 export function getTotalArea(
+  corners: [number, number][],
   area: Box,
   size: {width: number, height: number},
   columns: number,
@@ -97,12 +99,9 @@ export function getTotalArea(
   offsetColumn?: Vector,
   offsetRow?: Vector,
 ): Box {
-  const boxes = [
-    cellBoxRC(1, 1, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-    cellBoxRC(1, rows, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-    cellBoxRC(columns, rows, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-    cellBoxRC(columns, 1, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-  ];
+  const boxes = corners.map(corner => (
+    cellBoxRC(corner[0], corner[1], area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow)
+  ));
 
   const cellArea = {
     top: Math.min(...boxes.map(b => b!.top)),

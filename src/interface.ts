@@ -118,6 +118,7 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
       previousState: GameStartedState,
       move: SerializedInterfaceMove,
     ): GameUpdate => {
+      console.log('processMove', move);
       //console.time('processMove');
       let cachedGame: GameManager | undefined = undefined;
       // @ts-ignore

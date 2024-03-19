@@ -13,7 +13,8 @@
     "test:debug": "NODE_ENV=test yarn run build:test && mocha --inspect-brk --timeout 3600000 src/test/setup-debug.js dist/test/*_test.js",
     "compile": "tsc",
     "docs": "typedoc",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "dep-check": "dpdm  --no-warning --no-tree -T ./src/index.ts"
   },
   "type": "module",
   "exports": {
