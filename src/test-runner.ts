@@ -50,7 +50,7 @@ class TestRunnerPlayer<P extends Player, B extends Game> {
   }
 
   actions() {
-    const pendingMoves = this.game.gameManager.getPendingMoves(this.runner.server.gameManager.players[this.position - 1]);
+    const pendingMoves = this.game.gameManager.getPendingMoves(this.game.gameManager.players[this.position - 1]);
     if (!pendingMoves) return [];
     return pendingMoves.moves.map(m => m.name);
   }
