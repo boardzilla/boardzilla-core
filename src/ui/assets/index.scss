@@ -370,6 +370,32 @@ html, body { height: 100% }
       input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {
         opacity: 1;
       }
+
+      .action-divider {
+        border: 0;
+        font-size: 80%;
+        position: relative;
+        text-align: center;
+        line-height: .75em;
+        &::before {
+          content: "";
+          background: #888c;
+          position: absolute;
+          left: 0;
+          top: 50%;
+          width: calc(50% - .6rem);
+          height: .05rem;
+        }
+        &::after {
+          content: "";
+          background: #888c;
+          position: absolute;
+          right: 0;
+          top: 50%;
+          width: calc(50% - .6rem);
+          height: .05rem;
+        }
+      }
     }
 
     .Die[data-sides="6"] {

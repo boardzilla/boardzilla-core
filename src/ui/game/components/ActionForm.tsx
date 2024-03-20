@@ -6,9 +6,8 @@ import Selection from './Selection.js';
 import type { Player } from '../../../player/index.js';
 import type { UIMove } from '../../lib.js';
 import type { Argument } from '../../../action/action.js';
-import type { ResolvedSelection } from '../../../action/selection.js';
 
-const ActionForm = ({ move, stepName, onSubmit, children }: {
+const ActionForm = ({ move, stepName, onSubmit }: {
   move: UIMove,
   stepName: string,
   onSubmit: (move?: UIMove, args?: Record<string, Argument<Player>>) => void,
@@ -99,12 +98,16 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
     }
     let confirm = 'Confirm';
     const args: Record<string, Argument<Player>> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument<Player>>;
-    if (move.selections[0]?.confirm) {
-      const actionConfirm = action._getConfirmation(move.selections[0], args);
-      confirm = actionConfirm ?? confirm;
-    }
+    confirm = action._getConfirmation(move.selections[0], args) ?? confirm;
     return n(confirm, args)
   }, [move, action, allArgs, selected, validationErrors]);
+
+  const confirmToShow = useMemo(() => {
+    if (confirm) return confirm;
+    if (stepName === 'disambiguate-board-selection') return move.prompt ?? move.name;
+  }, [stepName, confirm, move]);
+
+  const selectionsToShow = useMemo(() => move.selections.filter(s => s.name !== '__confirm__'), [move]);
 
   return (
     <form
@@ -112,9 +115,9 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
       onSubmit={e => onSubmitForm(e)}
       className={`action ${move.name}`}
     >
-      {children && <div className="prompt">{children}</div>}
+      {move.prompt && stepName !== 'disambiguate-board-selection' && <div className="prompt">{move.prompt}</div>}
 
-      {move.selections.filter(s => s.name !== '__confirm__').map((s: ResolvedSelection<Player>) => (
+      {selectionsToShow.map(s => (
         <Selection
           key={s.name}
           value={allArgs[s.name]}
@@ -124,9 +127,7 @@ const ActionForm = ({ move, stepName, onSubmit, children }: {
         />
       ))}
 
-      {(confirm || stepName === 'disambiguate-board-selection') && (
-        <button name="submit" type="submit">{confirm ?? move.prompt}</button>
-      )}
+      {confirmToShow && <button name="submit" type="submit">{confirmToShow}</button>}
     </form>
   );
 };

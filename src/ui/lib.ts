@@ -240,20 +240,9 @@ export function updateSelections(store: GameStore): GameStore {
     state.actionDescription = `${gameManager.players.currentPosition.length > 1 ? 'Players are' : gameManager.players.current() + ' is'} ${description}`;
   }
 
-  state = {
-    ...state,
-    ...updateBoardSelections(state)
-  };
-
-  state = {
-    ...state,
-    ...updateControls(state)
-  };
-
-  state = {
-    ...state,
-    ...updateBoardPrompt(state)
-  };
+  Object.assign(state, updateBoardSelections(state));
+  Object.assign(state, updateControls(state));
+  Object.assign(state, updatePrompts(state));
 
   return state;
 }
@@ -427,36 +416,37 @@ export function updateBoardSelections(store: GameStore): Pick<GameStore, "boardS
   return { boardSelections };
 }
 
-export function updateBoardPrompt(store: GameStore): Pick<GameStore, "boardPrompt"> {
-  const { controls, step, prompt, actionDescription } = store;
+export function updatePrompts(store: GameStore): Partial<GameStore> {
+  const { controls, prompt, actionDescription, gameManager, position, disambiguateElement } = store;
+  if (actionDescription && !gameManager.players.currentPosition.includes(position!)) return { boardPrompt: actionDescription };
   if (!controls) return { boardPrompt: undefined };
+  const state: Partial<GameStore> = {};
+  const moves = [...controls.moves];
 
-  // all prompts from all board moves, using the most specific selection that applies
-  let hasNonBoardMoves = false;
-  const prompts: string[] = [];
-  for (const m of controls.moves) {
-    for (const s of m.selections) {
-      if (s.type === 'board') {
-        if (s.prompt ?? m.prompt) prompts.push(s.prompt ?? m.prompt!);
-      } else {
-        hasNonBoardMoves = true;
-      }
+  const boardMoves = moves.filter(m => m.selections.some(s => s.isBoardChoice()));
+  if (!boardMoves.length) return {};
+
+  if (disambiguateElement) {
+    state.boardPrompt = undefined;
+  } else if (boardMoves.length > 1) {
+    state.boardPrompt = prompt;
+  }
+
+  for (const move of boardMoves) {
+    // promote a board selection prompt to the move prompt
+    move.prompt = move.selections[0].prompt ?? move.prompt ?? prompt;
+    if (!move.prompt) {
+      move.prompt = move.name;
+      console.error(`No prompts defined for choosing "${move.selections[0].name}" in "${move.name}" action. Add either an action prompt or selection prompt.`);
+    }
+    move.selections[0].prompt = undefined;
+    if (state.boardPrompt) {
+      move.prompt = undefined;
     }
   }
 
-  // if only one, use that, otherwise use the step prompt
-  if (new Set(prompts).size > 1) {
-    if (!prompt) console.error(`Multiple action prompts apply (${controls.moves.map(m => m.name).join(', ')}). Add a step prompt ${step ? `on "${step}"` : 'here'} to clarify.`)
-    return { boardPrompt: prompt };
-  }
-  if (prompts.length > 0) return { boardPrompt: prompts[0] };
-  if (prompt) return { boardPrompt: prompt };
-  if (actionDescription && !hasNonBoardMoves) return { boardPrompt: actionDescription };
-  if (controls.moves.length && !hasNonBoardMoves) {
-    console.error(`No prompts defined for actions (${controls.moves.map(m => m.name).join(', ')}). Add an action prompt or step prompt here.`);
-    return {boardPrompt: '__missing__' };
-  }
-  return { boardPrompt: undefined };
+  state.controls = {...controls, moves}
+  return state;
 }
 
 export function removePlacementPiece(placement: Exclude<GameStore['placement'], undefined>) {
@@ -481,7 +471,7 @@ export function updateBoard(gameManager: GameManager<Player, Game<Player>>, posi
 export function decorateUIMove(move: PendingMove<Player> | UIMove): UIMove {
   const requireExplicitSubmit = ('requireExplicitSubmit' in move && move.requireExplicitSubmit) ||
     move.selections.length !== 1 ||
-    !(['board', 'choices', 'button', 'place'].includes(move.selections[0].type)) ||
+    ['number', 'text'].includes(move.selections[0].type) ||
     !!move.selections[0].confirm ||
     move.selections[0].isMulti();
 

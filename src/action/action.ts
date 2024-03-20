@@ -65,7 +65,6 @@ export type ActionStub<P extends Player> = {
 type Group<P extends Player> = Record<string,
   ['number', Parameters<Action<P, any>['chooseNumber']>[1]?] |
   ['select', Parameters<Action<P, any>['chooseFrom']>[1], Parameters<Action<P, any>['chooseFrom']>[2]?] |
-  ['board', Parameters<Action<P, any>['chooseOnBoard']>[1], Parameters<Action<P, any>['chooseOnBoard']>[2]?] |
   ['text', Parameters<Action<P, any>['enterText']>[1]?]
 >
 
@@ -73,7 +72,6 @@ type ExpandGroup<P extends Player, A extends Record<string, Argument<P>>, R exte
   R[K][0] extends 'number' ? number :
   R[K][0] extends 'text' ? string :
   R[K][0] extends 'select' ? (R[K][1] extends Parameters<typeof Action.prototype.chooseFrom<any, infer E>>[1] ? E : never) :
-  R[K][0] extends 'board' ? (R[K][1] extends (...args: any) => any ? ReturnType<R[K][1]> : R[K][1]) :
   never
 }
 
@@ -783,14 +781,16 @@ export default class Action<P extends Player, A extends Record<string, Argument<
 
   /**
    * Create a multi-selection choice. These selections will be presented all at
-   * once as a form.
+   * once as a form. This is used for form-like choices that have a number of
+   * choices that are not board choices, i.e. chooseFrom, chooseNumber and
+   * enterText
    *
    * @param choices - An object containing the selections. This is a set of
    * key-value pairs where each key is the name of the selection and each value
    * is an array of options where the first array element is a string indicating
-   * the type of choice ('number', 'select', 'board', 'text') and subsequent
-   * elements contain the options for the appropriate choice function
-   * (`chooseNumber`, `chooseFrom`, `chooseOnBoard` or `enterText`).
+   * the type of choice ('number', 'select', 'text') and subsequent elements
+   * contain the options for the appropriate choice function (`chooseNumber`,
+   * `chooseFrom` or `enterText`).
    *
    * @param options.validate - A function that takes an object of key-value
    * pairs for all player choices and returns a boolean. If false, the game will
@@ -825,16 +825,9 @@ export default class Action<P extends Player, A extends Record<string, Argument<
       confirm?: string | [string, Record<string, Argument<P>> | ((args: ExpandGroup<P, A, R>) => Record<string, Argument<P>>) | undefined]
     }
   ): Action<P, ExpandGroup<P, A, R>> {
-    let hasBoardSelection = false;
     for (const [name, choice] of Object.entries(choices)) {
-      if (choice[0] === 'board') {
-        if (hasBoardSelection) throw Error(`May not use chooseGroup with multiple board selections in ${this.name}`);
-        hasBoardSelection = true;
-      }
-
       if (choice[0] === 'number') this.chooseNumber(name, choice[1]);
       if (choice[0] === 'select') this.chooseFrom(name, choice[1], choice[2]);
-      if (choice[0] === 'board') this.chooseOnBoard(name, choice[1], choice[2]);
       if (choice[0] === 'text') this.enterText(name, choice[1]);
     }
     if (options?.confirm) this.selections[this.selections.length - 1].confirm = typeof options.confirm === 'string' ? [options.confirm, undefined] : options.confirm;

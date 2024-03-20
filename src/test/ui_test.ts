@@ -42,7 +42,8 @@ describe('UI', () => {
     const state = store.getState();
 
     expect(state.pendingMoves?.[0].name).to.equal('take');
-    expect(state.boardPrompt).to.equal('Choose a token');
+    expect(state.boardPrompt).to.be.undefined;
+    expect(state.pendingMoves?.[0].prompt).to.equal('Choose a token');
     expect(Object.values(state.boardSelections).length).to.equal(4);
   });
 
@@ -83,7 +84,8 @@ describe('UI', () => {
     expect(history.length).to.equal(0);
     expect(state.selected).to.deep.equal([token]);
     expect(state.pendingMoves?.[0].name).to.equal('take');
-    expect(state.boardPrompt).to.equal('Choose a token');
+    expect(state.boardPrompt).to.be.undefined;
+    expect(state.pendingMoves?.[0].prompt).to.equal('Choose a token');
     expect(state.uncommittedArgs.token).to.equal(token);
 
     state.selectMove(state.pendingMoves?.[0], state.uncommittedArgs);
@@ -118,7 +120,8 @@ describe('UI', () => {
     expect(history.length).to.equal(0);
     expect(state.selected?.length).to.equal(1);
     expect(state.pendingMoves?.[0].name).to.equal('take');
-    expect(state.boardPrompt).to.equal('Choose a token');
+    expect(state.boardPrompt).to.be.undefined;
+    expect(state.pendingMoves?.[0].prompt).to.equal('Choose a token');
 
     state.selectMove();
     state = store.getState();

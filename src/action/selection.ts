@@ -302,7 +302,7 @@ export default class Selection<P extends Player> {
       return this.value;
     } else if (this.boardChoices && (this.skipIf === true || this.boardChoices?.length === 1) && !this.isMulti()) {
       return this.boardChoices[0];
-    } else if (this.boardChoices && this.isMulti() && (this.skipIf === true || (this.boardChoices.length === (this.min ?? 0)) || (this.boardChoices.length >= (this.min ?? 0) && this.min == this.max))) {
+    } else if (this.boardChoices && this.isMulti() && (this.skipIf === true || (this.boardChoices.length === (this.min ?? 0)) || this.max === 0)) {
       return this.boardChoices.slice(0, this.min);
     } else if (this.type === 'number' &&
       this.min !== undefined &&

@@ -11,7 +11,7 @@ const Selection = ({selection, value, error, onChange} : {
   onChange: (value: Argument<Player>) => void
 }) => (
   <div className={`selection ${selection.name}`}>
-    {selection.prompt && selection.type !== 'button' && !selection.isBoardChoice() && <span className="prompt">{selection.prompt}</span>}
+    {selection.prompt && selection.type !== 'button' && <span className="prompt">{selection.prompt}</span>}
 
     {selection.type === 'choices' && selection.choices?.map(choice => (
       <button

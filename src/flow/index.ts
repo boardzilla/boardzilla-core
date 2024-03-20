@@ -49,9 +49,12 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  * can be used for the UI to determine placement of messages for this action in
  * {@link Game#layoutStep}.
  *
- * @param options.prompt - A prompting message for the player taking the action
- * to decide between their choices. May be a string or a function accepting
- * {@link FlowArguments}
+ * @param options.prompt - A prompting message for the player to decide between
+ * multiple actions that involve clicking on the board. For example, if a player
+ * can choose between playing a card from hand, or drawing from the deck, this
+ * text can contain a single prompt that indicates this. This is used only if
+ * multiple such selections are available and replaces the individual action
+ * prompts. May be a string or a function accepting {@link FlowArguments}.
  *
  * @param options.description - A description of this step from a 3rd person
  * perspective, e.g. "choosing a card". The string will be automatically

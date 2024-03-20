@@ -345,7 +345,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
             if (submoves.length === 0 || skipIf === 'never' || (skipIf === 'only-one' && actions.length > 1)) {
               submoves = [{
                 name: action.name,
-                prompt,
+                prompt: action.prompt,
                 args,
                 selections: [
                   new Selection<P>('__action__', {
