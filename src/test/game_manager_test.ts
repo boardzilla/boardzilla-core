@@ -752,6 +752,23 @@ describe('GameManager', () => {
     });
 
     it('allows followup for other player', () => {
+      const {
+        loop,
+        eachPlayer,
+        playerActions
+      } = game.flowCommands
+      gameManager.game.defineFlow(loop(eachPlayer({
+        name: 'player',
+        do: [
+          playerActions({
+            actions: [{name: 'takeOne', do: actionSpy}]
+          }),
+          playerActions({
+            actions: ['declare']
+          }),
+        ]
+      })));
+
       gameManager.game.tokens = 12;
       gameManager.start();
       gameManager.play();
@@ -759,8 +776,12 @@ describe('GameManager', () => {
       expect(gameManager.players.currentPosition).to.deep.equal([1]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
       gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: 'p1'}, player: gameManager.players[0] });
+      gameManager.play();
       expect(gameManager.players.currentPosition).to.deep.equal([2]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: 'p1'}, player: gameManager.players[1] });
       gameManager.play();
       expect(gameManager.players.currentPosition).to.deep.equal([3]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[2] });
@@ -769,6 +790,10 @@ describe('GameManager', () => {
       expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(0);
       expect(gameManager.allowedActions(gameManager.players[1]).actions.length).to.equal(1);
       expect(gameManager.allowedActions(gameManager.players[2]).actions.length).to.equal(0);
+
+      gameManager.processMove({ name: 'declare', args: {d: 'follow'}, player: gameManager.players[1] });
+      gameManager.play();
+      expect(gameManager.players.currentPosition).to.deep.equal([3]);
     });
 
     it('multi followup', () => {

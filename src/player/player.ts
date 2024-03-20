@@ -85,7 +85,7 @@ export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer 
    * search terms. Also see {@link GameElement#owner}.
    */
   allMy<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  allMy(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
+  allMy(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<GameElement<G, P>>;
   allMy(className?: any, ...finders: ElementFinder[]) {
     return this.game.all(className, {owner: this}, ...finders);
   }
@@ -96,7 +96,7 @@ export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer 
    * the search terms. Also see {@link GameElement#owner}.
    */
   my<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  my(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
+  my(className?: ElementFinder, ...finders: ElementFinder[]): GameElement<G, P> | undefined;
   my(className?: any, ...finders: ElementFinder[]) {
     return this.game.first(className, {owner: this}, ...finders);
   }

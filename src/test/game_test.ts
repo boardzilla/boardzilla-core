@@ -48,7 +48,6 @@ describe('Game', () => {
     game = new Game({
       // @ts-ignore
       gameManager: { players, addDelay: () => {}, random: random.create('a').random },
-      classRegistry: [Space, Piece, GameElement]
     });
     game._ctx.gameManager.game = game;
   });
@@ -146,8 +145,6 @@ describe('Game', () => {
       rival: Country;
       general: Piece<Game>;
     }
-    game._ctx.classRegistry = [Space, Piece, GameElement, Country];
-
     const map = game.create(Space, 'map', {});
     const napolean = map.create(Piece, 'napolean')
     const england = map.create(Country, 'england', {});
@@ -167,8 +164,6 @@ describe('Game', () => {
     class General extends Piece<Game> {
       country?: Country;
     }
-    game._ctx.classRegistry = [Space, Piece, GameElement, Country, General];
-
     const map = game.create(Space, 'map', {});
     const france = map.create(Country, 'france');
     const napolean = france.create(General, 'napolean', { country: france });
@@ -231,10 +226,6 @@ describe('Game', () => {
       flipped?: boolean = false;
       state?: string = 'initial';
     }
-
-    beforeEach(() => {
-      game._ctx.classRegistry.push(Card);
-    });
 
     it('takes attrs', () => {
       game.create(Card, '2H', { suit: 'H', pip: 2 });
@@ -632,7 +623,6 @@ describe('Game', () => {
   describe("graph", () => {
     let map: ConnectedSpaceMap<BaseGame>;
     beforeEach(() => {
-      game._ctx.classRegistry.push(ConnectedSpaceMap);
       map = game.create(ConnectedSpaceMap, 'map');
     });
 
@@ -708,9 +698,6 @@ describe('Game', () => {
 
   describe('grids', () => {
     class Cell extends Space<Game> { color: string }
-    beforeEach(() => {
-      game._ctx.classRegistry.push(SquareGrid, HexGrid, Cell);
-    });
 
     it('creates squares', () => {
       game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
@@ -834,7 +821,7 @@ describe('Game', () => {
 
   describe('layouts', () => {
     beforeEach(() => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement] });
+      game = new Game({});
       game.layout(GameElement, {
         margin: 0,
         gap: 0,
@@ -1129,7 +1116,7 @@ describe('Game', () => {
 
     it('specificity', () => {
       class Country extends Space<Game> { }
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Country] });
+      game = new Game({});
 
       const spaces = game.createMany(4, Space, 'space');
       const space = game.create(Space, 'special');
@@ -1256,7 +1243,6 @@ describe('Game', () => {
     let map: PieceGrid<Game>;
 
     beforeEach(() => {
-      game._ctx.classRegistry.push(PieceGrid);
       map = game.create(PieceGrid, 'map');
       p1 = map.create(Piece, 'p1');
       p2 = map.create(Piece, 'p2');

@@ -4,6 +4,7 @@ import {
   Game,
   Piece,
   Space,
+  ConnectedSpaceMap,
   SquareGrid,
   HexGrid,
   PieceGrid,
@@ -12,7 +13,7 @@ import {
 } from './board/index.js';
 
 export { Game, union } from './board/index.js';
-export { Space, Piece, SquareGrid, HexGrid, PieceGrid, Die, GameElement };
+export { Space, Piece, ConnectedSpaceMap, SquareGrid, HexGrid, PieceGrid, Die, GameElement };
 
 export { Do } from './flow/index.js';
 

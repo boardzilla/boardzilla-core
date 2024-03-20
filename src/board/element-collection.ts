@@ -72,8 +72,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * provided.
    */
   all<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  all(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
-  all(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  all(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<T>;
+  all(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): ElementCollection<any> {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
       return this._finder(undefined, {}, ...finders);
@@ -144,8 +144,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * @returns A matching element, if found
    */
   first<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  first(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
-  first(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  first(className?: ElementFinder, ...finders: ElementFinder[]): T | undefined;
+  first(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): GameElement | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
       return this._finder(undefined, {limit: 1}, ...finders)[0];
@@ -165,8 +165,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * if one was provided.
    */
   firstN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  firstN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
-  firstN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  firstN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<T>;
+  firstN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): ElementCollection<any> {
     if (typeof n !== 'number') throw Error('first argument must be number of matches');
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
@@ -183,8 +183,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * @returns A matching element, if found
    */
   last<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  last(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
-  last(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  last(className?: ElementFinder, ...finders: ElementFinder[]): T | undefined;
+  last(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): GameElement | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
       return this._finder<GameElement>(undefined, {limit: 1, order: 'desc'}, ...finders)[0];
@@ -204,8 +204,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * if one was provided.
    */
   lastN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  lastN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
-  lastN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  lastN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<T>;
+  lastN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): ElementCollection<any> {
     if (typeof n !== 'number') throw Error('first argument must be number of matches');
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
@@ -219,8 +219,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * @category Queries
    */
   top<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  top(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
-  top(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  top(className?: ElementFinder, ...finders: ElementFinder[]): T | undefined;
+  top(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): GameElement | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
       return this._finder<GameElement>(undefined, {limit: 1}, ...finders)[0];
@@ -233,8 +233,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * @category Queries
    */
   topN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  topN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
-  topN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  topN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<T>;
+  topN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): ElementCollection<any> {
     if (typeof n !== 'number') throw Error('first argument must be number of matches');
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
@@ -248,8 +248,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * @category Queries
    */
   bottom<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): F | undefined;
-  bottom(className?: ElementFinder, ...finders: ElementFinder[]): GameElement | undefined;
-  bottom(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  bottom(className?: ElementFinder, ...finders: ElementFinder[]): T | undefined;
+  bottom(className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): GameElement<any> | undefined {
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];
       return this._finder<GameElement>(undefined, {limit: 1, order: 'desc'}, ...finders)[0];
@@ -262,8 +262,8 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * @category Queries
    */
   bottomN<F extends GameElement>(n: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
-  bottomN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection;
-  bottomN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]) {
+  bottomN(n: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<T>;
+  bottomN(n: number, className?: ElementFinder | ElementClass, ...finders: ElementFinder[]): ElementCollection<any> {
     if (typeof n !== 'number') throw Error('first argument must be number of matches');
     if ((typeof className !== 'function') || !('isGameElement' in className)) {
       if (className) finders = [className, ...finders];

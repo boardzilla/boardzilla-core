@@ -167,6 +167,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       position,
       move: undefined,
       prompt: undefined,
+      boardPrompt: undefined,
       actionDescription: undefined,
       otherPlayerAction: undefined,
       announcementIndex: 0,

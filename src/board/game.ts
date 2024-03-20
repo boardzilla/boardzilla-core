@@ -144,11 +144,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     this.pile = this._ctx.removed;
   }
 
-  /**
-   * This method must be called inside {@link createGame} with all custom Space
-   * and Piece class declared in your game.
-   * @category Definition
-   */
+  // no longer needed - remove in next minor release
   registerClasses(...classList: ElementClass[]) {
     this._ctx.classRegistry = this._ctx.classRegistry.concat(classList);
   }

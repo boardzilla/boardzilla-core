@@ -35,13 +35,6 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     return this.adjacenciesByCell(el1 as Piece<G>, el2 as Piece<G>).length > 0;
   }
 
-  configureLayout(layoutConfiguration: Partial<LayoutAttributes<GameElement>>) {
-    if ('margin' in layoutConfiguration || 'offsetRow' in layoutConfiguration || 'offsetColumn' in layoutConfiguration) {
-      throw Error("PieceGrid cannot have margin or offsets");
-    }
-    super.configureLayout(layoutConfiguration);
-  }
-
   _sizeNeededFor(element: GameElement) {
     if (!element._size) return {width: 1, height: 1};
     if (element.rotation % 180 === 90) return {

@@ -306,7 +306,7 @@ describe('Actions', () => {
   describe('_withDecoratedArgs', () => {
     let game: Game;
     beforeEach(() => {
-      game = new Game({ classRegistry: [Space, Piece] });
+      game = new Game({});
     });
 
     it('validates', () => {
@@ -359,7 +359,7 @@ describe('Actions', () => {
   describe('board moves', () => {
     let game: Game;
     beforeEach(() => {
-      game = new Game({ classRegistry: [Space, Piece] });
+      game = new Game({});
       const space1 = game.create(Space, 'space-1');
       game.create(Space, 'space-2');
       space1.create(Piece, 'piece-1');
