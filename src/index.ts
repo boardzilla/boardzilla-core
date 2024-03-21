@@ -37,20 +37,6 @@ import type Action from './action/action.js';
 
 export type { GameManager, Action, ElementClass };
 
-/**
- * Returns game classes with the correct types for game and player.
- *
- * @example
- * const {Space, Piece, Die} = createGameClasses<MyGamePlayer, MyGame>();
- * @category Board
- */
-// export const createGameClasses = <P extends Player<P, B>, B extends Game<P, B>>() => ({
-//   GameElement: GameElement<P, B>,
-//   Space: Space<P, B>,
-//   Piece: Piece<P, B>,
-//   Die: Die<P, B>
-// });
-
 export type SetupFunction<B extends Game = Game> = (
   state: SetupState | GameState,
   options?: {rseed?: string, trackMovement?: boolean}

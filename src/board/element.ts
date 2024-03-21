@@ -524,8 +524,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     return this._t.parent!._t.children.all(className, (el: GameElement) => el !== this, ...finders);
   }
 
-  // test(e: GameElement) { return () => e === this }
-
   /**
    * Return whether any element within this element recursively matches the arguments
    * provided. See {@link all} for parameter details.
@@ -855,9 +853,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
     if (!this._ctx.classRegistry.includes(className)) {
       this._ctx.classRegistry.push(className);
-      // const classNameBasedOnName = this._ctx.classRegistry.find(c => c.name === className.name) as ElementClass<T>;
-      // if (!classNameBasedOnName) throw Error(`No class found ${className.name}. Declare any classes in \`game.registerClasses\``);
-      // className = classNameBasedOnName;
     }
     const el = new className(this._ctx);
     el.game = this.game;
@@ -1065,6 +1060,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
   cloneInto<T extends GameElement>(this: T, into: GameElement): T {
     let attrs = this.attributeList();
+    delete attrs.column;
+    delete attrs.row;
 
     const clone = into.createElement(this.constructor as ElementClass<T>, this.name, attrs);
     if (into._t.order === 'stacking') {

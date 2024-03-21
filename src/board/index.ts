@@ -19,8 +19,8 @@ export type { ElementFinder, Sorter } from './element-collection.js';
  * GameElement}'s or {@link ElementCollection}'s,
  * @category Flow
  */
-export function union(...queries: (GameElement | ElementCollection | undefined)[]): ElementCollection {
-  let c = new ElementCollection();
+export function union<T extends GameElement>(...queries: (T | ElementCollection<T> | undefined)[]): ElementCollection<T> {
+  let c = new ElementCollection<T>();
   for (const q of queries) {
     if (q) {
       if ('forEach' in q) {

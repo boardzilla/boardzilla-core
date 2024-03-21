@@ -200,15 +200,19 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
         if (!(move.data instanceof Array)) move.data = [move.data];
 
         for (let i = 0; i !== move.data.length; i++) {
-          error = gameManager.processMove({
-            player,
-            name: move.data[i].name,
-            args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, gameManager.game)]))
-          });
-          if (error) break;
-          if (gameManager.phase === 'finished') break;
+          try {
+            error = gameManager.processMove({
+              player,
+              name: move.data[i].name,
+              args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, gameManager.game)]))
+            });
+          } catch (e) {
+            error = e.message;
+          }
+          if (error || gameManager.phase === 'finished') break;
           gameManager.play();
         }
+        if (error || gameManager.phase === 'finished') break;
         updates.push(gameManager.getUpdate());
       }
 
