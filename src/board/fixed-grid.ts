@@ -4,7 +4,10 @@ import Space from './space.js';
 import type Game from './game.js';
 import type { default as GameElement, ElementClass, ElementUI } from "./element.js";
 
-export default abstract class FixedGrid<G extends Game> extends ConnectedSpaceMap<G> {
+/**
+ * Abstract base class for {@link SquareGrid} and {@link HexGrid}
+ */
+export default class FixedGrid<G extends Game> extends ConnectedSpaceMap<G> {
 
   rows: number = 1;
   columns: number = 1;

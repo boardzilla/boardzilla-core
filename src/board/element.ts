@@ -542,7 +542,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   /**
    * If this element is adjacent to some other element, using the nearest
    * containing space that has an adjacency map.
-   * @category Structure
+   * @category Adjacency
    */
   isAdjacentTo(element: GameElement): boolean {
     const graph = this.containerWithProperty('isAdjacent');
@@ -552,7 +552,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
   /**
    * Finds the shortest distance between two spaces
-   * @category Structure
+   * @category Adjacency
    *
    * @param element - {@link element} to measure distance to
    */
@@ -566,7 +566,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * Find all elements adjacent based on row/column placement or based on this
    * element having connections created by Space#connectTo. Uses the same
    * parameters as {@link GameElement#all}
-   * @category Queries
+   * @category Adjacency
    */
   adjacencies<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
   adjacencies(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<GameElement<G, P>>;
@@ -580,7 +580,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * Finds all spaces connected to this space by a distance no more than
    * `distance`
    *
-   * @category Queries
+   * @category Adjacency
    */
   withinDistance<F extends GameElement>(distance: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
   withinDistance(distance: number, className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<GameElement<G, P>>;
@@ -942,6 +942,35 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     return {width: 1, height: 1};
   }
 
+  /**
+   * Set an irregular shape for this element. This is only meaningful for the
+   * purposes of finding specifically adjacent cells when placed into a
+   * PieceGrid. See {@link PieceGrid#adjacenciesByCell}. When rendered in a
+   * PieceGrid, the element will have a size large enough to fill the
+   * appropriate number of spaces in the grid, but it's appearance is otherwise
+   * unaffected and will be based on {@link appearance}. When not rendered in a
+   * PieceGrid, the element will take up a single cell but will be scaled
+   * relatively to other elements with a shape in the same layout.
+   *
+   * @param shape - A set of single characters used as labels for each cell. The
+   * cell label characters are provided as an array of strings, with each string
+   * being one row of cell labels, with spaces used to indicate empty "holes" in
+   * the shape. Each row must be the same length. The specific non-space
+   * characters used are used for labelling the adjacencies in {@link
+   * PieceGrid#adjacenciesByCell} but are otherwise unimportant.
+   * @category Adjacency
+   *
+   * @example
+   *
+   * domino12.setShape(
+   *   '12'
+   * );
+
+   * tetrisPiece.setShape(
+   *   'XX ',
+   *   ' XX'
+   * );
+   */
   setShape(...shape: string[]) {
     if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
     if (shape.some(s => s.length !== shape[0].length)) throw Error("Each row in shape must be same size. Invalid shape:\n" + shape);
@@ -952,6 +981,41 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     }
   }
 
+  /**
+   * Set the edge labels for this element. These are only meaningful for the
+   * purposes of finding specifically adjacent edges when placed into a
+   * PieceGrid. See {@link PieceGrid#adjacenciesByEdge}.
+   * @category Adjacency
+   *
+   * @param edges - A set of edge labels for each cell label provided by {@link
+   * setShape}. For simple 1-celled shapes, the edges can be provided without
+   * cell labels.
+   *
+   * @example
+   *
+   * // a bridge tile with a road leading from left to right and a river leading
+   * // from top to bottom.
+   * simpleTile.setEdge(
+   *   up: 'river',
+   *   down: 'river',
+   *   left: 'road'
+   *   right: 'road'
+   * });
+   *
+   * // A tetris-shaped tile with sockets coming out either "end"
+   * tetrisPiece.setShape(
+   *   'AX ',
+   *   ' XB'
+   * );
+   * tetrisPiece.setEdge({
+   *   A: {
+   *     left: 'socket'
+   *   },
+   *   B: {
+   *     right: 'socket'
+   *   }
+   * });
+   */
   setEdges(edges: Record<string, Partial<Record<Direction, string>>> | Partial<Record<Direction, string>>) {
     if (this._ctx.gameManager?.phase === 'started') throw Error('Cannot change shape once game has started.');
     if (Object.keys(edges)[0].length === 1) {

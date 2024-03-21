@@ -4,14 +4,42 @@ import Space from '../board/space.js';
 
 import type Game from './game.js'
 import type Piece from './piece.js'
-import type { default as GameElement, Vector, Direction, LayoutAttributes, DirectionWithDiagonals } from "./element.js";
+import type { default as GameElement, Vector, Direction, DirectionWithDiagonals } from "./element.js";
 import type { ElementContext, ElementUI } from './element.js';
 
+/**
+ * A grid that tracks adjacency for pieces placed within it. This is useful for
+ * tile placement games, e.g. dominoes. Only pieces can be placed in a PieceGrid
+ * and each must have a column and row. Pieces that have been assigned irregular
+ * shapes using {@link Piece#setShape} will be rendered as taking up more than a
+ * single cell in the grid, depending on their shape. Adjacency is calculated
+ * for the entire shape.
+ */
 export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
 
+  /**
+   * If true, the space will be automatically enlarged when new places are added
+   * using {@link Action#placePiece}.
+   * @category Adjacency
+   */
   extendableGrid: boolean = true;
+  /**
+   * Initial number of rows to render, but this can increase if {@link
+   * extendableGrid} is true.
+   * @category Adjacency
+   */
   rows: number = 1;
+  /**
+   * Initial number of columns to render, but this can increase if {@link
+   * extendableGrid} is true.
+   * @category Adjacency
+   */
   columns: number = 1;
+  /**
+   * Whether to consider tiles that touch at the corners to be adjacent when
+   * using adjacenciesByCell.
+   * @category Adjacency
+   */
   diagonalAdjacency: boolean = false
 
   _ui: ElementUI<this> = {
@@ -47,6 +75,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     }
   }
 
+  // internal
   cellsAround(piece: Piece<G>, pos: Vector) {
     const adjacencies: Partial<Record<DirectionWithDiagonals, string>> = {
       up: piece._cellAt({y: pos.y - 1, x: pos.x}),
@@ -63,6 +92,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     return adjacencies;
   }
 
+  // internal
   isOverlapping(piece: Piece<G>, other?: Piece<G>): boolean {
     if (!other) {
       return this._t.children.some(p => p !== piece && this.isOverlapping(piece, p as Piece<G>));
@@ -92,6 +122,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     return false;
   }
 
+  // internal
   _fitPieceInFreePlace(piece: Piece<G>, rows: number, columns: number, origin: {column: number, row: number}) {
     const tryLaterally = (vertical: boolean, d: number): boolean => {
       for (let lateral = 0; lateral < d + (vertical ? 0 : 1); lateral = -lateral + (lateral < 1 ? 1 : 0)) {
@@ -138,6 +169,30 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     piece.column = undefined;
   }
 
+  /**
+   * Returns a list of other Pieces in the grid that have a touching edge (or
+   * touching corner if {@link diagonalAdjacency} is true} with this shape. Each
+   * item in the list contains the adjacent Piece, as well as the string
+   * representation of cells in both pieces, as provided in {@link
+   * Piece#setShape}.
+   * @category Adjacency
+   *
+   * @example
+   *
+   * A domino named "domino12" is adjacent to a domino named "domino34" with the
+   * 2 touching the 3:
+   *
+   * domino12.setShape('12');
+   * domino34.setShape('34');
+   * board.adjacenciesByCell(domino12) =>
+   *    [
+   *      {
+   *        piece: domino34,
+   *        from: '2',
+   *        to: '3'
+   *      }
+   *    ]
+   */
   adjacenciesByCell(piece: Piece<G>, other?: Piece<G>): {piece: Piece<G>, from: string, to: string}[] {
     if (!other) {
       return this._t.children.reduce(
@@ -187,6 +242,39 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
     return adjacencies;
   }
 
+  /**
+   * Returns a list of other Pieces in the grid that have a touching edge with
+   * this shape. Each item in the list contains the adjacent Piece, as well as
+   * the string representation of the edges in both pieces, as provided in
+   * {@link Piece#setEdges}.
+   * @category Adjacency
+   *
+   * @example
+   *
+   * A tile named "corner" is adjacent directly to the left of a tile named
+   * "bridge".
+   *
+   * corner.setEdges({
+   *   up: 'road',
+   *   right: 'road'
+   * });
+   *
+   * bridge.setEdges({
+   *   up: 'river',
+   *   down: 'river',
+   *   left: 'road'
+   *   right: 'road'
+   * });
+   *
+   * board.adjacenciesByCell(corner) =>
+   *    [
+   *      {
+   *        piece: bridge,
+   *        from: 'road',
+   *        to: 'road'
+   *      }
+   *    ]
+   */
   adjacenciesByEdge(piece: Piece<G>, other?: Piece<G>): {piece: Piece<G>, from?: string, to?: string}[] {
     if (!other) {
       // TODO reduce to single layout

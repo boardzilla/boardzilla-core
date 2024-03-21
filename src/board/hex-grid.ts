@@ -4,9 +4,39 @@ import { times } from '../utils.js';
 import type Game from './game.js';
 import type { ElementUI } from "./element.js";
 
+/**
+ * A Hex grid. Create the HexGrid with 'rows' and 'columns' values to
+ * automatically create the spaces. Optionally use {@link shape} and {@link
+ * axes} to customize the type of hex.
+ *
+ * @example
+ * game.create(HexGrid, 'catan-board', { rows: 5, columns: 5, shape: 'hex' })
+ */
 export default class HexGrid<G extends Game> extends FixedGrid<G> {
 
+  /**
+   * Determines which direction the rows and columns go within the
+   * hex. E.g. with east-by-southwest axes, The cell at {row: 1, column: 2} is
+   * directly east of {row: 1, column: 1}. The cell at {row: 2, column: 1} is
+   * directly southwest of {row: 1, column: 1}.
+   * @category Adjacency
+   */
   axes: 'east-by-southwest' | 'east-by-southeast' | 'southeast-by-south' | 'northeast-by-south' = 'east-by-southwest';
+  /**
+   * Determines the overall shape of the spaces created.
+   *
+   * rhomboid - A rhomboid shape. This means a cell will exist at every row and
+   * column combination. A 3x3 rhomboid hex contains 9 cells.
+   *
+   * hex - A hex shape. This means the hex will be at most row x columns but
+   * will be missing cells at the corners. A 3x3 hex shape contains 7 cells.
+   *
+   * square - A square shape. This means the hex will be at most row x columns
+   * but will be shaped to keep a square shape. Some cells will therefore have a
+   * column value outside the range of columns. A 3x3 square hex contains 8
+   * cells, 3 on each side, and two in the middle.
+   * @category Adjacency
+   */
   shape: 'square' | 'hex' | 'rhomboid' = 'rhomboid';
 
   _ui: ElementUI<this> = {

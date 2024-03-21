@@ -4,6 +4,9 @@ import GameElement from './element.js';
 import type { BaseGame } from './game.js';
 import type { ElementUI, LayoutAttributes } from './element.js';
 
+/**
+ * Abstract base class for all adjacency spaces
+ */
 export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G> {
 
   _ui: ElementUI<this> = {
@@ -30,10 +33,21 @@ export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G
     return element._t.parent === this ? element : this._positionedParentOf(element._t.parent);
   }
 
+  /**
+   * Adjacency grids are stricter and can only contain elements of a certain
+   * type. Rather than adding multiple, overlapping layouts for different
+   * elements, there is a single layout that can be modified using {@link
+   * configureLayout}.
+   * @category UI
+   */
   layout() {
     throw Error("Additional layouts may not be added to grids or connected spaces. The base layout can instead be configured with configureLayout.");
   }
 
+  /**
+   * Change the layout attributes for this space's layout.
+   * @category UI
+   */
   configureLayout(layoutConfiguration: Partial<LayoutAttributes<GameElement>>) {
     const keys = Object.keys(layoutConfiguration);
     if (keys.includes('scaling') || keys.includes('alignment')) {
