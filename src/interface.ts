@@ -186,7 +186,7 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
 
     reprocessHistory(state: SetupState, moves: SerializedInterfaceMove[]): ReprocessHistoryResult {
       let rseed = state.randomSeed;
-      const gameManager = setup(state, {rseed});
+      const gameManager = setup(state, {rseed, trackMovement: false});
       if (gameManager.phase !== 'finished') gameManager.play();
       const initialState = gameManager.getUpdate();
       let error = undefined;
@@ -196,6 +196,7 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
         rseed = advanceRseed(rseed);
         gameManager.messages = [];
         gameManager.announcements = [];
+        gameManager.intermediateUpdates = [];
         const player = gameManager.players.atPosition(move.position)!;
         if (!(move.data instanceof Array)) move.data = [move.data];
 
