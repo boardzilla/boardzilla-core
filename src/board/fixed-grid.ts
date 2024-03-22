@@ -6,8 +6,9 @@ import type { default as GameElement, ElementClass, ElementUI } from "./element.
 
 /**
  * Abstract base class for {@link SquareGrid} and {@link HexGrid}
+ * @category Board
  */
-export default class FixedGrid<G extends Game> extends ConnectedSpaceMap<G> {
+export default abstract class FixedGrid<G extends Game> extends ConnectedSpaceMap<G> {
 
   rows: number = 1;
   columns: number = 1;

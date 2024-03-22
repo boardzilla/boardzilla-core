@@ -213,8 +213,9 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
           if (error || gameManager.phase === 'finished') break;
           gameManager.play();
         }
-        if (error || gameManager.phase === 'finished') break;
+        if (error) break;
         updates.push(gameManager.getUpdate());
+        if (gameManager.phase === 'finished') break;
       }
 
       return {

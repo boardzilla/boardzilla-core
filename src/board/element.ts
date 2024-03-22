@@ -573,7 +573,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   adjacencies(className?: any, ...finders: ElementFinder[]) {
     const graph = this.containerWithProperty('isAdjacent') as AdjacencySpace<G> | undefined;
     if (!graph) return false;
-    return graph._t.children.filter(c => graph.isAdjacent(this, c)).all(className, ...finders);
+    return (graph as ConnectedSpaceMap<G>).allAdjacentTo(this, className, ...finders);
   }
 
   /**

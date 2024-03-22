@@ -14,6 +14,7 @@ import type { ElementContext, ElementUI } from './element.js';
  * shapes using {@link Piece#setShape} will be rendered as taking up more than a
  * single cell in the grid, depending on their shape. Adjacency is calculated
  * for the entire shape.
+ * @category Board
  */
 export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
 

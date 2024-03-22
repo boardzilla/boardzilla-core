@@ -633,6 +633,8 @@ describe('Game', () => {
       map.connect(a, b);
       expect(a.isAdjacentTo(b)).to.equal(true);
       expect(a.isAdjacentTo(c)).to.equal(false);
+      expect(map.isAdjacent(a, b)).to.equal(true);
+      expect(map.isAdjacent(a, c)).to.equal(false);
     })
 
     it("calculates distance", () => {
@@ -643,6 +645,7 @@ describe('Game', () => {
       map.connect(b, c, 3);
       map.connect(a, c, 6);
       expect(a.distanceTo(c)).to.equal(5);
+      expect(map.distanceBetween(a, c)).to.equal(5);
     })
 
     it("calculates closest", () => {
@@ -666,6 +669,8 @@ describe('Game', () => {
       map.connect(c, d, 1);
       expect(a.adjacencies()).to.deep.equal([b, c]);
       expect(c.adjacencies()).to.deep.equal([a, b, d]);
+      expect(map.allAdjacentTo(a)).to.deep.equal([b, c]);
+      expect(map.allAdjacentTo(c)).to.deep.equal([a, b, d]);
     })
 
     it("searches by distance", () => {
@@ -677,7 +682,8 @@ describe('Game', () => {
       map.connect(b, c, 3);
       map.connect(a, c, 6);
       map.connect(c, d, 1);
-      expect(a.withinDistance(5).all(Space)).to.deep.equal([b,c]);
+      expect(a.withinDistance(5).all(Space)).to.deep.equal([b, c]);
+      expect(map.allWithinDistanceOf(a, 5, Space)).to.deep.equal([b, c]);
     })
 
     it("searches contiguous", () => {
@@ -692,7 +698,7 @@ describe('Game', () => {
       map.connect(a, c, 6);
       map.connect(c, d, 1);
       map.connect(e, f, 1);
-      expect(map.allConnectedTo(a).all(Space)).to.deep.equal([a,b,c,d]);
+      expect(map.allConnectedTo(a).all(Space)).to.deep.equal([a, b, c, d]);
     })
   });
 

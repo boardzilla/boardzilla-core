@@ -18,6 +18,7 @@ import type { ElementFinder } from './element-collection.js';
  * adjacency is created manually with {@link ConnectedSpaceMap#connect}. This is
  * useful for arbitrary adjacencies. See also {@link SquareGrid}, {@link
  * HexGrid} for standard adjacency layouts.
+ * @category Board
  */
 export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpace<G> {
   _graph: DirectedGraph;
@@ -94,6 +95,26 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
     } catch(e) {
       return Infinity;
     }
+  }
+
+  /**
+   * Finds all elements of the query type given that are adjacent to the
+   * provided element, searching recursively through the adjacent Spaces. Uses
+   * the same query parameters as {@link all}.
+   * @category Adjacency
+   *
+   * @param element - {@link GameElement} to measure distance from
+   * @param {class} className - Optionally provide a class as the first argument
+   * as a class filter. This will only match elements which are instances of the
+   * provided class
+   * @param finders - All other parameters are filters. See {@link
+   * ElementFinder} for more information.
+   */
+  allAdjacentTo<F extends GameElement>(element: GameElement, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
+  allAdjacentTo(element: GameElement, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
+  allAdjacentTo(element: GameElement, className?: any, ...finders: ElementFinder[]) {
+    const source = this._positionedParentOf(element);
+    return this._t.children.filter(c => this.isAdjacent(source, c)).all(className, ...finders);
   }
 
   /**

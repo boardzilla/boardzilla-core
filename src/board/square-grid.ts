@@ -6,6 +6,7 @@ import type Game from './game.js';
 /**
  * A Square grid. Create the SquareGrid with 'rows' and 'columns' values to
  * automatically create the spaces.
+ * @category Board
  *
  * @example
  * game.create(SquareGrid, 'chess-board', { rows: 8, columns: 8 })

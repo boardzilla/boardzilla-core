@@ -8,6 +8,7 @@ import type { ElementUI } from "./element.js";
  * A Hex grid. Create the HexGrid with 'rows' and 'columns' values to
  * automatically create the spaces. Optionally use {@link shape} and {@link
  * axes} to customize the type of hex.
+ * @category Board
  *
  * @example
  * game.create(HexGrid, 'catan-board', { rows: 5, columns: 5, shape: 'hex' })

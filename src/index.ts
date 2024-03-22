@@ -1,10 +1,14 @@
 import GameManager from './game-manager.js';
+export { Game, union } from './board/index.js';
 import { Player } from './player/index.js';
+
 import {
   Game,
   Piece,
   Space,
   ConnectedSpaceMap,
+  AdjacencySpace,
+  FixedGrid,
   SquareGrid,
   HexGrid,
   PieceGrid,
@@ -12,8 +16,18 @@ import {
   GameElement,
 } from './board/index.js';
 
-export { Game, union } from './board/index.js';
-export { Space, Piece, ConnectedSpaceMap, SquareGrid, HexGrid, PieceGrid, Die, GameElement };
+export {
+  Space,
+  Piece,
+  ConnectedSpaceMap,
+  AdjacencySpace,
+  FixedGrid,
+  SquareGrid,
+  HexGrid,
+  PieceGrid,
+  Die,
+  GameElement
+};
 
 export { Do } from './flow/index.js';
 
