@@ -1063,12 +1063,11 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       )) as typeof attrs;
     }
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
-    if (seenBy === undefined || 'isSpace' in this || ('name' in attrs && attrs['name'])) json._id = this._t.id; // this should also check for *unique* name or we'll leak information
+    if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name or we'll leak information
     if (this._t.order) json.order = this._t.order;
     if (this._t.was) json.was = this._t.was;
     // do not expose hidden deck shuffles
-    if (seenBy && this._t.was && this._t.parent?._t.order === 'stacking' // && !this.hasChangedParent()
-      && !this.isVisibleTo(seenBy)) json.was = this.branch();
+    if (seenBy && this._t.was && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) json.was = this.branch();
     if (this._t.children.length && (!seenBy || this.isVisibleTo(seenBy))) {
       json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
     }
@@ -1403,46 +1402,46 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
             }
           }
           switch (fillDirection) {
-            case 'ltr':
-              available = {x: 1, y: 1};
-              advance = {x: 1, y: 0};
-              carriageReturn = {x: -columns, y: 1};
-              break;
-            case 'rtl':
-              available = {x: columns, y: 1};
-              advance = {x: -1, y: 0};
-              carriageReturn = {x: columns, y: 1};
-              break;
-            case 'ttb':
-              available = {x: 1, y: 1};
-              advance = {x: 0, y: 1};
-              carriageReturn = {x: 1, y: -rows};
-              break;
-            case 'btt':
-              available = {x: 1, y: rows};
-              advance = {x: 0, y: -1};
-              carriageReturn = {x: 1, y: rows};
-              break;
-            case 'ltr-btt':
-              available = {x: 1, y: rows};
-              advance = {x: 1, y: 0};
-              carriageReturn = {x: -columns, y: -1};
-              break;
-            case 'rtl-btt':
-              available = {x: columns, y: rows};
-              advance = {x: -1, y: 0};
-              carriageReturn = {x: columns, y: -1};
-              break;
-            case 'ttb-rtl':
-              available = {x: columns, y: 1};
-              advance = {x: 0, y: 1};
-              carriageReturn = {x: -1, y: -rows};
-              break;
-            case 'btt-rtl':
-              available = {x: columns, y: rows};
-              advance = {x: 0, y: -1};
-              carriageReturn = {x: -1, y: rows};
-              break;
+          case 'ltr':
+            available = {x: 1, y: 1};
+            advance = {x: 1, y: 0};
+            carriageReturn = {x: -columns, y: 1};
+            break;
+          case 'rtl':
+            available = {x: columns, y: 1};
+            advance = {x: -1, y: 0};
+            carriageReturn = {x: columns, y: 1};
+            break;
+          case 'ttb':
+            available = {x: 1, y: 1};
+            advance = {x: 0, y: 1};
+            carriageReturn = {x: 1, y: -rows};
+            break;
+          case 'btt':
+            available = {x: 1, y: rows};
+            advance = {x: 0, y: -1};
+            carriageReturn = {x: 1, y: rows};
+            break;
+          case 'ltr-btt':
+            available = {x: 1, y: rows};
+            advance = {x: 1, y: 0};
+            carriageReturn = {x: -columns, y: -1};
+            break;
+          case 'rtl-btt':
+            available = {x: columns, y: rows};
+            advance = {x: -1, y: 0};
+            carriageReturn = {x: columns, y: -1};
+            break;
+          case 'ttb-rtl':
+            available = {x: columns, y: 1};
+            advance = {x: 0, y: 1};
+            carriageReturn = {x: -1, y: -rows};
+            break;
+          case 'btt-rtl':
+            available = {x: columns, y: rows};
+            advance = {x: 0, y: -1};
+            carriageReturn = {x: -1, y: rows};
+            break;
           }
 
           if (ghostPiecesIgnoredForLayout) {

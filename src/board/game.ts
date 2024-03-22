@@ -474,7 +474,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   applyLayouts(this: G, base?: (b: G) => void) {
     this.resetUI();
     if (this._ui.setupLayout) {
-      this._ui.setupLayout(this, this._ctx.player! as P, this._ui.boardSize.name);
+      this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
     }
     if (base) base(this);
 

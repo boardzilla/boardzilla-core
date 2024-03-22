@@ -74,16 +74,16 @@ export type SetupComponentProps = {
  *
  * @category UI
  */
-export const render = <B extends Game>(setup: SetupFunction<B>, options: {
+export const render = <G extends Game>(setup: SetupFunction<G>, options: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
   boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize,
-  layout?: (game: B, player: NonNullable<B['player']>, boardSize: string) => void,
-  announcements?: Record<string, (game: B) => JSX.Element>
-  infoModals?: {title: string, modal: (game: B) => JSX.Element}[]
+  layout?: (game: G, player: NonNullable<G['player']>, boardSize: string) => void,
+  announcements?: Record<string, (game: G) => JSX.Element>
+  infoModals?: {title: string, modal: (game: G) => JSX.Element}[]
 }): void => {
   const { settings, boardSizes, layout, announcements, infoModals } = options;
   const state = gameStore.getState();
-  const setupGame: SetupFunction<B> = state => {
+  const setupGame: SetupFunction<G> = state => {
     const gameManager = setup(state);
     gameManager.game._ui.boardSizes = boardSizes;
     gameManager.game._ui.setupLayout = layout;

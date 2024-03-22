@@ -6,7 +6,7 @@ import type Game from './game.js'
  * Specialized piece for represnting 6-sided dice
  * @category Board
  */
-export default class Die<B extends Game = Game> extends Piece<B> {
+export default class Die<G extends Game = Game> extends Piece<G> {
   sides: number = 6;
 
   /**
