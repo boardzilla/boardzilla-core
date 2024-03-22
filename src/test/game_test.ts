@@ -7,20 +7,25 @@ import {
   Space,
   Piece,
   GameElement,
+  ConnectedSpaceMap,
+  SquareGrid,
+  HexGrid,
+  PieceGrid
 } from '../board/index.js';
 
 import {
   Player,
   PlayerCollection,
 } from '../player/index.js';
+import type { BaseGame } from '../board/game.js';
 
 chai.use(spies);
 const { expect } = chai;
 
 describe('Game', () => {
-  let game: Game<Player>;
+  let game: BaseGame;
 
-  const players = new PlayerCollection<Player>;
+  const players = new PlayerCollection;
   players.className = Player;
   players.addPlayer({
     id: 'joe',
@@ -43,7 +48,6 @@ describe('Game', () => {
     game = new Game({
       // @ts-ignore
       gameManager: { players, addDelay: () => {}, random: random.create('a').random },
-      classRegistry: [Space, Piece, GameElement]
     });
     game._ctx.gameManager.game = game;
   });
@@ -121,9 +125,9 @@ describe('Game', () => {
   it('builds from json', () => {
     const map = game.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});
-    const piece3 = map.create(Piece, 'token3');
-    const england = map.create(Space, 'england', {});
-    const play = game.create(Space, 'play', {});
+    map.create(Piece, 'token3');
+    map.create(Space, 'england', {});
+    game.create(Space, 'play', {});
     const piece1 = france.create(Piece, 'token1', { player: players[0] });
     const piece2 = france.create(Piece, 'token2', { player: players[1] });
     const json = game.allJSON();
@@ -137,12 +141,10 @@ describe('Game', () => {
   });
 
   it('preserves serializable attributes from json', () => {
-    class Country extends Space<Player> {
+    class Country extends Space<Game> {
       rival: Country;
-      general: Piece<Player>;
+      general: Piece<Game>;
     }
-    game._ctx.classRegistry = [Space, Piece, GameElement, Country];
-
     const map = game.create(Space, 'map', {});
     const napolean = map.create(Piece, 'napolean')
     const england = map.create(Country, 'england', {});
@@ -156,14 +158,12 @@ describe('Game', () => {
   });
 
   it('handles cyclical serializable attributes', () => {
-    class Country extends Space<Player> {
+    class Country extends Space<Game> {
       general?: General;
     }
-    class General extends Piece<Player> {
+    class General extends Piece<Game> {
       country?: Country;
     }
-    game._ctx.classRegistry = [Space, Piece, GameElement, Country, General];
-
     const map = game.create(Space, 'map', {});
     const france = map.create(Country, 'france');
     const napolean = france.create(General, 'napolean', { country: france });
@@ -179,7 +179,7 @@ describe('Game', () => {
   it('understands branches', () => {
     const map = game.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});
-    const england = map.create(Space, 'england', {});
+    map.create(Space, 'england', {});
     const play = game.create(Space, 'play', {});
     const piece1 = france.create(Piece, 'token1', { player: players[0] });
     const piece2 = france.create(Piece, 'token2', { player: players[1] });
@@ -195,7 +195,7 @@ describe('Game', () => {
   it('assigns and finds IDs', () => {
     const map = game.create(Space, 'map', {});
     const france = map.create(Space, 'france', {});
-    const england = map.create(Space, 'england', {});
+    map.create(Space, 'england', {});
     const play = game.create(Space, 'play', {});
     const piece1 = france.create(Piece, 'token1', { player: players[0] });
     const piece2 = france.create(Piece, 'token2', { player: players[1] });
@@ -220,16 +220,12 @@ describe('Game', () => {
   });
 
   describe("Element subclasses", () => {
-    class Card extends Piece<Player> {
+    class Card extends Piece<Game> {
       suit: string;
       pip: number = 1;
       flipped?: boolean = false;
       state?: string = 'initial';
     }
-
-    beforeEach(() => {
-      game._ctx.classRegistry.push(Card);
-    });
 
     it('takes attrs', () => {
       game.create(Card, '2H', { suit: 'H', pip: 2 });
@@ -625,72 +621,92 @@ describe('Game', () => {
   });
 
   describe("graph", () => {
+    let map: ConnectedSpaceMap<BaseGame>;
+    beforeEach(() => {
+      map = game.create(ConnectedSpaceMap, 'map');
+    });
+
     it("adjacency", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      a.connectTo(b);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      map.connect(a, b);
       expect(a.isAdjacentTo(b)).to.equal(true);
       expect(a.isAdjacentTo(c)).to.equal(false);
-      expect(a.others({ adjacent: true }).includes(b)).to.equal(true);
-      expect(a.others({ adjacent: true }).includes(c)).to.not.equal(true);
+      expect(map.isAdjacent(a, b)).to.equal(true);
+      expect(map.isAdjacent(a, c)).to.equal(false);
     })
 
     it("calculates distance", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
       expect(a.distanceTo(c)).to.equal(5);
+      expect(map.distanceBetween(a, c)).to.equal(5);
     })
 
     it("calculates closest", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
-      expect(a.closest()).to.equal(b);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      expect(map.closestTo(a)).to.equal(b);
     })
 
     it("finds adjacencies", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
-      c.connectTo(d, 1);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      const d = map.create(Space, 'd');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      map.connect(c, d, 1);
       expect(a.adjacencies()).to.deep.equal([b, c]);
-      expect(a.others({ adjacent: true })).to.deep.equal([b, c]);
       expect(c.adjacencies()).to.deep.equal([a, b, d]);
-      expect(c.others({ adjacent: true })).to.deep.equal([a, b, d]);
+      expect(map.allAdjacentTo(a)).to.deep.equal([b, c]);
+      expect(map.allAdjacentTo(c)).to.deep.equal([a, b, d]);
     })
 
     it("searches by distance", () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.connectTo(b, 2);
-      b.connectTo(c, 3);
-      a.connectTo(c, 6);
-      c.connectTo(d, 1);
-      expect(a.withinDistance(5).all(Space)).to.deep.equal([b,c]);
-      expect(a.others({ withinDistance: 5}).length).to.equal(2);
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      const d = map.create(Space, 'd');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      map.connect(c, d, 1);
+      expect(a.withinDistance(5).all(Space)).to.deep.equal([b, c]);
+      expect(map.allWithinDistanceOf(a, 5, Space)).to.deep.equal([b, c]);
+    })
+
+    it("searches contiguous", () => {
+      const a = map.create(Space, 'a');
+      const b = map.create(Space, 'b');
+      const c = map.create(Space, 'c');
+      const d = map.create(Space, 'd');
+      const e = map.create(Space, 'e');
+      const f = map.create(Space, 'f');
+      map.connect(a, b, 2);
+      map.connect(b, c, 3);
+      map.connect(a, c, 6);
+      map.connect(c, d, 1);
+      map.connect(e, f, 1);
+      expect(map.allConnectedTo(a).all(Space)).to.deep.equal([a, b, c, d]);
     })
   });
 
   describe('grids', () => {
-    class Cell extends Space<Player> { color: string }
+    class Cell extends Space<Game> { color: string }
 
     it('creates squares', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
+      game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -705,8 +721,7 @@ describe('Game', () => {
     });
 
     it('creates squares with diagonals', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3, diagonalDistance: 1.5 }, Cell, 'cell');
+      const square = game.create(SquareGrid, 'square', { rows: 3, columns: 3, diagonalDistance: 1.5, space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -717,12 +732,11 @@ describe('Game', () => {
       expect(corner.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [2,1], [2,2]]);
 
       const knight = game.first(Cell, {row: 3, column: 2})!;
-      expect(corner.distanceTo(knight)).to.equal(2.5);
+      expect(square.distanceBetween(corner, knight)).to.equal(2.5);
     });
 
     it('creates hexes', () => {
-      game = new Game({ classRegistry:  [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3, style: 'hex' }, Cell, 'cell');
+      game.create(HexGrid, 'hex', { rows: 3, columns: 3, space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -737,8 +751,7 @@ describe('Game', () => {
     });
 
     it('creates inverse hexes', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3, style: 'hex-inverse' }, Cell, 'cell');
+      game.create(HexGrid, 'hex', { rows: 3, columns: 3, axes: 'east-by-southeast', space: Cell });
       expect(game.all(Cell).length).to.equal(9);
       expect(game.first(Cell)!.row).to.equal(1);
       expect(game.first(Cell)!.column).to.equal(1);
@@ -752,9 +765,44 @@ describe('Game', () => {
       expect(middle.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,2], [1,3], [2,1], [2,3], [3,1], [3,2]]);
     });
 
+    it('creates hex-shaped hexes', () => {
+      game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'hex', space: Cell });
+      expect(game.all(Cell).length).to.equal(16);
+      expect(game.all(Cell, {row: 1}).length).to.equal(3);
+      expect(game.all(Cell, {row: 2}).length).to.equal(4);
+      expect(game.all(Cell, {row: 3}).length).to.equal(5);
+      expect(game.all(Cell, {row: 4}).length).to.equal(4);
+
+      const cell = game.first(Cell, {row: 2, column: 4})!;
+      expect(cell.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,3], [2,3], [3,4], [3,5]]);
+    });
+
+    it('creates inverse hex-shaped hexes', () => {
+      game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'hex', axes: 'east-by-southeast', space: Cell });
+      expect(game.all(Cell).length).to.equal(16);
+      expect(game.all(Cell, {row: 1}).length).to.equal(3);
+      expect(game.all(Cell, {row: 2}).length).to.equal(4);
+      expect(game.all(Cell, {row: 3}).length).to.equal(5);
+      expect(game.all(Cell, {row: 4}).length).to.equal(4);
+
+      const cell = game.first(Cell, {row: 2, column: 2})!;
+      expect(cell.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,3], [2,3], [3,1], [3,2]]);
+    });
+
+    it('creates square-shaped hexes', () => {
+      game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'square', axes: 'east-by-southeast', space: Cell });
+      expect(game.all(Cell).length).to.equal(18);
+      expect(game.all(Cell, {row: 1}).length).to.equal(5);
+      expect(game.all(Cell, {row: 2}).length).to.equal(4);
+      expect(game.all(Cell, {row: 3}).length).to.equal(5);
+      expect(game.all(Cell, {row: 4}).length).to.equal(4);
+
+      const cell = game.first(Cell, {row: 2, column: 1})!;
+      expect(cell.adjacencies(Cell).map(e => [e.row, e.column])).to.deep.equal([[1,1], [1,2], [2,2], [3,0], [3,1]]);
+    });
+
     it('adjacencies', () => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Cell] });
-      game.createGrid({ rows: 3, columns: 3 }, Cell, 'cell');
+      game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
       for (const cell of game.all(Cell, {row: 2})) cell.color = 'red';
       const center = game.first(Cell, {row: 2, column: 2})!;
       expect(center.adjacencies(Cell).map(c => [c.row, c.column])).to.deep.equal([[1, 2], [2, 1], [2, 3], [3, 2]]);
@@ -762,30 +810,24 @@ describe('Game', () => {
       expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 2})!)).to.be.true;
       expect(center.isAdjacentTo(game.first(Cell, {row: 1, column: 1})!)).to.be.false;
     });
-  });
 
-  describe('placement', () => {
-    it('creates squares', () => {
-      game = new Game({ classRegistry: [Space, Piece] });
-      const piece1 = game.create(Piece, 'piece-1', { row: 1, column: 1 });
-      const piece2 = game.create(Piece, 'piece-2', { row: 1, column: 2 });
-      const piece3 = game.create(Piece, 'piece-3', { row: 2, column: 2 });
-
-      expect(piece1.adjacencies(Piece).length).to.equal(1);
-      expect(piece1.adjacencies(Piece)[0]).to.equal(piece2);
-      expect(piece2.adjacencies(Piece).length).to.equal(2);
-      expect(piece2.adjacencies(Piece)).includes(piece1);
-      expect(piece2.adjacencies(Piece)).includes(piece3);
-
-      expect(piece2.isAdjacentTo(piece1)).to.equal(true);
-      expect(piece2.isAdjacentTo(piece3)).to.equal(true);
-      expect(piece1.isAdjacentTo(piece3)).to.equal(false);
+    it('deep adjacencies', () => {
+      game.create(SquareGrid, 'square', { rows: 3, columns: 3, space: Cell });
+      const topLeft = game.first(Cell, {row: 1, column: 1})!;
+      const topCenter = game.first(Cell, {row: 1, column: 2})!;
+      const center = game.first(Cell, {row: 2, column: 2})!;
+      const p1 = topLeft.create(Piece, 'p1');
+      const p2 = topCenter.create(Piece, 'p2');
+      const p3 = center.create(Piece, 'p3');
+      expect(p2.adjacencies(Piece)).to.deep.equal([p1, p3]);
+      expect(p1.adjacencies(Piece)).to.deep.equal([p2]);
+      expect(p3.adjacencies(Piece)).to.deep.equal([p2]);
     });
   });
 
   describe('layouts', () => {
     beforeEach(() => {
-      game = new Game({ classRegistry: [Space, Piece, GameElement] });
+      game = new Game({});
       game.layout(GameElement, {
         margin: 0,
         gap: 0,
@@ -807,10 +849,10 @@ describe('Game', () => {
     });
 
     it('applies overlaps', () => {
-      const s1 = game.create(Space, 's1');
-      const s2 = game.create(Space, 's2');
-      const s3 = game.create(Space, 's3');
-      const s4 = game.create(Space, 's4');
+      game.create(Space, 's1');
+      game.create(Space, 's2');
+      game.create(Space, 's3');
+      game.create(Space, 's4');
       const p1 = game.create(Piece, 'p1');
       const p2 = game.create(Piece, 'p2');
       const p3 = game.create(Piece, 'p3');
@@ -1079,8 +1121,8 @@ describe('Game', () => {
     });
 
     it('specificity', () => {
-      class Country extends Space<Player> { }
-      game = new Game({ classRegistry: [Space, Piece, GameElement, Country] });
+      class Country extends Space<Game> { }
+      game = new Game({});
 
       const spaces = game.createMany(4, Space, 'space');
       const space = game.create(Space, 'special');
@@ -1198,6 +1240,457 @@ describe('Game', () => {
       expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
       expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
       expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+    });
+  });
+
+  describe('shapes', () => {
+    let p1: Piece<Game>;
+    let p2: Piece<Game>;
+    let map: PieceGrid<Game>;
+
+    beforeEach(() => {
+      map = game.create(PieceGrid, 'map');
+      p1 = map.create(Piece, 'p1');
+      p2 = map.create(Piece, 'p2');
+
+      p1.setShape(
+        'ABC',
+        'D  ',
+        'E  ',
+      );
+
+      p2.setShape(
+        'abcd',
+        'e f ',
+      );
+    });
+
+    describe("both zero degrees", () => {
+      it('finds overlap 1', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 0;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 2', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 1;
+        p2.row = 1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+      });
+
+      it('finds overlap 3', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = -1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 4', () => {
+        p1.column = 4;
+        p1.row = 2;
+        p2.column = 1;
+        p2.row = 1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+      });
+    });
+
+    describe("p1 at 90 degrees", () => {
+      beforeEach(() => p1.rotation = 90);
+      it('finds overlap 5', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 6', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -2;
+        p2.row = 1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+      });
+
+      it('finds overlap 7', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 2;
+        p2.row = 2;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 8', () => {
+        p1.column = 2;
+        p1.row = 4;
+        p2.column = 3;
+        p2.row = 2;
+
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+      });
+    });
+
+    describe("p2 at 270 degrees", () => {
+      beforeEach(() => p2.rotation = 270);
+      it('finds overlap 9', () => {
+        p1.column = -1;
+        p1.row = 0;
+        p2.column = 1;
+        p2.row = 0;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 10', () => {
+        p1.column = -1;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+      });
+
+      it('finds overlap 11', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 2;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 12', () => {
+        p1.column = 1;
+        p1.row = 0;
+        p2.column = 0;
+        p2.row = 2;
+
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+      });
+    });
+
+    describe("p1 at 180 degrees, p2 at 270 degrees", () => {
+      beforeEach(() => {p1.rotation = 180; p2.rotation = 270});
+      it('finds overlap 13', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = -1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 14', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 0;
+        p1.setEdges({
+          C: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          }
+        });
+        p2.setEdges({
+          b: {
+            up: 'up',
+            down: 'down',
+            left: 'left',
+            right: 'right'
+          },
+          f: {
+            up: 'Up',
+            down: 'Down',
+            left: 'Left',
+            right: 'Right'
+          },
+          e: {
+            right: 'stuff'
+          }
+        });
+
+        // d  E
+        // cf D
+        // bCBA
+        // ae
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+        expect(map.adjacenciesByCell(p1, p2)).to.deep.equal([
+          {
+            piece: p2,
+            from: 'C',
+            to: 'f'
+          },
+          {
+            piece: p2,
+            from: 'C',
+            to: 'e'
+          },
+          {
+            piece: p2,
+            from: 'C',
+            to: 'b'
+          },
+        ]);
+        expect(map.adjacenciesByEdge(p1, p2)).to.deep.equal([
+          {
+            piece: p2,
+            from: 'DOWN',
+            to: 'Left'
+          },
+          {
+            piece: p2,
+            from: 'UP',
+            to: 'stuff'
+          },
+          {
+            piece: p2,
+            from: 'RIGHT',
+            to: 'down'
+          },
+        ]);
+      });
+
+      it('finds overlap 15', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 1;
+
+        expect(map.isOverlapping(p1, p2)).to.be.true;
+      });
+
+      it('finds overlap 16', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 2;
+        p1.setEdges({
+          C: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          }
+        });
+        p2.setEdges({
+          d: {
+            up: 'up',
+            down: 'down',
+            left: 'left',
+            right: 'right'
+          },
+          f: {
+            up: 'Up',
+            down: 'Down',
+            left: 'Left',
+            right: 'Right'
+          }
+        });
+
+        //    E
+        //    D
+        // dCBA
+        // cf
+        // b
+        // ae
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+        expect(map.adjacenciesByCell(p1, p2)).to.deep.equal([
+          {
+            piece: p2,
+            from: 'C',
+            to: 'f'
+          },
+          {
+            piece: p2,
+            from: 'C',
+            to: 'd'
+          },
+        ]);
+        expect(map.adjacenciesByEdge(p1, p2)).to.deep.equal([
+          {
+            piece: p2,
+            from: 'UP',
+            to: 'Right'
+          },
+          {
+            piece: p2,
+            from: 'RIGHT',
+            to: 'down'
+          }
+        ]);
+      });
+
+      it('3 body problem', () => {
+        p1.column = 0;
+        p1.row = 0;
+        p2.column = -1;
+        p2.row = 2;
+        const p3 = map.create(Piece, 'p3') // unshaped
+        p3.column = 1;
+        p3.row = 3;
+        p1.setEdges({
+          C: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          },
+          B: {
+            up: 'UP',
+            down: 'DOWN',
+            left: 'LEFT',
+            right: 'RIGHT'
+          }
+        });
+        p2.setEdges({
+          d: {
+            up: 'up',
+            down: 'down',
+            left: 'left',
+            right: 'right'
+          },
+          f: {
+            up: 'Up',
+            down: 'Down',
+            left: 'Left',
+            right: 'Right'
+          }
+        });
+
+        //    E
+        //    D
+        // dCBA
+        // cf.
+        // b
+        // ae
+        expect(map.isOverlapping(p1, p2)).to.be.false;
+        expect(map.isOverlapping(p1, p3)).to.be.false;
+        expect(map.isOverlapping(p3, p1)).to.be.false;
+        expect(map.isOverlapping(p3, p2)).to.be.false;
+        expect(map.isOverlapping(p1)).to.be.false;
+        expect(map.isOverlapping(p3)).to.be.false;
+        expect(map.adjacenciesByCell(p1)).to.deep.equal([
+          {
+            piece: p2,
+            from: 'C',
+            to: 'f'
+          },
+          {
+            piece: p2,
+            from: 'C',
+            to: 'd'
+          },
+          {
+            piece: p3,
+            from: 'B',
+            to: '.'
+          }
+        ]);
+        expect(map.adjacenciesByEdge(p1)).to.deep.equal([
+          {
+            piece: p2,
+            from: 'UP',
+            to: 'Right'
+          },
+          {
+            piece: p2,
+            from: 'RIGHT',
+            to: 'down'
+          },
+          {
+            piece: p3,
+            from: 'UP',
+            to: undefined
+          }
+        ]);
+        expect(map.adjacenciesByEdge(p3)).to.deep.equal([
+          {
+            piece: p1,
+            from: undefined,
+            to: 'UP'
+          },
+          {
+            piece: p2,
+            from: undefined,
+            to: 'Down'
+          },
+        ]);
+      });
+    });
+
+    it('can place shapes', () => {
+      p1.column = 0;
+      p1.row = 0;
+      p2.column = -1;
+      p2.row = -1;
+
+      game.applyLayouts();
+      expect(p1._ui.computedStyle).to.deep.equal({ left: 25, top: 25, width: 75, height: 75 })
+      expect(p2._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 50 })
+    });
+
+    it('can place shapes rotated', () => {
+      p1.column = 0;
+      p1.row = 0;
+      p1.rotation = 180;
+      p2.column = 1;
+      p2.row = 1;
+      p2.rotation = 90;
+
+      game.applyLayouts();
+      expect(p1._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 60, height: 60 })
+      expect(p2._ui.computedStyle).to.deep.equal({ left: 40, top: 20, width: 80, height: 40, transformOrigin: '25% 50%' })
+    });
+
+    it('can find place for shapes', () => {
+      p1.column = 4;
+      p1.row = 5;
+      p1.rotation = 0;
+      p2.column = 5;
+      p2.row = 5;
+      p2.rotation = 90;
+      map._fitPieceInFreePlace(p2, 4, 4, {column: 4, row: 4});
+      // ..ea
+      // ABCb
+      // D.fc
+      // E..d
+      expect(p2.column).equal(6);
+      expect(p2.row).equal(4);
+      expect(p2.rotation).equal(90);
+    });
+
+    it('can find place for shapes even if rotation is forced', () => {
+      p1.column = 2;
+      p1.row = 2;
+      p1.rotation = 180;
+      p2.column = 2;
+      p2.row = 2;
+      p2.rotation = 90;
+      map.rows = 5;
+      map.columns = 5;
+      map._fitPieceInFreePlace(p2, 5, 5, {column: 1, row: 1});
+      // .....
+      // d..E.
+      // cf.D.
+      // bCBA.
+      // ae...
+      expect(p2.column).equal(1);
+      expect(p2.row).equal(2);
+      expect(p2.rotation).equal(270);
     });
   });
 });

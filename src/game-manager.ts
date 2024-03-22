@@ -1,5 +1,4 @@
 import {
-  Game,
   Space,
   Piece,
   Die,
@@ -11,6 +10,8 @@ import Flow from './flow/flow.js';
 
 import random from 'random-seed';
 
+import type { BaseGame } from './board/game.js';
+import type { BasePlayer } from './player/player.js';
 import type { ElementClass } from './board/element.js';
 import type { PlayerState, GameUpdate, GameState } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
@@ -18,7 +19,7 @@ import type { Argument, ActionStub } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
 
 // find all non-method non-internal attr's
-export type PlayerAttributes<T extends Player> = {
+export type PlayerAttributes<T extends Player = Player> = {
   [
     K in keyof InstanceType<{new(...args: any[]): T}>
       as InstanceType<{new(...args: any[]): T}>[K] extends (...args: unknown[]) => unknown ? never : (K extends '_players' | 'game' | 'gameManager' ? never : K)
@@ -26,17 +27,17 @@ export type PlayerAttributes<T extends Player> = {
 }
 
 // a Move is a request from a particular Player to perform a certain Action with supplied args
-export type Move<P extends Player> = {
-  player: P,
+export type Move = {
+  player: Player,
   name: string,
-  args: Record<string, Argument<P>>
+  args: Record<string, Argument>
 };
 
-export type PendingMove<P extends Player> = {
+export type PendingMove = {
   name: string,
   prompt?: string,
-  args: Record<string, Argument<P>>,
-  selections: ResolvedSelection<P>[],
+  args: Record<string, Argument>,
+  selections: ResolvedSelection[],
 };
 
 export type SerializedMove = {
@@ -54,8 +55,8 @@ export type Message = {
  * {@link Player}'s, the {@link Action}'s and the {@link Flow}.
  * @category Core
  */
-export default class GameManager<P extends Player<P, B> = any, B extends Game<P, B> = any> {
-  flow: Flow<P>;
+export default class GameManager<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> {
+  flow: Flow;
   /**
    * The players in this game. See {@link Player}
    */
@@ -63,9 +64,9 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
   /**
    * The game. See {@link Game}
    */
-  game: B;
+  game: G;
   settings: Record<string, any>;
-  actions: Record<string, (player: P) => Action<P, Record<string, Argument<P>>>>;
+  actions: Record<string, (player: P) => Action<Record<string, Argument>>>;
   sequence: number = 0;
   /**
    * Current game phase
@@ -75,19 +76,19 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
   random: () => number;
   messages: Message[] = [];
   announcements: string[] = [];
-  intermediateUpdates: GameState<P>[][] = [];
+  intermediateUpdates: GameState[][] = [];
   /**
    * If true, allows any piece to be moved or modified in any way. Used only
    * during development.
    */
   godMode = false;
   winner: P[] = [];
-  followups: ActionStub<P>[] = [];
+  followups: ActionStub[] = [];
 
-  constructor(playerClass: {new(...a: any[]): P}, gameClass: ElementClass<B>, elementClasses: ElementClass[] = []) {
+  constructor(playerClass: {new(...a: any[]): P}, gameClass: ElementClass<G>, elementClasses: ElementClass[] = []) {
     this.players = new PlayerCollection<P>();
-    this.game = new gameClass({ gameManager: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})
     this.players.className = playerClass;
+    this.game = new gameClass({ gameManager: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})
     this.players.game = this.game;
   }
 
@@ -124,9 +125,9 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
    * @internal
    */
 
-  getState(player?: P): GameState<P> {
+  getState(player?: P): GameState {
     return {
-      players: this.players.map(p => p.toJSON() as PlayerAttributes<P>), // TODO scrub for player
+      players: this.players.map(p => p.toJSON() as PlayerAttributes), // TODO scrub for player
       settings: this.settings,
       position: this.flow.branchJSON(!!player),
       board: this.game.allJSON(player?.position),
@@ -137,7 +138,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
     }
   }
 
-  getPlayerStates(): PlayerState<P>[] {
+  getPlayerStates(): PlayerState[] {
     return this.players.map((p, i) => ({
       position: p.position,
       state: this.intermediateUpdates.length ?
@@ -146,7 +147,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
     }));
   }
 
-  getUpdate(): GameUpdate<P> {
+  getUpdate(): GameUpdate {
     this.sequence += 1;
     if (this.phase === 'started') {
       return {
@@ -173,13 +174,13 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
     throw Error('unable to initialize game');
   }
 
-  contextualizeBoardToPlayer(player?: P) {
+  contextualizeBoardToPlayer(player?: Player) {
     const prev = this.game._ctx.player;
     this.game._ctx.player = player;
     return prev;
   }
 
-  inContextOfPlayer<T>(player: P, fn: () => T): T {
+  inContextOfPlayer<T>(player: Player, fn: () => T): T {
     const prev = this.contextualizeBoardToPlayer(player);
     const results = fn();
     this.contextualizeBoardToPlayer(prev);
@@ -202,7 +203,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
       const godModeAction = this.godModeActions()[name];
       if (godModeAction) {
         godModeAction.name = name;
-        return godModeAction as Action<P, any> & {name: string};
+        return godModeAction as Action & {name: string};
       }
     }
 
@@ -212,33 +213,33 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
       const action = this.actions[name](player);
       action.gameManager = this;
       action.name = name;
-      return action as Action<P, any> & {name: string};
+      return action as Action & {name: string};
     });
   }
 
-  godModeActions(): Record<string, Action<P, any>> {
+  godModeActions(): Record<string, Action> {
     if (this.phase !== 'started') throw Error('cannot call god mode actions until started');
     return {
       _godMove: this.game.action({
         prompt: "Move",
       }).chooseOnBoard(
-        'piece', this.game.all(Piece<P, B>),
+        'piece', this.game.all(Piece),
       ).chooseOnBoard(
-        'into', this.game.all(GameElement<P, B>)
+        'into', this.game.all(GameElement)
       ).move(
         'piece', 'into'
       ),
       _godEdit: this.game.action({
         prompt: "Change",
       })
-        .chooseOnBoard('element', this.game.all(GameElement<P, B>))
+        .chooseOnBoard('element', this.game.all(GameElement))
         .chooseFrom<'property', string>(
           'property',
           ({ element }) => Object.keys(element).filter(a => !GameElement.unserializableAttributes.concat(['_visible', 'mine', 'owner']).includes(a)),
           { prompt: "Change property" }
         ).enterText('value', {
           prompt: ({ property }) => `Change ${property}`,
-          initial: ({ element, property }) => String(element[property as keyof GameElement<P>])
+          initial: ({ element, property }) => String(element[property as keyof GameElement])
         }).do(({ element, property, value }) => {
           let v: any = value
           if (value === 'true') {
@@ -263,10 +264,10 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
   // given a player's move (minimum a selected action), attempts to process
   // it. if not, returns next selection for that player, plus any implied partial
   // moves
-  processMove({ player, name, args }: Move<P>): string | undefined {
+  processMove({ player, name, args }: Move): string | undefined {
     if (this.phase === 'finished') return 'Game is finished';
     let error: string | undefined;
-    return this.inContextOfPlayer(player, () => {
+    return this.inContextOfPlayer(player as P, () => {
       if (this.godMode && this.godModeActions()[name]) {
         const godModeAction = this.godModeActions()[name];
         error = godModeAction._process(player, args);
@@ -282,8 +283,8 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
     });
   }
 
-  allowedActions(player: P): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub<P>[]} {
-    const actions: ActionStub<P>[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
+  allowedActions(player: P): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub[]} {
+    const actions: ActionStub[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
       actions,
       skipIf: 'always',
@@ -296,7 +297,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
           actions.push(allowedAction);
         } else {
           const gameAction = this.getAction(allowedAction.name, player);
-          if (gameAction.isPossible(allowedAction.args)) {
+          if (gameAction.isPossible(allowedAction.args ?? {})) {
             // step action config take priority over action config
             actions.push({ ...gameAction, ...allowedAction, player });
           }
@@ -315,7 +316,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
     };
   }
 
-  getPendingMoves(player: P, name?: string, args?: Record<string, Argument<P>>): {step?: string, prompt?: string, moves: PendingMove<P>[]} | undefined {
+  getPendingMoves(player: P, name?: string, args?: Record<string, Argument>): {step?: string, prompt?: string, moves: PendingMove[]} | undefined {
     if (this.phase === 'finished') return;
     const allowedActions = this.allowedActions(player);
     if (!allowedActions.actions.length) return;
@@ -323,7 +324,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
 
     if (!name) {
       let possibleActions: string[] = [];
-      let pendingMoves: PendingMove<P>[] = [];
+      let pendingMoves: PendingMove[] = [];
       for (const action of actions) {
         if (action.name === '__pass__') {
           possibleActions.push('__pass__');
@@ -331,7 +332,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
             name: '__pass__',
             args: {},
             selections: [
-              new Selection<P>('__action__', { prompt: action.prompt, value: '__pass__' }).resolve({})
+              new Selection('__action__', { prompt: action.prompt, value: '__pass__' }).resolve({})
             ]
           });
         } else {
@@ -348,7 +349,7 @@ export default class GameManager<P extends Player<P, B> = any, B extends Game<P,
                 prompt: action.prompt,
                 args,
                 selections: [
-                  new Selection<P>('__action__', {
+                  new Selection('__action__', {
                     prompt: action.prompt ?? playerAction.prompt,
                     value: action.name,
                     skipIf

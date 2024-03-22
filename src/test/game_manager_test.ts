@@ -6,7 +6,8 @@ import GameManager, { PlayerAttributes } from '../game-manager.js'
 import {
   Player,
   Game,
-  createGameClasses,
+  Piece,
+  Space,
 } from '../index.js';
 
 chai.use(spies);
@@ -20,33 +21,31 @@ describe('GameManager', () => {
     { id: 'jin', name: 'Jin', color: 'purple', position: 4, tokens: 0, avatar: '', host: false, },
   ];
 
-  class TestPlayer extends Player<TestPlayer, TestGame> {
+  class TestPlayer extends Player<TestGame, TestPlayer> {
     tokens: number = 0;
     rival?: TestPlayer;
     general?: General;
   }
 
-  class TestGame extends Game<TestPlayer, TestGame> {
+  class TestGame extends Game<TestGame, TestPlayer> {
     tokens: number = 0;
   }
 
-  const { Space, Piece } = createGameClasses<TestPlayer, TestGame>();
-
-  class Card extends Piece {
+  class Card extends Piece<TestGame> {
     suit: string;
     value: number;
     flipped: boolean;
   }
 
-  class Country extends Space {
+  class Country extends Space<TestGame> {
     general?: General;
   }
 
-  class General extends Piece {
+  class General extends Piece<TestGame> {
     country?: Country;
   }
 
-  let gameManager: GameManager<TestPlayer, TestGame>;
+  let gameManager: GameManager<TestGame, TestPlayer>;
   let game: TestGame;
   const spendSpy = chai.spy();
 
@@ -753,6 +752,23 @@ describe('GameManager', () => {
     });
 
     it('allows followup for other player', () => {
+      const {
+        loop,
+        eachPlayer,
+        playerActions
+      } = game.flowCommands
+      gameManager.game.defineFlow(loop(eachPlayer({
+        name: 'player',
+        do: [
+          playerActions({
+            actions: [{name: 'takeOne', do: actionSpy}]
+          }),
+          playerActions({
+            actions: ['declare']
+          }),
+        ]
+      })));
+
       gameManager.game.tokens = 12;
       gameManager.start();
       gameManager.play();
@@ -760,8 +776,12 @@ describe('GameManager', () => {
       expect(gameManager.players.currentPosition).to.deep.equal([1]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
       gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: 'p1'}, player: gameManager.players[0] });
+      gameManager.play();
       expect(gameManager.players.currentPosition).to.deep.equal([2]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: 'p1'}, player: gameManager.players[1] });
       gameManager.play();
       expect(gameManager.players.currentPosition).to.deep.equal([3]);
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[2] });
@@ -770,6 +790,10 @@ describe('GameManager', () => {
       expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(0);
       expect(gameManager.allowedActions(gameManager.players[1]).actions.length).to.equal(1);
       expect(gameManager.allowedActions(gameManager.players[2]).actions.length).to.equal(0);
+
+      gameManager.processMove({ name: 'declare', args: {d: 'follow'}, player: gameManager.players[1] });
+      gameManager.play();
+      expect(gameManager.players.currentPosition).to.deep.equal([3]);
     });
 
     it('multi followup', () => {

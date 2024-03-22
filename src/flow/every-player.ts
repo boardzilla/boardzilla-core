@@ -2,22 +2,22 @@ import Flow from './flow.js';
 import { FlowControl, LoopInterruptControl } from './enums.js';
 
 import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
-import type { Player } from '../player/index.js';
+import type { Player, PlayerCollection } from '../player/index.js';
 import { Argument } from '../action/action.js';
 
 export type EveryPlayerPosition = {positions: FlowBranchJSON[][], completed: (boolean | undefined)[]};
 
-export default class EveryPlayer<P extends Player> extends Flow<P> {
+export default class EveryPlayer<P extends Player> extends Flow {
   position: EveryPlayerPosition;
   players?: P[];
   value: number; // player temporarily looking at
   completed: (boolean | undefined)[] = [];
-  block: FlowDefinition<P>;
-  type: FlowBranchNode<P>['type'] = 'parallel';
+  block: FlowDefinition;
+  type: FlowBranchNode['type'] = 'parallel';
 
   constructor({ players, do: block, name }: {
     players?: P[],
-    do: FlowDefinition<P>,
+    do: FlowDefinition,
     name?: string
   }) {
     super({ do: block, name });
@@ -47,7 +47,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
   }
 
   getPlayers(): P[] {
-    return this.players || this.gameManager.players
+    return this.players || this.gameManager.players as PlayerCollection<P>
   }
 
   // reimpl ourselves to collect json from all players
@@ -108,7 +108,7 @@ export default class EveryPlayer<P extends Player> extends Flow<P> {
   processMove(move: {
     player: number,
     name: string,
-    args: Record<string, Argument<P>>,
+    args: Record<string, Argument>,
   }): string | undefined {
     const player = this.getPlayers().findIndex(p => p.position === move.player);
     if (player < 0) throw Error(`Cannot process action from ${move.player}`);

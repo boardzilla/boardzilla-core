@@ -1,13 +1,12 @@
-import {default as ActionStep} from './action-step.js';
-import {default as WhileLoop} from './while-loop.js';
-import {default as ForLoop} from './for-loop.js';
-import {default as ForEach} from './for-each.js';
-import {default as EachPlayer} from './each-player.js';
-import {default as SwitchCase} from './switch-case.js';
-import {default as IfElse} from './if-else.js';
-import {default as EveryPlayer} from './every-player.js';
+import ActionStep from './action-step.js';
+import WhileLoop from './while-loop.js';
+import ForLoop from './for-loop.js';
+import ForEach from './for-each.js';
+import EachPlayer from './each-player.js';
+import SwitchCase from './switch-case.js';
+import IfElse from './if-else.js';
+import EveryPlayer from './every-player.js';
 
-import type { Player } from '../player/index.js';
 import type { Serializable } from '../action/utils.js';
 import { FlowStep } from './flow.js';
 import { Do, FlowControl } from './enums.js';
@@ -86,7 +85,7 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  *
  * @category Flow
  */
-export const playerActions = <P extends Player>(options: ConstructorParameters<typeof ActionStep<P>>[0]) => new ActionStep<P>(options);
+export const playerActions = (options: ConstructorParameters<typeof ActionStep>[0]) => new ActionStep(options);
 
 /**
  * Create a loop that continues until some condition is true. This functions
@@ -112,7 +111,7 @@ export const playerActions = <P extends Player>(options: ConstructorParameters<t
  *
  * @category Flow
  */
-export const whileLoop = <P extends Player>(options: ConstructorParameters<typeof WhileLoop<P>>[0]) => new WhileLoop<P>(options);
+export const whileLoop = (options: ConstructorParameters<typeof WhileLoop>[0]) => new WhileLoop(options);
 
 /**
  * Create a loop that continues until {@link Do|Do.break} is called
@@ -131,7 +130,7 @@ export const whileLoop = <P extends Player>(options: ConstructorParameters<typeo
  *
  * @category Flow
  */
-export const loop = <P extends Player>(...block: FlowStep<P>[]) => new WhileLoop<P>({do: block, while: () => true});
+export const loop = (...block: FlowStep[]) => new WhileLoop({do: block, while: () => true});
 
 /**
  * Create a loop that sets a value and continues until that value meets some
@@ -169,7 +168,7 @@ export const loop = <P extends Player>(...block: FlowStep<P>[]) => new WhileLoop
  *
  * @category Flow
  */
-export const forLoop = <P extends Player, T = Serializable<P>>(options: ConstructorParameters<typeof ForLoop<P, T>>[0]) => new ForLoop<P, T>(options);
+export const forLoop = <T = Serializable>(options: ConstructorParameters<typeof ForLoop<T>>[0]) => new ForLoop<T>(options);
 
 /**
  * Create a loop that iterates over an array. This functions like a standard
@@ -201,7 +200,7 @@ export const forLoop = <P extends Player, T = Serializable<P>>(options: Construc
  *
  * @category Flow
  */
-export const forEach = <P extends Player, T extends Serializable<P>>(options: ConstructorParameters<typeof ForEach<P, T>>[0]) => new ForEach<P, T>(options);
+export const forEach = <T extends Serializable>(options: ConstructorParameters<typeof ForEach<T>>[0]) => new ForEach<T>(options);
 
 /**
  * Create a loop that iterates over each player. This is the same as {@link
@@ -239,7 +238,7 @@ export const forEach = <P extends Player, T extends Serializable<P>>(options: Co
  *
  * @category Flow
  */
-export const eachPlayer = <P extends Player>(options: ConstructorParameters<typeof EachPlayer<P>>[0]) => new EachPlayer<P>(options);
+export const eachPlayer = (options: ConstructorParameters<typeof EachPlayer>[0]) => new EachPlayer(options);
 
 /**
  * Provides a branching flow on a condition. This operates like a standard
@@ -258,7 +257,7 @@ export const eachPlayer = <P extends Player>(options: ConstructorParameters<type
  *
  * @category Flow
  */
-export const ifElse = <P extends Player>(options: ConstructorParameters<typeof IfElse<P>>[0]) => new IfElse<P>(options);
+export const ifElse = (options: ConstructorParameters<typeof IfElse>[0]) => new IfElse(options);
 
 /**
  * Provides a branching flow on a condition with multiple outcomes. This
@@ -296,7 +295,7 @@ export const ifElse = <P extends Player>(options: ConstructorParameters<typeof I
  *
  * @category Flow
  */
-export const switchCase = <P extends Player, T extends Serializable<P>>(options: ConstructorParameters<typeof SwitchCase<P, T>>[0]) => new SwitchCase<P, T>(options);
+export const switchCase = <T extends Serializable>(options: ConstructorParameters<typeof SwitchCase<T>>[0]) => new SwitchCase<T>(options);
 
 /**
  * Create a flow for a set of players that can be done by all players
@@ -324,4 +323,4 @@ export const switchCase = <P extends Player, T extends Serializable<P>>(options:
  *
  * @category Flow
  */
-export const everyPlayer = <P extends Player>(options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => new EveryPlayer<P>(options);
+export const everyPlayer = (options: ConstructorParameters<typeof EveryPlayer>[0]) => new EveryPlayer(options);

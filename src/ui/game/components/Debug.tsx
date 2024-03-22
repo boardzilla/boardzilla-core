@@ -1,5 +1,5 @@
 import React from 'react';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 
 import FlowDebug from './FlowDebug.js';
 //import BoardDebug from './BoardDebug';

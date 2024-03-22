@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { gameStore } from './index.js';
+import { gameStore } from './store.js';
 import Game from './game/Game.js';
 import Setup from './setup/Setup.js';
 import Queue from './queue.js';
 
 import type { GameState } from '../interface.js';
-import type Player from '../player/player.js';
 import type { SetupComponentProps } from './index.js';
 
 export type User = {
@@ -43,14 +42,14 @@ export type SettingsUpdateEvent = {
 
 export type GameUpdateEvent = {
   type: "gameUpdate";
-  state: GameState<Player> | GameState<Player>[];
+  state: GameState | GameState[];
   position: number;
   currentPlayers: number[];
 }
 
 export type GameFinishedEvent = {
   type: "gameFinished";
-  state: GameState<Player> | GameState<Player>[];
+  state: GameState | GameState[];
   position: number;
   winners: number[];
 }

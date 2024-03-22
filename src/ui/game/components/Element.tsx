@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 import uuid from 'uuid-random';
 import Drawer from './Drawer.js';
 
@@ -13,16 +13,16 @@ import { serialize } from '../../../action/utils.js'
 
 import type { ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../lib.js';
-import type { Player } from '../../../player/index.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
+import type { DirectedGraph } from 'graphology';
 
-const defaultAppearance = (el: GameElement<Player>) => <div className="bz-default">{el.toString()}</div>;
+const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
 const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
-  element: GameElement<Player>,
+  element: GameElement,
   json: ElementJSON,
   mode: 'game' | 'info' | 'zoom'
-  onSelectElement: (moves: UIMove[], ...elements: GameElement<Player>[]) => void,
+  onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
 }) => {
   const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, boardJSON] =
@@ -51,6 +51,10 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const draggable = mode === 'game' && !invalidSelectionError && !!selections?.dragMoves?.length; // ???
   const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
   const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
+  const gridSizeNeeded = useMemo(() => (
+    placement?.into._sizeNeededFor(placement.piece) ?? {width: 1, height: 1}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
   const previousRender = useMemo(() => {
     if (element.hasChangedParent()) {
@@ -193,28 +197,56 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     if (!layout) return;
     const {area, grid} = layout;
     if (!grid || !area) return;
+
     const pointer = {
-      column: Math.max(
-        grid.origin.column,
-        Math.min(
-          grid.origin.column + grid.columns - 1,
-          Math.floor(((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x) + grid.origin.column
-        )
-      ),
-      row: Math.max(
-        grid.origin.row,
-        Math.min(
-          grid.origin.row + grid.rows - 1,
-          Math.floor(((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y) + grid.origin.row
-        )
-      ),
+      column: ((event.clientX - rect.x) / rect.width * 100 - grid.anchor.x - area.left) / grid.offsetColumn.x + grid.origin.column,
+      row: ((event.clientY - rect.y) / rect.height * 100 - grid.anchor.y - area.top) / grid.offsetRow.y + grid.origin.row
     };
 
-    if (placement.piece.row !== pointer.row || placement.piece.column !== pointer.column) {
-      setPlacement(pointer);
+    let newPlacement: {column: number, row: number};
+    if (placement.piece.row === undefined || placement.piece.column === undefined) {
+      newPlacement = {
+        column: Math.round(pointer.column - gridSizeNeeded.width / 2),
+        row: Math.round(pointer.row - gridSizeNeeded.height / 2),
+      }
+    } else {
+      newPlacement = {column: placement.piece.column, row: placement.piece.row};
+      if (pointer.column < placement.piece.column) {
+        newPlacement.column = Math.max(grid.origin.column, Math.floor(pointer.column));
+      } else if (pointer.column - gridSizeNeeded.width + 1 > placement.piece.column) {
+        newPlacement.column = Math.min(
+          grid.origin.column + grid.columns - gridSizeNeeded.width,
+          Math.floor(pointer.column - gridSizeNeeded.width + 1)
+        );
+      }
+      if (pointer.row < placement.piece.row) {
+        newPlacement.row = Math.max(grid.origin.row, Math.floor(pointer.row));
+      } else if (pointer.row - gridSizeNeeded.height + 1 > placement.piece.row) {
+        newPlacement.row = Math.min(
+          grid.origin.row + grid.rows - gridSizeNeeded.height,
+          Math.floor(pointer.row - gridSizeNeeded.height + 1)
+        );
+      }
+    }
+    if (newPlacement.column !== undefined) {
+      newPlacement.column = Math.max(grid.origin.column,
+        Math.min(grid.origin.column + grid.columns - gridSizeNeeded.width,
+          Math.floor(newPlacement.column)
+        )
+      );
+    }
+    if (newPlacement.row !== undefined) {
+      newPlacement.row = Math.max(grid.origin.row,
+        Math.min(grid.origin.row + grid.rows - gridSizeNeeded.height,
+          Math.floor(newPlacement.row)
+        )
+      );
+    }
+    if (newPlacement.column !== placement.piece.column || newPlacement.row !== placement.piece.row) {
+      setPlacement(newPlacement);
     }
 
-  }, [placement, setPlacement])
+  }, [placement, setPlacement, gridSizeNeeded])
 
   const handleRotate = useCallback((direction: number) => {
     const choices = placement?.rotationChoices;
@@ -243,7 +275,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     const { computedStyle } = element._ui;
 
     if (computedStyle) {
-      styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, `${val}%`])));
+      styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, typeof val === 'number' ? `${val}%` : val])));
     }
 
     if (dragging) {
@@ -364,7 +396,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
   }
 
-  if (element._ui.appearance.connections && element._t.graph) {
+  if (element._ui.appearance.connections && '_graph' in element) {
     let { thickness, style, color, fill, label, labelScale } = element._ui.appearance.connections;
     if (!thickness) thickness = .1;
     if (!style) style = 'solid';
@@ -375,9 +407,9 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     let i = 0;
     const lines: React.JSX.Element[] = [];
     const labels: React.JSX.Element[] = [];
-    element._t.graph.forEachEdge((...args) => {
-      const source = args[4].space as GameElement<Player>;
-      const target = args[5].space as GameElement<Player>;
+    (element._graph as DirectedGraph).forEachEdge((...args) => {
+      const source = args[4].space as GameElement;
+      const target = args[5].space as GameElement;
 
       if (source._ui.computedStyle && target._ui.computedStyle) {
         const origin = {
@@ -496,10 +528,13 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     </div>
   );
   if (placing && placement?.rotationChoices) {
+    const widthStretch = gridSizeNeeded.width / (element._size?.width ?? 1);
+    const minSquare = Math.min(absoluteTransform.width, absoluteTransform.height);
+
     contents = (
       <>
         {contents}
-        <div className="rotator" style={{...style, transform: undefined }}>
+        <div className="rotator" style={{...style, width: (element._ui.computedStyle!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
           <div className="left" onClick={() => handleRotate(-1)}>
             <svg
               viewBox="0 0 254.2486 281.95978"

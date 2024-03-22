@@ -1,26 +1,28 @@
 import {
   Game,
   Player,
-  createGameClasses,
+  Space,
+  Piece,
+  PieceGrid,
 } from '../../index.js';
 
-export class TestPlayer extends Player<TestPlayer, TestGame> {
+export class TestPlayer extends Player<TestGame, TestPlayer> {
   tokens: number = 0;
 }
 
-export class TestGame extends Game<TestPlayer, TestGame> {
+export class TestGame extends Game<TestGame, TestPlayer> {
   tokens: number = 0;
 }
 
-const { Space, Piece } = createGameClasses<TestPlayer, TestGame>();
-
-export class Token extends Piece {
+export class Token extends Piece<TestGame> {
   color: 'red' | 'blue';
 }
 
+let tiles: PieceGrid<Game>;
+
 const gameFactory = (creator: (game: TestGame) => void) => (game: TestGame) => {
   const { playerActions, loop, eachPlayer } = game.flowCommands;
-  game.registerClasses(Token);
+  tiles = game.create(PieceGrid, 'tiles', { rows: 3, columns: 3});
 
   for (const player of game.players) {
     const mat = game.create(Space, 'mat', { player });
@@ -108,24 +110,24 @@ export const starterGameWithCompoundMove = gameFactory(game => {
 
 export const starterGameWithTiles = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!
+      'token', tiles
     ),
   });
 });
 
 export const starterGameWithTilesConfirm = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!,
+      'token', tiles,
       { confirm: "confirm placement?" }
     ),
   });
@@ -133,12 +135,12 @@ export const starterGameWithTilesConfirm = gameFactory(game => {
 
 export const starterGameWithTilesValidate = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!,
+      'token', tiles,
       { validate: ({ token }) => (token.column + token.row) % 2 !== 0 ? 'must be black square' : undefined, }
     ),
   });
@@ -146,12 +148,12 @@ export const starterGameWithTilesValidate = gameFactory(game => {
 
 export const starterGameWithTilesCompound = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
     ).placePiece(
-      'token', player.my('mat')!,
+      'token', tiles,
     ).chooseFrom(
       'a', [1,2]
     ),

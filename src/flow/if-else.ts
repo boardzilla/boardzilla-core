@@ -1,14 +1,13 @@
 import SwitchCase from './switch-case.js';
 
 import type { FlowDefinition, FlowStep } from './flow.js';
-import type { Player } from '../player/index.js';
 
-export default class If<P extends Player> extends SwitchCase<P, boolean> {
+export default class If extends SwitchCase<boolean> {
   constructor({ name, if: test, do: doExpr, else: elseExpr }: {
     name?: string,
     if: (r: Record<any, any>) => boolean,
-    do: FlowDefinition<P>;
-    else?: FlowDefinition<P>
+    do: FlowDefinition;
+    else?: FlowDefinition
   }) {
     super({ name, switch: test, cases: [{ eq: true, do: doExpr }], default: elseExpr });
   }
@@ -20,7 +19,7 @@ export default class If<P extends Player> extends SwitchCase<P, boolean> {
   visualize() {
     const blocks = {
       do: this.cases[0].do instanceof Array ? this.cases[0].do : [this.cases[0].do],
-    } as Record<string, FlowStep<P>[]>;
+    } as Record<string, FlowStep[]>;
     if (this.default) blocks.else = this.default instanceof Array ? this.default : [this.default];
 
     return this.visualizeBlocks({

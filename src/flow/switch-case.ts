@@ -3,25 +3,23 @@ import Flow from './flow.js';
 import { serialize, deserialize } from '../action/utils.js';
 
 import type { FlowArguments, FlowDefinition, FlowBranchNode, FlowStep } from './flow.js';
-import type { Player } from '../player/index.js';
 import type { Serializable } from '../action/utils.js';
 
 export type SwitchCasePostion<T> = { index?: number, value?: T, default?: boolean }
+export type SwitchCaseCases<T> = ({eq: T, do: FlowDefinition} | {test: (a: T) => boolean, do: FlowDefinition})[];
 
-export type SwitchCaseCases<P extends Player, T> = ({eq: T, do: FlowDefinition<P>} | {test: (a: T) => boolean, do: FlowDefinition<P>})[];
-
-export default class SwitchCase<P extends Player, T extends Serializable<P>> extends Flow<P> {
+export default class SwitchCase<T extends Serializable> extends Flow {
   position: SwitchCasePostion<T>;
   switch: ((a: FlowArguments) => T) | T;
-  cases: SwitchCaseCases<P, T>;
-  default?: FlowDefinition<P>;
-  type: FlowBranchNode<P>['type'] = "switch-case";
+  cases: SwitchCaseCases<T>;
+  default?: FlowDefinition;
+  type: FlowBranchNode['type'] = "switch-case";
 
   constructor({ name, switch: switchExpr, cases, default: def }: {
     name?: string,
     switch: ((a: FlowArguments) => T) | T,
-    cases: SwitchCaseCases<P, T>;
-    default?: FlowDefinition<P>
+    cases: SwitchCaseCases<T>;
+    default?: FlowDefinition
   }) {
     super({ name });
     this.switch = switchExpr;
@@ -53,7 +51,7 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
   toJSON(forPlayer=true) {
     return {
       index: this.position.index,
-      value: serialize<P>(this.position.value, forPlayer),
+      value: serialize(this.position.value, forPlayer),
       default: !!this.position.default
     };
   }
@@ -66,8 +64,8 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
     };
   }
 
-  allSteps(): FlowDefinition<P> {
-    const cases = this.cases.reduce<FlowStep<P>[]>((a, f) => a.concat(f.do ? ((f.do instanceof Array) ? f.do : [f.do]) : []), []);
+  allSteps(): FlowDefinition {
+    const cases = this.cases.reduce<FlowStep[]>((a, f) => a.concat(f.do ? ((f.do instanceof Array) ? f.do : [f.do]) : []), []);
     const defaultExpr = this.default ? ((this.default instanceof Array) ? this.default : [this.default]) : [];
     return cases.concat(defaultExpr);
   }
@@ -91,7 +89,7 @@ export default class SwitchCase<P extends Player, T extends Serializable<P>> ext
         this.cases.map(c => [String('eq' in c ? c.eq : c.test), c.do instanceof Array ? c.do : [c.do]]).concat([
           this.default ? ['default', (this.default instanceof Array ? this.default : [this.default])] : []
         ])
-      ) as Record<string, FlowStep<P>[]>,
+      ) as Record<string, FlowStep[]>,
       block,
       position: this.position?.value,
     });

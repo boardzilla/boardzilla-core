@@ -1,18 +1,37 @@
 import GameManager from './game-manager.js';
+export { Game, union } from './board/index.js';
 import { Player } from './player/index.js';
+
 import {
   Game,
   Piece,
   Space,
+  ConnectedSpaceMap,
+  AdjacencySpace,
+  FixedGrid,
+  SquareGrid,
+  HexGrid,
+  PieceGrid,
   Die,
   GameElement,
 } from './board/index.js';
 
-export { Game, union } from './board/index.js';
+export {
+  Space,
+  Piece,
+  ConnectedSpaceMap,
+  AdjacencySpace,
+  FixedGrid,
+  SquareGrid,
+  HexGrid,
+  PieceGrid,
+  Die,
+  GameElement
+};
 
 export { Do } from './flow/index.js';
 
-export { createInterface } from './interface.js';
+export { createInterface, colors } from './interface.js';
 export { times, range, shuffleArray } from './utils.js';
 export { Player };
 export {
@@ -30,33 +49,12 @@ import type { SetupState, GameState } from './interface.js';
 import type { ElementClass } from './board/element.js';
 import type Action from './action/action.js';
 
-export type { Space, Piece, GameManager, Action, ElementClass };
+export type { GameManager, Action, ElementClass };
 
-/**
- * Returns game classes with the correct types for game and player.
- *
- * @example
- * const {Space, Piece, Die} = createGameClasses<MyGamePlayer, MyGame>();
- * @category Board
- */
-export const createGameClasses = <P extends Player<P, B>, B extends Game<P, B>>() => ({
-  GameElement: GameElement<P, B>,
-  Space: Space<P, B>,
-  Piece: Piece<P, B>,
-  Die: Die<P, B>
-});
-
-export type SetupFunction<P extends Player<P, B> = any, B extends Game<P, B> = any> = (
-  state: SetupState<P> | GameState<P>,
-  options?: {trackMovement?: boolean}
-) => GameManager<P, B>
-
-export const colors = [
-  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
-  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
-  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
-  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'
-];
+export type SetupFunction<B extends Game = Game> = (
+  state: SetupState | GameState,
+  options?: {rseed?: string, trackMovement?: boolean}
+) => GameManager<B>
 
 declare global {
   /**
@@ -67,7 +65,7 @@ declare global {
    * ...
    * $.deck // =>  equals the Space just created
    */
-  var $: Record<string, Space>; // eslint-disable-line no-var
+  var $: Record<string, Space<Game>>; // eslint-disable-line no-var
 }
 
 /**
@@ -89,21 +87,21 @@ declare global {
  * - {@link game#defineFlow} to define the game's flow
  * @category Core
  */
-export const createGame = <P extends Player<P, B>, B extends Game<P, B>>(
-  playerClass: {new(...a: any[]): P},
-  gameClass: ElementClass<B>,
-  gameCreator: (game: B) => void
-): SetupFunction<P, B> => (
-  state: SetupState<P> | GameState<P>,
-  options?: {trackMovement?: boolean}
-): GameManager<P, B> => {
+export const createGame = <G extends Game>(
+  playerClass: {new(...a: any[]): Player},
+  gameClass: ElementClass<G>,
+  gameCreator: (game: G) => void
+): SetupFunction<G> => (
+  state: SetupState | GameState,
+  options?: {rseed?: string, trackMovement?: boolean}
+): GameManager<G> => {
   //console.time('setup');
-  const gameManager = new GameManager<P, B>(playerClass, gameClass);
+  const gameManager = new GameManager(playerClass, gameClass);
   const inSetup = !('board' in state);
 
   globalThis.$ = gameManager.game._ctx.namedSpaces;
 
-  gameManager.setRandomSeed(state.rseed);
+  if (options?.rseed) gameManager.setRandomSeed(options.rseed);
   gameManager.setSettings(state.settings);
   gameManager.players.fromJSON(state.players);
 

@@ -1,24 +1,22 @@
 import { deserializeArg } from './action/utils.js';
 import { range } from './utils.js';
-import { colors } from './index.js';
 import random from 'random-seed';
 
 import type { ElementJSON } from './board/element.js';
-import type Game from './board/game.js';
 import type { default as GameManager, PlayerAttributes, Message, SerializedMove } from './game-manager.js';
 import type Player from './player/player.js';
 import type { FlowBranchJSON } from './flow/flow.js';
 import type { SetupFunction } from './index.js';
 import type { SerializedArg } from './action/utils.js';
 
-export type SetupState<P extends Player> = {
-  players: (PlayerAttributes<P> & Record<string, any>)[],
+export type SetupState = {
+  players: (PlayerAttributes & Record<string, any>)[],
   settings: Record<string, any>,
-  rseed: string,
+  randomSeed: string,
 }
 
-export type GameState<P extends Player> = {
-  players: PlayerAttributes<P>[],
+export type GameState = {
+  players: PlayerAttributes[],
   settings: Record<string, any>,
   position: FlowBranchJSON[],
   board: ElementJSON[],
@@ -28,42 +26,55 @@ export type GameState<P extends Player> = {
   announcements: string[],
 }
 
-type GameStartedState<P extends Player> = {
+type GameStartedState = {
   phase: 'started',
   currentPlayers: number[],
-  state: GameState<P>,
+  state: GameState,
 }
 
-type GameFinishedState<P extends Player> = {
+type GameFinishedState = {
   phase: 'finished',
   winners: number[],
-  state: GameState<P>,
+  state: GameState,
 }
 
-export type PlayerState<P extends Player> = {
+export type PlayerState = {
   position: number
-  state: GameState<P> | GameState<P>[] // Game state, scrubbed
+  state: GameState | GameState[] // Game state, scrubbed
   summary?: string
   score?: number
 }
 
-export type GameUpdate<P extends Player> = {
-  game: GameStartedState<P> | GameFinishedState<P>
-  players: PlayerState<P>[]
+export type GameUpdate = {
+  game: GameStartedState | GameFinishedState
+  players: PlayerState[]
   messages: Message[]
 }
 
-export type GameInterface<P extends Player> = {
-  initialState: (state: SetupState<P>, rseed: string) => GameUpdate<P>
-  processMove: (
-    previousState: GameStartedState<P>,
-    move: {
-      position: number
-      data: SerializedMove
-    },
-  ) => GameUpdate<P>
-  seatPlayer(players: Player[], seatCount: number): {position: number, color: string, settings: any} | null
+type ReprocessHistoryResult = {
+  initialState: GameUpdate
+  updates: GameUpdate[]
+  error?: string
 }
+
+type SerializedInterfaceMove = {
+  position: number
+  data: SerializedMove | SerializedMove[]
+}
+
+export type GameInterface = {
+  initialState: (state: SetupState) => GameUpdate
+  processMove: (previousState: GameStartedState, move: SerializedInterfaceMove) => GameUpdate
+  seatPlayer(players: Player[], seatCount: number): {position: number, color: string, settings: any} | null
+  reprocessHistory(setup: SetupState, moves: SerializedInterfaceMove[]): ReprocessHistoryResult
+}
+
+export const colors = [
+  '#d50000', '#00695c', '#304ffe', '#ff6f00', '#7c4dff',
+  '#ffa825', '#f2d330', '#43a047', '#004d40', '#795a4f',
+  '#00838f', '#408074', '#448aff', '#1a237e', '#ff4081',
+  '#bf360c', '#4a148c', '#aa00ff', '#455a64', '#600020'
+];
 
 function advanceRseed(rseed?: string) {
   if (!rseed) {
@@ -75,40 +86,41 @@ function advanceRseed(rseed?: string) {
   return rseed;
 }
 
-function cacheGameOnWindow(game: GameManager, update: GameUpdate<Player>) {
+function cacheGameOnWindow(game: GameManager, update: GameUpdate) {
   // @ts-ignore
   if (globalThis.window) window.serverGameManager = game;
   // @ts-ignore
   if (globalThis.window) { window.json = JSON.stringify(update.game); window.lastGame = new Date() }
 }
 
-export const createInterface = (setup: SetupFunction<Player, Game<Player>>): GameInterface<Player> => {
+export const createInterface = (setup: SetupFunction): GameInterface => {
   return {
-    initialState: (state: SetupState<Player>): GameUpdate<Player> => {
-      if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev
-        let fixedRseed = sessionStorage.getItem('rseed') as string;
-        if (!fixedRseed) {
-          fixedRseed = String(Math.random());
-          sessionStorage.setItem('rseed', fixedRseed);
+    initialState: (state: SetupState): GameUpdate => {
+      let rseed = state.randomSeed;
+      if (!rseed) {
+        if (globalThis.window?.sessionStorage) { // web context, use a fixed initial seed for dev
+          let fixedRseed = sessionStorage.getItem('rseed') as string;
+          if (!fixedRseed) {
+            fixedRseed = String(Math.random());
+            sessionStorage.setItem('rseed', fixedRseed);
+          }
+          rseed = fixedRseed;
         }
-        state.rseed = fixedRseed;
+        if (!rseed) rseed = advanceRseed(); // set the seed first because createGame may call random()
       }
-      if (!state.rseed) state.rseed = advanceRseed(); // set the seed first because createGame may call random()
-      const gameManager = setup(state, {trackMovement: true});
+      const gameManager = setup(state, {rseed, trackMovement: true});
       if (gameManager.phase !== 'finished') gameManager.play();
       const update = gameManager.getUpdate();
       cacheGameOnWindow(gameManager, update);
       return update;
     },
     processMove: (
-      previousState: GameStartedState<Player>,
-      move: {
-        position: number,
-        data: SerializedMove | SerializedMove[]
-      },
-    ): GameUpdate<Player> => {
+      previousState: GameStartedState,
+      move: SerializedInterfaceMove,
+    ): GameUpdate => {
+      console.log('processMove', move);
       //console.time('processMove');
-      let cachedGame: GameManager<Player, Game<Player>> | undefined = undefined;
+      let cachedGame: GameManager | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.serverGame && window.lastGame > new Date() - 20 && window.json === JSON.stringify(previousState)) cachedGame = window.serverGameManager;
       const rseed = advanceRseed(cachedGame?.rseed || previousState.state.rseed);
@@ -142,10 +154,10 @@ export const createInterface = (setup: SetupFunction<Player, Game<Player>>): Gam
         if (error) {
           throw Error(`Unable to process move: ${error}`);
         }
-        //console.timeLog('processMove', 'process');
-        if (gameManager.phase !== 'finished') gameManager.play();
-        //console.timeLog('processMove', 'play');
         if (gameManager.phase === 'finished') break;
+        //console.timeLog('processMove', 'process');
+        gameManager.play();
+        //console.timeLog('processMove', 'play');
       }
 
       const update = gameManager.getUpdate();
@@ -154,6 +166,7 @@ export const createInterface = (setup: SetupFunction<Player, Game<Player>>): Gam
       //console.timeEnd('processMove');
       return update;
     },
+
     seatPlayer: (players: Player[], seatCount: number): {position: number, color: string, settings: any} | null => {
       let usedPositions = range(1, seatCount);
       let usedColors = [...colors];
@@ -169,6 +182,47 @@ export const createInterface = (setup: SetupFunction<Player, Game<Player>>): Gam
         };
       }
       return null;
+    },
+
+    reprocessHistory(state: SetupState, moves: SerializedInterfaceMove[]): ReprocessHistoryResult {
+      let rseed = state.randomSeed;
+      const gameManager = setup(state, {rseed, trackMovement: false});
+      if (gameManager.phase !== 'finished') gameManager.play();
+      const initialState = gameManager.getUpdate();
+      let error = undefined;
+      const updates: GameUpdate[] = [];
+
+      for (const move of moves) {
+        rseed = advanceRseed(rseed);
+        gameManager.messages = [];
+        gameManager.announcements = [];
+        gameManager.intermediateUpdates = [];
+        const player = gameManager.players.atPosition(move.position)!;
+        if (!(move.data instanceof Array)) move.data = [move.data];
+
+        for (let i = 0; i !== move.data.length; i++) {
+          try {
+            error = gameManager.processMove({
+              player,
+              name: move.data[i].name,
+              args: Object.fromEntries(Object.entries(move.data[i].args).map(([k, v]) => [k, deserializeArg(v as SerializedArg, gameManager.game)]))
+            });
+          } catch (e) {
+            error = e.message;
+          }
+          if (error || gameManager.phase === 'finished') break;
+          gameManager.play();
+        }
+        if (error) break;
+        updates.push(gameManager.getUpdate());
+        if (gameManager.phase === 'finished') break;
+      }
+
+      return {
+        initialState,
+        updates,
+        error
+      };
     }
   };
 }

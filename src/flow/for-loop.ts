@@ -1,24 +1,23 @@
-import type { Player } from '../player/index.js';
 import type { Serializable } from '../action/utils.js';
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
 import WhileLoop from './while-loop.js';
 
 export type ForLoopPosition<T> = { index: number, value: T };
 
-export default class ForLoop<P extends Player, T = Serializable<P>> extends WhileLoop<P> {
-  block: FlowDefinition<P>;
+export default class ForLoop<T = Serializable> extends WhileLoop {
+  block: FlowDefinition;
   position: ForLoopPosition<T>;
   initial: ((a: FlowArguments) => T) | T;
   whileCondition: (position: ForLoopPosition<T>) => boolean;
   next: (a: T) => T;
-  type: FlowBranchNode<P>['type'] = 'loop';
+  type: FlowBranchNode['type'] = 'loop';
 
   constructor({ name, initial, next, do: block, while: whileCondition }: {
     name: string,
     initial: ((a: FlowArguments) => T) | T,
     next: (a: T) => T,
     while: (a: T) => boolean,
-    do: FlowDefinition<P>
+    do: FlowDefinition
   }) {
     super({ do: block, while: () => true });
     this.name = name;

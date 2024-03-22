@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { gameStore } from '../../index.js';
+import { gameStore } from '../../store.js';
 
-import type { Player } from '../../../player/index.js';
 import type { Argument } from '../../../action/action.js';
 import type { Box } from '../../../board/element.js';
 
@@ -10,8 +9,8 @@ const Drawer = ({ area, absoluteAspectRatio, children, closeDirection, openIf, c
   absoluteAspectRatio: number,
   children: React.ReactNode,
   closeDirection: 'up' | 'down' | 'left' | 'right',
-  openIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
-  closeIf?: (actions: { name: string, args: Record<string, Argument<Player>> }[]) => boolean,
+  openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+  closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
 }) => {
   const [open, setOpen] = useState(false);
   const [pendingMoves] = gameStore(s => [s.pendingMoves]);

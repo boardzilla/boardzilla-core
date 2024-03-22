@@ -1,23 +1,22 @@
 import Flow from './flow.js';
-import { FlowControl } from './index.js';
+import { FlowControl } from './enums.js';
 
-import type { Player } from '../player/index.js';
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
 import { LoopInterruptControl } from './enums.js';
 
 export type WhileLoopPosition = { index: number, value?: any };
 
-export default class WhileLoop<P extends Player> extends Flow<P> {
-  block: FlowDefinition<P>;
+export default class WhileLoop extends Flow {
+  block: FlowDefinition;
   position: WhileLoopPosition;
   whileCondition: (position: WhileLoopPosition) => boolean;
-  type: FlowBranchNode<P>['type'] = 'loop';
+  type: FlowBranchNode['type'] = 'loop';
   next?: (...a: any) => void;
   initial?: any;
 
   constructor({ do: block, while: whileCondition }: {
     while: (a: FlowArguments) => boolean,
-    do: FlowDefinition<P>,
+    do: FlowDefinition,
   }) {
     super({ do: block });
     this.whileCondition = () => whileCondition(this.flowStepArgs());

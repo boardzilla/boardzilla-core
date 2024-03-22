@@ -1,25 +1,4 @@
-import { GameElement, ElementCollection } from './index.js';
-
-import type { Box, Vector } from './element.js';
-
-/**
- * Returns an {@link ElementCollection} by combining a list of {@link
- * GameElement}'s or {@link ElementCollection}'s,
- * @category Flow
- */
-export function union(...queries: (GameElement | ElementCollection | undefined)[]): ElementCollection {
-  let c = new ElementCollection();
-  for (const q of queries) {
-    if (q) {
-      if ('forEach' in q) {
-        q.forEach(e => c.includes(e) || c.push(e));
-      } else if (!c.includes(q)) {
-        c.push(q);
-      }
-    }
-  }
-  return c;
-}
+import type { Box, Vector, Direction } from './element.js';
 
 export function translate(original: Box, transform: Box): Box {
   return shift(
@@ -84,7 +63,8 @@ export function cellSizeForArea(
   area: { width: number, height: number },
   gap?: Vector,
   offsetColumn?: Vector,
-  offsetRow?: Vector
+  offsetRow?: Vector,
+  rhomboid?: boolean
 ) {
   let width: number;
   let height: number;
@@ -94,12 +74,12 @@ export function cellSizeForArea(
     height = (area.height - (gap!.y || 0) * (rows - 1)) / rows;
   } else {
     width = area.width / (
-      (rows - 1) * Math.abs(offsetRow!.x / 100) + 1 +
-        (columns - 1) * Math.abs(offsetColumn.x / 100)
+      (rhomboid ? (rows - 1) * Math.abs(offsetRow!.x / 100) : 0) +
+        1 + (columns - 1) * Math.abs(offsetColumn.x / 100)
     )
     height = area.height / (
-      (columns - 1) * Math.abs(offsetColumn.y / 100) + 1 +
-        (rows - 1) * Math.abs(offsetRow!.y / 100)
+      (rhomboid ? (columns - 1) * Math.abs(offsetColumn.y / 100) : 0) +
+        1 + (rows - 1) * Math.abs(offsetRow!.y / 100)
     )
   }
 
@@ -109,6 +89,7 @@ export function cellSizeForArea(
 // find the edge boxes and calculate the total size needed
 // @internal
 export function getTotalArea(
+  corners: [number, number][],
   area: Box,
   size: {width: number, height: number},
   columns: number,
@@ -118,12 +99,9 @@ export function getTotalArea(
   offsetColumn?: Vector,
   offsetRow?: Vector,
 ): Box {
-  const boxes = [
-    cellBoxRC(1, 1, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-    cellBoxRC(1, rows, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-    cellBoxRC(columns, rows, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-    cellBoxRC(columns, 1, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow),
-  ];
+  const boxes = corners.map(corner => (
+    cellBoxRC(corner[0], corner[1], area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow)
+  ));
 
   const cellArea = {
     top: Math.min(...boxes.map(b => b!.top)),
@@ -138,4 +116,28 @@ export function getTotalArea(
     left: cellArea.left,
     top: cellArea.top
   }
+}
+
+export function rotateDirection(dir: Direction, rotation: number) {
+  rotation = (rotation % 360 + 360) % 360;
+  if (rotation === 0) return dir;
+  let angle: number;
+  if (dir === 'up') {
+    angle = rotation;
+  } else if (dir === 'down') {
+    angle = (rotation + 180) % 360;
+  } else if (dir === 'right') {
+    angle = (rotation + 90) % 360;
+  } else {
+    angle = (rotation + 270) % 360;
+  }
+
+  if (angle === 0) {
+    return 'up';
+  } else if (angle === 90) {
+    return 'right';
+  } else if (angle === 180) {
+    return 'down';
+  }
+  return 'left';
 }

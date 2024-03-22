@@ -1,14 +1,13 @@
 import React from 'react';
 
 import type { ResolvedSelection } from '../../../action/selection.js';
-import type { Player } from '../../../player/index.js';
 import type { Argument } from '../../../action/action.js';
 
 const Selection = ({selection, value, error, onChange} : {
-  selection: ResolvedSelection<Player>,
-  value: Argument<Player> | undefined,
+  selection: ResolvedSelection,
+  value: Argument | undefined,
   error?: string,
-  onChange: (value: Argument<Player>) => void
+  onChange: (value: Argument) => void
 }) => (
   <div className={`selection ${selection.name}`}>
     {selection.prompt && selection.type !== 'button' && <span className="prompt">{selection.prompt}</span>}

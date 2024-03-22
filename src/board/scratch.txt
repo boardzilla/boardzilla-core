@@ -1,7 +1,0 @@
-board can be built from json with no uniq id's
-
-- flow in the middle of bidding on an item
-- the item's moved in current board state
-- flow-position sent to client cannot have id's
-- ids in el serialization are anonymized at time of getState for players
-- id must be preserved during getState/setState, but scrubbed for players

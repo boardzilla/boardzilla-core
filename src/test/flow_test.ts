@@ -18,13 +18,12 @@ import {
 } from '../flow/enums.js';
 
 import type { FlowBranchJSON } from '../flow/flow.js';
-import type { Player } from '../player/index.js';
 
 chai.use(spies);
 const { expect } = chai;
 
 describe('Flow', () => {
-  let testFlow: Flow<Player>;
+  let testFlow: Flow;
   let stepSpy1: (...a: any[]) => any;
   let stepSpy2: (...a: any[]) => any;
   let actionSpy: (...a: any[]) => any;
@@ -242,9 +241,9 @@ describe('Loop', () => {
   let stepSpy1: (...a: any[]) => any
   let stepSpy2: (...a: any[]) => any
   let counter: number
-  let loop: Flow<Player>
-  let nonLoop: Flow<Player>
-  let testFlow: Flow<Player>;
+  let loop: Flow
+  let nonLoop: Flow
+  let testFlow: Flow;
   beforeEach(() => {
     stepSpy1 = chai.spy((x:number) => x);
     stepSpy2 = chai.spy((x:number) => x);
@@ -329,7 +328,7 @@ describe('Loop', () => {
 
   describe('nested', () => {
     let stepSpy: (...a: any[]) => any;
-    let nestedLoop: Flow<Player>;
+    let nestedLoop: Flow;
     beforeEach(() => {
       stepSpy = chai.spy((x: number, y: number) => {x; y});
       nestedLoop = forLoop({

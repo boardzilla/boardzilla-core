@@ -4,17 +4,17 @@ import { SerializedArg, serializeArg } from '../action/utils.js';
 import Selection from '../action/selection.js'
 import { GameElement, Die } from '../board/index.js'
 
-import type { GameStore } from './index.js';
+import type { GameStore } from './store.js';
 import type { default as GameManager, SerializedMove, PendingMove } from '../game-manager.js'
 import type { Box, ElementJSON } from '../board/element.js'
-import type Player from '../player/player.js'
 import type { ResolvedSelection } from '../action/selection.js';
-import type { ActionLayout, Game, Piece } from '../board/index.js'
+import type { BaseGame } from '../board/game.js'
+import type { ActionLayout, Piece, PieceGrid } from '../board/index.js'
 
-type GamePendingMoves = ReturnType<GameManager<Player, Game<Player>>['getPendingMoves']>;
+type GamePendingMoves = ReturnType<GameManager['getPendingMoves']>;
 
 // this feels like the makings of a class
-export type UIMove = PendingMove<Player> & {
+export type UIMove = PendingMove & {
   requireExplicitSubmit: boolean; // true if explicit submit has been provided or is not needed
 }
 
@@ -62,9 +62,9 @@ export function updateSelections(store: GameStore): GameStore {
 
     const selection = moves[0].selections[0];
     if (selection.type === 'place' && !placement) {
-      let piece = selection.clientContext.placement.piece as string | Piece;
-      if (typeof piece === 'string') piece = moves[0].args[piece] as Piece;
-      const into = selection.clientContext.placement.into as GameElement;
+      let piece = selection.clientContext.placement.piece as string | Piece<BaseGame>;
+      if (typeof piece === 'string') piece = moves[0].args[piece] as Piece<BaseGame>;
+      const into = selection.clientContext.placement.into as PieceGrid<BaseGame>;
       const clone = piece.cloneInto(into);
       clone._ui.ghost = true;
       if (selection.rotationChoices) {
@@ -77,18 +77,15 @@ export function updateSelections(store: GameStore): GameStore {
             return a1 < a2 ? 1 : -1;
           })[0];
       }
-      let layoutIndex = into.getLayoutItems().findIndex(l => l?.includes(clone as Piece));
 
       state = {
         ...state,
         ...updateBoard(gameManager, position),
       };
-      // get the layout again since the updateBoard re-applied the layout after the piece was put into it
-      const layout = into._ui.computedLayouts![layoutIndex];
       state.placement = {
         piece: clone,
         into,
-        layout,
+        layout: into._ui.computedLayouts![0],
         rotationChoices: selection.rotationChoices,
       };
     }
@@ -376,7 +373,7 @@ export function updateBoardSelections(store: GameStore): Pick<GameStore, "boardS
     clickMoves: UIMove[],
     dragMoves: {
       move: UIMove,
-      drag: Selection<Player> | ResolvedSelection<Player>,
+      drag: Selection | ResolvedSelection,
     }[],
     error?: string
   }> = {};
@@ -393,7 +390,7 @@ export function updateBoardSelections(store: GameStore): Pick<GameStore, "boardS
           boardSelections[(option as GameElement).branch()] ??= { clickMoves: [], dragMoves: [] };
           boardSelections[(option as GameElement).branch()].error = error;
         }
-        let { dragInto, dragFrom } = sel.clientContext as { dragInto?: Selection<Player> | GameElement, dragFrom?: Selection<Player> | GameElement };
+        let { dragInto, dragFrom } = sel.clientContext as { dragInto?: Selection | GameElement, dragFrom?: Selection | GameElement };
         if (dragInto) {
           if (dragInto instanceof GameElement) {
             // convert to confirmation for a single drop target
@@ -449,13 +446,13 @@ export function updatePrompts(store: GameStore): Partial<GameStore> {
   return state;
 }
 
-export function removePlacementPiece(placement: Exclude<GameStore['placement'], undefined>) {
+export function removePlacementPiece(placement: NonNullable<GameStore['placement']>) {
   const position = placement.into._t.children.indexOf(placement.piece);
   placement.into._t.children.splice(position, 1);
 }
 
 // function to ensure react detects a change. must be called immediately after any function that alters board state
-export function updateBoard(gameManager: GameManager<Player, Game<Player>>, position: number, json?: ElementJSON[]) {
+export function updateBoard(gameManager: GameManager, position: number, json?: ElementJSON[]) {
   // rerun layouts. probably optimize TODO
   gameManager.contextualizeBoardToPlayer(gameManager.players.atPosition(position));
   gameManager.game.applyLayouts(game => {
@@ -468,7 +465,7 @@ export function updateBoard(gameManager: GameManager<Player, Game<Player>>, posi
   return ({ boardJSON: json || gameManager.game.allJSON() })
 }
 
-export function decorateUIMove(move: PendingMove<Player> | UIMove): UIMove {
+export function decorateUIMove(move: PendingMove | UIMove): UIMove {
   const requireExplicitSubmit = ('requireExplicitSubmit' in move && move.requireExplicitSubmit) ||
     move.selections.length !== 1 ||
     ['number', 'text'].includes(move.selections[0].type) ||

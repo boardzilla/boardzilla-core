@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { Player } from '../../../index.js';
-import { gameStore } from '../../index.js';
+import Player from '../../../player/player.js';
+import { gameStore } from '../../store.js';
 import classNames from 'classnames';
 
 /**
@@ -15,7 +15,7 @@ export function ProfileBadge({player}: {player: Player}) {
   const [userOnline] = gameStore(s => [s.userOnline, s.boardJSON]);
   const online = userOnline.has(player.id)
   return (
-    <div className={classNames("profile-badge", {online, current: player.isCurrent()})} style={{backgroundColor: player.color}}>
+    <div className={classNames("profile-badge", {online, current: player.isCurrent()})} data-position={player.position} style={{backgroundColor: player.color}}>
       <div className="avatar"><img src={player.avatar} /></div>
       <div className="player-name">{player.name}</div>
     </div>

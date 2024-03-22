@@ -5,7 +5,7 @@ import spies from 'chai-spies';
 
 import { Action } from '../action/index.js';
 import Player from '../player/player.js';
-import { Game } from '../index.js';
+import { Game, PieceGrid } from '../index.js';
 import Space from '../board/space.js';
 import Piece from '../board/piece.js';
 
@@ -213,7 +213,7 @@ describe('Actions', () => {
   });
 
   describe('getPendingMoves with skip strategies', () => {
-    let testAction: Action<any, {r: string, n: number}>;
+    let testAction: Action<{r: string, n: number}>;
     beforeEach(() => {
       testAction = new Action({ prompt: 'p' })
         .chooseFrom('r', [{ label: 'Oil', choice: 'oil' }, { label: 'Garbage', choice: 'garbage' }])
@@ -281,7 +281,7 @@ describe('Actions', () => {
   });
 
   describe('validation rules', () => {
-    let testAction: Action<any, {r: string, n: number}>;
+    let testAction: Action<{r: string, n: number}>;
     beforeEach(() => {
       testAction = new Action({ prompt: 'p' })
         .chooseFrom(
@@ -306,7 +306,7 @@ describe('Actions', () => {
   describe('_withDecoratedArgs', () => {
     let game: Game;
     beforeEach(() => {
-      game = new Game({ classRegistry: [Space, Piece] });
+      game = new Game({});
     });
 
     it('validates', () => {
@@ -315,7 +315,7 @@ describe('Actions', () => {
       }).chooseOnBoard(
         'token', game.all(Space),
       ).placePiece(
-        'token', game,
+        'token', game as unknown as PieceGrid<Game>,
         {
           rotationChoices: [0, 90, 180, 270],
         }
@@ -338,7 +338,7 @@ describe('Actions', () => {
       }).chooseOnBoard(
         'token', game.all(Space),
       ).placePiece(
-        'token', game,
+        'token', game as unknown as PieceGrid<Game>,
         {
           rotationChoices: [0, 90, 180, 270],
         }
@@ -359,7 +359,7 @@ describe('Actions', () => {
   describe('board moves', () => {
     let game: Game;
     beforeEach(() => {
-      game = new Game({ classRegistry: [Space, Piece] });
+      game = new Game({});
       const space1 = game.create(Space, 'space-1');
       game.create(Space, 'space-2');
       space1.create(Piece, 'piece-1');
@@ -386,7 +386,7 @@ describe('Actions', () => {
 
     it('places', () => {
       const boardAction = new Action({
-      }).chooseOnBoard('piece', game.all(Piece)).placePiece('piece', game.first('space-2')!);
+      }).chooseOnBoard('piece', game.all(Piece)).placePiece('piece', game.first('space-2') as PieceGrid<Game>);
       boardAction._process(player, {piece: game.first('piece-1')!, "__placement__": [3, 2]});
       expect(game.first('space-1')!.all(Piece).length).to.equal(1);
       expect(game.first('space-2')!.all(Piece).length).to.equal(1);

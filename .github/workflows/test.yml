@@ -17,3 +17,4 @@ jobs:
     - uses: actions/checkout@v3
     - run: yarn
     - run: yarn test
+    - run: yarn run dep-check

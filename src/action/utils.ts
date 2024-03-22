@@ -1,32 +1,58 @@
-import { Player } from '../player/index.js';
-import { GameElement } from '../board/index.js';
-
 import type { Argument, SingleArgument } from './action.js';
-import type { Game } from '../board/index.js';
+import type { Player } from '../player/index.js';
+import type { BaseGame } from '../board/game.js';
+import type GameElement from '../board/element.js';
 
 export type SerializedSingleArg = string | number | boolean;
 export type SerializedArg = SerializedSingleArg | SerializedSingleArg[];
-export type Serializable<P extends Player> = SingleArgument<P> | null | undefined | Serializable<P>[] | { [key: string]: Serializable<P> };
+export type Serializable = SingleArgument | null | undefined | Serializable[] | { [key: string]: Serializable };
 
-export const serializeArg = <P extends Player>(arg: Argument<P>, forPlayer=true): SerializedArg => {
+export const serialize = (arg: Serializable, forPlayer=true, name?: string): any => {
+  if (arg === undefined) return undefined;
+  if (arg === null) return null;
+  if (arg instanceof Array) return arg.map(a => serialize(a, forPlayer));
+  if (typeof arg === 'object' && 'constructor' in arg && ('isPlayer' in arg.constructor || 'isGameElement' in arg.constructor)) {
+    return serializeSingleArg(arg as GameElement | Player, forPlayer);
+  }
+  if (typeof arg === 'object') return serializeObject(arg, forPlayer);
+  if (typeof arg === 'number' || typeof arg === 'string' || typeof arg === 'boolean') return serializeSingleArg(arg, forPlayer);
+  throw Error(`Unable to serialize the property ${name ? '"' + name + '": ' : ''} ${arg}. Only primitives, Player's, GameElement's or arrays/objects containing such can be used.`);
+}
+
+export const serializeArg = (arg: Argument, forPlayer=true): SerializedArg => {
   if (arg instanceof Array) return arg.map(a => serializeSingleArg(a, forPlayer));
   return serializeSingleArg(arg, forPlayer);
 }
 
-export const serializeSingleArg = <P extends Player>(arg: SingleArgument<P>, forPlayer=true): SerializedSingleArg => {
-  if (arg instanceof Player) return `$p[${arg.position}]`;
-  if (arg instanceof GameElement) return forPlayer ? `$el[${arg.branch()}]` : `$eid[${arg._t.id}]`;
-  return arg;
+export const serializeSingleArg = (arg: SingleArgument, forPlayer=true): SerializedSingleArg => {
+  if (typeof arg === 'object' && 'constructor' in arg) {
+    if ('isPlayer' in arg.constructor) return `$p[${(arg as Player).position}]`;
+    if ('isGameElement' in arg.constructor) return forPlayer ? `$el[${(arg as GameElement).branch()}]` : `$eid[${(arg as GameElement)._t.id}]`;
+  }
+  return arg as SerializedSingleArg;
 }
 
-export const deserializeArg = <P extends Player>(arg: SerializedArg, game: Game<P>): Argument<P> => {
-  if (arg instanceof Array) return arg.map(a => deserializeSingleArg(a, game)) as GameElement<P>[];
+export const serializeObject = (obj: Record<string, any>, forPlayer=true) => {
+  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, serialize(v, forPlayer, k)]));
+}
+
+export const escapeArgument = (arg: Argument): string => {
+  if (arg instanceof Array) {
+    const escapees = arg.map(escapeArgument);
+    return escapees.slice(0, -1).join(', ') + (escapees.length > 1 ? ' and ' : '') + (escapees[escapees.length - 1] || '');
+  }
+  if (typeof arg === 'object') return `[[${serializeSingleArg(arg)}|${arg.toString()}]]`;
+  return String(arg);
+}
+
+export const deserializeArg = (arg: SerializedArg, game: BaseGame): Argument => {
+  if (arg instanceof Array) return arg.map(a => deserializeSingleArg(a, game)) as GameElement[];
   return deserializeSingleArg(arg, game);
 }
 
-export const deserializeSingleArg = <P extends Player>(arg: SerializedSingleArg, game: Game<P>): SingleArgument<P> => {
+export const deserializeSingleArg = (arg: SerializedSingleArg, game: BaseGame): SingleArgument => {
   if (typeof arg === 'number' || typeof arg === 'boolean') return arg;
-  let deser: SingleArgument<P> | undefined;
+  let deser: SingleArgument | undefined;
   if (arg.slice(0, 3) === '$p[') {
     deser = game.players.atPosition(parseInt(arg.slice(3, -1)));
   } else if (arg.slice(0, 4) === '$el[') {
@@ -40,40 +66,17 @@ export const deserializeSingleArg = <P extends Player>(arg: SerializedSingleArg,
   return deser;
 }
 
-export const serializeObject = (obj: Record<string, any>, forPlayer=true) => {
-  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, serialize(v, forPlayer)]));
-}
-
-export const deserializeObject = <P extends Player>(obj: Record<string, any>, game: Game<P>) => {
+export const deserializeObject = (obj: Record<string, any>, game: BaseGame) => {
   return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, deserialize(v, game)]));
 }
 
-export const serialize = <P extends Player>(arg: Serializable<P>, forPlayer=true): any => {
-  if (arg === undefined) return undefined;
-  if (arg === null) return null;
-  if (arg instanceof Array) return arg.map(a => serialize(a, forPlayer));
-  if (arg instanceof Player || arg instanceof GameElement) return serializeSingleArg(arg, forPlayer);
-  if (typeof arg === 'object') return serializeObject(arg, forPlayer);
-  if (typeof arg === 'number' || typeof arg === 'string' || typeof arg === 'boolean') return serializeSingleArg(arg, forPlayer);
-  throw Error(`unable to serialize ${arg}`);
-}
-
-export const deserialize = <P extends Player>(arg: any, game: Game<P>): Serializable<P> => {
+export const deserialize = (arg: any, game: BaseGame): Serializable => {
   if (arg === undefined) return undefined;
   if (arg === null) return null;
   if (arg instanceof Array) return arg.map(a => deserialize(a, game));
   if (typeof arg === 'object') return deserializeObject(arg, game);
   if (typeof arg === 'number' || typeof arg === 'string' || typeof arg === 'boolean') return deserializeSingleArg(arg, game);
   throw Error(`unable to deserialize ${arg}`);
-}
-
-export const escapeArgument = <P extends Player>(arg: Argument<P>): string => {
-  if (arg instanceof Array) {
-    const escapees = arg.map(escapeArgument);
-    return escapees.slice(0, -1).join(', ') + (escapees.length > 1 ? ' and ' : '') + (escapees[escapees.length - 1] || '');
-  }
-  if (typeof arg === 'object') return `[[${serializeSingleArg(arg)}|${arg.toString()}]]`;
-  return String(arg);
 }
 
 export const combinations = <T>(set: T[], min: number, max: number): T[][] => {

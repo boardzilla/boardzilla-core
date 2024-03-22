@@ -6,25 +6,25 @@ import type { Player } from '../player/index.js';
 import type { Argument, ActionStub } from '../action/action.js';
 import { LoopInterruptControl, loopInterrupt } from './enums.js';
 
-export type ActionStepPosition<P extends Player> = { // turn taken by `player`
+export type ActionStepPosition = { // turn taken by `player`
   player: number,
   name: string,
-  args: Record<string, Argument<P>>,
-  followups?: ActionStub<P>[]
+  args: Record<string, Argument>,
+  followups?: ActionStub[]
 } | { // waiting for `players`
   players: number[]
 };
 
-export default class ActionStep<P extends Player> extends Flow<P> {
-  players?: P | P[] | ((args: Record<string, any>) => P | P[]); // if restricted to a particular player list. otherwise uses current player
-  position: ActionStepPosition<P>;
+export default class ActionStep extends Flow {
+  players?: Player | Player[] | ((args: Record<string, any>) => Player | Player[]); // if restricted to a particular player list. otherwise uses current player
+  position: ActionStepPosition;
   actions: {
     name: string,
     prompt?: string | ((args: Record<string, any>) => string),
-    args?: Record<string, Argument<P>> | ((args: Record<string, any>) => Record<string, Argument<P>>),
-    do?: FlowDefinition<P>
+    args?: Record<string, Argument> | ((args: Record<string, any>) => Record<string, Argument>),
+    do?: FlowDefinition
   }[];
-  type: FlowBranchNode<P>['type'] = "action";
+  type: FlowBranchNode['type'] = "action";
   optional?: string | ((args: Record<string, any>) => string);
   prompt?: string | ((args: Record<string, any>) => string); // needed if multiple board actions
   description?: string;
@@ -32,13 +32,13 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
   constructor({ name, player, players, actions, prompt, description, optional, skipIf }: {
     name?: string,
-    players?: P[] | ((args: Record<string, any>) => P[]),
-    player?: P | ((args: Record<string, any>) => P),
+    players?: Player[] | ((args: Record<string, any>) => Player[]),
+    player?: Player | ((args: Record<string, any>) => Player),
     actions: (string | {
       name: string,
       prompt?: string | ((args: Record<string, any>) => string),
-      args?: Record<string, Argument<P>> | ((args: Record<string, any>) => Record<string, Argument<P>>),
-      do?: FlowDefinition<P>
+      args?: Record<string, Argument> | ((args: Record<string, any>) => Record<string, Argument>),
+      do?: FlowDefinition
     })[],
     prompt?: string | ((args: Record<string, any>) => string),
     description?: string,
@@ -89,7 +89,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     step?: string,
     prompt?: string,
     description?: string,
-    actions: ActionStub<P>[],
+    actions: ActionStub[],
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
     if (!('player' in this.position)) {
@@ -119,7 +119,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
   processMove(move: {
     player: number,
     name: string,
-    args: Record<string, Argument<P>>,
+    args: Record<string, Argument>,
   }): string | undefined {
     if (!this.allowedActions().includes(move.name)) throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
     const gameManager = this.gameManager;
@@ -161,7 +161,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
 
     // succeeded
     const followups = ('followups' in this.position && this.position.followups?.length ? this.position.followups.slice(1) : []).concat(gameManager.followups ?? []);
-    const position: ActionStepPosition<P> = 'followups' in this.position ? {...this.position, followups: undefined} : move;
+    const position: ActionStepPosition = 'followups' in this.position ? {...this.position, followups: undefined} : move;
     if (followups.length) {
       position.followups = followups;
       if (followups[0].player) {
@@ -195,18 +195,18 @@ export default class ActionStep<P extends Player> extends Flow<P> {
     if (!position) return {players: undefined};
     return !('player' in position) ? position : {
       ...position,
-      args: deserializeObject(position.args ?? {}, this.gameManager.game) as Record<string, Argument<P>>,
+      args: deserializeObject(position.args ?? {}, this.gameManager.game) as Record<string, Argument>,
       followups: position.followups?.map((f: any) => ({
         name: f.name,
         prompt: f.prompt,
         player: deserialize(f.player, this.gameManager.game),
-        args: deserializeObject(f.args ?? {}, this.gameManager.game) as Record<string, Argument<P>>,
+        args: deserializeObject(f.args ?? {}, this.gameManager.game) as Record<string, Argument>,
       }))
     };
   }
 
   allSteps() {
-    return this.actions.map(a => a.do).reduce<FlowStep<P>[]>((a, f) => f ? a.concat(f) : a, []);
+    return this.actions.map(a => a.do).reduce<FlowStep[]>((a, f) => f ? a.concat(f) : a, []);
   }
 
   toString(): string {
@@ -220,7 +220,7 @@ export default class ActionStep<P extends Player> extends Flow<P> {
       name: this.position && 'name' in this.position ? this.position.name : '',
       blocks: Object.fromEntries(
         this.actions.filter(a => a.name !== '__pass__').map(a => [a.name, a.do ? (a.do instanceof Array ? a.do : [a.do]) : undefined])
-      ) as Record<string, FlowStep<P>[]>,
+      ) as Record<string, FlowStep[]>,
       block: this.position && 'name' in this.position ? this.position.name : undefined,
       position: this.position && (
         ('player' in this.position ? args : undefined) ??
