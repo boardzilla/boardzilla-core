@@ -858,7 +858,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     el.game = this.game;
     el.name = name;
     Object.assign(el, attrs);
-    if ('afterCreation' in el) (el.afterCreation as Function).bind(el)();
+    if ('afterCreation' in el) (el.afterCreation as () => void).bind(el)();
     return el;
   }
 

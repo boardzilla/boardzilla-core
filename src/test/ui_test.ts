@@ -223,7 +223,7 @@ describe('UI', () => {
 
     state.setPlacement({ column: 1, row: 2 });
     state = store.getState();
-    const ghost = state.placement?.piece!
+    const ghost = state.placement!.piece
 
     expect(ghost.column).to.equal(1);
     expect(ghost.row).to.equal(2);

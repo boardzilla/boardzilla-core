@@ -2,7 +2,6 @@ import { LoopInterruptControl, loopInterrupt, FlowControl } from './enums.js';
 import { Do } from './enums.js';
 
 import type GameManager from '../game-manager.js';
-import type { Game } from '../board/index.js';
 import type { Player } from '../index.js';
 import type { WhileLoopPosition } from './while-loop.js';
 import type { ForLoopPosition } from './for-loop.js';
@@ -320,7 +319,7 @@ export default class Flow {
   }
 
   // override if position contains objects that need serialization
-  toJSON(forPlayer=true): any {
+  toJSON(_forPlayer=true): any {
     return this.position;
   }
 

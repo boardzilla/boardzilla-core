@@ -790,7 +790,7 @@ describe('Game', () => {
     });
 
     it('creates square-shaped hexes', () => {
-      const h = game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'square', axes: 'east-by-southeast', space: Cell });
+      game.create(HexGrid, 'hex', { rows: 4, columns: 5, shape: 'square', axes: 'east-by-southeast', space: Cell });
       expect(game.all(Cell).length).to.equal(18);
       expect(game.all(Cell, {row: 1}).length).to.equal(5);
       expect(game.all(Cell, {row: 2}).length).to.equal(4);

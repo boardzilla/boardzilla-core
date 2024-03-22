@@ -15,7 +15,6 @@ import {
   SwitchCase,
 } from '../flow/index.js';
 
-import type { Player } from '../player/index.js';
 import type { BasePlayer } from '../player/player.js';
 import type {
   default as GameElement,
@@ -98,7 +97,7 @@ export type BoardSize = {
   fixed?: 'landscape' | 'portrait'
 };
 
-export interface BaseGame extends Game<BaseGame, BasePlayer> {};
+export interface BaseGame extends Game<BaseGame, BasePlayer> {}
 
 /**
  * Base class for the game. Represents the current state of the game and

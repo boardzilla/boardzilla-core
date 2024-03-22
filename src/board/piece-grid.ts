@@ -165,7 +165,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
           if (tryLaterally(false, distance)) return;
         }
       }
-    };
+    }
     piece.row = undefined;
     piece.column = undefined;
   }

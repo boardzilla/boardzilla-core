@@ -110,7 +110,7 @@ export const starterGameWithCompoundMove = gameFactory(game => {
 
 export const starterGameWithTiles = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
@@ -122,7 +122,7 @@ export const starterGameWithTiles = gameFactory(game => {
 
 export const starterGameWithTilesConfirm = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
@@ -135,7 +135,7 @@ export const starterGameWithTilesConfirm = gameFactory(game => {
 
 export const starterGameWithTilesValidate = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),
@@ -148,7 +148,7 @@ export const starterGameWithTilesValidate = gameFactory(game => {
 
 export const starterGameWithTilesCompound = gameFactory(game => {
   game.defineActions({
-    take: player => game.action({
+    take: () => game.action({
       prompt: 'Choose a token',
     }).chooseOnBoard(
       'token', $.pool.all(Token),

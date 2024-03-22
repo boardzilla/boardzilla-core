@@ -4,7 +4,7 @@ import { shuffleArray } from '../utils.js';
 import { deserializeObject } from '../action/utils.js';
 
 import type { PlayerAttributes } from '../game-manager.js';
-import type { Game, Sorter } from '../board/index.js';
+import type { Sorter } from '../board/index.js';
 
 /**
  * An Array-like collection of the game's players, mainly used in {@link

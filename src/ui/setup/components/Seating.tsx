@@ -95,7 +95,7 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
       if (operations.length) onUpdatePlayers(operations);
     }
     onUpdateSettings({ seatCount: count });
-  }, [players, seatCount, maxPlayers, onUpdatePlayers, onUpdateSettings]);
+  }, [players, userID, seatCount, maxPlayers, onUpdatePlayers, onUpdateSettings]);
 
   const updateColor = (id: string, color: string) => {
     setPickingColor(undefined);
