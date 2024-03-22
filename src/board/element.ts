@@ -680,7 +680,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * true/false
    @category Queries
    */
-  get mine(): boolean {
+  get mine() {
     if (!this._ctx.player) return false; // throw?
     return this.owner === this._ctx.player;
   }

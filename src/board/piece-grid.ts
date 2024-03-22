@@ -178,6 +178,10 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
    * Piece#setShape}.
    * @category Adjacency
    *
+   * @param piece - The piece to check for adjacency
+   * @param other - An optional other piece to check against. If undefined, it
+   * will check for all pieces against the first argument
+   *
    * @example
    *
    * A domino named "domino12" is adjacent to a domino named "domino34" with the
@@ -249,6 +253,10 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
    * the string representation of the edges in both pieces, as provided in
    * {@link Piece#setEdges}.
    * @category Adjacency
+   *
+   * @param piece - The piece to check for adjacency
+   * @param other - An optional other piece to check against. If undefined, it
+   * will check for all pieces against the first argument
    *
    * @example
    *

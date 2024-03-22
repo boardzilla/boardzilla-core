@@ -454,7 +454,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     })
   };
 
-  // // restore default layout rules before running setupLayout
+  // restore default layout rules before running setupLayout
   resetUI() {
     super.resetUI();
     this._ui.stepLayouts = {};
