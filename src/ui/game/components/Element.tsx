@@ -25,8 +25,8 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, boardJSON] =
-    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.boardJSON]);
+  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev, boardJSON] =
+    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev, s.boardJSON]);
 
   const [dragging, setDragging] = useState(false); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
@@ -486,11 +486,19 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     ));
   }
 
+  let title: string | undefined = undefined;
+  if (dev) {
+    title = `${element.constructor.name}
+  visibility: ${element._visible?.default ?? true ? "visible" : "hidden"}${element._visible?.except ? ` (except positions ${element._visible?.except.join(', ')})` : ""}
+${Object.entries(element.attributeList()).filter(([k]) => !['_size', 'was'].includes(k)).map(([k, v]) => `  ${k}: ${v}`).join("\n")}`;
+  }
+
   // "base" semantic GameElement dom element
   contents = (
     <div
       id={element.name}
       ref={domElement}
+      title={title}
       className={classNames(
         baseClass,
         element._ui.appearance.className,

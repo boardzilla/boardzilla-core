@@ -13,6 +13,7 @@ import {
   clearMove,
 } from './lib.js';
 
+import { ActionDebug } from '../game-manager.js'
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
 import type { Box, ElementJSON } from '../board/element.js'
 import type { BaseGame } from '../board/game.js'
@@ -55,6 +56,7 @@ export type GameStore = {
   boardPrompt?: string; // prompt for choosing board action
   actionDescription?: string; // description of the current pending action
   otherPlayerAction?: string;
+  actionDebug?: ActionDebug;
   announcementIndex: number;
   dismissAnnouncement: () => void;
   boardSelections: Record<string, {

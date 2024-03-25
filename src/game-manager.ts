@@ -50,6 +50,12 @@ export type Message = {
   body: string
 }
 
+export type ActionDebug = Record<string, {
+  args: Record<string, 'sel' | 'skip' | 'only-one' | 'always' | 'tree' | 'forced' | 'imp' | 'ask' | 'future'>,
+  // pruned?: Record<string, Argument[]>
+  impossible?: boolean
+}>
+
 /**
  * Game manager is used to coordinate other classes, the {@link Game}, the
  * {@link Player}'s, the {@link Action}'s and the {@link Flow}.
@@ -283,7 +289,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     });
   }
 
-  allowedActions(player: P): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub[]} {
+  allowedActions(player: P, debug?: ActionDebug): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub[]} {
     const actions: ActionStub[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
       actions,
@@ -300,6 +306,8 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
           if (gameAction.isPossible(allowedAction.args ?? {})) {
             // step action config take priority over action config
             actions.push({ ...gameAction, ...allowedAction, player });
+          } else if (debug) {
+            debug[allowedAction.name] = { impossible: true, args: {} };
           }
         }
       }
@@ -316,9 +324,9 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     };
   }
 
-  getPendingMoves(player: P, name?: string, args?: Record<string, Argument>): {step?: string, prompt?: string, moves: PendingMove[]} | undefined {
+  getPendingMoves(player: P, name?: string, args?: Record<string, Argument>, debug?: ActionDebug): {step?: string, prompt?: string, moves: PendingMove[]} | undefined {
     if (this.phase === 'finished') return;
-    const allowedActions = this.allowedActions(player);
+    const allowedActions = this.allowedActions(player, debug);
     if (!allowedActions.actions.length) return;
     const { step, prompt, actions, skipIf } = allowedActions;
 
@@ -335,10 +343,13 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
               new Selection('__action__', { prompt: action.prompt, value: '__pass__' }).resolve({})
             ]
           });
+          if (debug) {
+            debug['__pass__'] = { args: {} };
+          }
         } else {
           const playerAction = this.getAction(action.name, player)
           const args = action.args || {}
-          let submoves = playerAction._getPendingMoves(args);
+          let submoves = playerAction._getPendingMoves(args, debug);
           if (submoves !== undefined) {
             possibleActions.push(action.name);
             // no sub-selections to show so just create a prompt selection of this action
@@ -369,7 +380,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
 
     } else {
       if (name === '__pass__') return { step, prompt, moves: [] };
-      const moves = this.getAction(name, player)?._getPendingMoves(args || {});
+      const moves = this.getAction(name, player)?._getPendingMoves(args || {}, debug);
       if (moves) return { step, prompt, moves };
     }
   }

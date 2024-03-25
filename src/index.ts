@@ -95,7 +95,6 @@ export const createGame = <G extends Game>(
   state: SetupState | GameState,
   options?: {rseed?: string, trackMovement?: boolean}
 ): GameManager<G> => {
-  //console.time('setup');
   const gameManager = new GameManager(playerClass, gameClass);
   const inSetup = !('board' in state);
 
@@ -107,7 +106,6 @@ export const createGame = <G extends Game>(
 
   // setup board to get all non-serialized setup (spaces, event handlers, graphs)
   gameCreator(gameManager.game);
-  //console.timeLog('setup', 'game creator setup');
 
   // lock game from receiving any more setup
   gameManager.start();
@@ -123,8 +121,6 @@ export const createGame = <G extends Game>(
   } else {
     gameManager.players.assignAttributesFromJSON(state.players);
   }
-  //console.timeLog('setup', 'setState');
 
-  //console.timeEnd('setup');
   return gameManager;
 };
