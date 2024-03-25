@@ -144,6 +144,52 @@ describe('GameManager', () => {
     ]);
   });
 
+  it('messages to players', () => {
+    gameManager.actions.addSome = player => game!.action({
+      prompt: 'add some counters',
+    }).chooseNumber('n', {
+      prompt: 'how many?',
+      min: 1,
+      max: 3,
+    }).do(
+      ({ n }) => { game.tokens += n }
+    ).messageTo(
+      player, '{{player}} added {{n}}'
+    ).messageTo(
+      player.others(), '{{player}} added some'
+    );
+
+    gameManager.play();
+    expect(gameManager.messages).to.deep.equals([
+      {
+        "body": "Starting game with 4 tokens"
+      }
+    ]);
+    gameManager.processMove({ name: 'addSome', args: {n: 3}, player: gameManager.players[0] });
+    gameManager.play();
+    expect(gameManager.messages).to.deep.equals([
+      {
+        "body": "Starting game with 4 tokens"
+      },
+      {
+        "body": "[[$p[1]|Joe]] added 3",
+        "position": 1
+      },
+      {
+        "body": "[[$p[1]|Joe]] added some",
+        "position": 2
+      },
+      {
+        "body": "[[$p[1]|Joe]] added some",
+        "position": 3
+      },
+      {
+        "body": "[[$p[1]|Joe]] added some",
+        "position": 4
+      }
+    ]);
+  });
+
   it('finishes', () => {
     gameManager.flow.setBranchFromJSON([
       { type: 'main', position: null, sequence: 2 },
