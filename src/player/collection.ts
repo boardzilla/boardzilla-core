@@ -88,7 +88,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
    */
   setCurrent(players: number | P | number[] | P[]) {
     if (!(players instanceof Array)) players = [players] as number[] | P[];
-    players = players.map(p => typeof p === 'number' ? p : p.position) as number[];
+    players = players.map(p => typeof p === 'number' ? p : p.position);
     this.currentPosition = players;
   }
 

@@ -53,11 +53,11 @@ describe('UI', () => {
     updateStore(store, 2, {tokens: 4});
     let state = store.getState();
     const token = state.gameManager.game.first(Token)!;
-    const clickMoves = state.boardSelections[token.branch()].clickMoves;
     expect(state.pendingMoves?.length).to.equal(1);
     expect(state.pendingMoves?.[0].name).to.equal('take');
     expect(state.pendingMoves?.[0].requireExplicitSubmit).to.be.false;
 
+    const clickMoves = state.boardSelections[token.branch()].clickMoves;
     state.selectElement(clickMoves, token);
     state = store.getState();
 

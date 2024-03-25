@@ -309,7 +309,7 @@ export default class Flow {
 
   // must override. reset runs any logic needed and call setPosition. Must not modify own state.
   reset() {
-    this.gameManager.players.setCurrent(this.gameManager.players);
+    this.gameManager.players.setCurrent(Array.from(this.gameManager.players));
     this.setPosition(null);
   }
 
