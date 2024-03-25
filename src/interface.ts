@@ -118,8 +118,6 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
       previousState: GameStartedState,
       move: SerializedInterfaceMove,
     ): GameUpdate => {
-      console.log('processMove', move);
-      //console.time('processMove');
       let cachedGame: GameManager | undefined = undefined;
       // @ts-ignore
       if (globalThis.window && window.serverGame && window.lastGame > new Date() - 20 && window.json === JSON.stringify(previousState)) cachedGame = window.serverGameManager;
@@ -139,7 +137,6 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
       gameManager.players.setCurrent(previousState.currentPlayers);
       const player = gameManager.players.atPosition(move.position)!;
       // @ts-ignore
-      //console.timeLog('processMove', cachedGame ? 'restore cached game' : 'setup');
       gameManager.messages = [];
       gameManager.announcements = [];
       if (!(move.data instanceof Array)) move.data = [move.data];
@@ -155,15 +152,11 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
           throw Error(`Unable to process move: ${error}`);
         }
         if (gameManager.phase === 'finished') break;
-        //console.timeLog('processMove', 'process');
         gameManager.play();
-        //console.timeLog('processMove', 'play');
       }
 
       const update = gameManager.getUpdate();
-      //console.timeLog('processMove', 'update');
       cacheGameOnWindow(gameManager, update);
-      //console.timeEnd('processMove');
       return update;
     },
 

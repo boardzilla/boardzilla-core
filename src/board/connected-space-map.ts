@@ -177,7 +177,6 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
    * @category Adjacency
    *
    * @param element - {@link GameElement} to measure distance from
-   * @param distance - Distance to measure using the adjacency distances
    * @param {class} className - Optionally provide a class as the first argument
    * as a class filter. This will only match elements which are instances of the
    * provided class

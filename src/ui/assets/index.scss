@@ -1118,28 +1118,121 @@ html, body { height: 100% }
     font-size: 16px;
     z-index: 199;
     background: #fffc;
-    font-family: 'DM Sans Variable', sans-serif;
+
+    #action-debug {
+      overflow-y: scroll;
+      position: absolute;
+      right: .5em;
+      top: 5vmin;
+      width: calc(45% - 1em);
+      height: calc(100% - 4em);
+      top: 3em;
+
+      #action-breakdown {
+        font-family: 'DM Sans Variable', sans-serif;
+      }
+
+      a {
+        color: #009;
+        cursor: pointer;
+      }
+
+      ul {
+        padding-left: 1.2em;
+      }
+
+      li.action-block {
+        margin-bottom: 1em;
+
+        .name {
+          font-weight: bold;
+        }
+
+        &::marker {
+          content: '► ';
+          color: #900;
+        }
+        &.impossible::marker {
+          content: '🚫 ';
+        }
+        &.impossible {
+          filter: opacity(.5);
+        }
+        li.selection-type-ask::marker {
+          content: '► ';
+          color: #009;
+        }
+        li.selection-type-tree::marker {
+          content: '🚫 ';
+        }
+        li.selection-type-imp::marker {
+          content: '❌ ';
+        }
+        li.selection-type-sel::marker, li.selection-type-only-one::marker, li.selection-type-skip::marker {
+          content: '✓ ';
+          color: #090;
+        }
+        li.selection-type-future::marker {
+          content: '▷ ';
+        }
+      }
+    }
+
+    .element-zoom {
+      display: inline-block;
+      margin: 0 0 1rem 1rem;
+      position: relative;
+      pointer-events: none;
+      width: 24vw;
+      .Piece, .Space {
+        transform: none !important;
+      }
+      > div {
+        position: relative;
+      }
+    }
 
     #flow-debug {
-      overflow: scroll;
+      font-family: 'DM Sans Variable', sans-serif;
+      overflow-y: scroll;
       position: absolute;
-      left: 1em;
+      left: .5em;
       top: 5vmin;
-      right: 50%;
-      bottom: 0;
+      width: 55%;
+      height: calc(100% - 4em);
+      top: 3em;
 
+      > .flow-debug-block {
+        width: 90%;
+      }
       .flow-debug-block {
         margin: .2em 0 .2em .4em;
         border-left: .2em solid var(--color);
+        position: relative;
 
         &.current {
           outline: 4px solid #ff0;
+          &::after {
+            content: '';
+            position: absolute;
+            width: 5%;
+            height: 100%;
+            left: 100%;
+            top: 0;
+            background: #ff0;
+            clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+          };
+          .header {
+            color: #ff0;
+          }
         }
 
         .header {
+          display: flex;
           color: white;
           background: var(--color);
           height: 1.5em;
+          padding: 0 .2em;
           > .name {
             height: 80%;
             color: var(--color);
@@ -1150,6 +1243,8 @@ html, body { height: 100% }
             margin-top: .25em;
             font-size: .75em;
             padding: .2em .5em;
+            overflow-x: scroll;
+            white-space: nowrap;
           }
         }
 

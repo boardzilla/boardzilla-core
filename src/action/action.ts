@@ -4,13 +4,10 @@ import Piece from '../board/piece.js';
 import ElementCollection from '../board/element-collection.js';
 import { n } from '../utils.js';
 
-import type {
-  ResolvedSelection,
-  BoardQueryMulti,
-} from './selection.js';
+import type { ResolvedSelection, BoardQueryMulti } from './selection.js';
 import type { Game, PieceGrid } from '../board/index.js';
 import type { Player } from '../player/index.js';
-import type { default as GameManager, PendingMove } from '../game-manager.js';
+import type { default as GameManager, ActionDebug, PendingMove } from '../game-manager.js';
 
 /**
  * A single argument
@@ -126,11 +123,19 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
   // return array of follow-up selections if incomplete
   // skipping/expanding is very complex and this method runs all the rules for what should/must be combined, either as additional selections or as forced args
   // skippable options will still appear in order to present the choices to the user to select that tree. This will be the final selection if no other selection turned skipping off
-  _getPendingMoves(args: Record<string, Argument>): PendingMove[] | undefined {
-    const moves = this._getPendingMovesInner(args);
+  // TODO memoize
+  _getPendingMoves(args: Record<string, Argument>, debug?: ActionDebug): PendingMove[] | undefined {
+    if (debug) {
+      debug[this.name!] = { args: {} };
+      for (const arg of Object.keys(args)) debug[this.name!].args[arg] = 'sel';
+    }
+    const moves = this._getPendingMovesInner(args, debug);
     // resolve any combined selections now with only args up until first choice
     if (moves?.length) {
       for (const move of moves) {
+        if (debug) {
+          debug[move.name].args[move.selections[0].name] = 'ask';
+        }
         const combineWith = move.selections[0].clientContext?.combineWith; // guaranteed single selection
         let confirm: Selection['confirm'] | undefined = move.selections[0].confirm;
         let validation: Selection['validation'] | undefined = move.selections[0].validation;
@@ -143,8 +148,14 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
           const arg = selection.isForced();
           if (arg !== undefined) { // forced future args are added here to shorten the form and pre-prompt any confirmation
             move.args[selection.name] = arg;
+            if (debug) {
+              debug[move.name].args[selection.name] = 'forced';
+            }
           } else if (combineWith?.includes(selection.name)) { // future combined selections are added as well
             move.selections.push(selection);
+            if (debug) {
+              debug[move.name].args[selection.name] = 'ask';
+            }
           } else {
             break;
           }
@@ -158,7 +169,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     return moves;
   }
 
-  _getPendingMovesInner(args: Record<string, Argument>): PendingMove[] | undefined {
+  _getPendingMovesInner(args: Record<string, Argument>, debug?: ActionDebug): PendingMove[] | undefined {
     let selection = this._nextSelection(args);
     if (!selection) return [];
 
@@ -170,7 +181,12 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
       selections: [selection]
     };
 
-    if (!selection.isPossible()) return;
+    if (!selection.isPossible()) {
+      if (debug) {
+        debug[this.name!].args[selection.name] = 'imp';
+      }
+      return;
+    }
     if (!selection.isUnbounded()) {
       let possibleOptions: Argument[] = [];
       let pruned = false;
@@ -186,7 +202,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
             continue;
           }
         }
-        const submoves = this._getPendingMovesInner(allArgs);
+        const submoves = this._getPendingMovesInner(allArgs, debug);
         if (submoves === undefined) {
           pruned = true;
         } else {
@@ -195,7 +211,12 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
           pendingMoves = pendingMoves.concat(submoves);
         }
       }
-      if (!possibleOptions.length) return undefined;
+      if (!possibleOptions.length) {
+        if (debug) {
+          debug[this.name!].args[selection.name] = 'tree';
+        }
+        return undefined;
+      }
       if (pruned && !selection.isMulti()) {
         selection.overrideOptions(possibleOptions as SingleArgument[]);
       }
@@ -206,6 +227,9 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
         ((selection.skipIf === 'always' || selection.skipIf === true) && !hasCompleteMove) ||
           selection.skipIf === 'only-one' && possibleOptions.length === 1 && (!selection.clientContext?.combineWith || selection.options().length <= 1)
       )) {
+        if (debug) {
+          debug[this.name!].args[selection.name] = selection.skipIf === true ? 'skip' : selection.skipIf;
+        }
         return pendingMoves;
       }
     }
@@ -252,13 +276,16 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     }
     if (error) return error;
 
-    const pendingMoves = this._getPendingMoves(args);
-    if (!pendingMoves) {
-      console.error('attempted to process invalid args', this.name, args);
-      return error || 'unknown error during action._process';
-    }
-    if (pendingMoves.length) {
-      return error || 'incomplete action';
+    // revalidate on server. quite expensive. easier way?
+    if (!globalThis.window) {
+      const pendingMoves = this._getPendingMoves(args);
+      if (!pendingMoves) {
+        console.error('attempted to process invalid args', this.name, args);
+        return error || 'unknown error during action._process';
+      }
+      if (pendingMoves.length) {
+        return error || 'incomplete action';
+      }
     }
 
     let moveIndex = 0;

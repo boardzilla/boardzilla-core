@@ -9,6 +9,7 @@ const InfoOverlay = ({ setMode }: {
   const [infoModal, setInfoModal] = useState<number | undefined>(undefined);
 
   const [gameManager, infoElement, setInfoElement, actionDescription] = gameStore(s => [s.gameManager, s.infoElement, s.setInfoElement, s.actionDescription]);
+  useEffect(() => setInfoElement(), [setInfoElement]);
 
   let elementStyle: React.CSSProperties | undefined = useMemo(() => {
     if (!infoElement?.element) return {};

@@ -46,13 +46,16 @@ export function updateSelections(store: GameStore): GameStore {
   let maySubmit = !!move;
   let autoSubmit = false;
 
-  pendingMoves = gameManager.getPendingMoves(player, move?.name, move?.args);
+  const debug = {};
+  pendingMoves = gameManager.getPendingMoves(player, move?.name, move?.args, store.dev ? debug : undefined);
+  if (store.dev) state.actionDebug = debug;
 
   if (move && !pendingMoves?.moves) {
     // perhaps an update came while we were in the middle of a move
     console.error('move may no longer be valid. retrying getPendingMoves', move, pendingMoves);
     move = undefined;
-    pendingMoves = gameManager.getPendingMoves(player);
+    pendingMoves = gameManager.getPendingMoves(player, undefined, undefined, debug);
+    if (store.dev) state.actionDebug = debug;
   }
 
   let moves = pendingMoves?.moves;
