@@ -1,3 +1,13 @@
+#!/bin/bash
+set -e
+
+# # check if git is clean
+if [[ $(git diff-index -p HEAD) ]]; then
+  echo "Aborting release due to git not being in a clean state"
+  echo
+  exit 1
+fi
+
 yarn clean
 yarn build
 rm -r entry
