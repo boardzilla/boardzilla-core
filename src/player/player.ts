@@ -67,14 +67,14 @@ export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer 
   /**
    * Returns an array of all other players.
    */
-  others() {
+  others(): P[] {
     return Array.from(this._players).filter(p => p as Player !== this);
   }
 
   /**
    * Returns the other player. Only allowed in 2 player games
    */
-  other() {
+  other(): P {
     if (this._players.length !== 2) throw Error('Can only use `other` for 2 player games');
     return this._players.find(p => p as Player !== this)!;
   }
