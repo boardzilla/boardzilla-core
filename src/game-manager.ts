@@ -51,7 +51,7 @@ export type Message = {
 }
 
 export type ActionDebug = Record<string, {
-  args: Record<string, 'sel' | 'skip' | 'only-one' | 'always' | 'tree' | 'forced' | 'imp' | 'ask'>,
+  args: Record<string, 'sel' | 'skip' | 'only-one' | 'always' | 'tree' | 'forced' | 'imp' | 'ask' | 'future'>,
   // pruned?: Record<string, Argument[]>
   impossible?: boolean
 }>

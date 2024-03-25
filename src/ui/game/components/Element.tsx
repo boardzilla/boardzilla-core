@@ -490,7 +490,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   if (dev) {
     title = `${element.constructor.name}
   visibility: ${element._visible?.default ?? true ? "visible" : "hidden"}${element._visible?.except ? ` (except positions ${element._visible?.except.join(', ')})` : ""}
-${Object.entries(element.attributeList()).filter(([k]) => k !== '_size').map(([k, v]) => `  ${k}: ${v}`).join("\n")}`;
+${Object.entries(element.attributeList()).filter(([k]) => !['_size', 'was'].includes(k)).map(([k, v]) => `  ${k}: ${v}`).join("\n")}`;
   }
 
   // "base" semantic GameElement dom element

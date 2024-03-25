@@ -8,7 +8,7 @@ const DebugArgument = ({ argument }: {
   argument?: Argument
 }) => {
   const [setInfoElement] = gameStore(s => [s.setInfoElement]);
-  if (argument) return (
+  if (argument !== undefined) return (
     typeof argument === 'object' && 'isGameElement' in argument.constructor ? (
       <a onClick={e => {e.stopPropagation(); setInfoElement({ info: true, element: argument as GameElement })}}>{String(argument)}</a>
     ) : String(argument)

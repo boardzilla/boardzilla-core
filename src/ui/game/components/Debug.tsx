@@ -58,10 +58,13 @@ const Debug = () => {
                       s => [s.name, s.type, getSelection(action, s.name)] as [string, string, ResolvedSelection?]
                     ).map(([name, type, sel]) => (
                       <li key={name} className={`selection-type-${args[name] ?? 'future'}`}>
-                        <div className="name">"{name}"</div>
+                        <div className="function">
+                          <code>{{number: 'chooseNumber', board: 'chooseOnBoard', 'choices': 'chooseFrom', text: 'enterText', button: 'confirm', place: 'placePiece'}[type]}</code>
+                          &nbsp;<span className="name">"{name}"</span>
+                        </div>
+
                         {['ask', 'imp', 'tree'].includes(args[name]) && (
                           <div>
-                            <div className="function"><code>{{number: 'chooseNumber', board: 'chooseOnBoard', 'choices': 'chooseFrom', text: 'enterText', button: 'confirm', place: 'placePiece'}[type]}</code></div>
                             <ul>
                               <DebugChoices
                                 choices={sel?.boardChoices || sel?.choices}
@@ -79,7 +82,9 @@ const Debug = () => {
                         {args[name] === 'tree' && ' (no valid continuation)'}
                         {['sel', 'skip', 'only-one', 'forced', 'always'].includes(args[name]) && (
                           <span>
-                            <DebugArgument argument={getAction(action)?.args[name]}/>
+                            <span className="argument">
+                              <DebugArgument argument={getAction(action)?.args[name]}/>
+                            </span>
                             {args[name] === 'sel' && ' (player-selected)'}
                             {args[name] === 'skip' && <span> (skipped by <code>skipIf</code> function)</span>}
                             {args[name] === 'only-one' && <span> (skipped by <code>"only-one"</code>)</span>}

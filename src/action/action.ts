@@ -183,7 +183,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
 
     if (!selection.isPossible()) {
       if (debug) {
-        debug[this.name!].args[selection.name] = 'imp';
+        debug[this.name!].args[selection.name] ??= 'imp';
       }
       return;
     }
@@ -232,6 +232,9 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
         }
         return pendingMoves;
       }
+    }
+    if (debug && (debug[this.name!].args[selection.name] ?? 'imp') === 'imp') {
+      debug[this.name!].args[selection.name] ??= 'future';
     }
 
     return [move];
