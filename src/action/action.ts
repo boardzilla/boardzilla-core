@@ -100,7 +100,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
   selections: Selection[] = [];
   moves: ((args: Record<string, Argument>) => any)[] = [];
   condition?: ((args: A) => boolean) | boolean;
-  messages: {text: string, args?: Record<string, Argument> | ((a: A) => Record<string, Argument>)}[] = [];
+  messages: {text: string, args?: Record<string, Argument> | ((a: A) => Record<string, Argument>), position?: number}[] = [];
   order: ('move' | 'message')[] = [];
   mutated = false;
 
@@ -269,7 +269,11 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
       } else {
         const message = this.messages[messageIndex++];
         const messageArgs = ((typeof message.args === 'function') ? message.args(args as A) : message.args);
-        this.gameManager.game.message(message.text, {...args, player, ...messageArgs});
+        if (message.position) {
+          this.gameManager.game.messageTo(message.position, message.text, {...args, player, ...messageArgs});
+        } else {
+          this.gameManager.game.message(message.text, {...args, player, ...messageArgs});
+        }
       }
     }
   }
@@ -388,6 +392,50 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
   message(text: string, args?: Record<string, Argument> | ((a: A) => Record<string, Argument>)) {
     this.messages.push({text, args});
     this.order.push('message');
+    return this;
+  }
+
+  /**
+   * Add a message to this action that will be broadcast in the chat to the
+   * specified player(s). Call this method after all the methods for player
+   * choices so that the choices are properly available to the `message`
+   * function. However the message should be called before or after any `do`
+   * behaviour depending on whether you want the message to reflect the game
+   * state before or after the move is performs. The action's `message` and `do`
+   * functions can be intermixed in this way to generate messages at different
+   * points int the execution of a move.
+   *
+   * @param player - Player or players to receive the message
+   *
+   * @param text - The text of the message to send. This can contain interpolated
+   * strings with double braces just as when calling {@link Game#message}
+   * directly. However when using this method, the player performing the action,
+   * plus any choices made in the action are automatically made available.
+   *
+   * @param args - If additional strings are needed in the message besides
+   * 'player' and the player choices, these can be specified here. This can also
+   * be specified as a function that accepts the player choices and returns
+   * key-value pairs of strings for interpolation.
+   *
+   * @example
+   * action({
+   *   prompt: 'Say something',
+   * }).enterText({
+   *   'message',
+   * }).message(
+   *   '{{player}} said {{message}}' // no args needed
+   * ).message(
+   *   "I said, {{player}} said {{loudMessage}}",
+   *   ({ message }) => ({ loudMessage: message.toUpperCase() })
+   * )
+   * @category Behaviour
+   */
+  messageTo(player: (Player | number) | (Player | number)[], text: string, args?: Record<string, Argument> | ((a: A) => Record<string, Argument>)) {
+    if (!(player instanceof Array)) player = [player];
+    for (const p of player) {
+      this.messages.push({position: typeof p === 'number' ? p : p.position, text, args});
+      this.order.push('message');
+    }
     return this;
   }
 

@@ -362,7 +362,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    * objects (e.g. players or pieces) passed in as args will be displayed
    * specially by Boardzilla.
    *
-   * @param args - AN object of key-value pairs of strings for interpolation in
+   * @param args - An object of key-value pairs of strings for interpolation in
    * the message.
    *
    * @example
@@ -375,6 +375,39 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    */
   message(text: string, args?: Record<string, Argument>) {
     this._ctx.gameManager.messages.push({body: n(text, args, true)});
+  }
+
+  /**
+   * Add a message that will be broadcast to the given player(s) in the chat at
+   * the next game update, based on the current state of the game.
+   *
+   * @param player - Player or players to receive the message
+   *
+   * @param text - The text of the message to send. This can contain interpolated strings
+   * with double braces, i.e. {{player}} that are defined in args. Of course,
+   * strings can be interpolated normally using template literals. However game
+   * objects (e.g. players or pieces) passed in as args will be displayed
+   * specially by Boardzilla.
+   *
+   * @param args - An object of key-value pairs of strings for interpolation in
+   * the message.
+   *
+   * @example
+   * game.message(
+   *   '{{player}} has a score of {{score}}',
+   *   { player, score: player.score() }
+   * );
+   *
+   * @category Game Management
+   */
+  messageTo(player: (BasePlayer | number) | (BasePlayer | number)[], text: string, args?: Record<string, Argument>) {
+    if (!(player instanceof Array)) player = [player];
+    for (const p of player) {
+      this._ctx.gameManager.messages.push({
+        body: n(text, args, true),
+        position: typeof p === 'number' ? p : p.position
+      });
+    }
   }
 
   /**
