@@ -53,6 +53,15 @@ export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer 
 
   static isPlayer = true;
 
+  /**
+   * Provide list of attributes that are hidden from other players
+   */
+  static hide<P extends BasePlayer>(this: {new(): P; hiddenAttributes: (keyof P)[]}, ...attrs: (keyof P)[]): void {
+    this.hiddenAttributes = attrs;
+  }
+
+  static hiddenAttributes: (keyof BasePlayer)[]
+
   isCurrent() {
     return this._players.currentPosition.includes(this.position);
   }
@@ -112,13 +121,16 @@ export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer 
     return this.game.has(className, {owner: this}, ...finders);
   }
 
-  toJSON() {
+  toJSON(player?: Player) {
     let {_players, game: _b, ...attrs}: Record<any, any> = this;
 
     // remove methods
     attrs = serializeObject(
       Object.fromEntries(Object.entries(attrs).filter(
-        ([, value]) => typeof value !== 'function'
+        ([key, value]) => (
+          typeof value !== 'function' &&
+            (player === undefined || player === this || !(this.constructor as typeof Player).hiddenAttributes.includes(key as keyof Player))
+        )
       ))
     );
 

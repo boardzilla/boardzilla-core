@@ -96,7 +96,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
       if (s.type === 'board' && s.isMulti() && (!selected || (selected.length < (s.min ?? 1) || selected.length > (s.max ?? Infinity)))) return undefined;
     }
     let confirm = 'Confirm';
-    const args: Record<string, Argument> = Object.fromEntries(Object.entries(allArgs).filter(([_, v]) => v !== undefined)) as Record<string, Argument>;
+    const args: Record<string, Argument> = Object.fromEntries(Object.entries(allArgs).filter(([, v]) => v !== undefined)) as Record<string, Argument>;
     confirm = action._getConfirmation(move.selections[0], args) ?? confirm;
     return n(confirm, args)
   }, [move, action, allArgs, selected, validationErrors]);

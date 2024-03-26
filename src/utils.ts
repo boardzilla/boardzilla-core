@@ -17,7 +17,7 @@ export const n = (message: string, args?: Record<string, Argument>, escaped: boo
     message = message.replace(new RegExp(`\\{\\{\\s*${k}\\s*\\}\\}`), escaped ? escapeArgument(v) : v.toString());
   })
 
-  const missingArgs = Array.from(message.matchAll(new RegExp(`\\{\\{\\s*(\\w+)\\s*\\}\\}`, 'g'))).map(([_, arg]) => arg);
+  const missingArgs = Array.from(message.matchAll(new RegExp(`\\{\\{\\s*(\\w+)\\s*\\}\\}`, 'g'))).map(([, arg]) => arg);
   if (missingArgs.length) throw Error(`Missing strings in:\n${message}\nAll substitution strings must be specified in 2nd parameter. Missing: ${missingArgs.join('; ')}`);
 
   return message;

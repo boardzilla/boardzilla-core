@@ -279,7 +279,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     }
     if (error) return error;
 
-    // revalidate on server. quite expensive. easier way?
+    // revalidate on server. quite expensive. easier way? I think this might just be counting the args since the validation already passed ^^
     if (!globalThis.window) {
       const pendingMoves = this._getPendingMoves(args);
       if (!pendingMoves) {

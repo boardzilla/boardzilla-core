@@ -393,6 +393,20 @@ describe('GameManager', () => {
       expect(game.first(Country, 'france')!.general?.name).to.equal('napolean');
       expect(game.first(Country, 'france')!.general?.country).to.equal(france);
     });
+
+    it('hides attributes', () => {
+      TestPlayer.hide('rival');
+
+      gameManager.players[0].rival = gameManager.players[1];
+      gameManager.players[1].rival = gameManager.players[0];
+
+      const json = gameManager.players.map(p => p.toJSON(gameManager.players[0]) as PlayerAttributes<TestPlayer>);
+
+      gameManager.players.fromJSON(json);
+      gameManager.players.assignAttributesFromJSON(json);
+      expect(gameManager.players[0].rival).to.equal(gameManager.players[1]);
+      expect(gameManager.players[1].rival).to.be.undefined;
+    });
   });
 
   describe('action for multiple players', () => {
@@ -888,7 +902,6 @@ describe('GameManager', () => {
       gameManager.play();
     });
   });
-
 
   describe('each player', () => {
     beforeEach(() => {

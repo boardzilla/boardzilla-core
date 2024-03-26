@@ -278,9 +278,9 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     this._ctx.gameManager.followups.push(action);
   }
 
-  flowGuard = (): true => {
+  flowGuard = (name: string): true => {
     if (this._ctx.gameManager.phase !== 'new') {
-      throw Error('Cannot call playerActions once game has started. It is likely that this function is in the wrong place and must be called directly in defineFlow as a FlowDefinition');
+      throw Error(`Cannot use "${name}" once game has started. It is likely that this function is in the wrong place and must be called directly in defineFlow as a FlowDefinition`);
     }
     return true;
   };
@@ -299,15 +299,15 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    * @category Definition
    */
   flowCommands = {
-    playerActions: (options: ConstructorParameters<typeof ActionStep>[0]) => this.flowGuard() && new ActionStep(options),
-    loop: (...block: FlowStep[]) => this.flowGuard() && new WhileLoop({do: block, while: () => true}),
-    whileLoop: (options: ConstructorParameters<typeof WhileLoop>[0]) => this.flowGuard() && new WhileLoop(options),
-    forEach: <T extends Serializable>(options: ConstructorParameters<typeof ForEach<T>>[0]) => this.flowGuard() && new ForEach<T>(options),
-    forLoop: <T = Serializable>(options: ConstructorParameters<typeof ForLoop<T>>[0]) => this.flowGuard() && new ForLoop<T>(options),
-    eachPlayer: (options: ConstructorParameters<typeof EachPlayer<P>>[0]) => this.flowGuard() && new EachPlayer<P>(options),
-    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => this.flowGuard() && new EveryPlayer<P>(options),
-    ifElse: (options: ConstructorParameters<typeof IfElse>[0]) => this.flowGuard() && new IfElse(options),
-    switchCase: <T extends Serializable>(options: ConstructorParameters<typeof SwitchCase<T>>[0]) => this.flowGuard() && new SwitchCase<T>(options),
+    playerActions: (options: ConstructorParameters<typeof ActionStep>[0]) => this.flowGuard('playerActions') && new ActionStep(options),
+    loop: (...block: FlowStep[]) => this.flowGuard('loop') && new WhileLoop({do: block, while: () => true}),
+    whileLoop: (options: ConstructorParameters<typeof WhileLoop>[0]) => this.flowGuard('whileloop') && new WhileLoop(options),
+    forEach: <T extends Serializable>(options: ConstructorParameters<typeof ForEach<T>>[0]) => this.flowGuard('forEach') && new ForEach<T>(options),
+    forLoop: <T = Serializable>(options: ConstructorParameters<typeof ForLoop<T>>[0]) => this.flowGuard('forloop') && new ForLoop<T>(options),
+    eachPlayer: (options: ConstructorParameters<typeof EachPlayer<P>>[0]) => this.flowGuard('eachPlayer') && new EachPlayer<P>(options),
+    everyPlayer: (options: ConstructorParameters<typeof EveryPlayer<P>>[0]) => this.flowGuard('everyplayer') && new EveryPlayer<P>(options),
+    ifElse: (options: ConstructorParameters<typeof IfElse>[0]) => this.flowGuard('ifelse') && new IfElse(options),
+    switchCase: <T extends Serializable>(options: ConstructorParameters<typeof SwitchCase<T>>[0]) => this.flowGuard('switchCase') && new SwitchCase<T>(options),
   };
 
   /**
