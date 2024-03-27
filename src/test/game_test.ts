@@ -569,16 +569,35 @@ describe('Game', () => {
     it("hides spaces", () => {
       const hand = game.create(Space, 'hand', { player: players[0] });
       hand.create(Card, 'AH', { suit: 'H', pip: 1 });
-      hand.showOnlyTo(1);
 
+      hand.blockViewFor('all-but-owner');
       expect(hand.toJSON(1)).to.deep.equal(
-        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, _visible: { default: false, except: [1] }, children: [
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, children: [
           {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
         ]}
       );
-
       expect(hand.toJSON(2)).to.deep.equal(
-        { className: 'Space', _id: 2, _visible: { default: false, except: [1] } }
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2 }
+      );
+
+      hand.blockViewFor('all');
+      expect(hand.toJSON(1)).to.deep.equal(
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2 }
+      );
+      expect(hand.toJSON(2)).to.deep.equal(
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2 }
+      );
+
+      hand.blockViewFor('none');
+      expect(hand.toJSON(1)).to.deep.equal(
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, children: [
+          {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
+        ]}
+      );
+      expect(hand.toJSON(2)).to.deep.equal(
+        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, children: [
+          {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
+        ]}
       );
     });
 

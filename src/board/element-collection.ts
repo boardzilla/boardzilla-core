@@ -16,6 +16,7 @@ import type { GameElement } from './index.js'
 export type Sorter<T> = keyof T | ((e: T) => number | string)
 
 import type { Player } from '../player/index.js';
+import { BaseGame } from './game.js';
 
 /**
  * A query filter can be one of 3 different forms:
@@ -276,7 +277,7 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * Show these elements to all players
    * @category Visibility
    */
-  showToAll() {
+  showToAll(this: ElementCollection<Piece<BaseGame>>) {
     for (const el of this) {
       delete(el._visible);
     }
@@ -286,7 +287,7 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * Show these elements only to the given player
    * @category Visibility
    */
-  showOnlyTo(player: Player | number) {
+  showOnlyTo(this: ElementCollection<Piece<BaseGame>>, player: Player | number) {
     if (typeof player !== 'number') player = player.position;
     for (const el of this) {
       el._visible = {
@@ -301,7 +302,7 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * any other players.
    * @category Visibility
    */
-  showTo(...player: Player[] | number[]) {
+  showTo(this: ElementCollection<Piece<BaseGame>>, ...player: Player[] | number[]) {
     if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
     for (const el of this) {
       if (el._visible === undefined) continue;
@@ -318,7 +319,7 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * Hide this element from all players
    * @category Visibility
    */
-  hideFromAll() {
+  hideFromAll(this: ElementCollection<Piece<BaseGame>>) {
     for (const el of this) {
       el._visible = {default: false};
     }
@@ -329,7 +330,7 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * any other players.
    * @category Visibility
    */
-  hideFrom(...player: Player[] | number[]) {
+  hideFrom(this: ElementCollection<Piece<BaseGame>>, ...player: Player[] | number[]) {
     if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
     for (const el of this) {
       if (el._visible?.default === false && !el._visible.except) continue;
