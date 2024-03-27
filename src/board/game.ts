@@ -94,7 +94,18 @@ export type ActionLayout = {
 export type BoardSize = {
   name: string,
   aspectRatio: number,
-  fixed?: 'landscape' | 'portrait'
+  orientation?: 'landscape' | 'portrait',
+  scaling?: 'fit' | 'scroll',
+  flipped?: boolean
+};
+
+export type BoardSizeMatcher = {
+  name: string,
+  aspectRatio: number | { min: number, max: number },
+  mobile?: boolean,
+  desktop?: boolean,
+  orientation?: 'landscape' | 'portrait',
+  scaling?: 'fit' | 'scroll'
 };
 
 export interface BaseGame extends Game<BaseGame, BasePlayer> {}
@@ -460,7 +471,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
 
   _ui: ElementUI<this> & {
     boardSize: BoardSize,
-    boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize
+    boardSizes?: (screenX: number, screenY: number, mobile: boolean) => BoardSize | undefined
     setupLayout?: (game: G, player: P, boardSize: string) => void;
     frame?: Box;
     disabledDefaultAppearance?: boolean;
@@ -495,7 +506,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   }
 
   setBoardSize(boardSize: BoardSize) {
-    if (boardSize.name !== this._ui.boardSize.name) {
+    if (boardSize.name !== this._ui.boardSize.name || boardSize.aspectRatio !== this._ui.boardSize.aspectRatio) {
       this._ui.boardSize = boardSize;
     }
   }

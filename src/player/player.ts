@@ -56,11 +56,11 @@ export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer 
   /**
    * Provide list of attributes that are hidden from other players
    */
-  static hide<P extends BasePlayer>(this: {new(): P; hiddenAttributes: (keyof P)[]}, ...attrs: (keyof P)[]): void {
-    this.hiddenAttributes = attrs;
+  static hide<P extends BasePlayer>(this: {new(): P; hiddenAttributes: string[]}, ...attrs: (keyof P)[]): void {
+    this.hiddenAttributes = attrs as string[];
   }
 
-  static hiddenAttributes: (keyof BasePlayer)[]
+  static hiddenAttributes: string[]
 
   isCurrent() {
     return this._players.currentPosition.includes(this.position);

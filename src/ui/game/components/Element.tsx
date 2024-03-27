@@ -488,8 +488,12 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
 
   let title: string | undefined = undefined;
   if (dev) {
-    title = `${element.constructor.name}
-  visibility: ${element._visible?.default ?? true ? "visible" : "hidden"}${element._visible?.except ? ` (except positions ${element._visible?.except.join(', ')})` : ""}
+    title = element.constructor.name;
+    if (element instanceof Piece) {
+      title += `
+  visibility: ${element._visible?.default ?? true ? "visible" : "hidden"}${element._visible?.except ? ` (except positions ${element._visible?.except.join(', ')})` : ""}`;
+    }
+    title += `
 ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && !['_size', '_visible', 'was'].includes(k)).map(([k, v]) => `  ${k}: ${typeof v === 'object' && ('isGameElement' in v.constructor || 'isPlayer' in v.constructor) ? v.toString() : JSON.stringify(v)}`).join("\n")}`;
   }
 

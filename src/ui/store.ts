@@ -86,6 +86,7 @@ export type GameStore = {
     }>
   };
   setBoardSize: () => void;
+  aspectRatio?: number;
   dragElement?: string;
   setDragElement: (el?: string) => void;
   dragOffset: {element?: string, x?: number, y?: number}; // mutable non-reactive record of drag offset
@@ -141,9 +142,8 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       window.game = gameManager.game;
       // @ts-ignore;
       for (const className of gameManager.game._ctx.classRegistry) window[className.name] = className;
-      gameManager.game.setBoardSize(
-        gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, !!globalThis.navigator?.userAgent.match(/Mobi/))
-      );
+      const boardSize = gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, !!globalThis.navigator?.userAgent.match(/Mobi/))
+      gameManager.game.setBoardSize(boardSize);
     } else {
       gameManager.players.fromJSON(update.state.players);
       gameManager.game.fromJSON(update.state.board);
@@ -372,9 +372,9 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   previousRenderedState: {sequence: -1, elements: {}},
   setBoardSize: () => set(s => {
     const boardSize = s.gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
-    if (boardSize.name !== s.gameManager.game._ui.boardSize.name && s.position) {
+    if ((boardSize.name !== s.gameManager.game._ui.boardSize.name || boardSize.aspectRatio !== s.gameManager.game._ui.boardSize.aspectRatio) && s.position) {
       s.gameManager.game.setBoardSize(boardSize);
-      updateBoard(s.gameManager, s.position);
+      return {aspectRatio: boardSize.aspectRatio, ...updateBoard(s.gameManager, s.position)};
     }
     return {};
   }),

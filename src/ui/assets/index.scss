@@ -43,19 +43,36 @@ html, body { height: 100% }
     color: #002;
     margin: 0;
     padding: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     font-family: 'DM Sans Variable', sans-serif;
     > #root {
       position: absolute;
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
+      overflow: auto;
+      &.orientation-flipped {
+        transform: rotate(90deg);
+        width: 100vh;
+        height: 100vw;
+        transform-origin: left bottom;
+        left: 0;
+        bottom: 100%;
+      }
     }
   }
 
   .full-page-cover {
     width: 100vw;
     height: 100vh;
+    #root.orientation-flipped & {
+      width: 100vh;
+      height: 100vw;
+    }
+    #root.orientation-flipped #game.scaling-scroll & {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
     position: fixed;
     left: 0;
     top: 0;
@@ -71,10 +88,28 @@ html, body { height: 100% }
   #game {
     position: absolute;
     --aspect-ratio: 1;
-    top: calc(50vh - .5 * min(100vw / var(--aspect-ratio), 100vh));
-    left: calc(50vw - .5 * min(100vw, 100vh * var(--aspect-ratio)));
-    width: min(100vw, 100vh * var(--aspect-ratio));
-    height: min(100vw / var(--aspect-ratio), 100vh);
+    &:not(.scaling-scroll) {
+      top: calc(50vh - .5 * min(100vw / var(--aspect-ratio), 100vh));
+      left: calc(50vw - .5 * min(100vw, 100vh * var(--aspect-ratio)));
+      width: min(100vw, 100vh * var(--aspect-ratio));
+      height: min(100vw / var(--aspect-ratio), 100vh);
+      #root.orientation-flipped & {
+        top: calc(50vw - .5 * min(100vh / var(--aspect-ratio), 100vw));
+        left: calc(50vh - .5 * min(100vh, 100vw * var(--aspect-ratio)));
+        width: min(100vh, 100vw * var(--aspect-ratio));
+        height: min(100vh / var(--aspect-ratio), 100vw);
+      }
+    }
+    &.scaling-scroll {
+      top: 0;
+      left: 0;
+      width: max(100vw, 100vh * var(--aspect-ratio));
+      height: max(100vw / var(--aspect-ratio), 100vh);
+      #root.orientation-flipped & {
+        width: max(100vh, 100vw * var(--aspect-ratio));
+        height: max(100vh / var(--aspect-ratio), 100vw);
+      }
+    }
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
