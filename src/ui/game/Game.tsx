@@ -76,7 +76,11 @@ export default () => {
       '--aspect-ratio',
       String(gameManager.game._ui.boardSize.aspectRatio)
     )
-    if (gameManager.game._ui.boardSize.flipped) window.document.querySelector('#root')?.classList.add('orientation-flipped');
+    if (gameManager.game._ui.boardSize.flipped) {
+      window.document.querySelector('#root')?.classList.add('orientation-flipped');
+    } else {
+      window.document.querySelector('#root')?.classList.remove('orientation-flipped');
+    }
     return () => {
       window.document.documentElement.style.removeProperty('font-size');
       window.document.documentElement.style.removeProperty('--aspect-ratio');
