@@ -133,7 +133,7 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
         cachedGame.trackMovement(false);
         cachedGame.intermediateUpdates = [];
       }
-      const gameManager = cachedGame || setup(previousState.state, {trackMovement: true});
+      const gameManager = cachedGame || setup(previousState.state, {rseed, trackMovement: true});
       gameManager.players.setCurrent(previousState.currentPlayers);
       const player = gameManager.players.atPosition(move.position)!;
       // @ts-ignore
@@ -187,6 +187,7 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
 
       for (const move of moves) {
         rseed = advanceRseed(rseed);
+        gameManager.setRandomSeed(rseed);
         gameManager.messages = [];
         gameManager.announcements = [];
         gameManager.intermediateUpdates = [];

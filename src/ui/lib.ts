@@ -1,8 +1,7 @@
 import React, { CSSProperties } from 'react'
-import DieComponent from './game/components/Die.js'
 import { SerializedArg, serializeArg } from '../action/utils.js';
 import Selection from '../action/selection.js'
-import { GameElement, Die } from '../board/index.js'
+import { GameElement } from '../board/index.js'
 
 import type { GameStore } from './store.js';
 import type { default as GameManager, SerializedMove, PendingMove } from '../game-manager.js'
@@ -458,12 +457,7 @@ export function removePlacementPiece(placement: NonNullable<GameStore['placement
 export function updateBoard(gameManager: GameManager, position: number, json?: ElementJSON[]) {
   // rerun layouts. probably optimize TODO
   gameManager.contextualizeBoardToPlayer(gameManager.players.atPosition(position));
-  gameManager.game.applyLayouts(game => {
-    game.all(Die).appearance({
-      render: (die: Die) => React.createElement(DieComponent, { die }),
-      aspectRatio: 1,
-    });
-  });
+  gameManager.game.applyLayouts();
 
   return ({ boardJSON: json || gameManager.game.allJSON() })
 }

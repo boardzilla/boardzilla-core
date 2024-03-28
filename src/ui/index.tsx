@@ -7,6 +7,7 @@ import { Game } from '../board/index.js'
 import type { User } from './Main.js'
 import type { SetupFunction } from '../index.js'
 import type { BoardSize, BoardSizeMatcher } from '../board/game.js';
+import './assets/index.scss';
 
 export { ProfileBadge } from './game/components/ProfileBadge.js';
 import {

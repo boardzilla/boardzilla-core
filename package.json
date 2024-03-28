@@ -5,11 +5,11 @@
   "license": "AGPL-3.0",
   "scripts": {
     "clean": "rm -rf dist docs",
-    "build": "tsc && node esbuild.mjs && rm -rf dist/test",
+    "build": "tsc && node esbuild.mjs && sed -ie 's/index\\.scss/index.css/' dist/ui/index.js && rm -rf dist/test",
     "prepublish": "git diff-index --quiet HEAD || (echo 'git unclean' && exit 1)",
     "prepack": "./scripts/prepack",
     "postpack": "./scripts/postpack",
-    "build:test": "tsc && node esbuild.mjs",
+    "build:test": "tsc && node esbuild.mjs && sed -ie '/index\\.scss/d' dist/ui/index.js",
     "test": "NODE_ENV=test yarn run build:test && mocha src/test/setup.js dist/test/*_test.js",
     "test:debug": "NODE_ENV=test yarn run build:test && mocha --inspect-brk --timeout 3600000 src/test/setup-debug.js dist/test/*_test.js",
     "compile": "tsc",
@@ -20,7 +20,8 @@
   "type": "module",
   "exports": {
     ".": "./entry/index.js",
-    "./index.css": "./assets/index.css"
+    "./index.css": "./assets/index.css",
+    "./components": "./entry/components/index.js"
   },
   "files": [
     "entry/**/*",

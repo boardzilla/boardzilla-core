@@ -12,7 +12,6 @@ import {
   SquareGrid,
   HexGrid,
   PieceGrid,
-  Die,
   GameElement,
 } from './board/index.js';
 
@@ -25,7 +24,6 @@ export {
   SquareGrid,
   HexGrid,
   PieceGrid,
-  Die,
   GameElement
 };
 
