@@ -40,26 +40,52 @@ export type SetupComponentProps = {
  * the setting functions {@link toggleSetting}, {@link numberSetting}, {@link
  * textSetting} or {@link choiceSetting}.
  *
- * @param options.boardSizes - A function that determines what board size to use
- * based on the player's device and viewport. The function will take the
- * following arguments:
+ * @param options.boardSizes - An array of possible boardsizes depending on the
+ * device type and viewport of the player. Each item in the list is a possible
+ * board size and must include at least a unique `name` and an
+ * `aspectRatio`. When a player joins, or resizes their screen, a layout will be
+ * chosen that meets the conditions given and is the closest fit.
  * <ul>
- * <li>screenX: The player's view port width
- * <li>screenY: The player's view port height
- * <li>mobile: true if using a mobile device
+
+ * <li>`name`: A unique name used to identify this board size. The name of the
+ * layout chosen for the player will be passed to the `layout` function below.
+ * <li>`aspectRatio`: The aspect ratio for this board size. Either a number (width
+ * / height), or an object with keys `min` and `max` with numbers that give a
+ * a possible range of aspect ratios. If providing a range, any aspect ratio
+ * within the range could be selected if it's a match for the player's
+ * viewport. You must ensure your game layout looks correct for the entire range
+ * provided.
+ * <li>`mobile`: If true, this layout will only be used for mobile devices. If
+ * false, this layout will not be used for mobile devices. If blank, it may be
+ * used in any case.
+ * <li>`desktop`: If true, this layout will only be used for desktop screens. If
+ * false, this layout will not be used for desktop. If blank, it may be used in
+ * any case.
+ * <li>`orientation`: If supplied, the layout will match a mobile screen size if
+ * either orientation matches the aspect ratio. if chosen as the best match
+ * board size, the player's screen will be locked to the given orientation.
+ * <li>`scaling`: Specifies how the screen should fit the board if it is not a
+ * perfect fit for the aspect ratio. If 'fit' the board size will be fit within
+ * the screen, with blank space on the sides or top and bottom. If 'scroll', the
+ * board will be fit to maximize it's space and scroll vertically or
+ * horizontally.
  * </ul>
- * The function should return a string indicating the layout to use, this will
- * be cached and sent to the `layout` function.
  *
  * @param options.layout - A function for declaring all UI customization in the
- * game. Typically this will include calls to {@link GameElement#layout}, {@link
+ * game. The function will receives 3 arguments:
+ * <ul>
+ * <li>`game`: The {@link Game} instance.
+ * <li>`player`: The {@link Player} who is viewing.
+ * <li>`boardSize`: The name of the selected `boardSize` from above.
+ * </ul>
+ * Typically this will include calls to {@link GameElement#layout}, {@link
  * GameElement#appearance}, {@link Game#layoutStep} and {@link
  * Game#layoutAction}.
  *
  * @param options.announcements - A list of announcements. Each is a function
  * that accepts the {@link Game} object and returns the JSX of the
- * announcement. These can be called from {@link game#announce} or {@link
- * game.finish}.
+ * announcement. These can be called from {@link Game#announce} or {@link
+ * Game#finish}.
  *
  * @param options.infoModals - A list of informational panels that appear in the
  * info sidebar. Each is an object with:
@@ -86,6 +112,7 @@ export const render = <G extends Game>(setup: SetupFunction<G>, options: {
   const setupGame: SetupFunction<G> = state => {
     const gameManager = setup(state);
     if (boardSizes instanceof Array) {
+      const bothOrientations = boardSizes.some(bs => bs.orientation === 'landscape') && boardSizes.some(bs => bs.orientation === 'portrait');
       const bss = boardSizes.map(bs => ({
         ...bs,
         aspectRatio: typeof bs.aspectRatio === 'number' ? bs.aspectRatio : { min: Math.min(bs.aspectRatio.min, bs.aspectRatio.max), max: Math.max(bs.aspectRatio.min, bs.aspectRatio.max) }
@@ -93,13 +120,14 @@ export const render = <G extends Game>(setup: SetupFunction<G>, options: {
       gameManager.game._ui.boardSizes = (screenX, screenY, mobile) => {
         let aspectRatio = screenX / screenY;
         let flipped: boolean | undefined = undefined;
-        let portrait: number, landscape: number;
-        if (aspectRatio < 1) {
-          portrait = aspectRatio;
-          landscape = 1 / aspectRatio;
-        } else {
-          portrait = 1 / aspectRatio;
-          landscape = aspectRatio;
+        let portrait = aspectRatio;
+        let landscape = aspectRatio;
+        if (mobile && !bothOrientations) {
+          if (aspectRatio < 1) {
+            landscape = 1 / aspectRatio;
+          } else {
+            portrait = 1 / aspectRatio;
+          }
         }
         const boardSize = bss.filter(
           bs => (bs.mobile ?? mobile) === mobile && (bs.desktop ?? !mobile) === !mobile
