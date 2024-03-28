@@ -342,11 +342,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     edges?: Record<string, Partial<Record<Direction, string>>>
   }
 
-  _visible?: {
-    default: boolean,
-    except?: number[]
-  }
-
   static isGameElement = true;
 
   static unserializableAttributes = ['_ctx', '_t', '_ui', 'game'];
@@ -391,6 +386,14 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    */
   toString() {
     return this.name || this.constructor.name.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+  }
+
+  isVisibleTo(_player: Player | number) {
+    return true;
+  }
+
+  isVisible() {
+    return true;
   }
 
   /**
@@ -686,109 +689,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   /**
-   * Show this element to all players
-   * @category Visibility
-   */
-  showToAll() {
-    delete(this._visible);
-  }
-
-  /**
-   * Show this element only to the given player
-   * @category Visibility
-   */
-  showOnlyTo(player: Player | number) {
-    if (typeof player !== 'number') player = player.position;
-    this._visible = {
-      default: false,
-      except: [player]
-    };
-  }
-
-  /**
-   * Show this element to the given players without changing it's visibility to
-   * any other players.
-   * @category Visibility
-   */
-  showTo(...player: Player[] | number[]) {
-    if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
-    if (this._visible === undefined) return;
-    if (this._visible.default) {
-      if (!this._visible.except) return;
-      this._visible.except = this._visible.except.filter(i => !(player as number[]).includes(i));
-    } else {
-      this._visible.except = Array.from(new Set([...(this._visible.except instanceof Array ? this._visible.except : []), ...(player as number[])]))
-    }
-  }
-
-  /**
-   * Hide this element from all players
-   * @category Visibility
-   */
-  hideFromAll() {
-    this._visible = {default: false};
-  }
-
-  /**
-   * Hide this element from the given players without changing it's visibility to
-   * any other players.
-   * @category Visibility
-   */
-  hideFrom(...player: Player[] | number[]) {
-    if (typeof player[0] !== 'number') player = (player as Player[]).map(p => p.position);
-    if (this._visible?.default === false && !this._visible.except) return;
-    if (this._visible === undefined || this._visible.default === true) {
-      this._visible = {
-        default: true,
-        except: Array.from(new Set([...(this._visible?.except instanceof Array ? this._visible.except : []), ...(player as number[])]))
-      };
-    } else {
-      if (!this._visible.except) return;
-      this._visible.except = this._visible.except.filter(i => !(player as number[]).includes(i));
-    }
-  }
-
-  /**
-   * Returns whether this element is visible to the given player
-   * @category Visibility
-   */
-  isVisibleTo(player: Player | number) {
-    if (typeof player !== 'number') player = player.position;
-    if (this._visible === undefined) return true;
-    if (this._visible.default) {
-      return !this._visible.except || !(this._visible.except.includes(player));
-    } else {
-      return this._visible.except?.includes(player) || false;
-    }
-  }
-
-  /**
-   * Returns whether this element is visible to all players, or to the current
-   * player if called when in a player context (during an action taken by a
-   * player or while the game is viewed by a given player.)
-   * @category Visibility
-   */
-  isVisible() {
-    if (this._ctx.player) return this.isVisibleTo(this._ctx.player.position);
-    return this._visible?.default !== false && (this._visible?.except ?? []).length === 0;
-  }
-
-  /**
-   * Provide list of attributes that remain visible even when these elements are
-   * not visible to players. E.g. In a game with multiple card decks with
-   * different backs, identified by Card#deck, the identity of the card when
-   * face-down is hidden, but the deck it belongs to is not, since the card art
-   * on the back would identify the deck. In this case calling
-   * `Card.revealWhenHidden('deck')` will cause all attributes other than 'deck'
-   * to be hidden when the card is face down, while still revealing which deck
-   * it is.
-   * @category Visibility
-   */
-  static revealWhenHidden<T extends GameElement>(this: ElementClass<T>, ...attrs: (string & keyof T)[]): void {
-    this.visibleAttributes = attrs;
-  }
-
-  /**
    * Create an element inside this element. This can only be called during the
    * game setup (see {@link createGame}. Any game elements that are required
    * must be created before the game starts. Elements that only appear later in
@@ -1068,7 +968,11 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     if (this._t.was) json.was = this._t.was;
     // do not expose hidden deck shuffles
     if (seenBy && this._t.was && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) json.was = this.branch();
-    if (this._t.children.length && (!seenBy || this.isVisibleTo(seenBy))) {
+    if (this._t.children.length && (
+      !seenBy || !('_screen' in this) || this._screen === undefined ||
+        (this._screen === 'all-but-owner' && this.owner?.position === seenBy) ||
+        (this._screen instanceof Array && this._screen.includes(this.owner?.position))
+    )) {
       json.children = Array.from(this._t.children.map(c => c.toJSON(seenBy)));
     }
 
