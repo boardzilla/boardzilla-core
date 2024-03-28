@@ -3,7 +3,7 @@ import { createInterface } from './interface.js';
 import { times } from './utils.js';
 
 import type { BaseGame } from './board/game.js';
-import type { GameInterface, GameUpdate } from './interface.js';
+import type { GameInterface, GameState, GameUpdate, SetupState } from './interface.js';
 import type { Argument } from './action/action.js';
 import type { SetupFunction } from './index.js';
 import type { default as GameManager, PlayerAttributes } from './game-manager.js';
@@ -43,7 +43,7 @@ class TestRunnerPlayer<G extends BaseGame> {
       selections: [],
       requireExplicitSubmit: false
     })
-    this.runner.updatePlayers();
+    this.runner.updatePlayersFromState();
   }
 
   actions() {
@@ -65,8 +65,14 @@ export class TestRunner<G extends BaseGame> {
 
   players: TestRunnerPlayer<G>[]
 
-  constructor(private setup: SetupFunction) {
-    const iface = createInterface(setup)
+  constructor(private setup: SetupFunction, mocks?: (game: G) => void) {
+    if (mocks) {
+      this.setup = (state: SetupState | GameState, options?: {
+        rseed?: string;
+        trackMovement?: boolean;
+      }) => setup(state, {...options, mocks});
+    }
+    const iface = createInterface(this.setup)
 
     this.server = {
       interface: iface,
@@ -117,7 +123,7 @@ export class TestRunner<G extends BaseGame> {
       setSetup(this.setup);
       return new TestRunnerPlayer(this, i + 1, store, p as unknown as PlayerAttributes, gameManager.game as G)
     });
-    this.updatePlayers(); // initial
+    this.updatePlayersFromState(); // initial
     return this.players
   }
 
@@ -127,6 +133,11 @@ export class TestRunner<G extends BaseGame> {
   }
 
   updatePlayers() {
+    this.server.state = this.server.gameManager.getUpdate();
+    this.updatePlayersFromState();
+  }
+
+  updatePlayersFromState() {
     for (const player of this.players) {
       const { updateState } = player.store.getState();
       const state = this.server.state!.players.find(state => state.position === player.position)!;
