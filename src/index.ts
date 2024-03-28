@@ -51,10 +51,10 @@ import type Action from './action/action.js';
 
 export type { GameManager, Action, ElementClass };
 
-export type SetupFunction<B extends Game = Game> = (
+export type SetupFunction<G extends Game = Game> = (
   state: SetupState | GameState,
-  options?: {rseed?: string, trackMovement?: boolean}
-) => GameManager<B>
+  options?: {rseed?: string, trackMovement?: boolean, mocks?: (game: G) => void}
+) => GameManager<G>
 
 declare global {
   /**
@@ -93,7 +93,7 @@ export const createGame = <G extends Game>(
   gameCreator: (game: G) => void
 ): SetupFunction<G> => (
   state: SetupState | GameState,
-  options?: {rseed?: string, trackMovement?: boolean}
+  options?: {rseed?: string, trackMovement?: boolean, mocks?: (game: G) => void}
 ): GameManager<G> => {
   const gameManager = new GameManager(playerClass, gameClass);
   const inSetup = !('board' in state);
@@ -106,6 +106,7 @@ export const createGame = <G extends Game>(
 
   // setup board to get all non-serialized setup (spaces, event handlers, graphs)
   gameCreator(gameManager.game);
+  if (options?.mocks) options.mocks(gameManager.game);
 
   // lock game from receiving any more setup
   gameManager.start();

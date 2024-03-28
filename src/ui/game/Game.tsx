@@ -14,7 +14,7 @@ import type { Argument } from '../../action/action.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [gameManager, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON]);
+  const [gameManager, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON, s.aspectRatio]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const announcement = useMemo(() => gameManager.announcements[announcementIndex], [gameManager.announcements, announcementIndex]);
@@ -68,8 +68,19 @@ export default () => {
   }, [setBoardSize]);
 
   useEffect(() => {
-    window.document.documentElement.style.setProperty('font-size', 'min(4vw / var(--aspect-ratio), 4vh)');
-    window.document.documentElement.style.setProperty('--aspect-ratio', String(gameManager.game._ui.boardSize.aspectRatio))
+    window.document.documentElement.style.setProperty(
+      'font-size',
+      `${gameManager.game._ui.boardSize.scaling === 'scroll' ? 'max' : 'min'}(4${gameManager.game._ui.boardSize.flipped ? 'vh' : 'vw'} / var(--aspect-ratio), 4${gameManager.game._ui.boardSize.flipped ? 'vw' : 'vh'})`
+    );
+    window.document.documentElement.style.setProperty(
+      '--aspect-ratio',
+      String(gameManager.game._ui.boardSize.aspectRatio)
+    )
+    if (gameManager.game._ui.boardSize.flipped) {
+      window.document.querySelector('#root')?.classList.add('orientation-flipped');
+    } else {
+      window.document.querySelector('#root')?.classList.remove('orientation-flipped');
+    }
     return () => {
       window.document.documentElement.style.removeProperty('font-size');
       window.document.documentElement.style.removeProperty('--aspect-ratio');
@@ -95,7 +106,9 @@ export default () => {
       data-board-size={gameManager.game._ui.boardSize?.name}
       data-step={step}
       className={classnames(
-        globalThis.navigator?.userAgent.match(/Mobi/) ? 'mobile' : 'desktop', {
+        globalThis.navigator?.userAgent.match(/Mobi/) ? 'mobile' : 'desktop',
+        {
+          'scaling-scroll': gameManager.game._ui.boardSize.scaling === 'scroll',
           'browser-chrome': globalThis.navigator?.userAgent.indexOf('Chrome') > -1,
           'browser-safari': globalThis.navigator?.userAgent.indexOf('Safari') > -1,
           'browser-edge': globalThis.navigator?.userAgent.indexOf('Edge') > -1,
