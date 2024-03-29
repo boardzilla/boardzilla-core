@@ -21,12 +21,11 @@
   "type": "module",
   "exports": {
     ".": "./entry/index.js",
-    "./index.css": "./dist/ui/assets/index.css",
+    "./index.css": "./entry/ui/assets/index.css",
     "./components": "./entry/components/index.js"
   },
   "files": [
-    "entry/**/*",
-    "dist/ui/assets/**/*"
+    "entry/**/*"
   ],
   "types": "entry/index.d.ts",
   "sideEffects": [
