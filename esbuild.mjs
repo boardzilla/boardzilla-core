@@ -2,7 +2,7 @@ import * as esbuild from 'esbuild'
 import {sassPlugin} from 'esbuild-sass-plugin'
 
 await esbuild.build({
-  entryPoints: ['./src/index.ts'],
+  entryPoints: ['./src/ui/assets/index.scss'],
   assetNames: '[name]',
   bundle: true,
   format: 'esm',
