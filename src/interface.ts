@@ -6,7 +6,7 @@ import type { ElementJSON } from './board/element.js';
 import type { default as GameManager, PlayerAttributes, Message, SerializedMove } from './game-manager.js';
 import type Player from './player/player.js';
 import type { FlowBranchJSON } from './flow/flow.js';
-import type { SetupFunction } from './index.js';
+import type { SetupFunction } from './game-creator.js';
 import type { SerializedArg } from './action/utils.js';
 
 export type SetupState = {

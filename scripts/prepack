@@ -4,8 +4,4 @@ set -e
 yarn clean
 yarn build
 rm -r entry
-# remove next 2 lines
-rm -r assets
-cp -r dist/ui/assets ./assets
-cp -r src/components/d6/assets dist/components/d6/assets
 mv dist entry

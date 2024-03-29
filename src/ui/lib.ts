@@ -1,4 +1,4 @@
-import React, { CSSProperties } from 'react'
+import { CSSProperties } from 'react'
 import { SerializedArg, serializeArg } from '../action/utils.js';
 import Selection from '../action/selection.js'
 import { GameElement } from '../board/index.js'

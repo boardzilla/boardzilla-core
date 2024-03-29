@@ -2,15 +2,10 @@ import chai from 'chai';
 import spies from 'chai-spies';
 
 import GameManager, { PlayerAttributes } from '../game-manager.js'
-
-import {
-  Player,
-  Game,
-  Piece,
-  Space,
-  createGame,
-  createInterface,
-} from '../index.js';
+import Player from '../player/player.js';
+import { Game, Piece, Space } from '../board/index.js';
+import { createGame } from '../game-creator.js';
+import { createInterface } from '../interface.js';
 
 chai.use(spies);
 const { expect } = chai;

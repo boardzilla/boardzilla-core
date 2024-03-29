@@ -2,8 +2,4 @@
 set -e
 
 rm -r entry
-# remove
-rm -r assets
 ln -s src entry
-# remove
-ln -s src/ui/assets assets

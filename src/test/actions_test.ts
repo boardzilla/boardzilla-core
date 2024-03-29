@@ -3,9 +3,10 @@
 import chai from 'chai';
 import spies from 'chai-spies';
 
-import { Action } from '../action/index.js';
+import Action from '../action/action.js';
 import Player from '../player/player.js';
-import { Game, PieceGrid } from '../index.js';
+import Game from '../board/game.js';
+import PieceGrid from '../board/piece-grid.js';
 import Space from '../board/space.js';
 import Piece from '../board/piece.js';
 

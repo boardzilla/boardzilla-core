@@ -5,7 +5,7 @@ import { times } from './utils.js';
 import type { BaseGame } from './board/game.js';
 import type { GameInterface, GameState, GameUpdate, SetupState } from './interface.js';
 import type { Argument } from './action/action.js';
-import type { SetupFunction } from './index.js';
+import type { SetupFunction } from './game-creator.js';
 import type { default as GameManager, PlayerAttributes } from './game-manager.js';
 
 declare global {

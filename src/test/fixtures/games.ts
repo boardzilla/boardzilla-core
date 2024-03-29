@@ -1,10 +1,10 @@
+import Player from '../../player/player.js';
 import {
   Game,
-  Player,
   Space,
   Piece,
   PieceGrid,
-} from '../../index.js';
+} from '../../board/index.js';
 
 export class TestPlayer extends Player<TestGame, TestPlayer> {
   tokens: number = 0;

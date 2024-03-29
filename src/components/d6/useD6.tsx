@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import dice from './assets/dice.ogg';
 import { times } from '../../utils.js';
 import D6 from './d6.js';
-import './assets/index.css';
+import './assets/index.scss';
 
 import type { BaseGame } from '../../board/game.js';
 

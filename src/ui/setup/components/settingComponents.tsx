@@ -1,5 +1,13 @@
 import React, { useEffect } from 'react';
-import type { SetupComponentProps } from '../../index.js'
+
+import type { User } from '../../Main.js'
+
+export type SetupComponentProps = {
+  name: string,
+  settings: Record<string, any>,
+  players: User[],
+  updateKey: (key: string, value: any) => void,
+}
 
 /**
  * Provide a game setting that can be turned on or off.

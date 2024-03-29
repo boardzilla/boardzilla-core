@@ -5,7 +5,7 @@ import Element from './components/Element.js';
 import PlayerControls from './components/PlayerControls.js';
 import InfoOverlay from './components/InfoOverlay.js';
 import Debug from './components/Debug.js';
-import { click } from '../assets/index.js';
+import click from '../assets/click.ogg.js';
 import { GameElement } from '../../board/index.js'
 import classnames from 'classnames';
 
