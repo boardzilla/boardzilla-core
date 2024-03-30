@@ -949,9 +949,34 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     });
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     const intoSelection = typeof into === 'string' ? this.selections.find(s => s.name === into) : undefined;
-    if (intoSelection?.isMulti()) throw Error("May not move into a multiple choice selection");
+    if (!intoSelection || intoSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${into as string}" must be the name of a previous chooseOnBoard`);
+    if (!pieceSelection || pieceSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${piece as string}" must be the name of a previous chooseOnBoard`);
+    if (intoSelection?.isMulti()) throw Error("Invalid move for ${this.name}: May not move into a multiple choice selection");
     if (pieceSelection && !pieceSelection.isMulti()) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
     if (intoSelection) intoSelection.clientContext = { dragFrom: pieceSelection ?? piece };
+    return this;
+  }
+
+  swap(piece1: keyof A | Piece<Game>, piece2: keyof A | Piece<Game>) {
+    this.do((args: A) => {
+      const p1 = piece1 instanceof Piece ? piece1 : args[piece1] as Piece<Game>;
+      const p2 = piece2 instanceof Piece ? piece2 : args[piece2] as Piece<Game>;
+      const parent1 = p1._t.parent!;
+      const parent2 = p2._t.parent!;
+      const pos1 = parent1._t.children.indexOf(p1);
+      const pos2 = parent2._t.children.indexOf(p2);
+      const row1 = p1.row;
+      const column1 = p1.column;
+      const row2 = p2.row;
+      const column2 = p2.column;
+      p1.putInto(parent2, { position: pos2, row: row2, column: column2 });
+      p2.putInto(parent1, { position: pos1, row: row1, column: column1 });
+    });
+    const piece1Selection = typeof piece1 === 'string' ? this.selections.find(s => s.name === piece1) : undefined;
+    const piece2Selection = typeof piece2 === 'string' ? this.selections.find(s => s.name === piece2) : undefined;
+    if (!piece1Selection || piece1Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece1 as string}" must be the name of a previous chooseOnBoard`);
+    if (!piece2Selection || piece2Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece2 as string}" must be the name of a previous chooseOnBoard`);
+    if (piece1Selection) piece1Selection.clientContext = { dragInto: piece2Selection ?? piece2 };
     return this;
   }
 
@@ -1006,7 +1031,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     rotationChoices?: number[],
   }) {
     const { prompt, confirm, validate } = options || {};
-    if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only have one placePiece");
+    if (this.selections.some(s => s.name === '__placement__')) throw Error(`invalid placePiece for ${this.name}: only one placePiece allowed`);
     const pieceSelection = this.selections.find(s => s.name === piece);
     if (!pieceSelection) throw (`No selection named ${String(piece)} for placePiece`)
     const positionSelection = this._addSelection(new Selection(

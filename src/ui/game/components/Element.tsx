@@ -18,9 +18,10 @@ import type { DirectedGraph } from 'graphology';
 
 const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
+const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
   element: GameElement,
   json: ElementJSON,
+  zIndex?: number;
   mode: 'game' | 'info' | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
@@ -77,10 +78,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const attrs = previousRender?.attrs ?? newAttrs;
 
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style || positioning || mode === 'zoom') {
-      //console.log('already moved', !!previousRender, previousRender?.movedTo, branch);
-      return;
-    }
+    if (!previousRender?.style || positioning || mode === 'zoom') return;
     const newPosition = relativeTransform;
     return {
       scaleX: previousRender.style.width / newPosition.width,
@@ -298,11 +296,12 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       Object.assign(styleBuilder, {'--transformed-to-old': String(uuid())});
     }
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
+    styleBuilder.zIndex = zIndex;
 
     if (element._rotation !== undefined) styleBuilder.transform = (styleBuilder.transform ?? '') + `rotate(${element._rotation}deg)`;
 
     return styleBuilder;
-  }, [element, dragging, mode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
+  }, [element, dragging, mode, moveTransform, branch, dragOffset, zIndex, previousRenderedState, absoluteTransform]);
 
   useEffect(() => {
     if (element._ui.appearance.effects) {
@@ -343,31 +342,40 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   }
 
   let contents: React.JSX.Element[] | React.JSX.Element = [];
+  let childZ = 0;
+  let lastKey = '0';
   for (let l = 0; l !== (element._ui.computedLayouts?.length ?? 0); l++) {
     const layout = element._ui.computedLayouts![l]
-    const layoutContents: React.JSX.Element[] = [];
-    for (const child of layout.children) {
+    const layoutContents: [React.JSX.Element, string][] = [];
+    for (let i = 0; i !== layout.children.length; i++) {
+      const child = layout.children[i];
       if (!child._ui.computedStyle || child._ui.appearance.render === false) continue;
       const childJSON = json.children?.[element._t.children.indexOf(child)];
       if (childJSON) {
         const childBranch = child.branch();
-        const key = 'isSpace' in child ? childBranch : (
-          renderedState[childBranch]?.key || (child._t.was && !child.hasChangedParent() && previousRenderedState.elements[child._t.was]?.key) || uuid()
+        const index = String(i).padStart(5, '0');
+        const key = 'isSpace' in child ? index + childBranch : (
+          renderedState[childBranch]?.key || (child._t.was && !child.hasChangedParent() && previousRenderedState.elements[child._t.was]?.key) || index + uuid()
         );
         renderedState[childBranch] ??= { key };
+        if (key < lastKey) childZ = Math.min(49, childZ + 1);
+        lastKey = key;
 
-        layoutContents.push(
+        layoutContents.push([
           <Element
             key={key}
+            zIndex={childZ}
             element={child}
             json={childJSON}
             mode={mode === 'zoom' ? 'game' : mode}
             onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
             onSelectElement={onSelectElement}
-          />
-        );
+          />,
+          key
+        ]);
       }
     }
+    const sortedContents = layoutContents.sort((a, b) => a[1] > b[1] ? 1 : -1).map(([el]) => el);
     if (layout.drawer) {
       const drawer = layout.drawer!;
       const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
@@ -388,11 +396,11 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
           <Drawer.Closed>
             {closedContent}
           </Drawer.Closed>
-          {layoutContents}
+          {sortedContents}
         </Drawer>
       );
     } else {
-      if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
+      if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{sortedContents}</div>);
     }
   }
 
@@ -592,7 +600,6 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
   //console.log('GAMEELEMENTS render', element.name);
 
   element._t.was = branch;
-  //console.log('doneMoving', branch);
   if (renderedState[branch]) {
     renderedState[branch].style = relativeTransform ?? {};
     renderedState[branch].style!.rotation = element._rotation;
