@@ -1,3 +1,14 @@
+# v0.2.3
+* Board Sizes now accepts more detailed matchers, with a range of "best fit"
+  aspect ratios, a setting to choose scrollbars or letterbox and mobile
+  orientation fixing
+* Show/hide methods moved to Piece only
+* Space now has new convenience methods to attach content show/hide event
+  handlers
+* Space now has "screen" methods to make contents completely invisible to
+  players
+* Added Test Runner mocks and updatePlayers
+
 # v0.2 Grids
 * Added subclasses of `Space` for various grids, including more options for
   square, hex and the brand new PieceGrid. These replace `Space#createGrid`.
