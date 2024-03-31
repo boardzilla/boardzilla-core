@@ -949,8 +949,8 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     });
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     const intoSelection = typeof into === 'string' ? this.selections.find(s => s.name === into) : undefined;
-    if (!intoSelection || intoSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${into as string}" must be the name of a previous chooseOnBoard`);
-    if (!pieceSelection || pieceSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${piece as string}" must be the name of a previous chooseOnBoard`);
+    if (intoSelection && intoSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${into as string}" must be the name of a previous chooseOnBoard`);
+    if (pieceSelection && pieceSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${piece as string}" must be the name of a previous chooseOnBoard`);
     if (intoSelection?.isMulti()) throw Error("Invalid move for ${this.name}: May not move into a multiple choice selection");
     if (pieceSelection && !pieceSelection.isMulti()) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
     if (intoSelection) intoSelection.clientContext = { dragFrom: pieceSelection ?? piece };
@@ -974,8 +974,8 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     });
     const piece1Selection = typeof piece1 === 'string' ? this.selections.find(s => s.name === piece1) : undefined;
     const piece2Selection = typeof piece2 === 'string' ? this.selections.find(s => s.name === piece2) : undefined;
-    if (!piece1Selection || piece1Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece1 as string}" must be the name of a previous chooseOnBoard`);
-    if (!piece2Selection || piece2Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece2 as string}" must be the name of a previous chooseOnBoard`);
+    if (piece1Selection && piece1Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece1 as string}" must be the name of a previous chooseOnBoard`);
+    if (piece2Selection && piece2Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece2 as string}" must be the name of a previous chooseOnBoard`);
     if (piece1Selection) piece1Selection.clientContext = { dragInto: piece2Selection ?? piece2 };
     return this;
   }

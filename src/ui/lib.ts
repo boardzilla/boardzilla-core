@@ -491,5 +491,6 @@ export function clearMove(): Partial<GameStore> {
     selected: undefined,
     dragElement: undefined,
     currentDrop: undefined,
+    dropSelections: [],
   }
 }

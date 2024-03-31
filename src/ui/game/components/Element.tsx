@@ -18,10 +18,9 @@ import type { DirectedGraph } from 'graphology';
 
 const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
+const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   element: GameElement,
   json: ElementJSON,
-  zIndex?: number;
   mode: 'game' | 'info' | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
@@ -29,7 +28,7 @@ const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
   const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev, boardJSON] =
     gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev, s.boardJSON]);
 
-  const [dragging, setDragging] = useState(false); // currently dragging
+  const [dragging, setDragging] = useState<{ deltaY: number, deltaX: number } | undefined>(); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
   const wrapper = useRef<HTMLDivElement | null>(null);
   const domElement = useRef<HTMLDivElement>(null);
@@ -58,12 +57,12 @@ const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
   ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
   const previousRender = useMemo(() => {
-    if (element.hasChangedParent()) {
+    if (branch !== element._t.was) {
       const previousRender = previousRenderedState.elements[element._t.was!];
       if (previousRender && previousRender.movedTo !== branch) return previousRender;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [element, branch, previousRenderedState, boardJSON]);
+  }, [element._t.was, branch, previousRenderedState, boardJSON]);
 
   const newAttrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
     !GameElement.unserializableAttributes.includes(key) &&
@@ -140,16 +139,16 @@ const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
   }, [wrapper]);
 
   useEffect(() => {
-    if (dragging && dragElement !== branch) setDragging(false);
+    if (dragging && dragElement !== branch) setDragging(undefined);
   }, [dragging, dragElement, branch]);
 
   const handleDrag = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
-    if (branch !== dragElement) setDragElement(branch);
-    setDragging(true);
     if (wrapper.current && element._ui.computedStyle) {
-      wrapper.current.style.top = `calc(${element._ui.computedStyle.top}% - ${parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y}px)`;
-      wrapper.current.style.left = `calc(${element._ui.computedStyle.left}% - ${parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x}px)`;
+      if (branch !== dragElement) setDragElement(branch);
+      const deltaY = parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y;
+      const deltaX = parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x;
+      if (Math.abs(deltaX) + Math.abs(deltaY) > 5) setDragging({deltaY, deltaX});
     }
   }, [element._ui.computedStyle, wrapper, branch, dragElement, setDragElement]);
 
@@ -171,7 +170,7 @@ const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
           wrapper.current.style.left = element._ui.computedStyle.left + '%';
         }
       }
-      setDragging(false);
+      setDragging(undefined);
       setCurrentDrop(undefined);
       setDragElement(undefined);
     }
@@ -276,32 +275,32 @@ const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
       styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, typeof val === 'number' ? `${val}%` : val])));
     }
 
-    if (dragging) {
-      delete styleBuilder.left;
-      delete styleBuilder.top;
+    if (dragging && !moveTransform && element._ui.computedStyle) {
+      styleBuilder.top = `calc(${element._ui.computedStyle.top}% - ${dragging.deltaY}px)`;
+      styleBuilder.left = `calc(${element._ui.computedStyle.left}% - ${dragging.deltaX}px)`;
     }
 
     if (moveTransform) {
-      let transformToNew = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY}) rotate(${moveTransform.rotate}deg)`;
+      let transformToOld = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY}) rotate(${moveTransform.rotate}deg)`;
 
       if (previousRenderedState.elements[element._t.was!]) previousRenderedState.elements[element._t.was!].movedTo = branch;
       if (dragOffset.element && dragOffset.element === element._t.was) {
-        transformToNew = `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + transformToNew;
+        // offset by the last drag position to prevent jump back to original position
+        transformToOld = `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + transformToOld;
         dragOffset.element = undefined;
         dragOffset.x = undefined;
         dragOffset.y = undefined;
       }
 
-      styleBuilder.transform = transformToNew;
+      styleBuilder.transform = transformToOld;
       Object.assign(styleBuilder, {'--transformed-to-old': String(uuid())});
     }
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
-    styleBuilder.zIndex = zIndex;
 
     if (element._rotation !== undefined) styleBuilder.transform = (styleBuilder.transform ?? '') + `rotate(${element._rotation}deg)`;
 
     return styleBuilder;
-  }, [element, dragging, mode, moveTransform, branch, dragOffset, zIndex, previousRenderedState, absoluteTransform]);
+  }, [element, dragging, mode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
 
   useEffect(() => {
     if (element._ui.appearance.effects) {
@@ -342,40 +341,31 @@ const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
   }
 
   let contents: React.JSX.Element[] | React.JSX.Element = [];
-  let childZ = 0;
-  let lastKey = '0';
   for (let l = 0; l !== (element._ui.computedLayouts?.length ?? 0); l++) {
     const layout = element._ui.computedLayouts![l]
-    const layoutContents: [React.JSX.Element, string][] = [];
-    for (let i = 0; i !== layout.children.length; i++) {
-      const child = layout.children[i];
+    const layoutContents: React.JSX.Element[] = [];
+    for (const child of layout.children) {
       if (!child._ui.computedStyle || child._ui.appearance.render === false) continue;
       const childJSON = json.children?.[element._t.children.indexOf(child)];
       if (childJSON) {
         const childBranch = child.branch();
-        const index = String(i).padStart(5, '0');
-        const key = 'isSpace' in child ? index + childBranch : (
-          renderedState[childBranch]?.key || (child._t.was && !child.hasChangedParent() && previousRenderedState.elements[child._t.was]?.key) || index + uuid()
+        const key = 'isSpace' in child ? childBranch : (
+          renderedState[childBranch]?.key || (child._t.was && !child.hasChangedParent() && previousRenderedState.elements[child._t.was]?.key) || uuid()
         );
         renderedState[childBranch] ??= { key };
-        if (key < lastKey) childZ = Math.min(49, childZ + 1);
-        lastKey = key;
 
-        layoutContents.push([
+        layoutContents.push(
           <Element
             key={key}
-            zIndex={childZ}
             element={child}
             json={childJSON}
             mode={mode === 'zoom' ? 'game' : mode}
             onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
             onSelectElement={onSelectElement}
-          />,
-          key
-        ]);
+          />
+        );
       }
     }
-    const sortedContents = layoutContents.sort((a, b) => a[1] > b[1] ? 1 : -1).map(([el]) => el);
     if (layout.drawer) {
       const drawer = layout.drawer!;
       const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
@@ -396,11 +386,11 @@ const Element = ({element, json, zIndex, mode, onSelectElement, onMouseLeave}: {
           <Drawer.Closed>
             {closedContent}
           </Drawer.Closed>
-          {sortedContents}
+          {layoutContents}
         </Drawer>
       );
     } else {
-      if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{sortedContents}</div>);
+      if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
     }
   }
 
@@ -596,8 +586,6 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
       </DraggableCore>
     );
   }
-
-  //console.log('GAMEELEMENTS render', element.name);
 
   element._t.was = branch;
   if (renderedState[branch]) {
