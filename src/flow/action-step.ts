@@ -27,10 +27,12 @@ export default class ActionStep extends Flow {
   type: FlowBranchNode['type'] = "action";
   optional?: string | ((args: Record<string, any>) => string);
   prompt?: string | ((args: Record<string, any>) => string); // needed if multiple board actions
+  continueIfImpossible?: boolean;
+  repeatUntil?: string;
   description?: string;
   skipIf: 'always' | 'never' | 'only-one';
 
-  constructor({ name, player, players, actions, prompt, description, optional, skipIf }: {
+  constructor({ name, player, players, actions, prompt, description, optional, continueIfImpossible, repeatUntil, skipIf }: {
     name?: string,
     players?: Player[] | ((args: Record<string, any>) => Player[]),
     player?: Player | ((args: Record<string, any>) => Player),
@@ -41,6 +43,8 @@ export default class ActionStep extends Flow {
       do?: FlowDefinition
     })[],
     prompt?: string | ((args: Record<string, any>) => string),
+    continueIfImpossible?: boolean;
+    repeatUntil?: string;
     description?: string,
     optional?: string | ((args: Record<string, any>) => string),
     skipIf?: 'always' | 'never' | 'only-one',
@@ -50,6 +54,8 @@ export default class ActionStep extends Flow {
     if (optional) this.actions.push({name: '__pass__', prompt: typeof optional === 'function' ? optional(this.flowStepArgs()) : optional});
     this.prompt = prompt;
     this.description = description;
+    this.continueIfImpossible = continueIfImpossible;
+    this.repeatUntil = repeatUntil;
     this.skipIf = skipIf ?? 'always';
     this.players = players ?? player;
   }
@@ -90,6 +96,7 @@ export default class ActionStep extends Flow {
     prompt?: string,
     description?: string,
     actions: ActionStub[],
+    continueIfImpossible?: boolean,
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
     if (!('player' in this.position)) {
@@ -103,6 +110,7 @@ export default class ActionStep extends Flow {
             prompt: typeof action.prompt === 'function' ? action.prompt(this.flowStepArgs()) : action.prompt,
             args: typeof action.args === 'function' ? action.args(this.flowStepArgs()) : action.args,
           })),
+          continueIfImpossible: this.continueIfImpossible,
           skipIf: this.skipIf,
         }
       }
@@ -121,7 +129,9 @@ export default class ActionStep extends Flow {
     name: string,
     args: Record<string, Argument>,
   }): string | undefined {
-    if (!this.allowedActions().includes(move.name)) throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
+    if ((move.name !== '__continue__' || !this.continueIfImpossible) && !this.allowedActions().includes(move.name)) {
+      throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
+    }
     const gameManager = this.gameManager;
 
     if (!gameManager.players.currentPosition.includes(move.player)) {
@@ -131,7 +141,7 @@ export default class ActionStep extends Flow {
     const player = gameManager.players.atPosition(move.player);
     if (!player) return `No such player position: ${move.player}`;
 
-    if (move.name === '__pass__') {
+    if (move.name === '__pass__' || move.name === '__continue__') {
       this.setPosition(move);
       return;
     }

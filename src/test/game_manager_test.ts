@@ -583,6 +583,41 @@ describe('GameManager', () => {
       expect(move3).not.to.be.undefined;
     });
 
+    it('deadlocked if impossible actions', () => {
+      const { playerActions } = game.flowCommands
+
+      game.defineFlow(
+        () => { game.tokens = 0 },
+        playerActions({
+          name: 'take-one',
+          players: gameManager.players,
+          actions: ['takeOne'],
+        }),
+      );
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.getPendingMoves(gameManager.players[0])).to.be.undefined;
+      expect(gameManager.phase).to.not.equal('finished');
+    });
+
+    it('continue if impossible actions', () => {
+      const { playerActions } = game.flowCommands
+
+      game.defineFlow(
+        () => { game.tokens = 0 },
+        playerActions({
+          name: 'take-one',
+          players: gameManager.players,
+          actions: ['takeOne'],
+          continueIfImpossible: true,
+        }),
+      );
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.getPendingMoves(gameManager.players[0])).to.be.undefined;
+      expect(gameManager.phase).to.equal('finished');
+    });
+
     it('action for every player', () => {
       const {
         playerActions,

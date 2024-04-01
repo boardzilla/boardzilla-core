@@ -227,6 +227,7 @@ export default class Flow {
     prompt?: string,
     description?: string,
     actions: ActionStub[],
+    continueIfImpossible?: boolean,
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
     return this.currentProcessor()?.actionNeeded(player);
