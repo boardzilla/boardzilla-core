@@ -990,7 +990,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
       '__reorder_from__', { prompt, selectOnBoard: { chooseFrom: collection }}
     ));
     const intoSelection = this._addSelection(new Selection(
-      '__reorder_to__', { prompt, selectOnBoard: { chooseFrom: collection }}
+      '__reorder_to__', { prompt, selectOnBoard: { chooseFrom: ({ __reorder_from__ }) => collection.filter(e => e !== __reorder_from__) }}
     ));
     pieceSelection.clientContext = { dragInto: intoSelection };
     intoSelection.clientContext = { dragFrom: pieceSelection };
