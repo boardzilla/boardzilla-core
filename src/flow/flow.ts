@@ -256,7 +256,7 @@ export default class Flow {
 
   /**
    * Advance flow one step and return FlowControl.complete if complete,
-   * FlowControl.ok if can continue, Do to interrupted the current loop. Returns
+   * FlowControl.ok if can continue, Do to interrupt the current loop. Returns
    * ActionStep if now waiting for player input. override for self-contained
    * flows that do not have subflows.
    */
