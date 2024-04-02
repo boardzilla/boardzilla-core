@@ -11,12 +11,14 @@ export default class D6<G extends Game = Game> extends Piece<G> {
 
   /**
    * Currently shown face
+   * @category D6
    */
   current: number = 1;
   rollSequence: number = 0;
 
   /**
    * Randomly choose a new face, causing the roll animation
+   * @category D6
    */
   roll() {
     this.current = Math.ceil((this.game.random || Math.random)() * this.sides);
