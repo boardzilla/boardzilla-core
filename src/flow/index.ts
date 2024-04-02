@@ -73,6 +73,15 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  * @param options.skipIf - One of 'always', 'never' or 'only-one' (Default
  * 'always').
  *
+ * @param options.repeatUntil - Include this option to make this action
+ * repeatable until the player passes. The pass prompt will be the supplied
+ * string, similar to `optional`
+ *
+ * @param options.continueIfImpossible - Include this option to make this action
+ * automatically skip if none of the actions are possible, either due to the
+ * action.condition or due to no valid selections being current available in the
+ * game.
+ *
  * <ul>
  * <li> only-one: If there is only valid choice in the choices given, the game
  * will skip this choice, prompting the player for subsequent choices, if any,
