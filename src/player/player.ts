@@ -60,7 +60,7 @@ export default class Player<G extends BaseGame = BaseGame, P extends BasePlayer 
     this.hiddenAttributes = attrs as string[];
   }
 
-  static hiddenAttributes: string[]
+  static hiddenAttributes: string[] = [];
 
   isCurrent() {
     return this._players.currentPosition.includes(this.position);

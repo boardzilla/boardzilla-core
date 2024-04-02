@@ -11,6 +11,8 @@ import {
   removePlacementPiece,
   decorateUIMove,
   clearMove,
+  updateControls,
+  updatePrompts,
 } from './lib.js';
 
 import { ActionDebug } from '../game-manager.js'
@@ -262,7 +264,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       return {};
     }
 
-    get().selectMove(move);
     const selected = selection.isMulti() ? (
       s.selected?.includes(element) ?
         (s.selected ?? []).filter(s => s !== element) :
@@ -271,15 +272,21 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       s.selected?.[0] === element ? [] : [element]
     );
 
-    return updateSelections({
+    const state: GameStore = {
       ...s,
       selected,
+      move,
+      pendingMoves: [move],
+      cancellable: true,
       disambiguateElement: undefined,
       uncommittedArgs: {
         ...s.uncommittedArgs,
         [selection.name]: selection.isMulti() ? selected : selected[0]
       }
-    });
+    }
+    Object.assign(state, updateControls(state));
+    Object.assign(state, updatePrompts(state));
+    return state;
   }),
 
   setPlacement: ({ column, row, rotation }) => set(s => {

@@ -424,13 +424,9 @@ export function updatePrompts(store: GameStore): Partial<GameStore> {
   const moves = [...controls.moves];
 
   const boardMoves = moves.filter(m => m.selections.some(s => s.isBoardChoice()));
-  if (!boardMoves.length) return {};
+  if (!boardMoves.length) return { boardPrompt: undefined };
 
-  if (disambiguateElement) {
-    state.boardPrompt = undefined;
-  } else if (boardMoves.length > 1) {
-    state.boardPrompt = prompt;
-  }
+  state.boardPrompt = boardMoves.length > 1 ? prompt : undefined;
 
   for (const move of boardMoves) {
     // promote a board selection prompt to the move prompt

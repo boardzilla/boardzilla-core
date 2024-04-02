@@ -13,7 +13,7 @@ const PlayerControls = ({onSubmit}: {
   if (!position || !controls) return null;
   if (!boardPrompt && controls.moves.length === 0) return null;
 
-  let visibleAction = !!boardPrompt;
+  let visibleAction = !!boardPrompt && !disambiguateElement;
 
   return (
     <div key={controls.name} className={`player-controls ${controls.name.replace(":", "-")}`} style={controls.style}>
@@ -22,7 +22,7 @@ const PlayerControls = ({onSubmit}: {
 
       {controls.moves.map((pendingMove, i) => {
         let actionDivider = false;
-        if (!disambiguateElement && (pendingMove.prompt || !pendingMove.selections[0]?.isBoardChoice())) {
+        if (pendingMove.prompt || disambiguateElement || !pendingMove.selections[0]?.isBoardChoice()) {
           actionDivider = visibleAction;
           visibleAction = true;
         }
