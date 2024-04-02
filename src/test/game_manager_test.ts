@@ -545,6 +545,32 @@ describe('GameManager', () => {
       expect(gameManager.getPendingMoves(gameManager.players[0])?.moves[0].selections[0].type).to.equal('text');
     });
 
+    it('accepts condition', () => {
+      const { playerActions, eachPlayer } = game.flowCommands
+
+      game.defineFlow(
+        () => { game.tokens = 4 },
+        eachPlayer({
+          name: 'player',
+          do: playerActions({
+            name: 'take-one',
+            condition: ({ player }) => player.position !== 2,
+            players: gameManager.players,
+            actions: ['takeOne'],
+            continueIfImpossible: true,
+          })
+        })
+      );
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.players.currentPosition).to.deep.equal([1])
+
+      gameManager.processMove({ player: gameManager.players[0], name: 'takeOne', args: {} });
+      gameManager.play();
+
+      expect(gameManager.players.currentPosition).to.deep.equal([3])
+    });
+
     it('optional actions', () => {
       const {
         playerActions,
@@ -555,13 +581,10 @@ describe('GameManager', () => {
         () => { game.tokens = 1 },
         eachPlayer({
           name: 'player',
-          do: [
-            () => {},
-            playerActions({
-              optional: 'Pass',
-              actions: ['takeOne']
-            })
-          ]
+          do: playerActions({
+            optional: 'Pass',
+            actions: ['takeOne']
+          })
         }),
       );
       gameManager.start();

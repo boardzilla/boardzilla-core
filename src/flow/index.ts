@@ -77,6 +77,9 @@ export type { FlowStep, FlowDefinition, FlowArguments } from './flow.js';
  * repeatable until the player passes. The pass prompt will be the supplied
  * string, similar to `optional`
  *
+ * @param options.condtion - Include this option to make this action
+ * automatically skip if this condition returns false.
+ *
  * @param options.continueIfImpossible - Include this option to make this action
  * automatically skip if none of the actions are possible, either due to the
  * action.condition or due to no valid selections being current available in the

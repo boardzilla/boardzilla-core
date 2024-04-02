@@ -26,12 +26,13 @@ export default class ActionStep extends Flow {
   }[];
   type: FlowBranchNode['type'] = "action";
   prompt?: string | ((args: Record<string, any>) => string); // needed if multiple board actions
+  condition?: (args: Record<string, any>) => boolean;
   continueIfImpossible?: boolean;
   repeatUntil?: boolean;
   description?: string;
   skipIf: 'always' | 'never' | 'only-one';
 
-  constructor({ name, player, players, actions, prompt, description, optional, continueIfImpossible, repeatUntil, skipIf }: {
+  constructor({ name, player, players, actions, prompt, description, optional, condition, continueIfImpossible, repeatUntil, skipIf }: {
     name?: string,
     players?: Player[] | ((args: Record<string, any>) => Player[]),
     player?: Player | ((args: Record<string, any>) => Player),
@@ -42,6 +43,7 @@ export default class ActionStep extends Flow {
       do?: FlowDefinition
     })[],
     prompt?: string | ((args: Record<string, any>) => string),
+    condition?: (args: Record<string, any>) => boolean;
     continueIfImpossible?: boolean;
     repeatUntil?: string | ((args: Record<string, any>) => string);
     description?: string,
@@ -58,6 +60,7 @@ export default class ActionStep extends Flow {
       this.actions.push({name: '__pass__', prompt: typeof optional === 'function' ? optional(this.flowStepArgs()) : optional});
     }
     this.description = description;
+    this.condition = condition;
     this.continueIfImpossible = continueIfImpossible;
     this.skipIf = skipIf ?? 'always';
     this.players = players ?? player;
@@ -77,14 +80,19 @@ export default class ActionStep extends Flow {
   }
 
   awaitingAction() {
-    return !('player' in this.position) || this.position.followups?.length;
+    if ('players' in this.position) {
+      return !this.condition || this.condition(this.flowStepArgs());
+    } else {
+      return !!this.position.followups?.length;
+    }
   }
 
   currentBlock() {
-    if (this.awaitingAction()) return;
-    const actionName = (this.position as { player: number, name: string, args: Record<string, Argument>, followups?: ActionStub[] }).name; // turn taken by `player`
-    const step = this.actions.find(a => a.name === actionName)?.do;
-    if (step) return step;
+    if ('player' in this.position && !this.position.followups?.length) {
+      const actionName = (this.position as { player: number, name: string, args: Record<string, Argument>, followups?: ActionStub[] }).name; // turn taken by `player`
+      const step = this.actions.find(a => a.name === actionName)?.do;
+      if (step) return step;
+    }
   }
 
   // current actions that can process. does not check player
