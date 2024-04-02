@@ -3,6 +3,7 @@ import { Player } from '../player/index.js';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils.js';
 
 import type { FlowArguments, FlowDefinition } from './flow.js';
+import { FlowControl } from './enums.js';
 
 export default class EachPlayer<P extends Player> extends ForLoop<P> {
   continueUntil?: (p: P) => boolean;
@@ -36,11 +37,19 @@ export default class EachPlayer<P extends Player> extends ForLoop<P> {
     this.turns = turns;
   }
 
-  setPosition(position: typeof this.position, sequence?: number, reset=true) {
-    super.setPosition(position, sequence, reset);
+  reset() {
+    super.reset();
     if (this.position.value) {
       this.gameManager.players.setCurrent(this.position.value);
     }
+  }
+
+  advance() {
+    const result = super.advance();
+    if (result === FlowControl.ok && this.position.value) {
+      this.gameManager.players.setCurrent(this.position.value);
+    }
+    return result;
   }
 
   toJSON() {

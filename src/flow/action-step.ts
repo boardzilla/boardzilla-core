@@ -4,7 +4,7 @@ import { deserialize, deserializeObject, serialize, serializeObject } from '../a
 import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
 import type { Argument, ActionStub } from '../action/action.js';
-import { LoopInterruptControl, loopInterrupt } from './enums.js';
+import { FlowControl, LoopInterruptControl, loopInterrupt } from './enums.js';
 
 export type ActionStepPosition = { // turn taken by `player`
   player: number,
@@ -25,12 +25,13 @@ export default class ActionStep extends Flow {
     do?: FlowDefinition
   }[];
   type: FlowBranchNode['type'] = "action";
-  optional?: string | ((args: Record<string, any>) => string);
   prompt?: string | ((args: Record<string, any>) => string); // needed if multiple board actions
+  continueIfImpossible?: boolean;
+  repeatUntil?: boolean;
   description?: string;
   skipIf: 'always' | 'never' | 'only-one';
 
-  constructor({ name, player, players, actions, prompt, description, optional, skipIf }: {
+  constructor({ name, player, players, actions, prompt, description, optional, continueIfImpossible, repeatUntil, skipIf }: {
     name?: string,
     players?: Player[] | ((args: Record<string, any>) => Player[]),
     player?: Player | ((args: Record<string, any>) => Player),
@@ -41,15 +42,23 @@ export default class ActionStep extends Flow {
       do?: FlowDefinition
     })[],
     prompt?: string | ((args: Record<string, any>) => string),
+    continueIfImpossible?: boolean;
+    repeatUntil?: string | ((args: Record<string, any>) => string);
     description?: string,
     optional?: string | ((args: Record<string, any>) => string),
     skipIf?: 'always' | 'never' | 'only-one',
   }) {
     super({ name });
     this.actions = actions.map(a => typeof a === 'string' ? {name: a} : a);
-    if (optional) this.actions.push({name: '__pass__', prompt: typeof optional === 'function' ? optional(this.flowStepArgs()) : optional});
     this.prompt = prompt;
+    if (repeatUntil) {
+      this.repeatUntil = true;
+      this.actions.push({name: '__pass__', prompt: typeof repeatUntil === 'function' ? repeatUntil(this.flowStepArgs()) : repeatUntil});
+    } else if (optional) {
+      this.actions.push({name: '__pass__', prompt: typeof optional === 'function' ? optional(this.flowStepArgs()) : optional});
+    }
     this.description = description;
+    this.continueIfImpossible = continueIfImpossible;
     this.skipIf = skipIf ?? 'always';
     this.players = players ?? player;
   }
@@ -72,8 +81,8 @@ export default class ActionStep extends Flow {
   }
 
   currentBlock() {
-    if (!('player' in this.position) || this.position.followups) return;
-    const actionName = this.position.name;
+    if (this.awaitingAction()) return;
+    const actionName = (this.position as { player: number, name: string, args: Record<string, Argument>, followups?: ActionStub[] }).name; // turn taken by `player`
     const step = this.actions.find(a => a.name === actionName)?.do;
     if (step) return step;
   }
@@ -90,6 +99,7 @@ export default class ActionStep extends Flow {
     prompt?: string,
     description?: string,
     actions: ActionStub[],
+    continueIfImpossible?: boolean,
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
     if (!('player' in this.position)) {
@@ -103,6 +113,7 @@ export default class ActionStep extends Flow {
             prompt: typeof action.prompt === 'function' ? action.prompt(this.flowStepArgs()) : action.prompt,
             args: typeof action.args === 'function' ? action.args(this.flowStepArgs()) : action.args,
           })),
+          continueIfImpossible: this.continueIfImpossible,
           skipIf: this.skipIf,
         }
       }
@@ -121,7 +132,9 @@ export default class ActionStep extends Flow {
     name: string,
     args: Record<string, Argument>,
   }): string | undefined {
-    if (!this.allowedActions().includes(move.name)) throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
+    if ((move.name !== '__continue__' || !this.continueIfImpossible) && !this.allowedActions().includes(move.name)) {
+      throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
+    }
     const gameManager = this.gameManager;
 
     if (!gameManager.players.currentPosition.includes(move.player)) {
@@ -131,7 +144,7 @@ export default class ActionStep extends Flow {
     const player = gameManager.players.atPosition(move.player);
     if (!player) return `No such player position: ${move.player}`;
 
-    if (move.name === '__pass__') {
+    if (move.name === '__pass__' || move.name === '__continue__') {
       this.setPosition(move);
       return;
     }
@@ -167,8 +180,17 @@ export default class ActionStep extends Flow {
       if (followups[0].player) {
         this.gameManager.players.setCurrent(followups[0].player);
       }
+    } else if ('followups' in this.position && this.position.followups?.length) {
+      // completed all followups - revert to current player
+      this.gameManager.players.setCurrent(this.position.player);
     }
     this.setPosition(position);
+  }
+
+  advance() {
+    if (!this.repeatUntil || ('name' in this.position && this.position.name === '__pass__')) return FlowControl.complete;
+    this.reset();
+    return FlowControl.ok;
   }
 
   toJSON(forPlayer=true) {

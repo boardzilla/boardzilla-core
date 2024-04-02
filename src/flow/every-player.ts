@@ -3,7 +3,7 @@ import { FlowControl, LoopInterruptControl } from './enums.js';
 
 import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
 import type { Player, PlayerCollection } from '../player/index.js';
-import { Argument } from '../action/action.js';
+import type { Argument } from '../action/action.js';
 
 export type EveryPlayerPosition = {positions: FlowBranchJSON[][], completed: (boolean | undefined)[]};
 
@@ -120,7 +120,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
 
   // intercept super.playOneStep so a single branch doesn't signal complete
   // without us checking all branches
-  playOneStep(): {name?: string, signal: LoopInterruptControl} | FlowControl | undefined {
+  playOneStep(): {name?: string, signal: LoopInterruptControl} | FlowControl | Flow {
     // step through each player over top of the normal super stepping
     const player = this.getPlayers().findIndex((_, p) => this.completed[p] === undefined);
 
@@ -130,14 +130,14 @@ export default class EveryPlayer<P extends Player> extends Flow {
         let result = super.playOneStep();
 
         // capture the complete state ourselves, pretend everything is fine
-        if (!result || result === FlowControl.complete) this.completed![player] = !!result;
+        if (result instanceof Flow || result === FlowControl.complete) this.completed![player] = result === FlowControl.complete;
         result = FlowControl.ok;
         return result;
       }, true);
     }
 
     // no more players to step through. return the all-complete
-    return this.completed.every(r => r) ? FlowControl.complete : undefined;
+    return this.completed.every(r => r) ? FlowControl.complete : this;
   }
 
   toString(): string {

@@ -264,7 +264,17 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   play() {
     if (this.phase === 'finished') return;
     if (this.phase !== 'started') throw Error('cannot call play until started');
-    this.flow.play();
+
+    const currentProcessor = this.flow.play();
+    if (currentProcessor && 'continueIfImpossible' in currentProcessor && currentProcessor.continueIfImpossible) {
+      // check if move is impossible and advance here
+      const possible = this.players.allCurrent().some(player => this.getPendingMoves(player) !== undefined);
+      if (!possible) {
+        console.debug(`Continuing past playerActions "${currentProcessor.name}" with no possible moves`);
+        this.flow.processMove({ player: this.players.currentPosition[0], name: '__continue__', args: {} });
+        this.play();
+      }
+    }
   }
 
   // given a player's move (minimum a selected action), attempts to process
@@ -289,7 +299,14 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     });
   }
 
-  allowedActions(player: P, debug?: ActionDebug): {step?: string, prompt?: string, description?: string, skipIf: 'always' | 'never' | 'only-one', actions: ActionStub[]} {
+  allowedActions(player: P, debug?: ActionDebug): {
+    step?: string,
+    prompt?: string,
+    description?: string,
+    skipIf: 'always' | 'never' | 'only-one',
+    continueIfImpossible?: boolean,
+    actions: ActionStub[]
+  } {
     const actions: ActionStub[] = this.godMode ? Object.keys(this.godModeActions()).map(name => ({ name })) : [];
     if (!player.isCurrent()) return {
       actions,
@@ -327,61 +344,64 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   getPendingMoves(player: P, name?: string, args?: Record<string, Argument>, debug?: ActionDebug): {step?: string, prompt?: string, moves: PendingMove[]} | undefined {
     if (this.phase === 'finished') return;
     const allowedActions = this.allowedActions(player, debug);
-    if (!allowedActions.actions.length) return;
-    const { step, prompt, actions, skipIf } = allowedActions;
+    let possibleActions: string[] = [];
 
-    if (!name) {
-      let possibleActions: string[] = [];
-      let pendingMoves: PendingMove[] = [];
-      for (const action of actions) {
-        if (action.name === '__pass__') {
-          possibleActions.push('__pass__');
-          pendingMoves.push({
-            name: '__pass__',
-            args: {},
-            selections: [
-              new Selection('__action__', { prompt: action.prompt, value: '__pass__' }).resolve({})
-            ]
-          });
-          if (debug) {
-            debug['__pass__'] = { args: {} };
-          }
-        } else {
-          const playerAction = this.getAction(action.name, player)
-          const args = action.args || {}
-          let submoves = playerAction._getPendingMoves(args, debug);
-          if (submoves !== undefined) {
-            possibleActions.push(action.name);
-            // no sub-selections to show so just create a prompt selection of this action
-            // if an explcit confirm is required, this would be where to add the logic for it, e.g. playerAction.explicit? => selection[0].confirm
-            if (submoves.length === 0 || skipIf === 'never' || (skipIf === 'only-one' && actions.length > 1)) {
-              submoves = [{
-                name: action.name,
-                prompt: action.prompt,
-                args,
-                selections: [
-                  new Selection('__action__', {
-                    prompt: action.prompt ?? playerAction.prompt,
-                    value: action.name,
-                    skipIf
-                  }).resolve({})
-                ]
-              }];
+    if (allowedActions.actions.length) {
+      const { step, prompt, actions, skipIf } = allowedActions;
+
+      if (!name) {
+        let pendingMoves: PendingMove[] = [];
+        for (const action of actions) {
+          if (action.name === '__pass__') {
+            possibleActions.push('__pass__');
+            pendingMoves.push({
+              name: '__pass__',
+              args: {},
+              selections: [
+                new Selection('__action__', { prompt: action.prompt, value: '__pass__' }).resolve({})
+              ]
+            });
+            if (debug) {
+              debug['__pass__'] = { args: {} };
             }
-            pendingMoves = pendingMoves.concat(submoves);
           } else {
-            console.debug(`Action ${action.name} not allowed because no valid selections exist`);
+            const playerAction = this.getAction(action.name, player)
+            const args = action.args || {}
+            let submoves = playerAction._getPendingMoves(args, debug);
+            if (submoves !== undefined) {
+              possibleActions.push(action.name);
+              // no sub-selections to show so just create a prompt selection of this action
+              // if an explcit confirm is required, this would be where to add the logic for it, e.g. playerAction.explicit? => selection[0].confirm
+              if (submoves.length === 0 || skipIf === 'never' || (skipIf === 'only-one' && actions.length > 1)) {
+                submoves = [{
+                  name: action.name,
+                  prompt: action.prompt,
+                  args,
+                  selections: [
+                    new Selection('__action__', {
+                      prompt: action.prompt ?? playerAction.prompt,
+                      value: action.name,
+                      skipIf
+                    }).resolve({})
+                  ]
+                }];
+              }
+              pendingMoves = pendingMoves.concat(submoves);
+            } else {
+              console.debug(`Action ${action.name} not allowed because no valid selections exist`);
+            }
           }
         }
+
+        if (possibleActions.length) return { step, prompt, moves: pendingMoves};
+
+      } else { // action provided
+        if (name === '__pass__') return { step, prompt, moves: [] };
+        const moves = this.getAction(name, player)?._getPendingMoves(args || {}, debug);
+        if (moves) return { step, prompt, moves };
       }
-
-      if (!possibleActions.length) return undefined;
-      return { step, prompt, moves: pendingMoves};
-
-    } else {
-      if (name === '__pass__') return { step, prompt, moves: [] };
-      const moves = this.getAction(name, player)?._getPendingMoves(args || {}, debug);
-      if (moves) return { step, prompt, moves };
     }
+
+    return undefined;
   }
 }

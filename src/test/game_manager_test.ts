@@ -8,6 +8,8 @@ import {
   Game,
   Piece,
   Space,
+  createGame,
+  createInterface,
 } from '../index.js';
 
 chai.use(spies);
@@ -558,11 +560,13 @@ describe('GameManager', () => {
         () => { game.tokens = 1 },
         eachPlayer({
           name: 'player',
-          do: playerActions({
-            players: gameManager.players,
-            optional: 'Pass',
-            actions: ['takeOne']
-          })
+          do: [
+            () => {},
+            playerActions({
+              optional: 'Pass',
+              actions: ['takeOne']
+            })
+          ]
         }),
       );
       gameManager.start();
@@ -581,6 +585,126 @@ describe('GameManager', () => {
       expect(gameManager.getPendingMoves(gameManager.players[2])?.moves.length).to.equal(1);
       const move3 = gameManager.processMove({ player: gameManager.players[2], name: 'takeOne', args: {} });
       expect(move3).not.to.be.undefined;
+    });
+
+    it('repeatUntil actions', () => {
+      const actionSpy = chai.spy();
+      const {
+        playerActions,
+        eachPlayer,
+      } = game.flowCommands
+
+      game.defineFlow(
+        () => { game.tokens = 8 },
+        eachPlayer({
+          name: 'player',
+          do: playerActions({
+            name: 'repeat',
+            repeatUntil: 'Pass',
+            actions: [
+              { name: 'takeOne', do: actionSpy },
+              'declare'
+            ]
+          })
+        }),
+      );
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.getPendingMoves(gameManager.players[0])?.moves.length).to.equal(3);
+      const move1 = gameManager.processMove({ player: gameManager.players[0], name: '__pass__', args: {} });
+      expect(move1).to.be.undefined;
+      gameManager.play();
+
+      expect(gameManager.players.currentPosition).to.deep.equal([2])
+      const move2 = gameManager.processMove({ player: gameManager.players[1], name: 'takeOne', args: {} });
+      expect(move2).to.be.undefined;
+      gameManager.play();
+      expect(actionSpy).to.have.been.called.once;
+
+      expect(gameManager.players.currentPosition).to.deep.equal([2]);
+      expect(gameManager.getPendingMoves(gameManager.players[1])?.moves.length).to.equal(3);
+      const move3 = gameManager.processMove({ player: gameManager.players[1], name: 'declare', args: {d: 'hi'} });
+      expect(move3).to.be.undefined;
+      gameManager.play();
+      expect(actionSpy).to.have.been.called.once;
+
+      expect(gameManager.players.currentPosition).to.deep.equal([2]);
+      expect(gameManager.getPendingMoves(gameManager.players[1])?.moves.length).to.equal(3);
+      const move4 = gameManager.processMove({ player: gameManager.players[1], name: '__pass__', args: {} });
+      expect(move4).to.be.undefined;
+      gameManager.play();
+
+      expect(gameManager.players.currentPosition).to.deep.equal([3]);
+    });
+
+    it('deadlocked if impossible actions', () => {
+      const { playerActions } = game.flowCommands
+
+      game.defineFlow(
+        () => { game.tokens = 0 },
+        playerActions({
+          name: 'take-one',
+          players: gameManager.players,
+          actions: ['takeOne'],
+        }),
+      );
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.getPendingMoves(gameManager.players[0])).to.be.undefined;
+      expect(gameManager.phase).to.not.equal('finished');
+    });
+
+    it('continue if impossible actions', () => {
+      const { playerActions } = game.flowCommands
+
+      game.defineFlow(
+        () => { game.tokens = 0 },
+        playerActions({
+          name: 'take-one',
+          players: gameManager.players,
+          actions: ['takeOne'],
+          continueIfImpossible: true,
+        }),
+      );
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.getPendingMoves(gameManager.players[0])).to.be.undefined;
+      expect(gameManager.phase).to.equal('finished');
+    });
+
+    it('continue if impossible actions in interface', () => {
+      const { playerActions } = game.flowCommands
+
+      const iface = createInterface(
+        createGame(TestPlayer, TestGame, game => {
+          game.defineActions({
+            takeOne: player => game.action({
+              prompt: 'take one counter',
+              condition: game.tokens > 0
+            }).do(() => {
+              game.tokens --;
+              player.tokens ++;
+            }),
+          });
+          game.defineFlow(
+            () => { game.tokens = 0 },
+            playerActions({
+              name: 'take-one',
+              players: gameManager.players,
+              actions: ['takeOne'],
+              continueIfImpossible: true,
+            }),
+          );
+        })
+      );
+
+      const initialState = iface.initialState({
+        players: players,
+        settings: {},
+        randomSeed: ''
+      });
+
+      expect(initialState.game.phase).to.equal('finished');
     });
 
     it('action for every player', () => {
