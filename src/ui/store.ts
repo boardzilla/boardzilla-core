@@ -22,7 +22,7 @@ import type { BaseGame } from '../board/game.js'
 import type { GameElement, Piece, PieceGrid } from '../board/index.js'
 import type Selection from '../action/selection.js'
 import type { Argument } from '../action/action.js'
-import type { SetupFunction } from '../index.js'
+import type { SetupFunction } from '../game-creator.js'
 import type { GameState } from '../interface.js';
 import type { ResolvedSelection } from '../action/selection.js';
 

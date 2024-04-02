@@ -5,7 +5,7 @@ import Setup from './setup/Setup.js';
 import Queue from './queue.js';
 
 import type { GameState } from '../interface.js';
-import type { SetupComponentProps } from './index.js';
+import type { SetupComponentProps } from './setup/components/settingComponents.js';
 
 export type User = {
   id: string;

@@ -1,11 +1,9 @@
 import chai from 'chai';
 
-import {
-  Game,
-  Player,
-  times,
-  createGame,
-} from '../index.js';
+import Game from '../board/game.js';
+import Player from '../player/player.js';
+import { times } from '../utils.js';
+import { createGame } from '../game-creator.js';
 import { createGameStore } from '../ui/store.js';
 
 import type { SerializedMove } from '../game-manager.js';

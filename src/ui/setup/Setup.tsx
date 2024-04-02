@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import Seating from './components/Seating.js';
 import { gameStore } from '../store.js';
 
-import { SetupComponentProps } from '../index.js';
+import type { SetupComponentProps } from './components/settingComponents.js';
 import type { User, UpdatePlayersMessage, GameSettings } from '../Main.js';
 
 export default ({ users, players, minPlayers, maxPlayers, setupComponents, settings, seatCount, onUpdatePlayers, onUpdateSettings }: {

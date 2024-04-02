@@ -9,7 +9,6 @@ export { default as FixedGrid } from './fixed-grid.js';
 export { default as SquareGrid } from './square-grid.js';
 export { default as HexGrid } from './hex-grid.js';
 export { default as PieceGrid } from './piece-grid.js';
-export { default as Die } from './die.js';
 export { default as Game } from './game.js';
 
 export type { ActionLayout } from './game.js';

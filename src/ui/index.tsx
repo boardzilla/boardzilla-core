@@ -3,31 +3,19 @@ import { createRoot } from 'react-dom/client';
 import { gameStore } from './store.js';
 import Main from './Main.js'
 import { Game } from '../board/index.js'
+import './assets/index.scss';
 
-import type { User } from './Main.js'
-import type { SetupFunction } from '../index.js'
+import type { SetupFunction } from '../game-creator.js'
 import type { BoardSize, BoardSizeMatcher } from '../board/game.js';
+import type { SetupComponentProps } from './setup/components/settingComponents.js';
 
 export { ProfileBadge } from './game/components/ProfileBadge.js';
-import {
-  toggleSetting,
-  numberSetting,
-  textSetting,
-  choiceSetting
-} from './setup/components/settingComponents.js';
 export {
   toggleSetting,
   numberSetting,
   textSetting,
   choiceSetting
-};
-
-export type SetupComponentProps = {
-  name: string,
-  settings: Record<string, any>,
-  players: User[],
-  updateKey: (key: string, value: any) => void,
-}
+} from './setup/components/settingComponents.js';
 
 /**
  * The core function called to customize the game's UI.

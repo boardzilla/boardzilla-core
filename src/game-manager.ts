@@ -1,7 +1,6 @@
 import {
   Space,
   Piece,
-  Die,
   GameElement
 } from './board/index.js';
 import { Action, Selection } from './action/index.js';
@@ -94,7 +93,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   constructor(playerClass: {new(...a: any[]): P}, gameClass: ElementClass<G>, elementClasses: ElementClass[] = []) {
     this.players = new PlayerCollection<P>();
     this.players.className = playerClass;
-    this.game = new gameClass({ gameManager: this, classRegistry: [GameElement, Space, Piece, Die, ...elementClasses]})
+    this.game = new gameClass({ gameManager: this, classRegistry: [GameElement, Space, Piece, ...elementClasses]})
     this.players.game = this.game;
   }
 
