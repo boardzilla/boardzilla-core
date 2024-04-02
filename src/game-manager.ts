@@ -264,7 +264,17 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   play() {
     if (this.phase === 'finished') return;
     if (this.phase !== 'started') throw Error('cannot call play until started');
-    this.flow.play();
+
+    const currentProcessor = this.flow.play();
+    if (currentProcessor && 'continueIfImpossible' in currentProcessor && currentProcessor.continueIfImpossible) {
+      // check if move is impossible and advance here
+      const possible = this.players.allCurrent().some(player => this.getPendingMoves(player) !== undefined);
+      if (!possible) {
+        console.debug(`Continuing past playerActions "${currentProcessor.name}" with no possible moves`);
+        this.flow.processMove({ player: this.players.currentPosition[0], name: '__continue__', args: {} });
+        this.play();
+      }
+    }
   }
 
   // given a player's move (minimum a selected action), attempts to process
@@ -389,16 +399,9 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
         if (name === '__pass__') return { step, prompt, moves: [] };
         const moves = this.getAction(name, player)?._getPendingMoves(args || {}, debug);
         if (moves) return { step, prompt, moves };
-        return undefined;
       }
     }
 
-    if (allowedActions.continueIfImpossible) {
-      console.debug(`Continuing past playerActions "${allowedActions.step}" with no possible moves`);
-      this.flow.processMove({ player: player.position, name: '__continue__', args: {} });
-      this.play();
-      return this.getPendingMoves(player, name, args, debug);
-    }
     return undefined;
-}
+  }
 }

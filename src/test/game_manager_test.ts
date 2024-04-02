@@ -8,6 +8,8 @@ import {
   Game,
   Piece,
   Space,
+  createGame,
+  createInterface,
 } from '../index.js';
 
 chai.use(spies);
@@ -616,6 +618,41 @@ describe('GameManager', () => {
       gameManager.play();
       expect(gameManager.getPendingMoves(gameManager.players[0])).to.be.undefined;
       expect(gameManager.phase).to.equal('finished');
+    });
+
+    it('continue if impossible actions in interface', () => {
+      const { playerActions } = game.flowCommands
+
+      const iface = createInterface(
+        createGame(TestPlayer, TestGame, game => {
+          game.defineActions({
+            takeOne: player => game.action({
+              prompt: 'take one counter',
+              condition: game.tokens > 0
+            }).do(() => {
+              game.tokens --;
+              player.tokens ++;
+            }),
+          });
+          game.defineFlow(
+            () => { game.tokens = 0 },
+            playerActions({
+              name: 'take-one',
+              players: gameManager.players,
+              actions: ['takeOne'],
+              continueIfImpossible: true,
+            }),
+          );
+        })
+      );
+
+      const initialState = iface.initialState({
+        players: players,
+        settings: {},
+        randomSeed: ''
+      });
+
+      expect(initialState.game.phase).to.equal('finished');
     });
 
     it('action for every player', () => {

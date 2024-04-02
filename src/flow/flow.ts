@@ -256,22 +256,22 @@ export default class Flow {
 
   /**
    * Advance flow one step and return FlowControl.complete if complete,
-   * FlowControl.ok if can continue, Do to interrupted the current
-   * loop. Returns undefined if now waiting for player input. override
-   * for self-contained flows that do not have subflows.
+   * FlowControl.ok if can continue, Do to interrupted the current loop. Returns
+   * ActionStep if now waiting for player input. override for self-contained
+   * flows that do not have subflows.
    */
-  playOneStep(): {loop?: string, signal: LoopInterruptControl} | FlowControl | undefined {
+  playOneStep(): {loop?: string, signal: LoopInterruptControl} | FlowControl | Flow {
     const step = this.step;
-    let result: {loop?: string, signal: LoopInterruptControl} | FlowControl | undefined = FlowControl.complete;
+    let result: {loop?: string, signal: LoopInterruptControl} | FlowControl | Flow = FlowControl.complete;
     if (step instanceof Function) {
       if (!loopInterrupt[0]) step(this.flowStepArgs());
       result = FlowControl.complete;
-      if (loopInterrupt[0]) result = loopInterrupt.shift();
+      if (loopInterrupt[0]) result = loopInterrupt.shift()!;
     } else if (step instanceof Flow) {
-      if ('awaitingAction' in step && (step as ActionStep).awaitingAction()) return; // awaiting action
+      if ('awaitingAction' in step && (step as ActionStep).awaitingAction()) return step as ActionStep; // awaiting action
       result = step.playOneStep();
     }
-    if (result === FlowControl.ok || !result) return result;
+    if (result === FlowControl.ok || result instanceof Flow) return result;
     if (result !== FlowControl.complete) {
       if ('interrupt' in this && typeof this.interrupt === 'function' && (!result.loop || result.loop === this.name)) return this.interrupt(result.signal)
       return result;
@@ -292,7 +292,7 @@ export default class Flow {
     return this.advance();
   }
 
-  // play until action required (returns list) or game over
+  // play until action required (returns ActionStep) or game over
   play() {
     let step;
     do {
@@ -300,6 +300,7 @@ export default class Flow {
       if (step) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
     } while (step === FlowControl.ok && this.gameManager.phase !== 'finished')
     //console.debug("Game Flow:\n" + this.stacktrace());
+    if (step instanceof Flow) return step;
     if (typeof step === 'object') {
       if (step.signal === LoopInterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
       if (step.signal === LoopInterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
