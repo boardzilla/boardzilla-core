@@ -365,11 +365,13 @@ describe('Actions', () => {
       game.create(Space, 'space-2');
       space1.create(Piece, 'piece-1');
       space1.create(Piece, 'piece-2');
+      space1.create(Piece, 'piece-3');
+      space1.create(Piece, 'piece-4');
     });
 
     it('chooseOnBoard', () => {
-      const boardAction = new Action({
-      }).chooseOnBoard('piece', game.all(Piece));
+      const boardAction = new Action({})
+        .chooseOnBoard('piece', game.all(Piece));
       const moves = boardAction._getPendingMoves({});
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
@@ -378,18 +380,39 @@ describe('Actions', () => {
     });
 
     it('moves', () => {
-      const boardAction = new Action({
-      }).chooseOnBoard('piece', game.all(Piece)).move('piece', game.first('space-2')!);
+      const boardAction = new Action({})
+        .chooseOnBoard('piece', game.all(Piece))
+        .move('piece', game.first('space-2')!);
       boardAction._process(player, {piece: game.first('piece-1')!});
-      expect(game.first('space-1')!.all(Piece).length).to.equal(1);
+      expect(game.first('space-1')!.all(Piece).length).to.equal(3);
       expect(game.first('space-2')!.all(Piece).length).to.equal(1);
     });
 
+    it('swaps', () => {
+      const boardAction = new Action({})
+        .chooseOnBoard('piece', game.all(Piece))
+        .chooseOnBoard('piece2', game.all(Piece))
+        .swap('piece', 'piece2');
+      boardAction._process(player, {piece: game.first('piece-1')!, piece2: game.first('piece-3')!});
+      expect(game.first('space-1')!.first(Piece)!.name).to.equal('piece-3');
+      expect(game.first('space-1')!.firstN(2, Piece)!.last()!.name).to.equal('piece-2');
+      expect(game.first('space-1')!.firstN(3, Piece)!.last()!.name).to.equal('piece-1');
+    });
+
+    it('reorders', () => {
+      const boardAction = new Action({}).reorder(game.all(Piece));
+      boardAction._process(player, {__reorder_from__: game.first('piece-1')!, __reorder_to__: game.first('piece-3')!});
+      expect(game.first('space-1')!.first(Piece)!.name).to.equal('piece-2');
+      expect(game.first('space-1')!.firstN(2, Piece)!.last()!.name).to.equal('piece-3');
+      expect(game.first('space-1')!.firstN(3, Piece)!.last()!.name).to.equal('piece-1');
+    });
+
     it('places', () => {
-      const boardAction = new Action({
-      }).chooseOnBoard('piece', game.all(Piece)).placePiece('piece', game.first('space-2') as PieceGrid<Game>);
+      const boardAction = new Action({})
+        .chooseOnBoard('piece', game.all(Piece))
+        .placePiece('piece', game.first('space-2') as PieceGrid<Game>);
       boardAction._process(player, {piece: game.first('piece-1')!, "__placement__": [3, 2]});
-      expect(game.first('space-1')!.all(Piece).length).to.equal(1);
+      expect(game.first('space-1')!.all(Piece).length).to.equal(3);
       expect(game.first('space-2')!.all(Piece).length).to.equal(1);
       const piece = game.first('piece-1')!;
       expect(piece.row).to.equal(2);

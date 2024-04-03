@@ -771,8 +771,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    */
   destroy() {
     if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be destroy once game has started.');
-    const position = this._t.parent!._t.children.indexOf(this);
-    this._t.parent!._t.children.splice(position, 1);
+    const position = this.position();
+    this._t.parent?._t.children.splice(position, 1);
   }
 
   /**
@@ -789,6 +789,13 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   /**
+   * Returns the index of this element within its parent, starting at zero
+   */
+  position() {
+    return this._t.parent?._t.children.indexOf(this) ?? -1;
+  }
+
+  /**
    * Returns a string identifying the tree position of the element suitable for
    * anonymous reference
    * @internal
@@ -797,9 +804,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     const branches = [];
     let node = this as GameElement;
     while (node._t.parent) {
-      const index = node._t.parent._t.children.indexOf(node);
+      const index = node.position();
       if (index === -1) throw Error(`Reference to element ${this.constructor.name}${this.name ? ':' + this.name : ''} is no longer current`);
-      branches.unshift(node._t.parent._t.children.indexOf(node));
+      branches.unshift(index);
       node = node._t.parent;
     }
     branches.unshift(this._ctx.removed === node ? 1 : 0);

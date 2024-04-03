@@ -310,7 +310,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
 
   _addSelection(selection: Selection) {
     if (this.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
-    if (this.mutated) throw Error(`Choices may not be added to the ${this.name} action after a do/move. This may need to be split into separate actions.`);
+    if (this.mutated) console.warn(`Adding a choice ("${selection.name}") after behavior in the "${this.name}" action is valid but players will need to perform the choices before the behavior.`);
     this.selections.push(selection);
     return selection;
   }
@@ -949,10 +949,58 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     });
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     const intoSelection = typeof into === 'string' ? this.selections.find(s => s.name === into) : undefined;
-    if (intoSelection?.isMulti()) throw Error("May not move into a multiple choice selection");
+    if (intoSelection && intoSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${into as string}" must be the name of a previous chooseOnBoard`);
+    if (pieceSelection && pieceSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${piece as string}" must be the name of a previous chooseOnBoard`);
+    if (intoSelection?.isMulti()) throw Error("Invalid move for ${this.name}: May not move into a multiple choice selection");
     if (pieceSelection && !pieceSelection.isMulti()) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
     if (intoSelection) intoSelection.clientContext = { dragFrom: pieceSelection ?? piece };
     return this;
+  }
+
+  swap(piece1: keyof A | Piece<Game>, piece2: keyof A | Piece<Game>) {
+    this.do((args: A) => {
+      const p1 = piece1 instanceof Piece ? piece1 : args[piece1] as Piece<Game>;
+      const p2 = piece2 instanceof Piece ? piece2 : args[piece2] as Piece<Game>;
+      const parent1 = p1._t.parent!;
+      const parent2 = p2._t.parent!;
+      const pos1 = p1.position();
+      const pos2 = p2.position();
+      const row1 = p1.row;
+      const column1 = p1.column;
+      const row2 = p2.row;
+      const column2 = p2.column;
+      p1.putInto(parent2, { position: pos2, row: row2, column: column2 });
+      p2.putInto(parent1, { position: pos1, row: row1, column: column1 });
+    });
+    const piece1Selection = typeof piece1 === 'string' ? this.selections.find(s => s.name === piece1) : undefined;
+    const piece2Selection = typeof piece2 === 'string' ? this.selections.find(s => s.name === piece2) : undefined;
+    if (piece1Selection && piece1Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece1 as string}" must be the name of a previous chooseOnBoard`);
+    if (piece2Selection && piece2Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece2 as string}" must be the name of a previous chooseOnBoard`);
+    if (piece1Selection) piece1Selection.clientContext = { dragInto: piece2Selection ?? piece2 };
+    return this;
+  }
+
+  reorder(collection: GameElement[], options?: {
+    prompt?: string | ((args: A) => string),
+  }) {
+    const { prompt } = options || {};
+    if (this.selections.some(s => s.name === '__reorder_from__')) throw Error(`Invalid reorder for ${this.name}: only one reorder allowed`);
+    if (collection.some(c => c._t.parent !== collection[0]._t.parent)) throw Error(`Invalid reorder for ${this.name}: all elements must belong to the same parent`);
+    const pieceSelection = this._addSelection(new Selection(
+      '__reorder_from__', { prompt, selectOnBoard: { chooseFrom: collection }}
+    ));
+    const intoSelection = this._addSelection(new Selection(
+      '__reorder_to__', { prompt, selectOnBoard: { chooseFrom: ({ __reorder_from__ }) => collection.filter(e => e !== __reorder_from__) }}
+    ));
+    pieceSelection.clientContext = { dragInto: intoSelection };
+    intoSelection.clientContext = { dragFrom: pieceSelection };
+    this.do((args: A) => {
+      const reorderFrom = args['__reorder_from__'] as Piece<Game>;
+      const reorderTo = args['__reorder_to__'] as Piece<Game>;
+      let position = reorderTo.position();
+      reorderFrom.putInto(reorderFrom._t.parent!, { position });
+    });
+    return this as unknown as Action<A & {__reorder_to__: Piece<Game>, __reorder_from__: number}>;
   }
 
   /**
@@ -1006,20 +1054,19 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     rotationChoices?: number[],
   }) {
     const { prompt, confirm, validate } = options || {};
-    if (this.selections.some(s => s.name === '__placement__')) throw Error("An action may only have one placePiece");
+    if (this.selections.some(s => s.name === '__placement__')) throw Error(`Invalid placePiece for ${this.name}: only one placePiece allowed`);
     const pieceSelection = this.selections.find(s => s.name === piece);
     if (!pieceSelection) throw (`No selection named ${String(piece)} for placePiece`)
     const positionSelection = this._addSelection(new Selection(
       '__placement__', { prompt, confirm, validation: validate, selectPlaceOnBoard: {piece, rotationChoices: options?.rotationChoices} }
     ));
     positionSelection.clientContext = { placement: { piece, into } };
-    this.moves.push((args: A & {__placement__: number[]}) => {
+    this.do((args: A & {__placement__: number[]}) => {
       const selectedPiece = args[piece];
       if (!(selectedPiece instanceof Piece)) throw Error(`Cannot place piece selection named ${String(piece)}. Returned ${selectedPiece} instead of a piece`);
       selectedPiece.putInto(into, { column: args['__placement__'][0], row: args['__placement__'][1] });
       selectedPiece.rotation = args['__placement__'][2];
     });
-    this.order.push('move');
     if (pieceSelection) pieceSelection.clientContext = { dragInto: into };
     return this as unknown as Action<A & {__placement__: number[]} & {[key in T]: { column: number, row: number }}>;
   }
