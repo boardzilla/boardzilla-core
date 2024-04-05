@@ -145,7 +145,6 @@ export default class Flow {
             player: number,
             name: string,
             args: Record<string, Argument>,
-            followups?: ActionStub[]
           };
           args[position!.name] = position!.args;
         }

@@ -97,7 +97,6 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
    */
   godMode = false;
   winner: P[] = [];
-  followups: ActionStub[] = [];
 
   constructor(playerClass: {new(...a: any[]): P}, gameClass: ElementClass<G>, elementClasses: ElementClass[] = []) {
     this.players = new PlayerCollection<P>();

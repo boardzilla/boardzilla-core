@@ -292,7 +292,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    */
   followUp(action: ActionStub) {
     Do.subflow('__followup__', action);
-    //this._ctx.gameManager.followups.push(action);
   }
 
   flowGuard = (name: string): true => {

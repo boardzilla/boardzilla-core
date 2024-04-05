@@ -53,7 +53,6 @@ describe('Flow', () => {
     ]});
     const gameManager = {
       flow: testFlow,
-      followups: [],
       players: {
         currentPosition: [1],
         atPosition: () => ({position: 1}),
@@ -586,7 +585,6 @@ describe('Loop short-circuiting', () => {
     ]});
     const gameManager = {
       flow: shortLoop,
-      followups: [],
       players: {
         currentPosition: [1],
         atPosition: () => ({position: 1}),
@@ -619,7 +617,6 @@ describe('Loop short-circuiting', () => {
     });
     const gameManager = {
       flow: shortLoop,
-      followups: [],
       players: {
         currentPosition: [1],
         atPosition: () => ({position: 1}),
