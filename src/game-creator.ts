@@ -60,7 +60,7 @@ export const createGame = <G extends Game>(
     gameManager.announcements = state.announcements;
     gameManager.game.fromJSON(state.board);
     gameManager.players.assignAttributesFromJSON(state.players);
-    gameManager.flow.setBranchFromJSON(state.position);
+    gameManager.setFlowFromJSON(state.position);
   } else {
     gameManager.players.assignAttributesFromJSON(state.players);
   }

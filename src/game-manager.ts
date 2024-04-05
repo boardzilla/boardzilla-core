@@ -5,7 +5,8 @@ import {
 } from './board/index.js';
 import { Action, Selection } from './action/index.js';
 import { Player, PlayerCollection } from './player/index.js';
-import Flow from './flow/flow.js';
+import Flow, { FlowBranchJSON } from './flow/flow.js';
+import ActionStep from './flow/action-step.js';
 
 import random from 'random-seed';
 
@@ -55,13 +56,21 @@ export type ActionDebug = Record<string, {
   impossible?: boolean
 }>
 
+export type FlowStackJSON = {
+  name?: string,
+  args?: Record<string, any>,
+  currentPosition: number[],
+  stack: FlowBranchJSON[]
+}
+
 /**
  * Game manager is used to coordinate other classes, the {@link Game}, the
  * {@link Player}'s, the {@link Action}'s and the {@link Flow}.
  * @category Core
  */
 export default class GameManager<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> {
-  flow: Flow;
+  flows: Record<string, Flow> = {}; // list of defined flows, including at minimum __main__
+  flowState: FlowStackJSON[] = []; // current state for all flows. only the active one is hydrated
   /**
    * The players in this game. See {@link Player}
    */
@@ -122,7 +131,96 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
       throw Error("No players");
     }
     this.phase = 'started';
-    this.flow.reset();
+    this.players.currentPosition = [...this.players].map(p => p.position)
+    this.flowState = [{stack: [], currentPosition: this.players.currentPosition}];
+    this.flows['__main__'].reset();
+  }
+
+  play(): void {
+    if (this.phase === 'finished') return;
+    if (this.phase !== 'started') throw Error('cannot call play until started');
+
+    const result = this.flow().play();
+    if (result instanceof Flow) {
+      if ('continueIfImpossible' in result && result.continueIfImpossible) {
+        // check if move is impossible and advance here
+        const possible = this.players.allCurrent().some(player => this.getPendingMoves(player) !== undefined);
+        if (!possible) {
+          console.debug(`Continuing past playerActions "${result.name}" with no possible moves`);
+          this.flow().processMove({ player: this.players.currentPosition[0], name: '__continue__', args: {} });
+          this.play();
+        }
+      }
+      // now awaiting action
+    } else if (result) {
+      // proceed to new subflow
+      for (const flow of result.reverse()) this.beginSubflow(flow);
+      this.play();
+    } else {
+      // completed this flow, go up the stack
+      if (this.flowState.length > 1) {
+        this.flowState.shift();
+        this.hydrateFlow(this.flowState[0]);
+        this.play();
+      } else {
+        this.game.finish();
+      }
+    }
+  }
+
+  flow() {
+    if (this.flowState[0].name === '__followup__' && !this.flows.__followup__) {
+      const actions = this.flowState[0].args as ActionStub;
+      const followup = new ActionStep({ name: '__followup__', player: actions.player, actions: [actions] });
+      followup.gameManager = this;
+      this.flows.__followup__ = followup;
+    }
+    return this.flows[this.flowState[0].name ?? '__main__'];
+  }
+
+  getFlowStep(name: string) {
+    for (const flow of Object.values(this.flows)) {
+      const step = flow.getStep(name);
+      if (step) return step;
+    }
+  }
+
+  beginSubflow(flow: {name: string, args: Record<string, any>}) {
+    this.flowState[0].stack = this.flow().branchJSON();
+    this.flowState[0].currentPosition = this.players.currentPosition;
+    this.flowState.unshift({
+      name: flow.name,
+      args: flow.args,
+      currentPosition: this.players.currentPosition,
+      stack: []
+    });
+    if (flow.name === '__followup__') delete this.flows.__followup__;
+    this.flow().reset();
+  }
+
+  setFlowFromJSON(json: FlowStackJSON[]) {
+    this.flowState = json;
+    this.hydrateFlow(json[0]);
+  }
+
+  hydrateFlow({ name, args, stack, currentPosition }: FlowStackJSON) {
+    this.flows[name ?? '__main__'].setBranchFromJSON(stack);
+    this.flows[name ?? '__main__'].args = args;
+    if (name === '__followup__') delete this.flows.__followup__;
+    this.players.currentPosition = currentPosition;
+  }
+
+  flowJSON(player: boolean = false) {
+    return this.flowState.map(({ name }) => {
+      const flow = this.flows[name ?? '__main__'];
+      const json: FlowStackJSON = {
+        stack: flow.branchJSON(!!player),
+        currentPosition: this.players.currentPosition
+      };
+      if (name && name !== '__main__') json.name = name;
+      if (flow.args) json.args = flow.args;
+      return json;
+    });
   }
 
   /**
@@ -134,7 +232,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     return {
       players: this.players.map(p => p.toJSON() as PlayerAttributes), // TODO scrub for player
       settings: this.settings,
-      position: this.flow.branchJSON(!!player),
+      position: this.flowJSON(!!player),
       board: this.game.allJSON(player?.position),
       sequence: this.sequence,
       messages: this.messages.filter(m => player && (!m.position || m.position === player?.position)),
@@ -212,7 +310,9 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
       }
     }
 
-    if (!this.actions[name]) throw Error(`No action found: "${name}". All actions must be specified in defineActions()`);
+    if (!this.actions[name]) {
+      throw Error(`No action found: "${name}". All actions must be specified in defineActions()`);
+    }
 
     return this.inContextOfPlayer(player, () => {
       const action = this.actions[name](player);
@@ -260,41 +360,28 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     };
   }
 
-  play() {
-    if (this.phase === 'finished') return;
-    if (this.phase !== 'started') throw Error('cannot call play until started');
-
-    const currentProcessor = this.flow.play();
-    if (currentProcessor && 'continueIfImpossible' in currentProcessor && currentProcessor.continueIfImpossible) {
-      // check if move is impossible and advance here
-      const possible = this.players.allCurrent().some(player => this.getPendingMoves(player) !== undefined);
-      if (!possible) {
-        console.debug(`Continuing past playerActions "${currentProcessor.name}" with no possible moves`);
-        this.flow.processMove({ player: this.players.currentPosition[0], name: '__continue__', args: {} });
-        this.play();
-      }
-    }
-  }
-
   // given a player's move (minimum a selected action), attempts to process
   // it. if not, returns next selection for that player, plus any implied partial
   // moves
   processMove({ player, name, args }: Move): string | undefined {
     if (this.phase === 'finished') return 'Game is finished';
-    let error: string | undefined;
-    return this.inContextOfPlayer(player as P, () => {
+    let result: string | {name: string, args: Record<string, any>}[] | undefined;
+    return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[name]) {
         const godModeAction = this.godModeActions()[name];
-        error = godModeAction._process(player, args);
+        result = godModeAction._process(player, args);
       } else {
-        error = this.flow.processMove({
+        result = this.flow().processMove({
           name,
           player: player.position,
           args
         });
+        if (result instanceof Array) {
+          for (const flow of result.reverse()) this.beginSubflow(flow);
+        }
       }
-      console.debug(`Received move from player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => `${k}: ${v}`).join(', ')}}) ${error ? '❌ ' + error : ( this.followups ? this.followups.map(f => `⮕ ${f.name}({${Object.entries(f.args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}})`) : '✅')}`);
-      return error;
+      console.debug(`Received move from player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => `${k}: ${v}`).join(', ')}}) ${result ? (typeof result === 'string' ? '❌ ' + result : `⮕ ${result[0].name}({${Object.entries(result[0].args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}})`) : '✅'}`);
+      return typeof result === 'string' ? result : undefined;
     });
   }
 
@@ -312,7 +399,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
       skipIf: 'always',
     };
 
-    const actionStep = this.flow.actionNeeded(player);
+    const actionStep = this.flow().actionNeeded(player);
     if (actionStep?.actions) {
       for (const allowedAction of actionStep.actions) {
         if (allowedAction.name === '__pass__') {

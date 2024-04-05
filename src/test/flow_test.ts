@@ -28,14 +28,12 @@ describe('Flow', () => {
   let stepSpy2: (...a: any[]) => any;
   let actionSpy: (...a: any[]) => any;
   let playSpy: (...a: any[]) => any;
-  let finishSpy: (...a: any[]) => any;
 
   beforeEach(() => {
     stepSpy1 = chai.spy();
     stepSpy2 = chai.spy();
     actionSpy = chai.spy(() => {});
     playSpy = chai.spy((a: string) => {a});
-    finishSpy = chai.spy()
     testFlow = new Flow({ name: 'test', do: [
       () => stepSpy1(),
       () => stepSpy2(),
@@ -65,7 +63,7 @@ describe('Flow', () => {
         play: { _process: actionSpy, messages: [] },
         pass: { _process: () => {}, messages: [] }
       }[a]),
-      game: { finish: finishSpy },
+      game: { },
     };
     // @ts-ignore mock gameManager
     testFlow.gameManager = gameManager;
@@ -130,20 +128,20 @@ describe('Flow', () => {
     testFlow.setBranchFromJSON([
       { type: 'main', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
+      { type: 'action', name: 'play-or-pass' }
     ]);
     testFlow.playOneStep();
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: "main", name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
+      { type: 'action', name: 'play-or-pass' }
     ]);
   });
   it('receives action', () => {
     testFlow.setBranchFromJSON([
       { type: "main", name: "test", sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
+      { type: 'action', name: 'play-or-pass' }
     ]);
     testFlow.processMove({ name: 'play', args: {a: 'violin'}, player: 1 });
     expect(actionSpy).to.have.been.called();
@@ -157,7 +155,7 @@ describe('Flow', () => {
     testFlow.setBranchFromJSON([
       { type: 'main', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
+      { type: 'action', name: 'play-or-pass' }
     ]);
     expect(() => testFlow.processMove({ name: 'play', args: {a: 'violin'}, player: 2 })).to.throw;
   });
@@ -178,7 +176,7 @@ describe('Flow', () => {
     testFlow.setBranchFromJSON([
       { type: 'main', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
+      { type: 'action', name: 'play-or-pass' }
     ]);
     testFlow.processMove({ name: 'pass', args: {}, player: 1 });
     expect(testFlow.branchJSON()).to.deep.equals([
@@ -192,14 +190,14 @@ describe('Flow', () => {
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: 'main', name: 'test', position: null, sequence: 3 },
       { type: 'switch-case', name: 'step4', position: { index: 0, value: true, default: false }, sequence: 1 },
-      { type: 'action', name: 'play-or-pass', position: {players: undefined} }
+      { type: 'action', name: 'play-or-pass' }
     ]);
     testFlow.processMove({ name: 'pass', args: {}, player: 1 });
-    testFlow.play();
+    const result = testFlow.play();
     expect(testFlow.branchJSON()).to.deep.equals([
       { type: 'main', name: 'test', position: null, sequence: 4 }
     ]);
-    expect(finishSpy).to.have.been.called();
+    expect(result).to.be.undefined;
   });
   it('serializes', () => {
     const branch: FlowBranchJSON[] = [

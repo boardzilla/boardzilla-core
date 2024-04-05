@@ -22,15 +22,21 @@ import {
 
 const history: SerializedMove[] = [];
 
-globalThis.window = {
-  clearTimeout: () => {},
-  top: { postMessage: ({ data }: { data: SerializedMove }) => history.push(data) }
-} as unknown as typeof globalThis.window;
-
 const { expect } = chai;
 
 describe('UI', () => {
-  beforeEach(() => history.splice(0, history.length));
+  beforeEach(() => {
+    globalThis.window = {
+      clearTimeout: () => {},
+      top: { postMessage: ({ data }: { data: SerializedMove }) => history.push(data) }
+    } as unknown as typeof globalThis.window;
+    history.splice(0);
+  });
+
+  afterEach(() => {
+    // @ts-ignore
+    delete globalThis.window;
+  });
 
   it("presents moves", () => {
 
@@ -49,6 +55,7 @@ describe('UI', () => {
     const store = getGameStore(starterGame);
 
     updateStore(store, 2, {tokens: 4});
+
     let state = store.getState();
     const token = state.gameManager.game.first(Token)!;
     expect(state.pendingMoves?.length).to.equal(1);

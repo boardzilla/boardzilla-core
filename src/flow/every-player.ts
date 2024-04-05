@@ -1,5 +1,5 @@
 import Flow from './flow.js';
-import { FlowControl, LoopInterruptControl } from './enums.js';
+import { FlowControl, InterruptControl } from './enums.js';
 
 import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
 import type { Player, PlayerCollection } from '../player/index.js';
@@ -109,7 +109,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
     player: number,
     name: string,
     args: Record<string, Argument>,
-  }): string | undefined {
+  }): string | {name: string, args: Record<string, any>}[] | undefined {
     const player = this.getPlayers().findIndex(p => p.position === move.player);
     if (player < 0) throw Error(`Cannot process action from ${move.player}`);
     return this.withPlayer(player, () => {
@@ -120,7 +120,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
 
   // intercept super.playOneStep so a single branch doesn't signal complete
   // without us checking all branches
-  playOneStep(): {name?: string, signal: LoopInterruptControl} | FlowControl | Flow {
+  playOneStep(): {name?: any, signal: InterruptControl}[] | FlowControl | Flow {
     // step through each player over top of the normal super stepping
     const player = this.getPlayers().findIndex((_, p) => this.completed[p] === undefined);
 

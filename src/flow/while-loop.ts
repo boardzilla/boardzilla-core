@@ -2,7 +2,7 @@ import Flow from './flow.js';
 import { FlowControl } from './enums.js';
 
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
-import { LoopInterruptControl } from './enums.js';
+import { InterruptControl } from './enums.js';
 
 export type WhileLoopPosition = { index: number, value?: any };
 
@@ -60,10 +60,10 @@ export default class WhileLoop extends Flow {
     return FlowControl.complete;
   }
 
-  interrupt(signal: LoopInterruptControl) {
-    if (signal === LoopInterruptControl.continue) return this.advance();
-    if (signal === LoopInterruptControl.repeat) return this.repeat();
-    if (signal === LoopInterruptControl.break) return this.exit();
+  interrupt(signal: InterruptControl) {
+    if (signal === InterruptControl.continue) return this.advance();
+    if (signal === InterruptControl.repeat) return this.repeat();
+    if (signal === InterruptControl.break) return this.exit();
   }
 
   allSteps() {

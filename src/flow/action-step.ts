@@ -4,16 +4,14 @@ import { deserialize, deserializeObject, serialize, serializeObject } from '../a
 import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
 import type { Argument, ActionStub } from '../action/action.js';
-import { FlowControl, LoopInterruptControl, loopInterrupt } from './enums.js';
+import { FlowControl, InterruptControl, interruptSignal } from './enums.js';
 
 export type ActionStepPosition = { // turn taken by `player`
   player: number,
   name: string,
   args: Record<string, Argument>,
   followups?: ActionStub[]
-} | { // waiting for `players`
-  players: number[]
-};
+} | undefined // waiting;
 
 export default class ActionStep extends Flow {
   players?: Player | Player[] | ((args: Record<string, any>) => Player | Player[]); // if restricted to a particular player list. otherwise uses current player
@@ -67,9 +65,13 @@ export default class ActionStep extends Flow {
   }
 
   reset() {
+    this.setPosition(undefined);
+  }
+
+  setPosition(position: ActionStepPosition) {
+    super.setPosition(position);
     const players = this.getPlayers();
     if (players) this.gameManager.players.setCurrent(players);
-    this.setPosition({players});
   }
 
   getPlayers() {
@@ -80,7 +82,7 @@ export default class ActionStep extends Flow {
   }
 
   awaitingAction() {
-    if ('players' in this.position) {
+    if (!this.position) {
       return !this.condition || this.condition(this.flowStepArgs());
     } else {
       return !!this.position.followups?.length;
@@ -88,7 +90,7 @@ export default class ActionStep extends Flow {
   }
 
   currentBlock() {
-    if ('player' in this.position && !this.position.followups?.length) {
+    if (this.position && !this.position.followups?.length) {
       const actionName = (this.position as { player: number, name: string, args: Record<string, Argument>, followups?: ActionStub[] }).name; // turn taken by `player`
       const step = this.actions.find(a => a.name === actionName)?.do;
       if (step) return step;
@@ -97,12 +99,12 @@ export default class ActionStep extends Flow {
 
   // current actions that can process. does not check player
   allowedActions(): string[] {
-    return 'followups' in this.position && this.position.followups?.length ? [this.position.followups[0].name] : (
-      'player' in this.position ? [] : this.actions.map(a => a.name)
+    return this.position && this.position.followups?.length ? [this.position.followups[0].name] : (
+      this.position ? [] : this.actions.map(a => a.name)
     );
   }
 
-  actionNeeded(player: Player): {
+  actionNeeded(player?: Player): {
     step?: string,
     prompt?: string,
     description?: string,
@@ -110,8 +112,8 @@ export default class ActionStep extends Flow {
     continueIfImpossible?: boolean,
     skipIf: 'always' | 'never' | 'only-one';
   } | undefined {
-    if (!('player' in this.position)) {
-      if (!player || !this.position.players || this.position.players.includes(player.position)) {
+    if (!this.position) {
+      if (!player || player.isCurrent()) {
         return {
           prompt: typeof this.prompt === 'function' ? this.prompt(this.flowStepArgs()) : this.prompt,
           description: this.description,
@@ -135,11 +137,12 @@ export default class ActionStep extends Flow {
     }
   }
 
+  // returns error (string) or subflow {args, name} or ok (undefined)
   processMove(move: {
     player: number,
     name: string,
     args: Record<string, Argument>,
-  }): string | undefined {
+  }): string | {name: string, args: Record<string, any>}[] | undefined {
     if ((move.name !== '__continue__' || !this.continueIfImpossible) && !this.allowedActions().includes(move.name)) {
       throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
     }
@@ -163,15 +166,17 @@ export default class ActionStep extends Flow {
     if (error) {
       // failed with a selection required
       return error;
-    } else if (loopInterrupt[0]) {
-      const loop = this.currentLoop(loopInterrupt[0].loop);
+    } else if (interruptSignal[0]) {
+      const interrupt = interruptSignal.splice(0);
+      if (interrupt[0].signal === InterruptControl.subflow) return interrupt.map(s => s.data as {name: string, args: Record<string, any>});
+      const loop = this.currentLoop(interrupt[0].data);
       if (!loop) {
-        if (loopInterrupt[0].loop) throw Error(`No loop found "${loopInterrupt[0].loop}" for interrupt`);
-        if (loopInterrupt[0].signal === LoopInterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
-        if (loopInterrupt[0].signal === LoopInterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
-        if (loopInterrupt[0].signal === LoopInterruptControl.break) throw Error("Cannot use Do.break when not in a loop");
+        if (interrupt[0].data) throw Error(`No loop found "${interrupt[0].data}" for interrupt`);
+        if (interrupt[0].signal === InterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
+        if (interrupt[0].signal === InterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
+        throw Error("Cannot use Do.break when not in a loop");
       } else {
-        loop.interrupt(loopInterrupt.shift()!.signal);
+        loop.interrupt(interrupt[0].signal);
         return;
       }
     } else if (gameManager.followups.length > 0) {
@@ -181,28 +186,32 @@ export default class ActionStep extends Flow {
     }
 
     // succeeded
-    const followups = ('followups' in this.position && this.position.followups?.length ? this.position.followups.slice(1) : []).concat(gameManager.followups ?? []);
-    const position: ActionStepPosition = 'followups' in this.position ? {...this.position, followups: undefined} : move;
+    const followups = (this.position?.followups?.length ? this.position.followups.slice(1) : []).concat(gameManager.followups ?? []);
+    const position: ActionStepPosition = this.position ? {...this.position, followups: undefined} : move;
     if (followups.length) {
       position.followups = followups;
       if (followups[0].player) {
         this.gameManager.players.setCurrent(followups[0].player);
       }
-    } else if ('followups' in this.position && this.position.followups?.length) {
+    } else if (this.position?.followups?.length) {
       // completed all followups - revert to current player
       this.gameManager.players.setCurrent(this.position.player);
     }
     this.setPosition(position);
   }
 
+  playOneStep(): {data?: any, signal: InterruptControl}[] | FlowControl | Flow {
+    return this.awaitingAction() ? this : super.playOneStep();
+  }
+
   advance() {
-    if (!this.repeatUntil || ('name' in this.position && this.position.name === '__pass__')) return FlowControl.complete;
+    if (!this.repeatUntil || this.position?.name === '__pass__') return FlowControl.complete;
     this.reset();
     return FlowControl.ok;
   }
 
   toJSON(forPlayer=true) {
-    if ('player' in this.position) {
+    if (this.position) {
       const json: any = {
         player: this.position.player,
         name: this.position.name,
@@ -218,11 +227,11 @@ export default class ActionStep extends Flow {
       }
       return json;
     }
-    return { players: this.getPlayers() };
+    return undefined;
   }
 
   fromJSON(position: any) {
-    if (!position) return {players: undefined};
+    if (!position) return undefined;
     return !('player' in position) ? position : {
       ...position,
       args: deserializeObject(position.args ?? {}, this.gameManager.game) as Record<string, Argument>,
@@ -244,18 +253,15 @@ export default class ActionStep extends Flow {
   }
 
   visualize() {
-    const args = this.position && ('args' in this.position) && '{' + Object.entries(this.position.args).map(([k, v]) => `${k}: ${v}`).join(', ') + '}'
+    const args = this.position && '{' + Object.entries(this.position.args).map(([k, v]) => `${k}: ${v}`).join(', ') + '}'
     return this.visualizeBlocks({
       type: 'playerActions',
-      name: this.position && 'name' in this.position ? this.position.name : '',
+      name: this.position?.name ?? '',
       blocks: Object.fromEntries(
         this.actions.filter(a => a.name !== '__pass__').map(a => [a.name, a.do ? (a.do instanceof Array ? a.do : [a.do]) : undefined])
       ) as Record<string, FlowStep[]>,
-      block: this.position && 'name' in this.position ? this.position.name : undefined,
-      position: this.position && (
-        ('player' in this.position ? args : undefined) ??
-          ('players' in this.position && this.position.players ? this.position.players.map(p => this.gameManager.players.atPosition(p)).join(', ') : undefined)
-      ),
+      block: this.position?.name,
+      position: args ?? this.gameManager.players.allCurrent().map(p => p.name).join(', ')
     });
   }
 }

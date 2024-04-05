@@ -40,7 +40,9 @@ const Debug = () => {
   return (
     <div id="debug-overlay" className="full-page-cover" onClick={() => setInfoElement()}>
       <div id="flow-debug">
-        <FlowDebug flow={gameManager.flow.visualize()} nest={0} current={true} />
+        {Object.entries(gameManager.flows).map(([, flow]) => (
+          <FlowDebug flow={flow.visualize()} nest={0} current={true} />
+        ))}
       </div>
       <div id="action-debug">
         <div id="action-breakdown">

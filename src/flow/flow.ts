@@ -1,4 +1,4 @@
-import { LoopInterruptControl, loopInterrupt, FlowControl } from './enums.js';
+import { InterruptControl, interruptSignal, FlowControl } from './enums.js';
 import { Do } from './enums.js';
 
 import type GameManager from '../game-manager.js';
@@ -10,7 +10,6 @@ import type { SwitchCasePostion } from './switch-case.js';
 import type { ActionStepPosition } from './action-step.js';
 import type { EveryPlayerPosition } from './every-player.js';
 import type { Argument, ActionStub } from '../action/action.js';
-import type ActionStep from './action-step.js';
 import type WhileLoop from './while-loop.js';
 
 /**
@@ -86,11 +85,8 @@ export type FlowBranchNode = ({
 }
 
 export type FlowBranchJSON = ({
-  type: 'main'
+  type: 'main' | 'action' | 'loop' | 'foreach' | 'switch-case' | 'parallel'
   position?: any,
-} | {
-  type: 'action' | 'loop' | 'foreach' | 'switch-case' | 'parallel'
-  position: any,
 }) & {
   name?: string,
   sequence?: number,
@@ -119,6 +115,7 @@ export default class Flow {
   type: FlowBranchNode['type'] = 'main';
   step?: FlowStep; // cached by setPositionFromJSON
   block?: FlowDefinition;
+  args?: Record<string, any>;
   top: Flow;
   parent?: Flow;
   gameManager: GameManager;
@@ -138,7 +135,7 @@ export default class Flow {
   }
 
   flowStepArgs(): FlowArguments {
-    const args: FlowArguments = {};
+    const args = {...(this.args ?? {})};
     let flow: FlowStep | undefined = this.top;
     while (flow instanceof Flow) {
       if ('position' in flow && flow.position) {
@@ -162,7 +159,7 @@ export default class Flow {
   }
 
   branchJSON(forPlayer=true): FlowBranchJSON[] {
-    if (this.position === undefined && this.sequence === undefined) return []; // probably invalid
+    // if (this.position === undefined && this.sequence === undefined) return []; // probably invalid
     let branch: Record<string, any> = {
       type: this.type,
     };
@@ -233,7 +230,8 @@ export default class Flow {
     return this.currentProcessor()?.actionNeeded(player);
   }
 
-  processMove(move: NonNullable<ActionStepPosition>): string | undefined {
+  processMove(move: NonNullable<ActionStepPosition>): string | {name: string, args: Record<string, any>}[] | undefined {
+    interruptSignal.splice(0);
     const step = this.currentProcessor();
     if (!step) throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);
     return step.processMove(move);
@@ -260,20 +258,20 @@ export default class Flow {
    * ActionStep if now waiting for player input. override for self-contained
    * flows that do not have subflows.
    */
-  playOneStep(): {loop?: string, signal: LoopInterruptControl} | FlowControl | Flow {
+  playOneStep(): {data?: any, signal: InterruptControl}[] | FlowControl | Flow {
     const step = this.step;
-    let result: {loop?: string, signal: LoopInterruptControl} | FlowControl | Flow = FlowControl.complete;
+    let result: {data?: any, signal: InterruptControl}[] | FlowControl | Flow = FlowControl.complete;
     if (step instanceof Function) {
-      if (!loopInterrupt[0]) step(this.flowStepArgs());
+      if (!interruptSignal[0]) step(this.flowStepArgs());
       result = FlowControl.complete;
-      if (loopInterrupt[0]) result = loopInterrupt.shift()!;
+      if (interruptSignal[0]) result = interruptSignal.splice(0);
     } else if (step instanceof Flow) {
-      if ('awaitingAction' in step && (step as ActionStep).awaitingAction()) return step as ActionStep; // awaiting action
       result = step.playOneStep();
     }
     if (result === FlowControl.ok || result instanceof Flow) return result;
     if (result !== FlowControl.complete) {
-      if ('interrupt' in this && typeof this.interrupt === 'function' && (!result.loop || result.loop === this.name)) return this.interrupt(result.signal)
+      if (result[0].signal === InterruptControl.subflow) return result;
+      if ('interrupt' in this && typeof this.interrupt === 'function' && (!result[0].data || result[0].data === this.name)) return this.interrupt(result[0].signal)
       return result;
     }
 
@@ -292,26 +290,27 @@ export default class Flow {
     return this.advance();
   }
 
-  // play until action required (returns ActionStep) or game over
+  // play until action required (returns ActionStep) or flow complete (undefined) or subflow started {name, args}
   play() {
+    interruptSignal.splice(0);
     let step;
     do {
       if (this.gameManager.phase !== 'finished') step = this.playOneStep();
-      if (step) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
+      if (!(step instanceof Flow)) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
     } while (step === FlowControl.ok && this.gameManager.phase !== 'finished')
     //console.debug("Game Flow:\n" + this.stacktrace());
     if (step instanceof Flow) return step;
-    if (typeof step === 'object') {
-      if (step.signal === LoopInterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
-      if (step.signal === LoopInterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
-      if (step.signal === LoopInterruptControl.break) throw Error("Cannot use Do.break when not in a loop");
+    if (step instanceof Array) {
+      if (step[0].signal === InterruptControl.subflow) return step.map(s => s.data as {name: string, args: Record<string, any>});
+      if (step[0].signal === InterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
+      if (step[0].signal === InterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
+      throw Error("Cannot use Do.break when not in a loop");
     }
-    if (step === FlowControl.complete) this.gameManager.game.finish();
+    // flow complete
   }
 
   // must override. reset runs any logic needed and call setPosition. Must not modify own state.
   reset() {
-    this.gameManager.players.setCurrent(Array.from(this.gameManager.players));
     this.setPosition(null);
   }
 
