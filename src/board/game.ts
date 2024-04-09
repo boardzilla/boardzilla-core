@@ -179,7 +179,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
 
   defineSubflow(name: string, ...flow: FlowStep[]) {
     if (this._ctx.gameManager.phase !== 'new') throw Error('cannot call defineFlow once started');
-    this._ctx.gameManager.flows[name] = new Flow({ do: flow });
+    this._ctx.gameManager.flows[name] = new Flow({ name, do: flow });
     this._ctx.gameManager.flows[name].gameManager = this._ctx.gameManager;
   }
 

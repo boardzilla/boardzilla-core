@@ -39,9 +39,7 @@ export default class EachPlayer<P extends Player> extends ForLoop<P> {
 
   reset() {
     super.reset();
-    if (this.position.value) {
-      this.gameManager.players.setCurrent(this.position.value);
-    }
+    this.gameManager.players.setCurrent(this.position.value);
   }
 
   advance() {

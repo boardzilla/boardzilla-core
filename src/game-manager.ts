@@ -132,7 +132,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     this.phase = 'started';
     this.players.currentPosition = [...this.players].map(p => p.position)
     this.flowState = [{stack: [], currentPosition: this.players.currentPosition}];
-    this.flows['__main__'].reset();
+    this.startFlow();
   }
 
   play(): void {
@@ -158,8 +158,10 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     } else {
       // completed this flow, go up the stack
       if (this.flowState.length > 1) {
+        // cede to previous flow
+        console.debug(`Completed "${this.flowState[0].name}" flow. Returning to "${this.flowState[1].name ?? 'main' }" flow`);
         this.flowState.shift();
-        this.hydrateFlow(this.flowState[0]);
+        this.startFlow();
         this.play();
       } else {
         this.game.finish();
@@ -168,12 +170,6 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   flow() {
-    if (this.flowState[0].name === '__followup__' && !this.flows.__followup__) {
-      const actions = this.flowState[0].args as ActionStub;
-      const followup = new ActionStep({ name: '__followup__', player: actions.player, actions: [actions] });
-      followup.gameManager = this;
-      this.flows.__followup__ = followup;
-    }
     return this.flows[this.flowState[0].name ?? '__main__'];
   }
 
@@ -185,28 +181,44 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   beginSubflow(flow: {name: string, args: Record<string, any>}) {
+    if (flow.name !== '__followup__' && flow.name !== '__main__' && !this.flows[flow.name]) throw Error(`No flow named "${flow.name}"`);
+    console.debug(`Proceeding to "${flow.name}" flow${flow.args ? ` with { ${Object.entries(flow.args).map(([k, v]) => `${k}: ${v}`).join(', ')} }` : ''}`);
+    // capture current flow state
     this.flowState[0].stack = this.flow().branchJSON();
     this.flowState[0].currentPosition = this.players.currentPosition;
+    // proceed to new flow on top of stack
     this.flowState.unshift({
       name: flow.name,
       args: flow.args,
       currentPosition: this.players.currentPosition,
       stack: []
     });
-    if (flow.name === '__followup__') delete this.flows.__followup__;
-    this.flow().reset();
+    this.startFlow();
   }
 
   setFlowFromJSON(json: FlowStackJSON[]) {
     this.flowState = json;
-    this.hydrateFlow(json[0]);
+    this.startFlow();
   }
 
-  hydrateFlow({ name, args, stack, currentPosition }: FlowStackJSON) {
-    this.flows[name ?? '__main__'].setBranchFromJSON(stack);
-    this.flows[name ?? '__main__'].args = args;
-    if (name === '__followup__') delete this.flows.__followup__;
+  startFlow() {
+    const {name, args, stack, currentPosition} = this.flowState[0];
+    let flow: Flow;
+    if (name === '__followup__') {
+      const actions = args as ActionStub;
+      flow = new ActionStep({ name: '__followup__', player: actions.player, actions: [actions] });
+      flow.gameManager = this;
+      this.flows.__followup__ = flow;
+    } else {
+      flow = this.flows[name ?? '__main__'];
+    }
     this.players.currentPosition = currentPosition;
+    if (stack.length) {
+      flow.setBranchFromJSON(stack);
+    } else {
+      flow.reset();
+    }
+    flow.args = args;
   }
 
   flowJSON(player: boolean = false) {
@@ -375,11 +387,11 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
           player: player.position,
           args
         });
-        if (result instanceof Array) {
-          for (const flow of result.reverse()) this.beginSubflow(flow);
-        }
       }
-      console.debug(`Received move from player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => `${k}: ${v}`).join(', ')}}) ${result ? (typeof result === 'string' ? '❌ ' + result : `⮕ ${result[0].name}({${Object.entries(result[0].args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}})`) : '✅'}`);
+      console.debug(`Received move from player #${player.position} ${name}({${Object.entries(args).map(([k, v]) => `${k}: ${v}`).join(', ')}}) ${result ? (typeof result === 'string' ? '❌ ' + result : `⮕  ${result[0].name}({${Object.entries(result[0].args || {}).map(([k, v]) => `${k}: ${v}`).join(', ')}})`) : '✅'}`);
+      if (result instanceof Array) {
+        for (const flow of result.reverse()) this.beginSubflow(flow);
+      }
       return typeof result === 'string' ? result : undefined;
     });
   }

@@ -6,6 +6,7 @@ import Player from '../player/player.js';
 import { Game, Piece, Space } from '../board/index.js';
 import { createGame } from '../game-creator.js';
 import { createInterface } from '../interface.js';
+import { Do } from '../flow/enums.js';
 
 chai.use(spies);
 const { expect } = chai;
@@ -107,7 +108,7 @@ describe('GameManager', () => {
     gameManager.game.fromJSON([ { className: 'TestGame', tokens: 0 } ]);
     gameManager.players.assignAttributesFromJSON(players);
     gameManager.start();
-    gameManager.setFlowFromJSON([{currentPosition: [1,2,3,4], stack: [ { type: 'main', position: null, sequence: 0 } ]}]);
+    gameManager.setFlowFromJSON([{currentPosition: [1,2,3,4], stack: [ { type: 'main', name: '__main__', sequence: 0 } ]}]);
   });
 
   it('plays', () => {
@@ -116,7 +117,7 @@ describe('GameManager', () => {
       {
         currentPosition: [1,2,3,4],
         stack: [
-          { type: 'main', position: null, sequence: 1 },
+          { type: 'main', name: '__main__', sequence: 1 },
           { type: "loop", position: { index: 0 } },
           { type: "action" }
         ]
@@ -195,10 +196,10 @@ describe('GameManager', () => {
     gameManager.setFlowFromJSON([{
       currentPosition: [2],
       stack: [
-        { type: 'main', position: null, sequence: 2 },
+        { type: 'main', name: '__main__', sequence: 2 },
         { type: 'loop', position: { index: 0 } },
         { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
-        { type: 'action', position: null }
+        { type: 'action' }
       ]
     }]);
     gameManager.game.fromJSON([ { className: 'TestGame', tokens: 9 } ]);
@@ -230,10 +231,10 @@ describe('GameManager', () => {
       gameManager.setFlowFromJSON([{
         currentPosition: [2],
         stack: [
-          { type: 'main', position: null, sequence: 2 },
+          { type: 'main', name: '__main__', sequence: 2 },
           { type: 'loop', position: { index: 0 } },
           { type: 'loop', name: 'player', position: { index: 1, value: '$p[2]' } },
-          { type: 'action', position: null }
+          { type: 'action' }
         ]}
       ]);
       gameManager.players.setCurrent([2]);
@@ -305,7 +306,7 @@ describe('GameManager', () => {
       expect(gameManager.flowJSON()).to.deep.equals([{
         currentPosition: [1,2,3,4],
         stack: [
-          { type: 'main', position: null, sequence: 1 },
+          { type: 'main', name: '__main__', sequence: 1 },
           { type: 'loop', position: { index: 0 } },
           { type: 'action', position: { name: "spend", args: {r: "gold", n: 2}, player: 1 }}
         ]
@@ -314,7 +315,7 @@ describe('GameManager', () => {
       expect(gameManager.flowJSON()).to.deep.equals([{
         currentPosition: [1,2,3,4],
         stack: [
-          { type: 'main', position: null, sequence: 1 },
+          { type: 'main', name: '__main__', sequence: 1 },
           { type: 'loop', position: { index: 1 } },
           { type: "action" }
         ]
@@ -327,7 +328,7 @@ describe('GameManager', () => {
       expect(gameManager.flowJSON()).to.deep.equals([{
         currentPosition: [1,2,3,4],
         stack: [
-          { type: 'main', position: null, sequence: 1 },
+          { type: 'main', name: '__main__', sequence: 1 },
           { type: 'loop', position: { index: 0 } },
           { type: 'action', position: { name: "addSome", args: {n: 2}, player: 1 }}
         ]
@@ -1117,6 +1118,199 @@ describe('GameManager', () => {
       expect(gameManager.players.currentPosition).to.deep.equal([2])
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
       gameManager.play();
+    });
+  });
+
+  describe("subflows", () => {
+    it("proceeds to subflow", () => {
+      gameManager = new GameManager(TestPlayer, TestGame, [ Card, Country, General ]);
+      game = gameManager.game;
+
+      const {
+        playerActions,
+        whileLoop,
+        eachPlayer,
+      } = game.flowCommands
+
+      game.defineFlow(
+        () => {
+          game.tokens = 10;
+          game.message('Starting game with {{tokens}} tokens', {tokens: game.tokens});
+        },
+        whileLoop({ while: () => game.tokens > 0, do: (
+          eachPlayer({ name: 'player', do: [
+            playerActions({ actions: ['takeOne']}),
+            () => {
+              if (game.tokens <= 6) Do.subflow('token-flow');
+              if (game.tokens <= 0) game.finish(gameManager.players.withHighest('tokens'))
+            },
+          ]})
+        )}),
+      );
+
+      game.defineSubflow(
+        'token-flow',
+        eachPlayer({ name: 'player', startingPlayer: () => game.players.current()!, do: [
+          playerActions({ actions: [
+            {
+              name: 'declare',
+              do: ({ declare, player }) => { if (declare.d === '!') player.tokens = 0 } }
+          ]}),
+        ]}),
+        () => {
+          game.players.withLowest('tokens').tokens += 2;
+        }
+      );
+
+      game.defineActions({
+        takeOne: player => game.action({
+          prompt: 'take one counter',
+        }).do(() => {
+          game.tokens --;
+          player.tokens ++;
+        }),
+
+        declare: () => game.action({
+          prompt: 'declare',
+        }).enterText('d', {
+          prompt: 'declaration'
+        }),
+        pass: () => game.action({
+          prompt: 'pass'
+        }),
+      });
+
+      gameManager.players.fromJSON(players);
+      gameManager.game.fromJSON([ { className: 'TestGame', tokens: 0 } ]);
+      gameManager.players.assignAttributesFromJSON(players);
+      gameManager.start();
+      gameManager.play();
+
+      // start play
+
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
+      gameManager.play();
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
+      gameManager.play();
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[2] });
+      gameManager.play();
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[3] });
+      gameManager.play();
+
+      expect(gameManager.players.currentPosition).to.deep.equal([1]);
+      expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(1);
+      expect(gameManager.allowedActions(gameManager.players[0]).actions[0].name).to.equal('declare');
+
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[0] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: '!'}, player: gameManager.players[1] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[2] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[3] });
+      gameManager.play();
+
+      // cedes to previous flow
+      expect(gameManager.players[1].tokens).to.equal(2);
+      expect(gameManager.players.currentPosition).to.deep.equal([1]);
+      expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(1);
+      expect(gameManager.allowedActions(gameManager.players[0]).actions[0].name).to.equal('takeOne');
+    });
+
+    it("proceeds to subflow from action do", () => {
+      gameManager = new GameManager(TestPlayer, TestGame, [ Card, Country, General ]);
+      game = gameManager.game;
+
+      const {
+        playerActions,
+        whileLoop,
+        eachPlayer,
+      } = game.flowCommands
+
+      game.defineFlow(
+        () => {
+          game.tokens = 10;
+          game.message('Starting game with {{tokens}} tokens', {tokens: game.tokens});
+        },
+        whileLoop({ while: () => game.tokens > 0, do: (
+          eachPlayer({ name: 'player', do: [
+            playerActions({ actions: ['takeOne']}),
+            () => {
+              if (game.tokens <= 0) game.finish(gameManager.players.withHighest('tokens'))
+            },
+          ]})
+        )}),
+      );
+
+      game.defineSubflow(
+        'token-flow',
+        eachPlayer({ name: 'player', startingPlayer: () => game.players.current()!, do: [
+          playerActions({ actions: [
+            {
+              name: 'declare',
+              do: ({ declare, player }) => { if (declare.d === '!') player.tokens = 0 } }
+          ]}),
+        ]}),
+        () => {
+          game.players.withLowest('tokens').tokens += 2;
+        }
+      );
+
+      game.defineActions({
+        takeOne: player => game.action({
+          prompt: 'take one counter',
+        }).do(() => {
+          game.tokens --;
+          player.tokens ++;
+          if (game.tokens <= 6) Do.subflow('token-flow');
+        }),
+
+        declare: () => game.action({
+          prompt: 'declare',
+        }).enterText('d', {
+          prompt: 'declaration'
+        }),
+        pass: () => game.action({
+          prompt: 'pass'
+        }),
+      });
+
+      gameManager.players.fromJSON(players);
+      gameManager.game.fromJSON([ { className: 'TestGame', tokens: 0 } ]);
+      gameManager.players.assignAttributesFromJSON(players);
+      gameManager.start();
+      gameManager.play();
+
+      // start play
+
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
+      gameManager.play();
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
+      gameManager.play();
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[2] });
+      gameManager.play();
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[3] });
+      gameManager.play();
+
+      expect(gameManager.players.currentPosition).to.deep.equal([4]);
+      expect(gameManager.allowedActions(gameManager.players[3]).actions.length).to.equal(1);
+      expect(gameManager.allowedActions(gameManager.players[3]).actions[0].name).to.equal('declare');
+
+      // starting player set from current which was still last player
+      gameManager.processMove({ name: 'declare', args: {d: '!'}, player: gameManager.players[3] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[0] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[1] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[2] });
+      gameManager.play();
+
+      // cedes to previous flow
+      expect(gameManager.players[3].tokens).to.equal(2);
+      expect(gameManager.players.currentPosition).to.deep.equal([4]);
+      expect(gameManager.allowedActions(gameManager.players[3]).actions.length).to.equal(1);
+      expect(gameManager.allowedActions(gameManager.players[3]).actions[0].name).to.equal('takeOne');
     });
   });
 });

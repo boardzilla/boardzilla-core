@@ -263,13 +263,12 @@ export default class Flow {
     if (step instanceof Function) {
       if (!interruptSignal[0]) step(this.flowStepArgs());
       result = FlowControl.complete;
-      if (interruptSignal[0]) result = interruptSignal.splice(0);
+      if (interruptSignal[0] && interruptSignal[0].signal !== InterruptControl.subflow) result = interruptSignal.splice(0);
     } else if (step instanceof Flow) {
       result = step.playOneStep();
     }
     if (result === FlowControl.ok || result instanceof Flow) return result;
     if (result !== FlowControl.complete) {
-      if (result[0].signal === InterruptControl.subflow) return result;
       if ('interrupt' in this && typeof this.interrupt === 'function' && (!result[0].data || result[0].data === this.name)) return this.interrupt(result[0].signal)
       return result;
     }
@@ -297,10 +296,9 @@ export default class Flow {
       if (this.gameManager.phase !== 'finished') step = this.playOneStep();
       if (!(step instanceof Flow)) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
     } while (step === FlowControl.ok && this.gameManager.phase !== 'finished')
-    //console.debug("Game Flow:\n" + this.stacktrace());
+    if (interruptSignal[0]?.signal === InterruptControl.subflow) return interruptSignal.map(s => s.data as {name: string, args: Record<string, any>});
     if (step instanceof Flow) return step;
     if (step instanceof Array) {
-      if (step[0].signal === InterruptControl.subflow) return step.map(s => s.data as {name: string, args: Record<string, any>});
       if (step[0].signal === InterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
       if (step[0].signal === InterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
       throw Error("Cannot use Do.break when not in a loop");
@@ -310,7 +308,7 @@ export default class Flow {
 
   // must override. reset runs any logic needed and call setPosition. Must not modify own state.
   reset() {
-    this.setPosition(null);
+    this.setPosition(undefined);
   }
 
   // must override. must rely solely on this.position
@@ -339,7 +337,7 @@ export default class Flow {
   }
 
   toString() {
-    return `flow${this.name ? ":" + this.name : ""}${this.block instanceof Array && this.block.length > 1 ? ' (item #' + this.sequence + ')' : ''}`;
+    return `flow${this.name ? ":" + this.name.replace(/__/g, '') : ""}${this.block instanceof Array && this.block.length > 1 ? ' (item #' + this.sequence + ')' : ''}`;
   }
 
   stacktrace(indent=0) {

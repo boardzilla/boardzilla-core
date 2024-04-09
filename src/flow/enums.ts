@@ -53,7 +53,7 @@ export const Do = {
   repeat: (loop?: string | Record<string, string>) => interrupt(InterruptControl.repeat, typeof loop === 'string' ? loop : undefined),
   continue: (loop?: string | Record<string, string>) => interrupt(InterruptControl.continue, typeof loop === 'string' ? loop : undefined),
   break: (loop?: string | Record<string, string>) => interrupt(InterruptControl.break, typeof loop === 'string' ? loop : undefined),
-  subflow: (flow: string, args: Record<string, any>) => interrupt(InterruptControl.subflow, {name: flow, args}),
+  subflow: (flow: string, args?: Record<string, any>) => interrupt(InterruptControl.subflow, {name: flow, args}),
 }
 
 /** @internal */
