@@ -125,6 +125,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
    * @internal
    */
 
+  // start the game fresh
   start() {
     if (this.phase === 'started') throw Error('cannot call start once started');
     if (!this.players.length) {
@@ -199,6 +200,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
 
   setFlowFromJSON(json: FlowStackJSON[]) {
     this.flowState = json;
+    this.phase = 'started';
     this.startFlow();
   }
 

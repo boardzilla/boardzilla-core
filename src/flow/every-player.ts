@@ -144,9 +144,10 @@ export default class EveryPlayer<P extends Player> extends Flow {
     return `every-player${this.name ? ":" + this.name : ""}`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     return this.visualizeBlocks({
       type: 'everyPlayer',
+      top,
       blocks: {
         do: this.block instanceof Array ? this.block : [this.block]
       },

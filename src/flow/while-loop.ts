@@ -1,8 +1,8 @@
 import Flow from './flow.js';
 import { FlowControl } from './enums.js';
+import { InterruptControl } from './enums.js';
 
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
-import { InterruptControl } from './enums.js';
 
 export type WhileLoopPosition = { index: number, value?: any };
 
@@ -74,10 +74,11 @@ export default class WhileLoop extends Flow {
     return `loop${this.name ? ":" + this.name : ""} (loop ${this.position.index === -1 ? 'complete' : '#' + this.position.index}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     const isLoop = this.whileCondition.toString() === '() => true';
     return this.visualizeBlocks({
       type: isLoop ? 'loop' : 'whileLoop',
+      top,
       blocks: {
         do: this.block instanceof Array ? this.block : [this.block]
       },

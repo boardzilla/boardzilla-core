@@ -207,19 +207,20 @@ export default class ActionStep extends Flow {
   }
 
   toString(): string {
-    return `player-action${this.name ? ":" + this.name : ""} (player #${this.gameManager.players.currentPosition}, ${this.allowedActions().join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
+    return `player-action${this.name ? ":" + this.name : ""} (player #${this.top.gameManager.players.currentPosition}, ${this.allowedActions().join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     const args = this.position && '{' + Object.entries(this.position.args).map(([k, v]) => `${k}: ${v}`).join(', ') + '}'
     return this.visualizeBlocks({
       type: 'playerActions',
       name: this.position?.name ?? '',
+      top,
       blocks: Object.fromEntries(
         this.actions.filter(a => a.name !== '__pass__').map(a => [a.name, a.do ? (a.do instanceof Array ? a.do : [a.do]) : undefined])
       ) as Record<string, FlowStep[]>,
       block: this.position?.name,
-      position: args ?? this.gameManager.players.allCurrent().map(p => p.name).join(', ')
+      position: args ?? top.gameManager.players.allCurrent().map(p => p.name).join(', ')
     });
   }
 }

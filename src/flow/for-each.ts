@@ -4,6 +4,7 @@ import { serialize, deserialize } from '../action/utils.js';
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
 import type { ForLoopPosition } from './for-loop.js';
 import type { Serializable } from '../action/utils.js';
+import type Flow from './flow.js';
 
 export type ForEachPosition<T> = ForLoopPosition<T> & { collection: T[] };
 
@@ -54,9 +55,10 @@ export default class ForEach<T extends Serializable> extends ForLoop<T> {
     return `foreach${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     return this.visualizeBlocks({
       type: 'forEach',
+      top,
       blocks: {
         do: this.block instanceof Array ? this.block : [this.block]
       },

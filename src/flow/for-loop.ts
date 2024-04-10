@@ -2,6 +2,8 @@ import type { Serializable } from '../action/utils.js';
 import type { FlowArguments, FlowDefinition, FlowBranchNode } from './flow.js';
 import WhileLoop from './while-loop.js';
 
+import type Flow from './flow.js';
+
 export type ForLoopPosition<T> = { index: number, value: T };
 
 export default class ForLoop<T = Serializable> extends WhileLoop {
@@ -34,9 +36,10 @@ export default class ForLoop<T = Serializable> extends WhileLoop {
     return `loop${this.name ? ":" + this.name : ""} (index: ${this.position.index}, value: ${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})$`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     return this.visualizeBlocks({
       type: 'forLoop',
+      top,
       blocks: {
         do: this.block instanceof Array ? this.block : [this.block]
       },

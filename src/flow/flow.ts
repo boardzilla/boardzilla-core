@@ -347,9 +347,10 @@ export default class Flow {
     return string;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     return this.visualizeBlocks({
       type: 'flow',
+      top,
       blocks: {
         do: this.block ? (this.block instanceof Array ? this.block : [this.block]) : undefined
       },
@@ -357,17 +358,18 @@ export default class Flow {
     });
   }
 
-  visualizeBlocks({ type, blocks, name, block, position }: {
+  visualizeBlocks({ type, blocks, name, top, block, position }: {
     type: string,
     blocks: Record<string, FlowStep[] | undefined>,
     name?: string,
+    top: Flow,
     block?: string,
     position?: any,
   }): FlowVisualization {
     const blockViz = Object.fromEntries(Object.entries(blocks).
       map(([key, block]) => [
         key, block?.map(s => {
-          if (s instanceof Flow) return s.visualize();
+          if (s instanceof Flow) return s.visualize(top);
           if (s === Do.break) return 'Do.break';
           if (s === Do.repeat) return 'Do.repeat';
           if (s === Do.continue) return 'Do.continue';
