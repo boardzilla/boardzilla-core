@@ -1308,9 +1308,9 @@ describe('GameManager', () => {
 
       // cedes to previous flow
       expect(gameManager.players[3].tokens).to.equal(2);
-      expect(gameManager.players.currentPosition).to.deep.equal([4]);
-      expect(gameManager.allowedActions(gameManager.players[3]).actions.length).to.equal(1);
-      expect(gameManager.allowedActions(gameManager.players[3]).actions[0].name).to.equal('takeOne');
+      expect(gameManager.players.currentPosition).to.deep.equal([1]);
+      expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(1);
+      expect(gameManager.allowedActions(gameManager.players[0]).actions[0].name).to.equal('takeOne');
     });
   });
 });

@@ -7,6 +7,7 @@ import { Action, Selection } from './action/index.js';
 import { Player, PlayerCollection } from './player/index.js';
 import Flow, { FlowBranchJSON } from './flow/flow.js';
 import ActionStep from './flow/action-step.js';
+import { deserialize, serialize } from './action/utils.js';
 
 import random from 'random-seed';
 
@@ -180,7 +181,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     }
   }
 
-  beginSubflow(flow: {name: string, args: Record<string, any>}) {
+  beginSubflow(flow: {name: string, args: Record<string, Argument>}) {
     if (flow.name !== '__followup__' && flow.name !== '__main__' && !this.flows[flow.name]) throw Error(`No flow named "${flow.name}"`);
     console.debug(`Proceeding to "${flow.name}" flow${flow.args ? ` with { ${Object.entries(flow.args).map(([k, v]) => `${k}: ${v}`).join(', ')} }` : ''}`);
     // capture current flow state
@@ -189,7 +190,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     // proceed to new flow on top of stack
     this.flowState.unshift({
       name: flow.name,
-      args: flow.args,
+      args: serialize(flow.args),
       currentPosition: this.players.currentPosition,
       stack: []
     });
@@ -204,8 +205,9 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   startFlow() {
     const {name, args, stack, currentPosition} = this.flowState[0];
     let flow: Flow;
+    const deserializedArgs = deserialize(args, this.game) as Record<string, Argument>;
     if (name === '__followup__') {
-      const actions = args as ActionStub;
+      const actions = deserializedArgs as any as ActionStub;
       flow = new ActionStep({ name: '__followup__', player: actions.player, actions: [actions] });
       flow.gameManager = this;
       this.flows.__followup__ = flow;
@@ -218,7 +220,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     } else {
       flow.reset();
     }
-    flow.args = args;
+    if (args) flow.args = deserializedArgs;
   }
 
   flowJSON(player: boolean = false) {
@@ -229,7 +231,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
         currentPosition: this.players.currentPosition
       };
       if (name && name !== '__main__') json.name = name;
-      if (flow.args) json.args = flow.args;
+      if (flow.args) json.args = serialize(flow.args);
       return json;
     });
   }

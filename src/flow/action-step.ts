@@ -151,23 +151,25 @@ export default class ActionStep extends Flow {
     if (error) {
       // failed with a selection required
       return error;
-    } else if (interruptSignal[0]) {
-      const interrupt = interruptSignal.splice(0);
-      if (interrupt[0].signal === InterruptControl.subflow) return interrupt.map(s => s.data as {name: string, args: Record<string, any>});
-      const loop = this.currentLoop(interrupt[0].data);
-      if (!loop) {
-        if (interrupt[0].data) throw Error(`No loop found "${interrupt[0].data}" for interrupt`);
-        if (interrupt[0].signal === InterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
-        if (interrupt[0].signal === InterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
-        throw Error("Cannot use Do.break when not in a loop");
-      } else {
-        loop.interrupt(interrupt[0].signal);
-        return;
+    } else {
+      // succeeded
+      this.setPosition(this.position ? {...this.position} : move);
+
+      if (interruptSignal[0]) {
+        const interrupt = interruptSignal.splice(0);
+        if (interrupt[0].signal === InterruptControl.subflow) return interrupt.map(s => s.data as {name: string, args: Record<string, any>});
+        const loop = this.currentLoop(interrupt[0].data);
+        if (!loop) {
+          if (interrupt[0].data) throw Error(`No loop found "${interrupt[0].data}" for interrupt`);
+          if (interrupt[0].signal === InterruptControl.continue) throw Error("Cannot use Do.continue when not in a loop");
+          if (interrupt[0].signal === InterruptControl.repeat) throw Error("Cannot use Do.repeat when not in a loop");
+          throw Error("Cannot use Do.break when not in a loop");
+        } else {
+          loop.interrupt(interrupt[0].signal);
+          return;
+        }
       }
     }
-
-    // succeeded
-    this.setPosition(this.position ? {...this.position} : move);
   }
 
   playOneStep(): {data?: any, signal: InterruptControl}[] | FlowControl | Flow {

@@ -11,6 +11,7 @@ import type { ActionStepPosition } from './action-step.js';
 import type { EveryPlayerPosition } from './every-player.js';
 import type { Argument, ActionStub } from '../action/action.js';
 import type WhileLoop from './while-loop.js';
+import type { Serializable } from '../action/utils.js';
 
 /**
  * Several flow methods accept an argument of this type. This is an object
@@ -115,7 +116,7 @@ export default class Flow {
   type: FlowBranchNode['type'] = 'main';
   step?: FlowStep; // cached by setPositionFromJSON
   block?: FlowDefinition;
-  args?: Record<string, any>;
+  args?: Record<string, Serializable>;
   top: Flow;
   parent?: Flow;
   gameManager: GameManager;
