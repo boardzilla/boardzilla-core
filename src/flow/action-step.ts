@@ -67,10 +67,12 @@ export default class ActionStep extends Flow {
     this.setPosition(undefined);
   }
 
-  setPosition(position: ActionStepPosition) {
-    super.setPosition(position);
-    const players = this.getPlayers();
-    if (players) this.gameManager.players.setCurrent(players);
+  setPosition(position: ActionStepPosition, sequence?: number) {
+    super.setPosition(position, sequence);
+    if (this.awaitingAction()) {
+      const players = this.getPlayers();
+      if (players) this.gameManager.players.setCurrent(players);
+    }
   }
 
   getPlayers() {
@@ -207,7 +209,7 @@ export default class ActionStep extends Flow {
   }
 
   toString(): string {
-    return `player-action${this.name ? ":" + this.name : ""} (player #${this.top.gameManager.players.currentPosition}, ${this.allowedActions().join(", ")}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
+    return `player-action${this.name ? ":" + this.name : ""} (player #${this.top.gameManager.players.currentPosition}: ${this.allowedActions().join(", ")}${this.block instanceof Array ? ' item #' + this.sequence : ''})`;
   }
 
   visualize(top: Flow) {

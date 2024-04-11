@@ -343,7 +343,7 @@ export default class Flow {
 
   stacktrace(indent=0) {
     let string = this.toString();
-    if (this.step instanceof Flow) string += '\n' + ' '.repeat(indent) + '↳ ' + this.step.stacktrace(indent + 2);
+    if (this.step instanceof Flow) string += '\n ' + ' '.repeat(indent) + '↳ ' + this.step.stacktrace(indent + 2);
     return string;
   }
 

@@ -38,17 +38,11 @@ export default class EachPlayer<P extends Player> extends ForLoop<P> {
     this.turns = turns;
   }
 
-  reset() {
-    super.reset();
-    this.gameManager.players.setCurrent(this.position.value);
-  }
-
-  advance() {
-    const result = super.advance();
-    if (result === FlowControl.ok && this.position.value) {
-      this.gameManager.players.setCurrent(this.position.value);
+  setPosition(position: typeof this.position, sequence?: number, reset=true) {
+    if (position.value && position.value.position !== this.position?.value.position) {
+      this.gameManager.players.setCurrent(position.value);
     }
-    return result;
+    super.setPosition(position, sequence, reset);
   }
 
   toJSON() {

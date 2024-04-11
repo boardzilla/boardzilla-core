@@ -145,10 +145,12 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const handleDrag = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
     if (wrapper.current && element._ui.computedStyle) {
-      if (branch !== dragElement) setDragElement(branch);
       const deltaY = parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y;
       const deltaX = parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x;
-      if (Math.abs(deltaX) + Math.abs(deltaY) > 5) setDragging({deltaY, deltaX});
+      if (Math.abs(deltaX) + Math.abs(deltaY) > 5) {
+        if (branch !== dragElement) setDragElement(branch);
+        setDragging({deltaY, deltaX});
+      }
     }
   }, [element._ui.computedStyle, wrapper, branch, dragElement, setDragElement]);
 

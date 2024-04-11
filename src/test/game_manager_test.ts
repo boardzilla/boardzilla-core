@@ -575,7 +575,6 @@ describe('GameManager', () => {
           do: playerActions({
             name: 'take-one',
             condition: ({ player }) => player.position !== 2,
-            players: gameManager.players,
             actions: ['takeOne'],
             continueIfImpossible: true,
           })
@@ -1118,6 +1117,51 @@ describe('GameManager', () => {
       expect(gameManager.players.currentPosition).to.deep.equal([2])
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
       gameManager.play();
+    });
+
+    it('nested each player', () => {
+      const {
+        whileLoop,
+        playerActions,
+        eachPlayer
+      } = game.flowCommands
+      const stepSpy = chai.spy((_p1: number, _p2: number) => {});
+
+      game.defineFlow(whileLoop({
+        while: () => true,
+        do: eachPlayer({
+          name: 'player1',
+          do: eachPlayer({
+            name: 'player2',
+            do: playerActions({
+              actions: [{name: 'takeOne', do: ({ player1, player2 }) => stepSpy(player1.position, player2.position)}]
+            }),
+          })
+        })
+      }));
+      gameManager.game.tokens = 20;
+      gameManager.start();
+      gameManager.play();
+
+      expect(gameManager.players.currentPosition).to.deep.equal([1])
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
+      gameManager.play();
+      expect(stepSpy).to.have.been.called.with(1, 1);
+
+      expect(gameManager.players.currentPosition).to.deep.equal([2])
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
+      gameManager.play();
+      expect(stepSpy).to.have.been.called.with(1, 2);
+
+      expect(gameManager.players.currentPosition).to.deep.equal([1])
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
+      gameManager.play();
+      expect(stepSpy).to.have.been.called.with(2, 1);
+
+      expect(gameManager.players.currentPosition).to.deep.equal([2])
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
+      gameManager.play();
+      expect(stepSpy).to.have.been.called.with(2, 2);
     });
   });
 
