@@ -18,6 +18,7 @@ import type { PlayerState, GameUpdate, GameState } from './interface.js';
 import type { SerializedArg } from './action/utils.js';
 import type { Argument, ActionStub } from './action/action.js';
 import type { ResolvedSelection } from './action/selection.js';
+import type { SubflowSignal } from './flow/enums.js';
 
 // find all non-method non-internal attr's
 export type PlayerAttributes<T extends Player = Player> = {
@@ -182,7 +183,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     }
   }
 
-  beginSubflow(flow: {name: string, args: Record<string, Argument>}) {
+  beginSubflow(flow: SubflowSignal['data']) {
     if (flow.name !== '__followup__' && flow.name !== '__main__' && !this.flows[flow.name]) throw Error(`No flow named "${flow.name}"`);
     console.debug(`Proceeding to "${flow.name}" flow${flow.args ? ` with { ${Object.entries(flow.args).map(([k, v]) => `${k}: ${v}`).join(', ')} }` : ''}`);
     // capture current flow state
@@ -204,8 +205,8 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     this.startFlow();
   }
 
-  startFlow() {
-    const {name, args, stack, currentPosition} = this.flowState[0];
+  startFlow(json?: FlowStackJSON) {
+    const {name, args, stack, currentPosition} = json ?? this.flowState[0];
     let flow: Flow;
     const deserializedArgs = deserialize(args, this.game) as Record<string, Argument>;
     if (name === '__followup__') {
@@ -378,7 +379,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   // moves
   processMove({ player, name, args }: Move): string | undefined {
     if (this.phase === 'finished') return 'Game is finished';
-    let result: string | {name: string, args: Record<string, any>}[] | undefined;
+    let result: string | SubflowSignal['data'][] | undefined;
     return this.inContextOfPlayer(player, () => {
       if (this.godMode && this.godModeActions()[name]) {
         const godModeAction = this.godModeActions()[name];

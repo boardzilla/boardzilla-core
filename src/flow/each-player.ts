@@ -1,7 +1,6 @@
 import ForLoop from './for-loop.js';
 import { Player } from '../player/index.js';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils.js';
-import { FlowControl } from './enums.js';
 
 import type { FlowArguments, FlowDefinition } from './flow.js';
 import type Flow from './flow.js';

@@ -161,7 +161,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   }
 
   /**
-   * Define your game's flow. May contain any of the following:
+   * Define your game's main flow. May contain any of the following:
    * - {@link playerActions}
    * - {@link loop}
    * - {@link whileLoop}
@@ -177,6 +177,14 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     this.defineSubflow('__main__', ...flow);
   }
 
+  /**
+   * Define an addtional flow that the main flow can enter. A subflow has a
+   * unique name and can be entered at any point by calling {@link
+   * Do|Do.subflow}.
+   *
+   * @param name - Unique name of flow
+   * @param flow - Steps of the flow
+   */
   defineSubflow(name: string, ...flow: FlowStep[]) {
     if (this._ctx.gameManager.phase !== 'new') throw Error('cannot call defineFlow once started');
     this._ctx.gameManager.flows[name] = new Flow({ name, do: flow });

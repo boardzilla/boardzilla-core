@@ -1,7 +1,11 @@
 /**
  * Functions for interrupting flows
  *
- * Three of these functions are for interrupting loops: `Do.break`, `Do.repear`,
+ * These functions all interrupt the flow in some. Upon calling one, the flow
+ * will complete its current step and then proceed with whatever type of
+ * interrupt was provided.
+ *
+ * Three of these functions are for interrupting loops: `Do.break`, `Do.repeat`,
  * and `Do.continue`. They can be called from anywhere inside a looping flow
  * ({@link loop}, {@link whileLoop}, {@link forLoop}, {@link forEach}, {@link
  * eachPlayer}) to interrupt the flow, with each one resuming the flow
@@ -9,7 +13,7 @@
  *
  * `Do.subflow` can be called anywhere and causes the flow to jump to another
  * subflow. When that subflow completes, the game flow will return to the
- * current flow, where it left off.
+ * current flow, at the step immediately after the one that called `Do.subflow`.
  *
  * `Do.break` causes the flow to exit loop and resume after the loop, like the
  * `break` keyword in Javascript.
@@ -57,7 +61,7 @@ export const Do = {
 }
 
 type LoopInterruptSignal = { signal: InterruptControl.repeat | InterruptControl.continue | InterruptControl.break, data?: string }
-type SubflowSignal = { signal: InterruptControl.subflow, data?: {name: string, args?: Record<string, any>} }
+export type SubflowSignal = { signal: InterruptControl.subflow, data: {name: string, args?: Record<string, any>} }
 export type InterruptSignal = LoopInterruptSignal | SubflowSignal
 
 /** @internal */

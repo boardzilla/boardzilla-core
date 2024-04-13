@@ -1,9 +1,10 @@
 import Flow from './flow.js';
-import { FlowControl, type InterruptSignal } from './enums.js';
+import { FlowControl } from './enums.js';
 
 import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
 import type { Player, PlayerCollection } from '../player/index.js';
 import type { Argument } from '../action/action.js';
+import type { SubflowSignal, InterruptSignal } from './enums.js';
 
 export type EveryPlayerPosition = {positions: FlowBranchJSON[][], completed: (boolean | undefined)[]};
 
@@ -109,7 +110,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
     player: number,
     name: string,
     args: Record<string, Argument>,
-  }): string | {name: string, args: Record<string, any>}[] | undefined {
+  }): string | SubflowSignal['data'][] | undefined {
     const player = this.getPlayers().findIndex(p => p.position === move.player);
     if (player < 0) throw Error(`Cannot process action from ${move.player}`);
     return this.withPlayer(player, () => {

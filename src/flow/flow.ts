@@ -1,6 +1,7 @@
-import { InterruptControl, interruptSignal, FlowControl, type InterruptSignal } from './enums.js';
+import { InterruptControl, interruptSignal, FlowControl } from './enums.js';
 import { Do } from './enums.js';
 
+import type { InterruptSignal, SubflowSignal } from './enums.js';
 import type GameManager from '../game-manager.js';
 import type { Player } from '../index.js';
 import type { WhileLoopPosition } from './while-loop.js';
@@ -229,7 +230,7 @@ export default class Flow {
     return this.currentProcessor()?.actionNeeded(player);
   }
 
-  processMove(move: NonNullable<ActionStepPosition>): string | {name: string, args: Record<string, any>}[] | undefined {
+  processMove(move: NonNullable<ActionStepPosition>): string | SubflowSignal['data'][] | undefined {
     interruptSignal.splice(0);
     const step = this.currentProcessor();
     if (!step) throw Error(`Cannot process action currently ${JSON.stringify(this.branchJSON())}`);

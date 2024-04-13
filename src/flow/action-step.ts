@@ -1,10 +1,11 @@
 import Flow from './flow.js';
 import { deserializeObject, serializeObject } from '../action/utils.js';
+import { FlowControl, InterruptControl, interruptSignal } from './enums.js';
 
 import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
 import type { Argument, ActionStub } from '../action/action.js';
-import { FlowControl, InterruptControl, type InterruptSignal, interruptSignal } from './enums.js';
+import type { InterruptSignal, SubflowSignal } from './enums.js';
 
 export type ActionStepPosition = { // turn taken by `player`
   player: number,
@@ -130,7 +131,7 @@ export default class ActionStep extends Flow {
     player: number,
     name: string,
     args: Record<string, Argument>,
-  }): string | {name: string, args: Record<string, any>}[] | undefined {
+  }): string | SubflowSignal['data'][] | undefined {
     if ((move.name !== '__continue__' || !this.continueIfImpossible) && !this.allowedActions().includes(move.name)) {
       throw Error(`No action ${move.name} available at this point. Waiting for ${this.allowedActions().join(", ")}`);
     }
@@ -159,7 +160,7 @@ export default class ActionStep extends Flow {
 
       if (interruptSignal[0]) {
         const interrupt = interruptSignal.splice(0);
-        if (interrupt[0].signal === InterruptControl.subflow) return interrupt.map(s => s.data as {name: string, args: Record<string, any>});
+        if (interrupt[0].signal === InterruptControl.subflow) return (interrupt as SubflowSignal[]).map(s => s.data);
         const loop = this.currentLoop(interrupt[0].data);
         if (!loop) {
           if (interrupt[0].data) throw Error(`No loop found "${interrupt[0].data}" for interrupt`);
