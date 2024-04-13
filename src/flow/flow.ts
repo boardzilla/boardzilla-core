@@ -159,7 +159,6 @@ export default class Flow {
   }
 
   branchJSON(forPlayer=true): FlowBranchJSON[] {
-    // if (this.position === undefined && this.sequence === undefined) return []; // probably invalid
     let branch: Record<string, any> = {
       type: this.type,
     };
