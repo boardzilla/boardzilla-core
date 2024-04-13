@@ -4,7 +4,7 @@ import { deserializeObject, serializeObject } from '../action/utils.js';
 import type { FlowBranchNode, FlowDefinition, FlowStep } from './flow.js';
 import type { Player } from '../player/index.js';
 import type { Argument, ActionStub } from '../action/action.js';
-import { FlowControl, InterruptControl, interruptSignal } from './enums.js';
+import { FlowControl, InterruptControl, type InterruptSignal, interruptSignal } from './enums.js';
 
 export type ActionStepPosition = { // turn taken by `player`
   player: number,
@@ -174,7 +174,7 @@ export default class ActionStep extends Flow {
     }
   }
 
-  playOneStep(): {data?: any, signal: InterruptControl}[] | FlowControl | Flow {
+  playOneStep(): InterruptSignal[] | FlowControl | Flow {
     return this.awaitingAction() ? this : super.playOneStep();
   }
 

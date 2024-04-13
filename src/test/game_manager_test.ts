@@ -1169,6 +1169,7 @@ describe('GameManager', () => {
     it("proceeds to subflow", () => {
       gameManager = new GameManager(TestPlayer, TestGame, [ Card, Country, General ]);
       game = gameManager.game;
+      const stepSpy = chai.spy();
 
       const {
         playerActions,
@@ -1188,6 +1189,7 @@ describe('GameManager', () => {
               if (game.tokens <= 6) Do.subflow('token-flow');
               if (game.tokens <= 0) game.finish(gameManager.players.withHighest('tokens'))
             },
+            stepSpy
           ]})
         )}),
       );
@@ -1241,21 +1243,25 @@ describe('GameManager', () => {
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[3] });
       gameManager.play();
 
-      expect(gameManager.players.currentPosition).to.deep.equal([1]);
-      expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(1);
-      expect(gameManager.allowedActions(gameManager.players[0]).actions[0].name).to.equal('declare');
+      console.log(gameManager.flowState);
 
-      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[0] });
+      expect(gameManager.players.currentPosition).to.deep.equal([4]);
+      expect(gameManager.allowedActions(gameManager.players[3]).actions.length).to.equal(1);
+      expect(gameManager.allowedActions(gameManager.players[3]).actions[0].name).to.equal('declare');
+      expect(stepSpy).to.have.been.called.exactly(3);
+
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[3] });
       gameManager.play();
-      gameManager.processMove({ name: 'declare', args: {d: '!'}, player: gameManager.players[1] });
+      gameManager.processMove({ name: 'declare', args: {d: '!'}, player: gameManager.players[0] });
+      gameManager.play();
+      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[1] });
       gameManager.play();
       gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[2] });
       gameManager.play();
-      gameManager.processMove({ name: 'declare', args: {d: '?'}, player: gameManager.players[3] });
-      gameManager.play();
 
       // cedes to previous flow
-      expect(gameManager.players[1].tokens).to.equal(2);
+      expect(stepSpy).to.have.been.called.exactly(4);
+      expect(gameManager.players[0].tokens).to.equal(2);
       expect(gameManager.players.currentPosition).to.deep.equal([1]);
       expect(gameManager.allowedActions(gameManager.players[0]).actions.length).to.equal(1);
       expect(gameManager.allowedActions(gameManager.players[0]).actions[0].name).to.equal('takeOne');

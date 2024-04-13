@@ -1,5 +1,5 @@
 import Flow from './flow.js';
-import { FlowControl, InterruptControl } from './enums.js';
+import { FlowControl, type InterruptSignal } from './enums.js';
 
 import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
 import type { Player, PlayerCollection } from '../player/index.js';
@@ -120,7 +120,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
 
   // intercept super.playOneStep so a single branch doesn't signal complete
   // without us checking all branches
-  playOneStep(): {name?: any, signal: InterruptControl}[] | FlowControl | Flow {
+  playOneStep(): InterruptSignal[] | FlowControl | Flow {
     // step through each player over top of the normal super stepping
     const player = this.getPlayers().findIndex((_, p) => this.completed[p] === undefined);
 

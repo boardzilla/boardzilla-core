@@ -226,16 +226,14 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   flowJSON(player: boolean = false) {
-    return this.flowState.map(({ name }) => {
-      const flow = this.flows[name ?? '__main__'];
-      const json: FlowStackJSON = {
-        stack: flow.branchJSON(!!player),
-        currentPosition: this.players.currentPosition
-      };
-      if (name && name !== '__main__') json.name = name;
-      if (flow.args) json.args = serialize(flow.args);
-      return json;
-    });
+    const currentFlow = this.flows[this.flowState[0].name ?? '__main__'];
+    const currentState: FlowStackJSON = {
+      stack: currentFlow.branchJSON(!!player),
+      currentPosition: this.players.currentPosition
+    };
+    if (this.flowState[0].name) currentState.name = this.flowState[0].name;
+    if (currentFlow.args) currentState.args = serialize(currentFlow.args);
+    return [currentState, ...this.flowState.slice(1)];
   }
 
   /**

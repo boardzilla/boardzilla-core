@@ -1,5 +1,3 @@
-import type { ActionStub } from "../action/action.js";
-
 /**
  * Functions for interrupting flows
  *
@@ -52,19 +50,20 @@ import type { ActionStub } from "../action/action.js";
  * @category Flow
  */
 export const Do = {
-  repeat: (loop?: string | Record<string, string>) => interrupt({ signal: InterruptControl.repeat, data: typeof loop === 'string' ? loop : undefined }),
-  continue: (loop?: string | Record<string, string>) => interrupt({ signal: InterruptControl.continue, data: typeof loop === 'string' ? loop : undefined }),
-  break: (loop?: string | Record<string, string>) => interrupt({ signal: InterruptControl.break, data: typeof loop === 'string' ? loop : undefined }),
-  subflow: (flow: string, args?: ActionStub) => interrupt({ signal: InterruptControl.subflow, data: {name: flow, args} }),
+  repeat: (loop?: string | Record<string, any>) => interrupt({ signal: InterruptControl.repeat, data: typeof loop === 'string' ? loop : undefined }),
+  continue: (loop?: string | Record<string, any>) => interrupt({ signal: InterruptControl.continue, data: typeof loop === 'string' ? loop : undefined }),
+  break: (loop?: string | Record<string, any>) => interrupt({ signal: InterruptControl.break, data: typeof loop === 'string' ? loop : undefined }),
+  subflow: (flow: string, args?: Record<string, any>) => interrupt({ signal: InterruptControl.subflow, data: {name: flow, args} }),
 }
 
 type LoopInterruptSignal = { signal: InterruptControl.repeat | InterruptControl.continue | InterruptControl.break, data?: string }
-type SubflowSignal = { signal: InterruptControl.subflow, data?: {name: string, args?: ActionStub} }
+type SubflowSignal = { signal: InterruptControl.subflow, data?: {name: string, args?: Record<string, any>} }
+export type InterruptSignal = LoopInterruptSignal | SubflowSignal
 
 /** @internal */
-export const interruptSignal: (LoopInterruptSignal | SubflowSignal)[] = [];
+export const interruptSignal: InterruptSignal[] = [];
 
-function interrupt({ signal, data }: LoopInterruptSignal | SubflowSignal) {
+function interrupt({ signal, data }: InterruptSignal) {
   if (signal === InterruptControl.subflow) {
     if (interruptSignal.every(s => s.signal === InterruptControl.subflow)) {
       interruptSignal.push({data, signal}); // subflows can be queued but will not override loop interrupt

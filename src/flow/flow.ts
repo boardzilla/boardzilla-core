@@ -1,4 +1,4 @@
-import { InterruptControl, interruptSignal, FlowControl } from './enums.js';
+import { InterruptControl, interruptSignal, FlowControl, type InterruptSignal } from './enums.js';
 import { Do } from './enums.js';
 
 import type GameManager from '../game-manager.js';
@@ -15,13 +15,12 @@ import type { Serializable } from '../action/utils.js';
 
 /**
  * Several flow methods accept an argument of this type. This is an object
- * containing keys for every flow function that the game is in the middle of
- * which recorded a value to the current scope. Functions that can add these
- * values are {@link forLoop}, {@link forEach}, {@link switchCase} and {@link
- * playerActions}. The name given to these functions will be the key used in the
- * FlowArguments and its value will be the value of the current loop for loops,
- * or the test value for switchCase, or the arguments to the action taken for
- * playerActions.
+ * containing the current values of any loops or actions that the game is in the
+ * middle of. Functions that can add these values are {@link forLoop}, {@link
+ * forEach}, {@link switchCase} and {@link playerActions}. The `name` given to
+ * these functions will be the key used in the FlowArguments and its value will
+ * be the value of the current loop for loops, or the test value for switchCase,
+ * or the arguments to the action taken for playerActions.
  *
  * @example
  * forLoop({
@@ -30,7 +29,7 @@ import type { Serializable } from '../action/utils.js';
  *   next: x => x + 1,
  *   while: x => x < 3,
  *   do: forLoop({
- *     name: 'y',
+ *     name: 'y', // y is declared here
  *     initial: 0,
  *     next: y => y + 1,
  *     while: y => y < 2,
@@ -136,7 +135,7 @@ export default class Flow {
   }
 
   flowStepArgs(): FlowArguments {
-    const args = {...(this.args ?? {})};
+    const args = {...(this.top.args ?? {})};
     let flow: FlowStep | undefined = this.top;
     while (flow instanceof Flow) {
       if ('position' in flow && flow.position) {
@@ -258,9 +257,9 @@ export default class Flow {
    * ActionStep if now waiting for player input. override for self-contained
    * flows that do not have subflows.
    */
-  playOneStep(): {data?: any, signal: InterruptControl}[] | FlowControl | Flow {
+  playOneStep(): InterruptSignal[] | FlowControl | Flow {
     const step = this.step;
-    let result: {data?: any, signal: InterruptControl}[] | FlowControl | Flow = FlowControl.complete;
+    let result: InterruptSignal[] | FlowControl | Flow = FlowControl.complete;
     if (step instanceof Function) {
       if (!interruptSignal[0]) step(this.flowStepArgs());
       result = FlowControl.complete;
@@ -277,11 +276,9 @@ export default class Flow {
     // completed step, advance this block if able
     const block = this.currentBlock();
     if (block instanceof Array) {
-      if (this.sequence !== undefined) {
-        if (this.sequence + 1 !== block.length) {
-          this.setPosition(this.position, this.sequence + 1);
-          return FlowControl.ok;
-        }
+      if ((this.sequence ?? 0) + 1 !== block.length) {
+        this.setPosition(this.position, (this.sequence ?? 0) + 1);
+        return FlowControl.ok;
       }
     }
 
@@ -296,7 +293,7 @@ export default class Flow {
     do {
       if (this.gameManager.phase !== 'finished') step = this.playOneStep();
       if (!(step instanceof Flow)) console.debug(`Advancing flow:\n ${this.stacktrace()}`);
-    } while (step === FlowControl.ok && this.gameManager.phase !== 'finished')
+    } while (step === FlowControl.ok && interruptSignal[0]?.signal !== InterruptControl.subflow && this.gameManager.phase !== 'finished')
     if (interruptSignal[0]?.signal === InterruptControl.subflow) return interruptSignal.map(s => s.data as {name: string, args: Record<string, any>});
     if (step instanceof Flow) return step;
     if (step instanceof Array) {
