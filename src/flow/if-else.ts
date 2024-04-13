@@ -1,6 +1,7 @@
 import SwitchCase from './switch-case.js';
 
 import type { FlowDefinition, FlowStep } from './flow.js';
+import type Flow from './flow.js';
 
 export default class If extends SwitchCase<boolean> {
   constructor({ name, if: test, do: doExpr, else: elseExpr }: {
@@ -16,7 +17,7 @@ export default class If extends SwitchCase<boolean> {
     return `if-else${this.name ? ":" + this.name : ""} (${!!this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     const blocks = {
       do: this.cases[0].do instanceof Array ? this.cases[0].do : [this.cases[0].do],
     } as Record<string, FlowStep[]>;
@@ -24,6 +25,7 @@ export default class If extends SwitchCase<boolean> {
 
     return this.visualizeBlocks({
       type: 'ifElse',
+      top,
       blocks,
       block: this.position ? (this.position.default ? 'else' : 'do') : undefined,
       position: this.position?.value,

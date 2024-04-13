@@ -18,7 +18,7 @@ export type SetupState = {
 export type GameState = {
   players: PlayerAttributes[],
   settings: Record<string, any>,
-  position: FlowBranchJSON[],
+  position: {name?: string, args?: Record<string, any>, currentPosition: number[], stack: FlowBranchJSON[]}[],
   board: ElementJSON[],
   sequence: number,
   rseed: string,
@@ -134,7 +134,6 @@ export const createInterface = (setup: SetupFunction): GameInterface => {
         cachedGame.intermediateUpdates = [];
       }
       const gameManager = cachedGame || setup(previousState.state, {rseed, trackMovement: true});
-      gameManager.players.setCurrent(previousState.currentPlayers);
       const player = gameManager.players.atPosition(move.position)!;
       // @ts-ignore
       gameManager.messages = [];

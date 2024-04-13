@@ -50,9 +50,6 @@ export const createGame = <G extends Game>(
   gameCreator(gameManager.game);
   if (options?.mocks) options.mocks(gameManager.game);
 
-  // lock game from receiving any more setup
-  gameManager.start();
-
   if (options?.trackMovement) gameManager.trackMovement();
   if (!inSetup) {
     gameManager.sequence = state.sequence;
@@ -60,8 +57,9 @@ export const createGame = <G extends Game>(
     gameManager.announcements = state.announcements;
     gameManager.game.fromJSON(state.board);
     gameManager.players.assignAttributesFromJSON(state.players);
-    gameManager.flow.setBranchFromJSON(state.position);
+    gameManager.setFlowFromJSON(state.position);
   } else {
+    gameManager.start();
     gameManager.players.assignAttributesFromJSON(state.players);
   }
 

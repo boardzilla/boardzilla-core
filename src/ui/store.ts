@@ -150,9 +150,8 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.players.fromJSON(update.state.players);
       gameManager.game.fromJSON(update.state.board);
       gameManager.players.assignAttributesFromJSON(update.state.players);
-      gameManager.flow.setBranchFromJSON(update.state.position);
+      gameManager.setFlowFromJSON(update.state.position);
     }
-    gameManager.players.setCurrent('currentPlayers' in update ? update.currentPlayers : []);
     gameManager.phase = 'started';
     gameManager.messages = update.state.messages;
     gameManager.announcements = update.state.announcements;
@@ -163,7 +162,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.phase = 'finished';
       gameManager.winner = update.winners.map(p => gameManager.players.atPosition(p)!);
     }
-    console.debug(`Game update for player #${position}. Current flow:\n ${gameManager.flow.stacktrace()}`);
+    console.debug(`Game update for player #${position}. Current flow:\n ${gameManager.flow().stacktrace()}`);
 
     let state: GameStore = {
       ...s,

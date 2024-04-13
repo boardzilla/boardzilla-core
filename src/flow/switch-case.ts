@@ -74,7 +74,7 @@ export default class SwitchCase<T extends Serializable> extends Flow {
     return `switch-case${this.name ? ":" + this.name : ""} (${this.position.value}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     let block: string | undefined = undefined;
     if (this.position.default) {
       block = 'default'
@@ -85,6 +85,7 @@ export default class SwitchCase<T extends Serializable> extends Flow {
 
     return this.visualizeBlocks({
       type: 'switchCase',
+      top,
       blocks: Object.fromEntries(
         this.cases.map(c => [String('eq' in c ? c.eq : c.test), c.do instanceof Array ? c.do : [c.do]]).concat([
           this.default ? ['default', (this.default instanceof Array ? this.default : [this.default])] : []

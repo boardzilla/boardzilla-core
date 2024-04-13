@@ -435,7 +435,7 @@ export function updatePrompts(store: GameStore): Partial<GameStore> {
       console.error(`No prompts defined for choosing "${move.selections[0].name}" in "${move.name}" action. Add either an action prompt or selection prompt.`);
     }
     move.selections[0].prompt = undefined;
-    if (state.boardPrompt) {
+    if (state.boardPrompt && !disambiguateElement) {
       move.prompt = undefined;
     }
   }

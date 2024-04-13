@@ -1,9 +1,10 @@
 import Flow from './flow.js';
-import { FlowControl, LoopInterruptControl } from './enums.js';
+import { FlowControl } from './enums.js';
 
 import type { FlowDefinition, FlowBranchNode, FlowBranchJSON } from './flow.js';
 import type { Player, PlayerCollection } from '../player/index.js';
 import type { Argument } from '../action/action.js';
+import type { SubflowSignal, InterruptSignal } from './enums.js';
 
 export type EveryPlayerPosition = {positions: FlowBranchJSON[][], completed: (boolean | undefined)[]};
 
@@ -109,7 +110,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
     player: number,
     name: string,
     args: Record<string, Argument>,
-  }): string | undefined {
+  }): string | SubflowSignal['data'][] | undefined {
     const player = this.getPlayers().findIndex(p => p.position === move.player);
     if (player < 0) throw Error(`Cannot process action from ${move.player}`);
     return this.withPlayer(player, () => {
@@ -120,7 +121,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
 
   // intercept super.playOneStep so a single branch doesn't signal complete
   // without us checking all branches
-  playOneStep(): {name?: string, signal: LoopInterruptControl} | FlowControl | Flow {
+  playOneStep(): InterruptSignal[] | FlowControl | Flow {
     // step through each player over top of the normal super stepping
     const player = this.getPlayers().findIndex((_, p) => this.completed[p] === undefined);
 
@@ -144,9 +145,10 @@ export default class EveryPlayer<P extends Player> extends Flow {
     return `every-player${this.name ? ":" + this.name : ""}`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     return this.visualizeBlocks({
       type: 'everyPlayer',
+      top,
       blocks: {
         do: this.block instanceof Array ? this.block : [this.block]
       },

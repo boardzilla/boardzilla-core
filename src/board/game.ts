@@ -13,6 +13,7 @@ import {
   EveryPlayer,
   IfElse,
   SwitchCase,
+  Do,
 } from '../flow/index.js';
 
 import type { BasePlayer } from '../player/player.js';
@@ -160,7 +161,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   }
 
   /**
-   * Define your game's flow. May contain any of the following:
+   * Define your game's main flow. May contain any of the following:
    * - {@link playerActions}
    * - {@link loop}
    * - {@link whileLoop}
@@ -173,9 +174,21 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    * @category Definition
    */
   defineFlow(...flow: FlowStep[]) {
+    this.defineSubflow('__main__', ...flow);
+  }
+
+  /**
+   * Define an addtional flow that the main flow can enter. A subflow has a
+   * unique name and can be entered at any point by calling {@link
+   * Do|Do.subflow}.
+   *
+   * @param name - Unique name of flow
+   * @param flow - Steps of the flow
+   */
+  defineSubflow(name: string, ...flow: FlowStep[]) {
     if (this._ctx.gameManager.phase !== 'new') throw Error('cannot call defineFlow once started');
-    this._ctx.gameManager.flow = new Flow({ do: flow });
-    this._ctx.gameManager.flow.gameManager = this._ctx.gameManager;
+    this._ctx.gameManager.flows[name] = new Flow({ name, do: flow });
+    this._ctx.gameManager.flows[name].gameManager = this._ctx.gameManager;
   }
 
   /**
@@ -286,7 +299,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    * @category Game Management
    */
   followUp(action: ActionStub) {
-    this._ctx.gameManager.followups.push(action);
+    Do.subflow('__followup__', action);
   }
 
   flowGuard = (name: string): true => {
@@ -554,7 +567,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    * @category UI
    */
   layoutStep(step: string, attributes: ActionLayout) {
-    if (!this._ctx.gameManager.flow.getStep(step)) throw Error(`No such step: ${step}`);
+    if (!this._ctx.gameManager.getFlowStep(step)) throw Error(`No such step: ${step}`);
     this._ui.stepLayouts["step:" + step] = attributes;
   }
 

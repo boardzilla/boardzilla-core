@@ -3,7 +3,7 @@ import { Player } from '../player/index.js';
 import { serializeSingleArg, deserializeSingleArg } from '../action/utils.js';
 
 import type { FlowArguments, FlowDefinition } from './flow.js';
-import { FlowControl } from './enums.js';
+import type Flow from './flow.js';
 
 export default class EachPlayer<P extends Player> extends ForLoop<P> {
   continueUntil?: (p: P) => boolean;
@@ -37,19 +37,11 @@ export default class EachPlayer<P extends Player> extends ForLoop<P> {
     this.turns = turns;
   }
 
-  reset() {
-    super.reset();
-    if (this.position.value) {
-      this.gameManager.players.setCurrent(this.position.value);
+  setPosition(position: typeof this.position, sequence?: number, reset=true) {
+    if (position.value && position.value.position !== this.position?.value.position) {
+      this.gameManager.players.setCurrent(position.value);
     }
-  }
-
-  advance() {
-    const result = super.advance();
-    if (result === FlowControl.ok && this.position.value) {
-      this.gameManager.players.setCurrent(this.position.value);
-    }
-    return result;
+    super.setPosition(position, sequence, reset);
   }
 
   toJSON() {
@@ -74,9 +66,10 @@ export default class EachPlayer<P extends Player> extends ForLoop<P> {
     return `each-player${this.name ? ":" + this.name : ""} (player #${this.position?.value?.position}${this.block instanceof Array ? ', item #' + this.sequence: ''})`;
   }
 
-  visualize() {
+  visualize(top: Flow) {
     return this.visualizeBlocks({
       type: 'eachPlayer',
+      top,
       blocks: {
         do: this.block instanceof Array ? this.block : [this.block]
       },

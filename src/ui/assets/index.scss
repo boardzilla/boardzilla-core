@@ -1085,6 +1085,15 @@ html, body { height: 100% }
       height: calc(100% - 4em);
       top: 3em;
 
+      .subflow {
+        background: black;
+        color: white;
+        width: 90%;
+        padding: .2em 1em;
+        margin: 1em 0;
+        border-radius: 1.5em;
+      }
+
       > .flow-debug-block {
         width: 90%;
       }

@@ -919,10 +919,10 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
   }
 
   /**
-   * Indicates that this action does a move with the selected elements. This is
-   * almost the equivalent of calling Action#do and adding a putInto command,
-   * except that the game will also permit the UI to allow a mouse drag for the
-   * move.
+   * Perform a move with the selected element(s) into a selected
+   * Space/Piece. This is almost the equivalent of calling Action#do and adding
+   * a putInto command, except that the game will also permit the UI to allow a
+   * mouse drag for the move.
    *
    * @param piece - A {@link Piece} to move or the name of the piece selection in this action
    * @param into - A {@link GameElement} to move into or the name of the
@@ -957,6 +957,23 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     return this;
   }
 
+  /**
+   * Swap the location of two Pieces. Each of the two pieces can either be the
+   * name of a previous `chooseOnBoard`, or a simply provide a piece if it is
+   * not a player choice. The game will also allow a mouse drag for the swap.
+   *
+   * @param piece1 - A {@link Piece} to swap or the name of the piece selection in this action
+   * @param piece2 - A {@link Piece} to swap or the name of the piece selection in this action
+   *
+   * player => action({
+   *   prompt: 'Exchange a card from hand with the top of the deck'
+   * }).chooseOnBoard(
+   *   'card', player.my(Card)
+   * ).swap(
+   *   'card', $.deck.first(Card)!
+   * )
+   * @category Behaviour
+   */
   swap(piece1: keyof A | Piece<Game>, piece2: keyof A | Piece<Game>) {
     this.do((args: A) => {
       const p1 = piece1 instanceof Piece ? piece1 : args[piece1] as Piece<Game>;
@@ -980,7 +997,24 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     return this;
   }
 
-  reorder(collection: GameElement[], options?: {
+  /**
+   * Have the player select one of the Pieces in the collection and select a new
+   * position within the collection while keeping everything else in the same
+   * order. The game will also permit a mouse drag for the reorder.
+   *
+   * @param collection - A collection of {@link Piece}s to reorder
+   *
+   * @param options.prompt - Prompt displayed to the user for this reorder
+   * choice.
+   *
+   * player => action({
+   *   prompt: 'Reorder cards in hand'
+   * }).reorder(
+   *   player.my(Card)
+   * )
+   * @category Behaviour
+   */
+  reorder(collection: Piece<Game>[], options?: {
     prompt?: string | ((args: A) => string),
   }) {
     const { prompt } = options || {};
@@ -1011,6 +1045,9 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
    * @param piece - The name of the piece selection in this action from a
    * `chooseOnBoard` prior to this
    * @param into - A {@link GameElement} to move into
+   *
+   * @param options.prompt - Prompt displayed to the user for this placement
+   * choice.
    *
    * @param options.validate - A function that takes an object of key-value
    * pairs for all player choices and returns a boolean. The position selected

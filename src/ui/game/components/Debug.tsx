@@ -40,7 +40,12 @@ const Debug = () => {
   return (
     <div id="debug-overlay" className="full-page-cover" onClick={() => setInfoElement()}>
       <div id="flow-debug">
-        <FlowDebug flow={gameManager.flow.visualize()} nest={0} current={true} />
+        {Object.entries(gameManager.flows).map(([name, flow]) => (
+          <React.Fragment key={name}>
+            {name !== '__main__' && <div className="subflow">subflow "{name.replace(/__/g, '')}"</div>}
+            <FlowDebug flow={flow.visualize(flow)} nest={0} current={true} />
+          </React.Fragment>
+        ))}
       </div>
       <div id="action-debug">
         <div id="action-breakdown">

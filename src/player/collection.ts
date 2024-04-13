@@ -186,7 +186,7 @@ export default class PlayerCollection<P extends Player> extends Array<P> {
 
   fromJSON(players: Record<string, any>[]) {
     // reset all on self
-    this.splice(0, this.length);
+    this.splice(0);
 
     for (const p of players) {
       this.addPlayer({position: p.position} as unknown as PlayerAttributes);
