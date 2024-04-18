@@ -172,14 +172,6 @@ export function updateSelections(store: GameStore): GameStore {
               // have been caught with any possible choices presented
               throw Error(state.error);
             } else {
-              try {
-                gameManager.play();
-              } catch (e) {
-                // this is a nice-to-have to speed up animations by
-                // "pre-playing" the flow. this could legitimately fail until
-                // the updated state is received from the server so exceptions
-                // here are ignored.
-              }
               gameManager.sequence = Math.floor(gameManager.sequence) + 0.5; // intermediate local update that will need to be merged
               let json: any = undefined;
               if (gameManager.intermediateUpdates.length) {
@@ -192,7 +184,7 @@ export function updateSelections(store: GameStore): GameStore {
                 ...updateBoard(gameManager, position, json),
               }
 
-              window.top!.postMessage(message, "*");
+              setTimeout(() => window.top!.postMessage(message, "*"), 500);
             }
           } catch (e) {
             // first line of defense for bad game logic. cancel all moves and

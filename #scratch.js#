@@ -1,0 +1,968 @@
+move server-x to new position
+- old = current.x.pos
+- new - pos' + branch'
+
+server-locations {}
+- delete on update
+- key each fresh, guaranteed from server update
+- add movedTo, used to determine changedParent
+
+prev-server-locations {}
+- demote current to previous on server update
+
+on update
+- demote and fresh
+on render (branch, was)
+- look up prev[was].style for moveTransform
+- record style, movedTo + key on current[branch] = prev[was]
+
+
+0123
+A012
+
+0123
+AB01
+
+x->x' + x->x''
+
+
+
+
+UI layout non-child elements moves them into a layout? why? create the hierarchy that matches the layout in the first place
+
+<Popout> looks like <Drawer> except open state ignores container size (inverse the scale?)
+
+playerActions
+- repeatUntil: 'pass'
+- optional: true
+- continueIfImpossible: true
+- logic on server means run gPM before sending state
+- auto-continuation gives away info
+
+- build with files just copied and matching normal import 'css' etc
+- change import scss to css
+- assets get hashed if theyre just bin imports
+- just has to compile but keep css/assets in same relative path
+- manually edit css but then node can't run
+      - can exclude the css from the test suite. that's probably better
+- double check side effects?
+
+- must be able to import game and UI and component modules all separately and tree-shake unused in the final build
+- must be able to compile imported code without assumptions of TS or SASS
+- as few steps for importing a new component module as needed
+
+scroll, alignment, margin?
+
+swap, reorder
+- XXSXX
+- can just select any other element, previous ones go before, subsequent ones go after
+- swap('c1', 'c2') // needs no add'l param
+      - reorder('c1', EC) // c1 = [p1, p2]
+
+Space
+      - showsPieces: boolean
+      - showsPiecesOnlyTo: Player[] | Player | 'owner'
+      - hidesPieces: boolean
+      - hidesPiecesOnlyFrom: Player[] | Player
+      - showsAsEmptyExceptTo: Player[] | Player
+
+contentsWillBeShown()
+  contentsWillBeShownToOwner()
+  contentsWillBeShownTo(...players: P[])
+  contentsWillBeHidden()
+  contentsWillBeHiddenFrom(...players: P[])
+  blockViewFor('all' | 'none' | 'all-but-owner' | Player[])
+
+                               - always available actions?
+                               - same as godMode, just toggle these on and off in the flow and record on Game
+
+
+
+    underlying space with pieces that create a graph
+                               - >1 graph for meaning, specify which one?
+                                - need to serialize if so!
+    or:
+                                  DynamicGrid
+                               - spaces graph normally when queried directly
+                               - pieces on the spaces check edges by providing a custom edge callback
+    or:
+                                  ConnectedSpaceMap#addCustomPieceAdjacency(
+                                    name,
+                                    Piece,
+                                    onEnter((piece, graph) => graph.addEdges(piece, piece.adjacencies())), // addNode removeNode addEdge
+                                  )
+    ConnectedSpaceMap#getdCustomPieceAdjacency(name).isAdjacent(p1, p2) //, etc.
+
+
+    grid aspect ratio just what it sounds like, if not 1, rotation of shapes simply doesnt work
+    piece aspect ratio is cell AR. if not 1, rotation of shapes simply doesnt work
+
+
+    ShapedPiece
+                               - _shape
+                               - base element still needs to be aware of size? for placement into arbitrary layouts
+
+    abstract AdjacencySpace extends Space
+                               - can only have one layout, attr's are taken from class
+                           - "sticky" position defaults to true
+                           - adjacency function or builtin: square, w/diagonal, hex1, hex2, triangle
+                           - adj checks go up to positioned parent
+
+       ConnectedSpaceMap extends AdjacencySpace
+                           - supplies a blank graph
+                           - allows arbitrary connections and weights
+                           - only spaces can be added
+                           - distances, imports graph lib
+
+                           - others no longer takes withinDistance, adjacent since needs to recursive search (remove from adjacency.md)
+- el.withinDistance delegates to container with distanceBetween
+- el.adjacencies delegates to container with isAdjacentTo
+
+SquareGrid/HexGrid extends FixedSpaceGrid extends ConnectedSpaceGrid
+- auto-creates Spaces
+- takes shape, or can remove spaces
+- no create allowed, only remove non-spaces
+- spaces created get added to the blank graph based on adjacency
+
+PieceGrid extends AdjacencySpace
+- only pieces allowed
+- assigns row/col if none
+- handles irregular shapes
+- adjacency but no distance
+- extensionMargin goes here now
+- layout handles size
+- no such thing as unpositioned pieces
+
+Grid#distanceBetween(p1, p2, {
+  impassable?: Space[],
+  passable?: Space[]
+  costToEnter?: {
+    spaces: Space[],
+    cost: number
+  },
+  costToExit?: {
+    spaces: Space[],
+    cost: number
+  },
+  custom?: (s1: Space, s2: Space) => number
+})
+
+- changes the distance property to a callback
+
+rows, columns, flex?, hex?
+- holds adjacency methods
+- adj check goes up to positioned parent
+- no longer need intermediate spaces, pieces can sit directly in the grid with row/col
+- spaces can too, createSpaces(className)
+
+- extensionMargin goes here now
+- slots? some special method to apply layout attrs, some are not allowed (scaling, alignment)
+
+graph connections belong to positions
+- allows hex shapes
+
+exclusion distanceto using graph#from
+cost to enter spaces
+
+
+import classes directly to allow tree-shaking
+
+split chooseSpace/choosePiece
+
+Space._layoutFor(el)
+
+create(Grid, {rows: n, flex: true})
+
+
+how is a space selectable?
+chooseOnGrid(pos, grid, ...) ? validate
+chooseSpace / placePiece
+
+
+grid size
+- origin row and column is top-left at zero deg
+- rotation keeps the top-left corner same for whatever orientation
+- takes a shape string and optional edges declaration for as few or many edges that need defined
+- overlap({row, col, shape}, {row, col, shape}): boolean
+- default function checks for collision, override for more complex
+- apply during grid fit, realy basic tiling if unpositioned, not intended for use? just reuse the overlap function
+
+element.setShape([
+                               'AXX',
+                               '  X',
+                               '  B'
+);
+
+  element.setEdges({
+  A: {
+    left: 'road'
+  },
+  B: {
+    down: 'river'
+  }
+});
+// shape letters are specific to this instance, but can be generalized, e.g.:
+element.setEdges(Carcassone.standardEdges);
+
+two functions in addition to the current basic adjacencies(): ElementCollection
+adjacenciesWithCells returns, e.g.
+  [
+    {
+      element,
+      from: 'A',
+      to: 'B', // this cell A is adjacent to el's cell B
+  }
+  ]
+adjacenciesWithEdges returns, e.g.
+  [
+    {
+      element,
+      from: 'river',
+      to: 'road' // this cell's river edge meets el's road edge, can be undefined if an edge is undefined
+    }
+  ]
+
+dominoes would be e.g.
+
+domino.shape = `
+3355
+3355
+`;
+
+example placement:
+  0123
+
+0 3355
+1 3355
+2  33
+3  33
+4  77
+5  77
+
+domino.adjacenciesWithCells() => [
+  {
+    element: Domino37,
+    from: '3',
+    to: '3',
+  },
+  {
+    element: Domino37,
+    from: '5',
+    to: '3',
+  }
+];
+// validation for dominoes is simple check for matching from&to
+  
+
+  invoke the flex grid
+  - flex grid is always present for display, generally invisibly
+  - interact by setting row,col or using placePiece
+
+
+
+
+rotation
+chooseRotation(name, [])
+move(..., { rotationChoices: [] }
+  placePiece(..., { rotationChoices: [] }
+
+game.announce('name', {autoDismiss: sec})
+
+announcements: {
+  finished: <div/>
+}
+
+announcements: {
+  finished: <div/>
+}
+
+single message (controls, tooltips, announcements)
+arbitrary hotspots
+- 
+
+tooltips?
+turn summary?
+mobile splay
+
+render({
+  announcements: {
+    finish: ({k:v, board}) => <div/>,
+  }
+});
+
+action.do(() => {
+  return followupAction({
+    name: 'next',
+    args: { }
+  });
+})
+
+name: 'next',
+do: () => {
+  return Do.break();
+  
+}
+  
+
+edge api?
+- element edges (how many edges? 4, 6, 3?)
+
+tile placement
+- spaces have invisible infinite grids for layout and placement
+- row/col/rotation are writable in a placeable grid, assigned automatically by layout if not set (layout vars are not visible)
+- 
+- creates a hidden? placement variable (or sets piece.row, col?) and a do (like move)
+- display using saved grid size
+
+placePiece(piece | 'piecename', space, { rotation?: degrees })
+// click + click, or drag
+
+space.first({ row: n, col: m, ... }) 
+
+layout.gridMargin // to allow placement into new areas to grow
+
+/* - layout can read elements row, col?
+ * - make these reserved props
+ * - whats the difference between the layout grid and the display grid? can they be combined?
+ * - adjacency would use simple math to look up the piece at the coord
+ * - what about interaction? selection is on the space right now
+ * - most grids are fixed, some can truncate or extend (carcasonne)
+ * - createPlacementGrid(size??: {x, y} / 'free' ??, mayShrink, mayExtend)
+ * - tile shapes
+ * - or just make row and col writable?
+ * - special grids that are arbitrary planes with optional snap coarseness and place on grid is a standard input
+ * - set of valid placements vs arbitrary with a validate
+ * - custom board inputs... grid placement, rotation, show partial....
+ * - arbitrary board size */
+
+
+  pauseToShow(sec)
+    auto-pause if piece moves more than once
+
+
+             - refs num or name[num], [0, ["mat", 1], 2, ["Queen of Hearts", 0]]
+             - name readonly after creation?
+             - hydrate using matching name[num] if !!name
+             - el.was hide if lateral move in a stack
+             - react keys should stay positional to avoid changes during hide/show
+             - tooltips need to work differently
+
+
+    player => {
+  ...
+  message(({ card }) => `${player} did ${card.cost()}`
+}
+
+
+
+
+
+defineActions({
+  pass: action(
+    ...
+  ).addModifier<number>(
+    'n'
+  ).followup(
+    () => ['play', {n : 2}]
+  )
+})                         
+
+defineFlow(
+  ...
+  playerActions({
+    actions: [
+      { name: 'pass', modifiers: {n: 2}, do: ... },
+      { name: 'play', do: ... },
+      'pass'
+    ]
+  })
+
+  lone button is own prompt
+  lone text/number/choice gets prompt
+  multi-input also gets move.prompt on form ? try not?
+  button selection is only used for action list atm
+
+  control gets step.prompt or only board prompt because the board prompt has to be at the top
+
+
+  a choice is skippable if:
+  - it has no confirm function
+  - it has a single valid choice
+  - is skipIfOnlyOne
+
+  a non-choice is one half of a move where one or both ends are single elements (e.g. take the top card into your hand)
+
+  SN = S+C/X
+  C
+  NS = S+C/X
+  C
+
+  # Releasing devtools
+  git tag -d v<version> if failed
+    ./scripts/release-go
+  go github and publish
+    ./scripts/release-npm
+
+
+  reset
+     - set initial (first item of coll, startingPlayer)
+- if invalid exit
+advance
+- if next position would be invalid exit
+- else setPos(next)
+exit
+- cleanup? setPlayer
+
+
+class MyPlayer {...}
+
+const Board = createBoardClass(MyPlayer);
+
+class MyBoard extends Board
+
+const ({ Space, Piece }) = createBoardClasses(MyBoard);
+
+export class Token extends Piece {...}
+
+export default createGame(MyBoard, board => {
+  const action = board.action;
+  setup...
+  board.defineActions({
+    action: player => action
+  });
+  board.defineFlow(() => Flow)
+});
+
+
+
+steps to create a game
+* define player
+- get board classes
+* define board
+* define board classes
+- instantiate Game, rseed
+- register classes
+- set settings from state
+- set players from state
+* setup
+- set phase = 'started'
+- setState (if supplied)
+  - set players (again?)
+  - set settings (again?)
+  - set board from state
+* create flow (cannot deser without current state)
+- flow.reset()
+- play()
+- set correct phase
+* create actions
+
+
+X combine each slice with previous
+x expand during getRS
+X find last confirm that applies
+
+x add confirm property that accepts up to current arg
+selection dom el
+x pM.s[]
+
+action.combine({
+  selections: 3,
+  validate: (a, b, c) => {}
+}).selection(
+).selection(
+)
+
+action(
+).selection(
+).selection(
+).combine({
+  selections: 2,
+  validate: (a, b)
+       
+
+rs(action, [], sel), cc: combine -> true
+rs(action, [], sel),
+rs(action, [], sel),
+rs(action, [], sel)
+
+chooseCombination({
+  valid:
+  choices: [
+    chooseNumber({
+      
+    lumber: 
+
+clickable/selectable
+
+create a playerControls for each defined layout (per step, action, selection)
+
+action.appearance((...args) => ({
+  position: {
+    relativeTo: element,
+    left, top,
+    align: 'top center'
+  },
+  selectNumber: val => <input value={val}>
+  selections: [
+    enterText,
+    
+  ]
+}));
+
+gameUpdate -> setState -> apply iMove -> move, selections
+
+action: rSel
+->
+el => {action, ...args}[]
+  +
+    non-board selections
+
+action selection (b, t, c, n, x)
+form with multiple actions? e.g. bid+pass
+
+b+b ambiguous board selections resolve with 'element > #action .prompt'
+- but what's the initial prompt??
+
+tcnx+x combine buttons
+tcn+tcn co-exist
+tcn+tcn+x x combine with last, up to you
+
+#action .prompt
+
+
+interactiveComponent
+- modifyable state
+- call arbitrary action? (e.g. set game value) can we just put these on game?
+
+import useModifyableState
+
+Counter = () => {
+  const setCount = useModifyableState('count')
+}
+
+free(player => {
+  board.all(Counter, { player }).canEdit('count')
+  board.all(Counter, { player }).canMove(...)
+})
+canEdit((player, element) => {
+  if (element instanceof Counter) return 'count';
+})
+
+map.createGrid // .createHexGrid
+el.connectTo(el2, cost)
+
+rome.others(City, {adjacent: true})
+rome.others(City, city => city.adjacentTo(rome))
+rome.others(City, {withinDistance: 2})
+
+rome.adjacent(City) // adjacent('diagonal' | 'knight') for grids
+rome.withinDistance(2, City)
+rome.distanceTo(sicily)
+
+
+
+selection {
+  min?, max?, bqm -> query(bqm, min)
+}
+
+
+
+const PGPlayer extends Player {
+  score: number;
+  passed: boolean
+})
+definePlayer(PGPlayer)
+
+// should not mutate instance, must lock
+deck.onEnter(Card, c => c.hideFromAll())
+Card.onEnter(deck, c => c.hideFromAll())
+deck.setVisibility(Card, "hidden")
+
+hand.onEnter(Card, () => hand.sort())
+Hand.onAddContent(h => h.sort())
+
+mat.onEnter(Card, c => c.eternal && pile.first(c.eternal).putInto(mat))
+
+deck.setVisibility("visible")
+
+for (mat of playerMats) Card.onEnter(mat, c => c.showOnlyTo(mat.owner))
+playerMats.setVisibility("owner")
+
+layout
+- game
+  - flow
+  - actions
+  - board
+- ui
+  - layout
+  - components
+  - assets
+
+Game set/get state
+  Flow:
+    player list/methods, set/get currentPlayer
+    this.board
+    this.players
+    this.actions
+  Board:
+    board
+      attrs
+
+deck.find(Card).first()
+or
+deck.first(Card)
+or
+q("Deck Card:top")
+or?
+q("Deck Card")[0] ?
+q.top("Deck Card") ?
+
+find(Hand, { mine: true }).find(Card, c => c.value > 6).top()
+or
+first(Hand, { mine: true }).find(Card, c => c.value > 6).top()
+or
+find(Hand, { mine: true }).top(Card, c => c.value > 6)
+or
+q("Hand[mine] Card[value>6]")
+
+find(PlayerMat, { mine: false }).find(Card, { suit: "H" })).all()
+or
+find(PlayerMat, { mine: false }).all(Card, { suit: "H" }))
+or
+q("PlayerMat[!mine] Card[suit=H]")
+
+find(Card, c => c["3p"]).all(Token)
+or
+q("Card[3p] Token")
+
+union(deck.find(Card).first(), hand.find(Card))
+or
+q("Deck Card:top, Hand Card")
+
+find(Space, {mine: true}).first(Space, "tableau").all(Card, c => !c.active)
+or
+find({mine: true}).first("tableau").all(c => !c.active)
+or
+q('[mine] #tableau Card[!active]')
+
+
+Piece
+- name
+- player
+- layout...
+
+
+
+how do Choice for multiple moves?
+
+Choice
+prompt
+[
+  selection
+  move selection + end
+  form selection + ...
+]
+
+// anatomy of a move
+
+// actions define a set of inputs and a resultant state change
+// these are deliberately together so that the client can decide how to expose the options and animate the action
+
+action {
+  name,
+  log,
+  label,
+  selections: [
+    selection,
+    ...
+  ]
+  move: args => {}, // what to do with the combo of args
+}
+
+// what gets sent to client:
+// moves (which ends are fixed where)
+// actions
+{
+  name: string
+  prompt: string,
+  selection: Selection
+  clientContext: {moveTo?, moveFrom?,... values used by client for specific form calc/validations }
+}
+
+composite selection { // has no name, is not an action by itself but can be used/combined by many actions
+  selections,
+  move: arg => {}, // what to do with the selection
+}
+
+// tap and choose target...
+// tap is an action, whats the follow-up choice? too complex for action definition, just put it all in the flow
+// pay-for when payment options might exist? flow branches are dynamic based on state
+// OptionalChoice step in flow?
+
+// combine actions into a choice function that takes user input and returns args
+// confirm(action) just wraps an action in a composite that inherits all behaviour but adds a confirm selection
+
+selection {
+  type
+  string / min-max / ...
+}
+
+input {
+    selections [
+      SelectPiece,
+      SelectPiece,
+    ]
+  }
+
+
+// phase=play,turn=2,auction=p2,bid=p1
+
+process(state, action) {
+  return route(state)(action);
+}
+
+i => {
+  new C(() => i);
+}
+
+// step[steps, each-player, before, after, actions]
+// action[during, next]
+
+// sequence[key, steps]
+// step[value,
+
+// setup
+// play
+//   auction[each p]
+//     > may auction
+//     bid[each player]
+//       > may bid
+//   buy[each p]
+//     > may buy
+//   build cities[each p]
+//     build
+//       > may build
+//   power[each p]
+//     power
+//       > may power
+
+
+// repeatForEach, repeatWhile, repeatUntil
+// continue (continues to the next step or substep)
+// next (repeats the current if a repeat block)
+// goto (skips the flow)
+
+step, run/sequence/loop
+
+flow creator in game context:
+
+step{name, Mutator: () => {}, nextStep}
+
+results in hierchical Flow objects on game.flow:
+
+SM{name, Record<StepName, Action => mutate phase/state>}
+
+usage:
+
+() => void
+  Step#name
+  Step#command: () => void
+  step action {
+    option: Step | Phase | null,
+    option: Step | Phase | null,
+  }
+
+Action > Step
+
+Flow > Step
+Flow#steps
+Flow#currentStep
+Flow#setState(flowState) {
+  this.currentStep = ...
+}
+Flow#process(Action) {
+  this.currentStep.process(Action);
+  proceed based on result?
+}
+
+Flow#advance() {
+  
+  
+Flow#advanceToNextAction() {
+  while !nextStep.requiresInput
+    this.advance()
+  return nextStep
+}
+
+Game#process(State, Action) {
+  this.setState(State); // hydrates the game and sets flow state
+  this.processAction(Action); // mutates game state and advances flow to next action needed
+  return [this.allowedActions(), this.getState()];
+}         
+
+Game#processAction(Action) {
+  this.flow.setState(state.flowState);
+  this.flow.process(Action);
+  this.flow.advanceToNextAction();
+}
+
+Game#allowedActions() {
+  return this.flow.currentStep keys map to this.actions;
+}
+
+  eachPlayer({
+    playCard: card => {
+      () => card.putInto('#deck');
+      if (card.scoring) game.scorePoint();
+    }, steps([
+      ...
+    ])
+  })
+      
+  eachPlayer([
+    choose([
+      playCard,
+      pass
+    ]),
+    steps([
+      bid,
+      draw
+    ]),
+  ])
+
+  playCard = actions.drag({
+    from: 'hand',
+    to: 'board'
+  });
+  
+  game.definePlay(
+    steps('play', [
+      step('setup', () => { /* ... setupSteps... */ }),
+      loop('turns', { initial: 1, next: turn => turn +1, until: /* ...winner found... */ }, turn => (
+        steps('turn', [
+          step('setupAuctionPhase', () => {
+            game.setAllPlayers({ havePassedAuctionPhase: false });
+          setCurrentPlayer(/* ... highest score player, */);
+        }),
+        eachPlayer('auctions', player => (
+          steps('auction', {
+            unless: () => player.get('havePassedAuctionPhase')
+          }, [
+            branch('ifCard', {
+              condition: () => Card.any(),
+              true: step(),
+              false: step()
+            },
+            currentPlayerAction('auctionOrPass', {
+              auction: steps('bidding', [
+                step('setupBiddingPhase', () => {
+                  game.setAllPlayers({ passedThisAuction: false })
+                }),
+                loop('bids', {
+                  initial: currentPlayer(),
+                  next: nextPlayer(),
+                  until: () => game.countPlayersBy(p => !p.get('passedThisAuction') && !p.get('havePassedAuctionPhase')) <= 1,
+                }, bidder => steps('bid', [
+                  playerAction('bidOrPass', {
+                    player: bidder,
+                    unless: () => player.get('passedThisAuction') || player.get('havePassedAuctionPhase')
+                  }, {
+                    bid: amount => game.set({ highBid: amount, playerWithHighestBid: bidder }),
+                    pass: () => bidder.set({ passedThisAuction: true })
+                  })
+                ])),
+                step('winBid', () => {
+                  Card.find('[auction]').putInto(game.playerMat(game.get('playerWithHighestBid')));
+                  game.playerMat(game.get('playerWithHighestBid').find('Counter').value -= game.get('highBid'));
+                })
+              ]),
+              pass: step('passAuction', () => {
+                player.set({ havePassedAuctionPhase: true })
+              })
+            })
+          ])
+        )),
+        eachPlayer('buy', player => something()),
+        eachPlayer('build', player => something()),
+        eachPlayer('power', player => something())
+      ])
+    ))
+  ])
+);
+
+
+
+     game.definePlay([
+       'setup',
+       loopUntil(() => { /* ...winner found... */ }, [
+         () => setPlayer(),
+         eachPlayer([
+           playerMay({
+             auction: 'bid',
+             pass: 
+           
+         
+       ]),
+       
+  steps: {
+    auction: {
+      onStart: () => setPlayer(),
+      beforeEach: () => {
+        if (player.get('havePassedAuctionPhase')) return repeat('auction');
+      }
+      actions: {
+        auction: 'bidding',
+        pass: REPEAT
+      },
+      afterEach: () => {
+        Card.find('[auction]').putInto(game.playerMat(game.get('playerWithHighestBid')));
+        game.playerMat(game.get('playerWithHighestBid').find('Counter').value -= (game.get('highestBid') || Card.find('[auction]').cost!));
+        nextPlayer(),
+      }
+    },
+    bidding: {
+      repeatWhile: 
+      before: () => setPlayer(),
+      beforeEach: () => {
+        if (game.countPlayersBy(p => !p.get('passedThisAuction') && !p.get('havePassedAuctionPhase')) <= 1) return 
+        if (player.get('passedThisAuction') || player.get('havePassedAuctionPhase')) return next();
+      }
+      actions: {
+        bid: repeat('bid'),
+        pass: repeat('bid'),
+      },
+    },
+    buy: () => {
+    },
+    build: () => {
+    },
+    power: () => {
+    }
+  }
+});
+
+route(state) {
+  stepThru("phase", {
+    setup: () => {
+      //...
+    },
+    play: () => {
+      incrementFrom("turn", 1, () => {
+        stepThru("turnPhase", {
+          auction: () => {
+          },
+          buy: () => {
+          },
+          build: () => {
+          },
+          power: () => {
+          },
+        });
+      });
+    }
+  });
+}
+
+route(state) {
+  val = getStateValue(getNextStateToTrackName());
+}

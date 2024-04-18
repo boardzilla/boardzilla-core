@@ -15,6 +15,7 @@ import type { ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../lib.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 import type { DirectedGraph } from 'graphology';
+import { equals } from '../../../utils.js';
 
 const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
@@ -56,14 +57,6 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
-  const previousRender = useMemo(() => {
-    if (branch !== element._t.was) {
-      const previousRender = previousRenderedState.elements[element._t.was!];
-      if (previousRender && previousRender.movedTo !== branch) return previousRender;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [element._t.was, branch, previousRenderedState, boardJSON]);
-
   const newAttrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
     !GameElement.unserializableAttributes.includes(key) &&
       typeof val !== 'function' && typeof val !== 'object' &&
@@ -74,10 +67,18 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
 
   if (element.player?.position === position) newAttrs['data-mine'] = 'true';
 
-  const attrs = previousRender?.attrs ?? newAttrs;
+  // if changes from last render, either attr change or position change
+  const previousRender = useMemo(() => {
+    const previousRender = previousRenderedState.elements[element._t.was!]; // && previousRenderedState.elements[child._t.was].movedTo
 
+    if (previousRender && (branch !== element._t.was || !equals(previousRender.attrs, newAttrs))) return previousRender;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [element._t.was, branch, previousRenderedState, boardJSON]);
+
+  // if position change
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style || positioning || mode === 'zoom') return;
+    if (!previousRender?.style || branch === element._t.was || previousRender.movedTo === branch || positioning || mode === 'zoom') return;
+    console.log('moveTransform', branch, element._t.was, previousRender?.movedTo);
     const newPosition = relativeTransform;
     return {
       scaleX: previousRender.style.width / newPosition.width,
@@ -86,18 +87,21 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       translateY: (previousRender.style.top + previousRender.style.height / 2 - newPosition.top - newPosition.height / 2) / newPosition.height * 100,
       rotate: (previousRender.style.rotation ?? 0) - (element._rotation ?? 0)
     };
-  }, [relativeTransform, previousRender, mode, positioning, element]);
+  }, [relativeTransform, previousRender, mode, positioning, branch, element]);
+
+  const attrs = moveTransform ? previousRender?.attrs : newAttrs;
 
   useEffect(() => {
     if (placing && moveTransform) setPositioning(true);
   }, [placing, moveTransform]);
 
+  // directly on the dom: remove the temporary transform-to-old position and set all new attr's
   useEffect(() => {
     const node = wrapper.current;
     if (node?.style.getPropertyValue('--transformed-to-old')) {
+      console.log('remove transformed-to-old', branch, node.style.getPropertyValue('transform'));
       node?.scrollTop; // force reflow
       // move to 'new' by removing transform and animate
-      if (node.classList.contains('animating')) return;
       node.classList.add('animating');
       node.style.removeProperty('--transformed-to-old');
       node.style.removeProperty('transform');
@@ -299,42 +303,31 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
-    if (element._rotation !== undefined) styleBuilder.transform = (styleBuilder.transform ?? '') + `rotate(${element._rotation}deg)`;
-
     return styleBuilder;
   }, [element, dragging, mode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
 
-  useEffect(() => {
-    if (element._ui.appearance.effects) {
-      if (!domElement.current) return;
-      const callback: MutationCallback = mutations => {
-        for (const {attributes, name} of element._ui.appearance.effects as {attributes: Record<string, any>, name: string}[]) {
-          if (mutations.some(m => {
-            const attr = Object.keys(attributes).find(a => `data-${a.toLowerCase()}` === m.attributeName);
-            return attr &&
-              m.oldValue !== String(attributes[attr]) &&
-              Object.entries(attributes).every(([k, v]) => (m.target as HTMLElement).getAttribute(`data-${k.toLowerCase()}`) === String(v));
-          })) {
-            domElement.current?.classList.add(name);
-            domElement.current?.setAttribute('data-bz-effect', name);
-          }
-        }
-      };
-
-      const observer = new MutationObserver(callback);
-      observer.observe(domElement.current, {
-        attributeFilter: element._ui.appearance.effects.map(e => Object.keys(e.attributes)).flat().map(a => `data-${a.toLowerCase()}`),
-        attributeOldValue: true
-      });
-      return () => observer.disconnect();
+  const effectClasses = useMemo(() => {
+    const classes: string[] = [];
+    if (element._ui.appearance.effects && previousRender?.attrs && domElement.current) {
+      for (const effect of element._ui.appearance.effects) {
+        if (effect.trigger(element, previousRender.attrs)) classes.push(effect.name);
+      }
     }
-  }, [element]);
+    return classes;
+  }, [element, previousRender]);
 
   const info = useMemo(() => {
     if (mode === 'info') {
       return typeof element._ui.appearance.info === 'function' ? element._ui.appearance.info(element) : element._ui.appearance.info;
     }
   }, [mode, element]);
+
+  const baseStyles = useMemo(() => {
+    const styles: React.CSSProperties = {};
+    if (element._rotation !== undefined) styles.transform = `rotate(${element._rotation}deg)`;
+    if (element.player) Object.assign(styles, {'--player-color': element.player.color});
+    return styles;
+  }, [element._rotation, element.player]);
 
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
     console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
@@ -352,8 +345,9 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       if (childJSON) {
         const childBranch = child.branch();
         const key = 'isSpace' in child ? childBranch : (
-          renderedState[childBranch]?.key || (child._t.was && !child.hasChangedParent() && previousRenderedState.elements[child._t.was]?.key) || uuid()
+          renderedState[child._t.was && previousRenderedState.elements[child._t.was].movedTo || childBranch]?.key || (child._t.was && !child.hasChangedParent() && previousRenderedState.elements[child._t.was]?.key) || uuid()
         );
+        console.log(childBranch, child._t.was, child._t.was && previousRenderedState.elements[child._t.was].movedTo, key);
         renderedState[childBranch] ??= { key };
 
         layoutContents.push(
@@ -506,6 +500,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
       className={classNames(
         baseClass,
         element._ui.appearance.className,
+        ...effectClasses,
         {
           [element.constructor.name]: baseClass !== element.constructor.name,
           selected: isSelected && mode === 'game',
@@ -515,7 +510,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
           droppable
         }
       )}
-      style={element.player ? {['--player-color' as string]: element.player.color} : {}}
+      style={baseStyles}
       onClick={clickable || placing || invalidSelectionError ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

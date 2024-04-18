@@ -59,7 +59,7 @@ export default class ActionStep extends Flow {
     }
     this.description = description;
     this.condition = condition;
-    this.continueIfImpossible = continueIfImpossible;
+    this.continueIfImpossible = continueIfImpossible ?? false;
     this.skipIf = skipIf ?? 'always';
     this.players = players ?? player;
   }

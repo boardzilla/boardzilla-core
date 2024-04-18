@@ -77,7 +77,7 @@ export type ElementUI<T extends GameElement> = {
     className?: string,
     render?: ((el: T) => JSX.Element | null) | false,
     aspectRatio?: number,
-    effects?: { attributes: ElementAttributes<T>, name: string }[],
+    effects?: { trigger: (element: T, oldAttributes: ElementAttributes<T>) => boolean, name: string }[],
     info?: ((el: T) => JSX.Element | null | boolean) | boolean,
     connections?: {
       thickness?: number,
@@ -1703,7 +1703,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
           child === applyTo ||
           (applyTo instanceof ElementCollection && applyTo.includes(child))
         ) {
-          if (attributes.limit !== undefined && attributes.limit <= (layoutItems[l]?.length ?? 0)) break;
+          if (attributes.limit !== undefined && attributes.limit <= (layoutItems[l]?.length ?? 0)) {
+            child._t.was = undefined;
+            break;
+          }
           layoutItems[l] ??= [];
           if (this._t.order === 'stacking') {
             layoutItems[l]!.unshift(child);
