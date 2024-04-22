@@ -26,15 +26,19 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
 }) => {
-  const [previousRenderedState, renderedState, boardSelections, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev, boardJSON] =
-    gameStore(s => [s.previousRenderedState, s.renderedState, s.boardSelections, s.move, s.selected, s.position, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev, s.boardJSON]);
+
+  const [renderedState, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev, boardJSON] =
+    gameStore(s => [s.renderedState, s.move, s.selected, s.position, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev, s.boardJSON]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const branch = useMemo(() => element.branch(), [element, boardJSON]);
+
+  const [boardSelections] = gameStore(s => [s.boardSelections[branch]]);
 
   const [dragging, setDragging] = useState<{ deltaY: number, deltaX: number } | undefined>(); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
   const wrapper = useRef<HTMLDivElement | null>(null);
   const domElement = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const branch = useMemo(() => element.branch(), [element, boardJSON]);
 
   const isSelected = mode === 'game' && (selected?.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
   const baseClass = element instanceof Piece ? 'Piece' : 'Space';
@@ -45,11 +49,10 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const relativeTransform = useMemo(() => element.relativeTransformToBoard(), [element, element._ui.computedStyle]);
   const absoluteTransform = useMemo(() => element.absoluteTransform(relativeTransform), [element, relativeTransform]);
 
-  const selections = boardSelections[branch];
-  const invalidSelectionError = mode === 'game' && selections?.error;
-  const clickable = mode === 'game' && !invalidSelectionError && !dragElement && selections?.clickMoves.length;
-  const selectable = mode === 'game' && !invalidSelectionError && !dragElement && selections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
-  const draggable = mode === 'game' && !invalidSelectionError && !!selections?.dragMoves?.length; // ???
+  const invalidSelectionError = mode === 'game' && boardSelections?.error;
+  const clickable = mode === 'game' && !invalidSelectionError && !dragElement && boardSelections?.clickMoves.length;
+  const selectable = mode === 'game' && !invalidSelectionError && !dragElement && boardSelections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
+  const draggable = mode === 'game' && !invalidSelectionError && !!boardSelections?.dragMoves?.length; // ???
   const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
   const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
   const gridSizeNeeded = useMemo(() => (
@@ -67,29 +70,33 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
 
   if (element.player?.position === position) newAttrs['data-mine'] = 'true';
 
-  // if changes from last render, either attr change or position change
-  const previousRender = useMemo(() => {
-    const previousRender = previousRenderedState.elements[element._t.was!]; // && previousRenderedState.elements[child._t.was].movedTo
+  const previousRender = useMemo(
+    () => element._t.was !== undefined ? renderedState[element._t.was] : undefined,
+    [renderedState, element._t.was]
+  );
 
-    if (previousRender && (branch !== element._t.was || !equals(previousRender.attrs, newAttrs))) return previousRender;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [element._t.was, branch, previousRenderedState, boardJSON]);
+  console.log(branch, '<----------', element._t.was);
+
+  const changedAttributes = useMemo(() => previousRender?.attrs && !equals(previousRender.attrs, newAttrs), [previousRender, newAttrs]);
 
   // if position change
   const moveTransform = useMemo(() => {
-    if (!previousRender?.style || branch === element._t.was || previousRender.movedTo === branch || positioning || mode === 'zoom') return;
-    console.log('moveTransform', branch, element._t.was, previousRender?.movedTo);
-    const newPosition = relativeTransform;
-    return {
-      scaleX: previousRender.style.width / newPosition.width,
-      scaleY: previousRender.style.height / newPosition.height,
-      translateX: (previousRender.style.left + previousRender.style.width / 2 - newPosition.left - newPosition.width / 2) / newPosition.width * 100,
-      translateY: (previousRender.style.top + previousRender.style.height / 2 - newPosition.top - newPosition.height / 2) / newPosition.height * 100,
+    if (!positioning && mode !== 'zoom' && previousRender?.style && (
+      previousRender.style.left !== relativeTransform.left ||
+      previousRender.style.top !== relativeTransform.top ||
+      previousRender.style.width !== relativeTransform.width ||
+      previousRender.style.height !== relativeTransform.height ||
+      (previousRender.style.rotation ?? 0) !== (element._rotation ?? 0)
+    )) return {
+      scaleX: previousRender.style.width / relativeTransform.width,
+      scaleY: previousRender.style.height / relativeTransform.height,
+      translateX: (previousRender.style.left + previousRender.style.width / 2 - relativeTransform.left - relativeTransform.width / 2) / relativeTransform.width * 100,
+      translateY: (previousRender.style.top + previousRender.style.height / 2 - relativeTransform.top - relativeTransform.height / 2) / relativeTransform.height * 100,
       rotate: (previousRender.style.rotation ?? 0) - (element._rotation ?? 0)
     };
-  }, [relativeTransform, previousRender, mode, positioning, branch, element]);
+  }, [relativeTransform, previousRender, mode, positioning, element._rotation]);
 
-  const attrs = moveTransform ? previousRender?.attrs : newAttrs;
+  const attrs = moveTransform && changedAttributes ? previousRender!.attrs : newAttrs;
 
   useEffect(() => {
     if (placing && moveTransform) setPositioning(true);
@@ -99,11 +106,12 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   useEffect(() => {
     const node = wrapper.current;
     if (node?.style.getPropertyValue('--transformed-to-old')) {
-      console.log('remove transformed-to-old', branch, node.style.getPropertyValue('transform'));
+      console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'));
       node?.scrollTop; // force reflow
       // move to 'new' by removing transform and animate
       node.classList.add('animating');
       node.style.removeProperty('--transformed-to-old');
+      node.style.removeProperty('transition');
       node.style.removeProperty('transform');
       if (domElement.current) {
         for (const [k, v] of Object.entries(newAttrs)) domElement.current.setAttribute(k, v);
@@ -121,7 +129,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       };
       node.addEventListener('transitionend', cancel);
     }
-  }, [element, newAttrs]);
+  }, [branch, element, newAttrs]);
 
   const handleClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
@@ -130,9 +138,9 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     } else if (invalidSelectionError) {
       setError(invalidSelectionError)
     } else {
-      onSelectElement(selections.clickMoves, element);
+      onSelectElement(boardSelections.clickMoves, element);
     }
-  }, [element, onSelectElement, selections, placing, invalidSelectionError, setError, selectPlacement]);
+  }, [element, onSelectElement, boardSelections, placing, invalidSelectionError, setError, selectPlacement]);
 
   const handleDragStart = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
@@ -289,7 +297,6 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     if (moveTransform) {
       let transformToOld = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY}) rotate(${moveTransform.rotate}deg)`;
 
-      if (previousRenderedState.elements[element._t.was!]) previousRenderedState.elements[element._t.was!].movedTo = branch;
       if (dragOffset.element && dragOffset.element === element._t.was) {
         // offset by the last drag position to prevent jump back to original position
         transformToOld = `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + transformToOld;
@@ -299,22 +306,23 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       }
 
       styleBuilder.transform = transformToOld;
-      Object.assign(styleBuilder, {'--transformed-to-old': String(uuid())});
+      console.log('transform', element.branch(), transformToOld);
+      Object.assign(styleBuilder, {'--transformed-to-old': String(uuid()), transition: 'none'});
     }
     styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
 
     return styleBuilder;
-  }, [element, dragging, mode, moveTransform, branch, dragOffset, previousRenderedState, absoluteTransform]);
+  }, [element, dragging, mode, moveTransform, dragOffset, absoluteTransform]);
 
   const effectClasses = useMemo(() => {
     const classes: string[] = [];
-    if (element._ui.appearance.effects && previousRender?.attrs && domElement.current) {
+    if (element._ui.appearance.effects && changedAttributes && domElement.current) {
       for (const effect of element._ui.appearance.effects) {
-        if (effect.trigger(element, previousRender.attrs)) classes.push(effect.name);
+        if (effect.trigger(element, previousRender!.attrs!)) classes.push(effect.name);
       }
     }
     return classes;
-  }, [element, previousRender]);
+  }, [element, changedAttributes, previousRender]);
 
   const info = useMemo(() => {
     if (mode === 'info') {
@@ -330,8 +338,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   }, [element._rotation, element.player]);
 
   if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
-    console.error('JSON does not match board. This can be caused by client rendering while server is updating and should fix itself as the final render is triggered.', element, json);
-    //throw Error('JSON does not match board');
+    console.error('Earlier errors have put the board out of sync');
     return null;
   }
 
@@ -343,11 +350,8 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       if (!child._ui.computedStyle || child._ui.appearance.render === false) continue;
       const childJSON = json.children?.[element._t.children.indexOf(child)];
       if (childJSON) {
-        const childBranch = child.branch();
-        const key = 'isSpace' in child ? childBranch : (
-          renderedState[child._t.was && previousRenderedState.elements[child._t.was].movedTo || childBranch]?.key || (child._t.was && !child.hasChangedParent() && previousRenderedState.elements[child._t.was]?.key) || uuid()
-        );
-        console.log(childBranch, child._t.was, child._t.was && previousRenderedState.elements[child._t.was].movedTo, key);
+        const childBranch = child._t.was || child.branch();
+        const key = 'isSpace' in child ? childBranch : !child.hasChangedParent() && renderedState[childBranch]?.key || uuid();
         renderedState[childBranch] ??= { key };
 
         layoutContents.push(
@@ -584,12 +588,12 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
     );
   }
 
-  element._t.was = branch;
-  if (renderedState[branch]) {
-    renderedState[branch].style = relativeTransform ?? {};
-    renderedState[branch].style!.rotation = element._rotation;
-    renderedState[branch].attrs = newAttrs;
+  if (previousRender) {
+    previousRender.style = relativeTransform ?? {};
+    previousRender.style!.rotation = element._rotation;
+    previousRender.attrs = newAttrs;
   }
+  if (branch === '0/0/0') console.log('now!', element._t.was, {...previousRender});
 
   return contents;
 };

@@ -73,20 +73,13 @@ export type GameStore = {
   selected?: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   selectElement: (moves: UIMove[], element: GameElement) => void;
   automove?: number;
-  renderedState: Record<string, {
+  translations: Record<string, string>, // map of current element branches pointing to branch it moved from
+  renderedState: Record<string, { // UI info keyed by current location in this UI
     key: string;
     style?: Box & { rotation?: number };
     attrs?: Record<string, any>;
   }>;
-  previousRenderedState: {
-    sequence: number;
-    elements: Record<string, {
-      key?: string;
-      style?: Box & { rotation?: number };
-      attrs?: Record<string, any>;
-      movedTo?: string;
-    }>
-  };
+  renderedSequence: number;
   setBoardSize: () => void;
   aspectRatio?: number;
   dragElement?: string;
@@ -124,22 +117,28 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   updateState: (update, readOnly=false) => set(s => {
     let { gameManager } = s;
     const position = s.position || update.position;
-    let renderedState = s.renderedState;
-    let previousRenderedState = s.previousRenderedState;
     window.clearTimeout(s.automove);
-    if (update.state.sequence === s.gameManager.sequence + 1) {
-      // demote current state to previous and play over top
-      renderedState = {};
-      previousRenderedState = {sequence: s.gameManager.sequence, elements: {...s.renderedState}};
-    } else if (update.state.sequence !== s.previousRenderedState.sequence + 1) {
-      // old state is invalid
-      renderedState = {};
-      previousRenderedState = {sequence: -1, elements: {}};
-    }
-    // otherwise reuse previous+current state, we're overwriting an internal version of the same state
+
+    let state: GameStore = {
+      ...s,
+      position,
+      move: undefined,
+      prompt: undefined,
+      boardPrompt: undefined,
+      actionDescription: undefined,
+      otherPlayerAction: undefined,
+      translations: {},
+      renderedState: {},
+      renderedSequence: update.state.sequence,
+      announcementIndex: 0,
+      step: undefined,
+      boardSelections: {},
+      pendingMoves: undefined,
+      placement: undefined,
+    };
 
     if (gameManager.phase === 'new' && s.setup) {
-      gameManager = s.setup(update.state);
+      gameManager = state.gameManager = s.setup(update.state);
       // @ts-ignore;
       window.game = gameManager.game;
       // @ts-ignore;
@@ -148,7 +147,18 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.game.setBoardSize(boardSize);
     } else {
       gameManager.players.fromJSON(update.state.players);
-      gameManager.game.fromJSON(update.state.board);
+      if (update.state.sequence === s.renderedSequence + 1) {
+        // demote current state to previous and play over top
+        const translations: Record<string, string> = {};
+        const renderedState: GameStore['renderedState'] = {};
+        gameManager.game.fromJSON(update.state.board, translations);
+        for (const [n, o] of Object.entries(translations)) renderedState[n] = {...s.renderedState[o]};
+        state.translations = translations;
+        state.renderedState = renderedState;
+        console.log(state.translations);
+      } else {
+        gameManager.game.fromJSON(update.state.board);
+      }
       gameManager.players.assignAttributesFromJSON(update.state.players);
       gameManager.setFlowFromJSON(update.state.position);
     }
@@ -163,31 +173,15 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.winner = update.winners.map(p => gameManager.players.atPosition(p)!);
     }
     console.debug(`Game update for player #${position}. Current flow:\n ${gameManager.flow().stacktrace()}`);
-
-    let state: GameStore = {
-      ...s,
-      gameManager,
-      position,
-      move: undefined,
-      prompt: undefined,
-      boardPrompt: undefined,
-      actionDescription: undefined,
-      otherPlayerAction: undefined,
-      announcementIndex: 0,
-      step: undefined,
-      boardSelections: {},
-      pendingMoves: undefined,
-      placement: undefined,
+    state = {
+      ...state,
       ...updateBoard(gameManager, position, update.state.board),
-    };
-
+    }
     // may override board with new information from playing forward from the new state
     if (!readOnly && update.type !== 'gameFinished') {
       state = updateSelections(state)
     }
 
-    state.previousRenderedState = previousRenderedState;
-    state.renderedState = renderedState;
     s.gameManager.sequence = update.state.sequence;
 
     return state;
@@ -221,14 +215,15 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
     state = updateSelections(state);
 
-    if (!pendingMove) {
-      s.gameManager.sequence = Math.floor(s.gameManager.sequence);
-    }
+    // obsolete???
+    // if (!pendingMove) {
+    //   s.gameManager.sequence = Math.floor(s.gameManager.sequence);
+    // }
 
-    if (s.gameManager.sequence > Math.floor(s.gameManager.sequence)) {
-      state.previousRenderedState = {sequence: Math.floor(s.gameManager.sequence), elements: {...s.renderedState}};
-      state.renderedState = {};
-    }
+    // if (s.gameManager.sequence > Math.floor(s.gameManager.sequence)) {
+    //   state.previousRenderedState = {sequence: Math.floor(s.gameManager.sequence), elements: {...s.renderedState}};
+    //   state.renderedState = {};
+    // }
 
     return state;
   }),
@@ -335,7 +330,10 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         '__placement__': [s.placement.piece.column ?? 1, s.placement.piece.row ?? 1, s.placement.piece.rotation]
       }
     );
-    return { cancellable: true, ...updateBoard(s.gameManager, s.position!) };
+    return {
+      cancellable: true,
+      ...updateBoard(s.gameManager, s.position!)
+    };
   }),
 
   selectPlacement: ({ column, row, rotation }) => set(s => {
@@ -374,8 +372,9 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     });
   }),
 
+  translations: {},
   renderedState: {},
-  previousRenderedState: {sequence: -1, elements: {}},
+  renderedSequence: -1,
   setBoardSize: () => set(s => {
     const boardSize = s.gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
     if ((boardSize.name !== s.gameManager.game._ui.boardSize.name || boardSize.aspectRatio !== s.gameManager.game._ui.boardSize.aspectRatio) && s.position) {

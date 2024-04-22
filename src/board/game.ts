@@ -461,7 +461,8 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     );
   }
 
-  fromJSON(boardJSON: ElementJSON[]) {
+  // hydrate from json, and assign all attrs. requires that players be hydrated first
+  fromJSON(boardJSON: ElementJSON[], movedTo?: Record<string, string>) {
     let { className, children, _id, order, ...rest } = boardJSON[0];
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
 
@@ -470,7 +471,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
       if (!Game.unserializableAttributes.includes(key) && !(key in rest))
         rest[key] = undefined;
     }
-    this.createChildrenFromJSON(children || [], '0');
+    this.createChildrenFromJSON(children || [], '0', movedTo);
     this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1), '1');
     if (order) this._t.order = order;
 

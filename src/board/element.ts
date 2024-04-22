@@ -708,10 +708,19 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be created once game has started.');
     const el = this.createElement(className, name, attributes);
     el._t.parent = this;
-    if (this._t.order === 'stacking') {
-      this._t.children.unshift(el);
+    const firstPiece = this._t.children.findIndex(c => !('isSpace' in c));
+    if (this._t.order === 'stacking' && !('isSpace' in el)) {
+      if (firstPiece > 0) {
+        this._t.children.splice(firstPiece, 0, el);
+      } else {
+        this._t.children.unshift(el);
+      }
     } else {
-      this._t.children.push(el);
+      if ('isSpace' in el && firstPiece !== -1) {
+        this._t.children.splice(firstPiece, 0, el)
+      } else {
+        this._t.children.push(el);
+      }
     }
     if ('isSpace' in el && name) {
       if (name in this._ctx.uniqueNames) { // no longer unique
@@ -972,9 +981,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
     if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name or we'll leak information
     if (this._t.order) json.order = this._t.order;
-    if (this._t.was) json.was = this._t.was;
-    // do not expose hidden deck shuffles
-    if (seenBy && this._t.was && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) json.was = this.branch();
+    if (this._t.was && this._t.was !== this.branch()) json.was = this._t.was;
+    // do not expose moves within deck (shuffles)
+    // if (seenBy && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) delete json.was;
     if (this._t.children.length && (
       !seenBy || !('_screen' in this) || this._screen === undefined ||
         (this._screen === 'all-but-owner' && this.owner?.position === seenBy) ||
@@ -994,13 +1003,15 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     return json;
   }
 
-  createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string) {
+  // translations are new->old
+  createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string, translations?: Record<string, string>) {
     // preserve previous children references
     const childrenRefs = [...this._t.children];
     this._t.children = new ElementCollection<GameElement<G, P>>();
 
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
+      const childBranch = branch + '/' + i;
       let { className, children, was, _id, name, order } = json;
       let child: GameElement | undefined = undefined;
       if (_id !== undefined) { // try to match space, preserve the object and any references. this should also match the .was if it's a sibling
@@ -1014,10 +1025,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         child._t.parent = this;
         child._t.order = order;
       }
-      child._t.was = was;
-      if (this._ctx.trackMovement && !('isSpace' in child)) child._t.was = branch + '/' + i;
+      if (!('isSpace' in child) && this._t.parent?._t.order !== 'stacking') child._t.was = childBranch;
+      if (translations) translations[childBranch] = was || childBranch;
       this._t.children.push(child);
-      child.createChildrenFromJSON(children || [], branch + '/' + i);
+      child.createChildrenFromJSON(children || [], childBranch, translations);
     }
   }
 
@@ -1030,23 +1041,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       Object.assign(child, rest);
       child.assignAttributesFromJSON(children || [], branch + '/' + i);
     }
-  }
-
-  cloneInto<T extends GameElement>(this: T, into: GameElement): T {
-    let attrs = this.attributeList();
-    delete attrs.column;
-    delete attrs.row;
-
-    const clone = into.createElement(this.constructor as ElementClass<T>, this.name, attrs);
-    if (into._t.order === 'stacking') {
-      into._t.children.unshift(clone);
-    } else {
-      into._t.children.push(clone);
-    }
-    clone._t.parent = into;
-    clone._t.order = this._t.order;
-    for (const child of this._t.children) child.cloneInto(clone);
-    return clone;
   }
 
   /**

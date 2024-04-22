@@ -12,7 +12,6 @@ import type { ActionLayout, Piece, PieceGrid } from '../board/index.js'
 
 type GamePendingMoves = ReturnType<GameManager['getPendingMoves']>;
 
-// this feels like the makings of a class
 export type UIMove = PendingMove & {
   requireExplicitSubmit: boolean; // true if explicit submit has been provided or is not needed
 }
@@ -172,7 +171,8 @@ export function updateSelections(store: GameStore): GameStore {
               // have been caught with any possible choices presented
               throw Error(state.error);
             } else {
-              gameManager.sequence = Math.floor(gameManager.sequence) + 0.5; // intermediate local update that will need to be merged
+              // obsolete?
+              // gameManager.sequence = Math.floor(gameManager.sequence) + 0.5; // intermediate local update that will need to be merged
               let json: any = undefined;
               if (gameManager.intermediateUpdates.length) {
                 json = gameManager.intermediateUpdates[0][0].board
@@ -184,16 +184,14 @@ export function updateSelections(store: GameStore): GameStore {
                 ...updateBoard(gameManager, position, json),
               }
 
-              setTimeout(() => window.top!.postMessage(message, "*"), 500);
+              window.top!.postMessage(message, "*");
             }
           } catch (e) {
             // first line of defense for bad game logic. cancel all moves and
             // surface the error but update board anyways to prevent more errors
             console.error(
               `Game attempted to complete move but was unable to process:\n` +
-                `⮕ ${move!.name}({${Object.entries(move!.args).map(
-                  ([k, v]) => `${k}: ${v}`
-                ).join(', ')}})\n`
+                `⮕ ${move!.name}({ ${Object.entries(move!.args).map(([k, v]) => `${k}: ${v}`).join(', ')} })\n`
             );
             console.error(e.message);
             console.debug(e.stack);

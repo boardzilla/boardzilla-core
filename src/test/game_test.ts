@@ -455,7 +455,7 @@ describe('Game', () => {
         [
           { className: 'Game', _id: 0, children: [
             { className: 'Space', name: 'deck', _id: 2, children: [
-              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4, was: '0/0/0' }
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
             ]},
             { className: 'Space', name: 'discard', _id: 3, children: [
               { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5, was: '0/0/1' },

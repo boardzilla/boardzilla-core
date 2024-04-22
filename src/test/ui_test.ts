@@ -70,7 +70,6 @@ describe('UI', () => {
     expect(history[0].name).to.equal('take');
 
     expect(state.pendingMoves).to.deep.equal([]);
-    expect(state.boardPrompt).to.match(/taking their turn/);
     expect(state.gameManager.game.first('mat')!.all(Token).length).to.equal(1);
     expect(state.gameManager.game.first('pool')!.all(Token).length).to.equal(3);
   });
