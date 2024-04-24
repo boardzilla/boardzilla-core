@@ -14,7 +14,7 @@ import type { Argument } from '../../action/action.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [gameManager, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON, s.aspectRatio]);
+  const [gameManager, dev, position, rendered, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.dev, s.position, s.rendered, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON, s.aspectRatio]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const announcement = useMemo(() => gameManager.announcements[announcementIndex], [gameManager.announcements, announcementIndex]);
@@ -127,7 +127,6 @@ export default () => {
         {mode !== 'debug' && (
           <Element
             element={gameManager.game}
-            json={boardJSON[0]}
             mode={announcement ? 'info' : mode}
             onSelectElement={handleSelectElement}
           />

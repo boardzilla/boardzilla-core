@@ -459,7 +459,7 @@ describe('Game', () => {
             ]},
             { className: 'Space', name: 'discard', _id: 3, children: [
               { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5, was: '0/0/1' },
-              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6, was: '0/0/2' }
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6, was: '0/0/1' }
             ]}
           ]},
         ]
@@ -860,11 +860,11 @@ describe('Game', () => {
       const d = game.create(Space, 'd');
       game.applyLayouts();
 
-      expect(game._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 100 })
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(game._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 100, height: 100 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
     });
 
     it('applies overlaps', () => {
@@ -884,10 +884,10 @@ describe('Game', () => {
         });
       });
 
-      expect(p1._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100 / 3, height: 100 / 3 })
-      expect(p2._ui.computedStyle).to.deep.equal({ left: 100 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
-      expect(p3._ui.computedStyle).to.deep.equal({ left: 200 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
-      expect(p4._ui.computedStyle).to.deep.equal({ left: 0, top: 100 / 3, width: 100 / 3, height: 100 / 3 })
+      expect(p1._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 100 / 3, height: 100 / 3 })
+      expect(p2._ui.computedStyle.pos).to.deep.equal({ left: 100 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
+      expect(p3._ui.computedStyle.pos).to.deep.equal({ left: 200 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
+      expect(p4._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 100 / 3, width: 100 / 3, height: 100 / 3 })
     });
 
     it('adds gaps and margins', () => {
@@ -901,10 +901,10 @@ describe('Game', () => {
           margin: 5
         });
       });
-      expect(a._ui.computedStyle).to.deep.equal({ left: 5, top: 5, width: 40, height: 40 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 55, top: 5, width: 40, height: 40 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 5, top: 55, width: 40, height: 40 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 55, top: 55, width: 40, height: 40 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 5, top: 5, width: 40, height: 40 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 55, top: 5, width: 40, height: 40 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 5, top: 55, width: 40, height: 40 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 55, top: 55, width: 40, height: 40 })
     });
 
     it('adds gaps and margins absolutely to relative sizes', () => {
@@ -919,10 +919,10 @@ describe('Game', () => {
           margin: 2
         });
       });
-      expect(a._ui.computedStyle).to.deep.equal({ left: 4, top: 4, width: 42, height: 42 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 4, width: 42, height: 42 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 4, top: 54, width: 42, height: 42 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 54, top: 54, width: 42, height: 42 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 4, top: 4, width: 42, height: 42 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 54, top: 4, width: 42, height: 42 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 4, top: 54, width: 42, height: 42 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 54, top: 54, width: 42, height: 42 })
     });
 
     it('areas are relative to parent', () => {
@@ -942,10 +942,10 @@ describe('Game', () => {
           }
         });
       });
-      expect(a._ui.computedStyle).to.deep.equal({ left: 10, top: 20, width: 36, height: 26 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 20, width: 36, height: 26 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 10, top: 54, width: 36, height: 26 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 54, top: 54, width: 36, height: 26 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 10, top: 20, width: 36, height: 26 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 54, top: 20, width: 36, height: 26 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 10, top: 54, width: 36, height: 26 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 54, top: 54, width: 36, height: 26 })
     });
 
     it('aligns', () => {
@@ -958,9 +958,9 @@ describe('Game', () => {
         });
       });
 
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 60, top: 0, width: 40, height: 50 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 40, height: 50 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 60, top: 50, width: 40, height: 50 })
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ left: 60, top: 0, width: 40, height: 50 })
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ left: 20, top: 0, width: 40, height: 50 })
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ left: 60, top: 50, width: 40, height: 50 })
     });
 
     it('aligns vertical', () => {
@@ -973,9 +973,9 @@ describe('Game', () => {
         });
       });
 
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 50, top: 60, width: 50, height: 40 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 0, top: 60, width: 50, height: 40 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 50, top: 20, width: 50, height: 40 })
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 60, width: 50, height: 40 })
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 60, width: 50, height: 40 })
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 20, width: 50, height: 40 })
     });
 
     it('sizes to fit', () => {
@@ -986,9 +986,9 @@ describe('Game', () => {
           scaling: 'fit'
         });
       });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 10, top: 0, width: 40, height: 50 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 40, height: 50 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 10, top: 50, width: 40, height: 50 })
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ left: 10, top: 0, width: 40, height: 50 })
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 0, width: 40, height: 50 })
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ left: 10, top: 50, width: 40, height: 50 })
     });
 
     it('sizes to fill', () => {
@@ -999,9 +999,9 @@ describe('Game', () => {
           scaling: 'fill'
         });
       });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 62.5 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 62.5 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 37.5, width: 50, height: 62.5 })
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 50, height: 62.5 })
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 0, width: 50, height: 62.5 })
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 37.5, width: 50, height: 62.5 })
     });
 
     it('retains sizes', () => {
@@ -1011,9 +1011,9 @@ describe('Game', () => {
           size: { width: 20, height: 25 },
         });
       });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 30, top: 25, width: 20, height: 25 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 25, width: 20, height: 25 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 30, top: 50, width: 20, height: 25 })
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ left: 30, top: 25, width: 20, height: 25 })
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 25, width: 20, height: 25 })
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ left: 30, top: 50, width: 20, height: 25 })
     });
 
     it('fits based on aspect ratios', () => {
@@ -1024,9 +1024,9 @@ describe('Game', () => {
           scaling: 'fit'
         });
       });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 10, width: 50, height: 40 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 10, width: 50, height: 40 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 40 })
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 10, width: 50, height: 40 })
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 10, width: 50, height: 40 })
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 50, height: 40 })
     });
 
     it('fills based on aspect ratios', () => {
@@ -1037,9 +1037,9 @@ describe('Game', () => {
           scaling: 'fill'
         });
       });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 62.5, height: 50 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 37.5, top: 0, width: 62.5, height: 50 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 62.5, height: 50 })
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 62.5, height: 50 })
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ left: 37.5, top: 0, width: 62.5, height: 50 })
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 62.5, height: 50 })
     });
 
     it('accommodate min row', () => {
@@ -1052,9 +1052,9 @@ describe('Game', () => {
           scaling: 'fill'
         });
       });
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(62.5);
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(50);
-      expect(spaces[0]._ui.computedStyle?.top).to.be.approximately(0, 0.0001);
+      expect(spaces[0]._ui.computedStyle.pos?.width).to.equal(62.5);
+      expect(spaces[0]._ui.computedStyle.pos?.height).to.equal(50);
+      expect(spaces[0]._ui.computedStyle.pos?.top).to.be.approximately(0, 0.0001);
     });
 
     it('accommodate min col', () => {
@@ -1067,9 +1067,9 @@ describe('Game', () => {
           scaling: 'fill'
         });
       });
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(62.5);
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(50);
-      expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
+      expect(spaces[0]._ui.computedStyle.pos?.height).to.equal(62.5);
+      expect(spaces[0]._ui.computedStyle.pos?.width).to.equal(50);
+      expect(spaces[0]._ui.computedStyle.pos?.left).to.be.approximately(0, 0.0001);
     });
 
     it('size overrides scaling', () => {
@@ -1082,9 +1082,9 @@ describe('Game', () => {
           scaling: 'fill'
         });
       });
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(5);
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(4);
-      expect(spaces[0]._ui.computedStyle?.top).to.equal(30);
+      expect(spaces[0]._ui.computedStyle.pos?.width).to.equal(5);
+      expect(spaces[0]._ui.computedStyle.pos?.height).to.equal(4);
+      expect(spaces[0]._ui.computedStyle.pos?.top).to.equal(30);
     });
 
     it('isomorphic', () => {
@@ -1097,15 +1097,15 @@ describe('Game', () => {
         });
       });
 
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 0 });
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 58, top: 20 });
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 74, top: 40 });
-      expect(spaces[3]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 26, top: 20 });
-      expect(spaces[4]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 40 });
-      expect(spaces[5]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 58, top: 60 });
-      expect(spaces[6]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 10, top: 40 });
-      expect(spaces[7]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 26, top: 60 });
-      expect(spaces[8]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 80 });
+      expect(spaces[0]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 42, top: 0 });
+      expect(spaces[1]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 58, top: 20 });
+      expect(spaces[2]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 74, top: 40 });
+      expect(spaces[3]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 26, top: 20 });
+      expect(spaces[4]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 42, top: 40 });
+      expect(spaces[5]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 58, top: 60 });
+      expect(spaces[6]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 10, top: 40 });
+      expect(spaces[7]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 26, top: 60 });
+      expect(spaces[8]._ui.computedStyle.pos).to.deep.equal({ width: 16, height: 20, left: 42, top: 80 });
     });
 
     it('stacks', () => {
@@ -1119,8 +1119,8 @@ describe('Game', () => {
         });
       });
 
-      expect(spaces[8]!._ui.computedStyle!.top).to.equal(0);
-      expect(spaces[0]!._ui.computedStyle!.top + spaces[0]!._ui.computedStyle!.height).to.equal(100);
+      expect(spaces[8]!._ui.computedStyle.pos!.top).to.equal(0);
+      expect(spaces[0]!._ui.computedStyle.pos!.top + spaces[0]!._ui.computedStyle.pos!.height).to.equal(100);
     });
 
     it('align+scale', () => {
@@ -1133,10 +1133,10 @@ describe('Game', () => {
         });
       });
 
-      expect(pieces[0]!._ui.computedStyle!.top).to.equal(0);
-      expect(pieces[5]!._ui.computedStyle!.top + pieces[5]!._ui.computedStyle!.height).to.equal(100);
-      expect(pieces[3]!._ui.computedStyle!.left).to.equal(0);
-      expect(pieces[2]!._ui.computedStyle!.left + pieces[2]!._ui.computedStyle!.width).to.equal(100);
+      expect(pieces[0]!._ui.computedStyle.pos!.top).to.equal(0);
+      expect(pieces[5]!._ui.computedStyle.pos!.top + pieces[5]!._ui.computedStyle.pos!.height).to.equal(100);
+      expect(pieces[3]!._ui.computedStyle.pos!.left).to.equal(0);
+      expect(pieces[2]!._ui.computedStyle.pos!.left + pieces[2]!._ui.computedStyle.pos!.width).to.equal(100);
     });
 
     it('specificity', () => {
@@ -1176,10 +1176,10 @@ describe('Game', () => {
       a.column = 2;
       game.applyLayouts();
 
-      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
     });
 
     it('can shift bounds', () => {
@@ -1191,10 +1191,10 @@ describe('Game', () => {
       a.column = 4;
       game.applyLayouts();
 
-      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
     });
 
     it('can shift negative', () => {
@@ -1206,10 +1206,10 @@ describe('Game', () => {
       a.column = -4;
       game.applyLayouts();
 
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
     });
 
     it('can stretch bounds', () => {
@@ -1223,10 +1223,10 @@ describe('Game', () => {
       d.column = 2;
       game.applyLayouts();
 
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 25 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 25, width: 100, height: 25 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 100, height: 25 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 100, height: 25 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 100, height: 25 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 25, width: 100, height: 25 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 100, height: 25 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 75, width: 100, height: 25 })
     });
 
     it('can become sparse', () => {
@@ -1240,10 +1240,10 @@ describe('Game', () => {
       d.column = 4;
       game.applyLayouts();
 
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 25, height: 25 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 25, height: 25 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 25, top: 0, width: 25, height: 25 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 75, top: 0, width: 25, height: 25 })
+      expect(a._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 75, width: 25, height: 25 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 25, height: 25 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 25, top: 0, width: 25, height: 25 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 75, top: 0, width: 25, height: 25 })
     });
 
     it('can place sticky', () => {
@@ -1256,9 +1256,9 @@ describe('Game', () => {
       });
       a.remove();
 
-      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+      expect(b._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
+      expect(c._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
+      expect(d._ui.computedStyle.pos).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
     });
   });
 
@@ -1658,8 +1658,8 @@ describe('Game', () => {
       p2.row = -1;
 
       game.applyLayouts();
-      expect(p1._ui.computedStyle).to.deep.equal({ left: 25, top: 25, width: 75, height: 75 })
-      expect(p2._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 50 })
+      expect(p1._ui.computedStyle.pos).to.deep.equal({ left: 25, top: 25, width: 75, height: 75 })
+      expect(p2._ui.computedStyle.pos).to.deep.equal({ left: 0, top: 0, width: 100, height: 50 })
     });
 
     it('can place shapes rotated', () => {
@@ -1671,8 +1671,9 @@ describe('Game', () => {
       p2.rotation = 90;
 
       game.applyLayouts();
-      expect(p1._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 60, height: 60 })
-      expect(p2._ui.computedStyle).to.deep.equal({ left: 40, top: 20, width: 80, height: 40, transformOrigin: '25% 50%' })
+      expect(p1._ui.computedStyle.pos).to.deep.equal({ left: 20, top: 0, width: 60, height: 60, rotation: 180 })
+      expect(p2._ui.computedStyle.pos).to.deep.equal({ left: 40, top: 20, width: 80, height: 40, rotation: 90 })
+      expect(p2._ui.computedStyle.styles?.transformOrigin).to.equal('25% 50%')
     });
 
     it('can find place for shapes', () => {
@@ -1715,5 +1716,5 @@ describe('Game', () => {
 });
 
       // console.log('<div style="width: 200; height: 200; position: relative; outline: 1px solid black">');
-      // for (const c of game._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}%; top: ${c._ui.computedStyle?.top}%; width: ${c._ui.computedStyle?.width}%; height: ${c._ui.computedStyle?.height}%; background: red; outline: 1px solid blue"></div>`);
+      // for (const c of game._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle.pos?.left}%; top: ${c._ui.computedStyle.pos?.top}%; width: ${c._ui.computedStyle.pos?.width}%; height: ${c._ui.computedStyle.pos?.height}%; background: red; outline: 1px solid blue"></div>`);
       // console.log('</div>');

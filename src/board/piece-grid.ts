@@ -46,6 +46,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
   _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
+    computedStyle: {},
     getBaseLayout: () => ({
       rows: this.rows,
       columns: this.columns,

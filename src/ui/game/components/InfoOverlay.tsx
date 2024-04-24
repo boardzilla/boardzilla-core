@@ -118,7 +118,6 @@ const InfoOverlay = ({ setMode }: {
                     <div style={elementStyle}>
                       <Element
                         element={infoElement.element}
-                        json={infoElement.element.toJSON()}
                         mode='zoom'
                         onSelectElement={() => {}}
                       />

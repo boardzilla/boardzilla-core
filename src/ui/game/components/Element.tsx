@@ -1,39 +1,34 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../store.js';
-import uuid from 'uuid-random';
 import Drawer from './Drawer.js';
 
 import {
   Piece,
   GameElement,
 } from '../../../board/index.js'
-import { serialize } from '../../../action/utils.js'
 
-import type { ElementJSON } from '../../../board/element.js';
 import type { UIMove } from '../../lib.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 import type { DirectedGraph } from 'graphology';
-import { equals } from '../../../utils.js';
 
 const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
+const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
   element: GameElement,
-  json: ElementJSON,
   mode: 'game' | 'info' | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
 }) => {
 
-  const [renderedState, move, selected, position, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev, boardJSON] =
-    gameStore(s => [s.renderedState, s.move, s.selected, s.position, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev, s.boardJSON]);
+  const [move, selected, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev] =
+    gameStore(s => [s.move, s.selected, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const branch = useMemo(() => element.branch(), [element, boardJSON]);
-
+  const branch = element.branch();
+  const rendered = element._ui.computedStyle;
   const [boardSelections] = gameStore(s => [s.boardSelections[branch]]);
+  const absoluteTransform = element.absoluteTransform();
 
   const [dragging, setDragging] = useState<{ deltaY: number, deltaX: number } | undefined>(); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
@@ -41,13 +36,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   const domElement = useRef<HTMLDivElement>(null);
 
   const isSelected = mode === 'game' && (selected?.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
-  const baseClass = element instanceof Piece ? 'Piece' : 'Space';
   const appearance = element._ui.appearance.render || (element.game._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const isVisible = useMemo(() => element.isVisible(), [element, boardJSON])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const relativeTransform = useMemo(() => element.relativeTransformToBoard(), [element, element._ui.computedStyle]);
-  const absoluteTransform = useMemo(() => element.absoluteTransform(relativeTransform), [element, relativeTransform]);
 
   const invalidSelectionError = mode === 'game' && boardSelections?.error;
   const clickable = mode === 'game' && !invalidSelectionError && !dragElement && boardSelections?.clickMoves.length;
@@ -60,47 +49,14 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
-  const newAttrs = Object.assign({'data-player': element.player?.position}, Object.fromEntries(Object.entries(element).filter(([key, val]) => (
-    !GameElement.unserializableAttributes.includes(key) &&
-      typeof val !== 'function' && typeof val !== 'object' &&
-      (isVisible || (element.constructor as typeof GameElement).visibleAttributes?.includes(key)) // should this be scrubbed during json hydration?
-  )).map(([key, val]) => (
-    [`data-${key.toLowerCase()}`, serialize(val)]
-  ))));
+  const transform = !!rendered.styles?.transform;
+  if ((positioning || mode === 'zoom') && rendered.styles?.transform) delete rendered.styles.transform; // not actually
 
-  if (element.player?.position === position) newAttrs['data-mine'] = 'true';
-
-  const previousRender = useMemo(
-    () => element._t.was !== undefined ? renderedState[element._t.was] : undefined,
-    [renderedState, element._t.was]
-  );
-
-  console.log(branch, '<----------', element._t.was);
-
-  const changedAttributes = useMemo(() => previousRender?.attrs && !equals(previousRender.attrs, newAttrs), [previousRender, newAttrs]);
-
-  // if position change
-  const moveTransform = useMemo(() => {
-    if (!positioning && mode !== 'zoom' && previousRender?.style && (
-      previousRender.style.left !== relativeTransform.left ||
-      previousRender.style.top !== relativeTransform.top ||
-      previousRender.style.width !== relativeTransform.width ||
-      previousRender.style.height !== relativeTransform.height ||
-      (previousRender.style.rotation ?? 0) !== (element._rotation ?? 0)
-    )) return {
-      scaleX: previousRender.style.width / relativeTransform.width,
-      scaleY: previousRender.style.height / relativeTransform.height,
-      translateX: (previousRender.style.left + previousRender.style.width / 2 - relativeTransform.left - relativeTransform.width / 2) / relativeTransform.width * 100,
-      translateY: (previousRender.style.top + previousRender.style.height / 2 - relativeTransform.top - relativeTransform.height / 2) / relativeTransform.height * 100,
-      rotate: (previousRender.style.rotation ?? 0) - (element._rotation ?? 0)
-    };
-  }, [relativeTransform, previousRender, mode, positioning, element._rotation]);
-
-  const attrs = moveTransform && changedAttributes ? previousRender!.attrs : newAttrs;
+  const attrs = rendered.previousDataAttributes || rendered.dataAttributes;
 
   useEffect(() => {
-    if (placing && moveTransform) setPositioning(true);
-  }, [placing, moveTransform]);
+    if (placing && transform) setPositioning(true);
+  }, [placing, transform]);
 
   // directly on the dom: remove the temporary transform-to-old position and set all new attr's
   useEffect(() => {
@@ -114,9 +70,9 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       node.style.removeProperty('transition');
       node.style.removeProperty('transform');
       if (domElement.current) {
-        for (const [k, v] of Object.entries(newAttrs)) domElement.current.setAttribute(k, v);
+       for (const [k, v] of Object.entries(rendered.attributes!)) domElement.current.setAttribute(k, v);
         for (const attr of domElement.current.getAttributeNames()) {
-          if (attr.slice(0, 5) === 'data-' && newAttrs[attr] === undefined) {
+          if (attr.slice(0, 5) === 'data-' && rendered.attributes![attr] === undefined) {
             domElement.current.removeAttribute(attr);
           }
         }
@@ -128,8 +84,15 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
         }
       };
       node.addEventListener('transitionend', cancel);
+      delete rendered.previousAttributes;
+      delete rendered.previousDataAttributes;
+      if (rendered.styles?.transform) delete rendered.styles.transform;
     }
-  }, [branch, element, newAttrs]);
+  }, [branch, element, rendered]);
+
+  useEffect(() => {
+    if (dragging && dragElement !== branch) setDragging(undefined);
+  }, [dragging, dragElement, branch]);
 
   const handleClick = useCallback((e: React.MouseEvent | MouseEvent) => {
     e.stopPropagation();
@@ -149,10 +112,6 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       wrapper.current.setAttribute('data-lasty', String(data.lastY))
     }
   }, [wrapper]);
-
-  useEffect(() => {
-    if (dragging && dragElement !== branch) setDragging(undefined);
-  }, [dragging, dragElement, branch]);
 
   const handleDrag = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
@@ -179,9 +138,9 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
         if (move) {
           onSelectElement([move], currentDrop);
           return;
-        } else if (wrapper.current && element._ui.computedStyle) {
-          wrapper.current.style.top = element._ui.computedStyle.top + '%';
-          wrapper.current.style.left = element._ui.computedStyle.left + '%';
+        } else if (wrapper.current && element._ui.computedStyle.styles) {
+          wrapper.current.style.top = element._ui.computedStyle.styles.top as string;
+          wrapper.current.style.left = element._ui.computedStyle.styles.left as string;
         }
       }
       setDragging(undefined);
@@ -274,7 +233,7 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     })
   }, [element, placement, setPlacement])
 
-  let style = useMemo(() => {
+  let styles = useMemo(() => {
     if (mode === 'zoom') return {
       left: 0,
       top: 0,
@@ -282,47 +241,28 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
       height: '100%'
     }
 
-    let styleBuilder: React.CSSProperties = {};
-    const { computedStyle } = element._ui;
-
-    if (computedStyle) {
-      styleBuilder = Object.fromEntries(Object.entries(computedStyle).map(([key, val]) => ([key, typeof val === 'number' ? `${val}%` : val])));
-    }
-
-    if (dragging && !moveTransform && element._ui.computedStyle) {
-      styleBuilder.top = `calc(${element._ui.computedStyle.top}% - ${dragging.deltaY}px)`;
-      styleBuilder.left = `calc(${element._ui.computedStyle.left}% - ${dragging.deltaX}px)`;
-    }
-
-    if (moveTransform) {
-      let transformToOld = `translate(${moveTransform.translateX}%, ${moveTransform.translateY}%) scaleX(${moveTransform.scaleX}) scaleY(${moveTransform.scaleY}) rotate(${moveTransform.rotate}deg)`;
-
-      if (dragOffset.element && dragOffset.element === element._t.was) {
-        // offset by the last drag position to prevent jump back to original position
-        transformToOld = `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + transformToOld;
-        dragOffset.element = undefined;
-        dragOffset.x = undefined;
-        dragOffset.y = undefined;
-      }
-
-      styleBuilder.transform = transformToOld;
-      console.log('transform', element.branch(), transformToOld);
-      Object.assign(styleBuilder, {'--transformed-to-old': String(uuid()), transition: 'none'});
-    }
-    styleBuilder.fontSize = absoluteTransform.height * 0.04 + 'rem'
-
-    return styleBuilder;
-  }, [element, dragging, mode, moveTransform, dragOffset, absoluteTransform]);
-
-  const effectClasses = useMemo(() => {
-    const classes: string[] = [];
-    if (element._ui.appearance.effects && changedAttributes && domElement.current) {
-      for (const effect of element._ui.appearance.effects) {
-        if (effect.trigger(element, previousRender!.attrs!)) classes.push(effect.name);
+    let styles = rendered.styles!;
+    if (dragging && rendered.styles && !rendered.styles.transform) {
+      styles = {
+        ...styles,
+        top: `calc(${styles.top} - ${dragging.deltaY}px)`,
+        left: `calc(${styles.left} - ${dragging.deltaX}px)`,
       }
     }
-    return classes;
-  }, [element, changedAttributes, previousRender]);
+
+    if (styles.transform && dragOffset.element && dragOffset.element === element._t.was) {
+      // offset by the last drag position to prevent jump back to original position
+      styles = {
+        ...styles,
+        transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + styles.transform
+      };
+      dragOffset.element = undefined;
+      dragOffset.x = undefined;
+      dragOffset.y = undefined;
+    }
+
+    return styles;
+  }, [element, rendered, dragging, mode, dragOffset]);
 
   const info = useMemo(() => {
     if (mode === 'info') {
@@ -330,41 +270,20 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
     }
   }, [mode, element]);
 
-  const baseStyles = useMemo(() => {
-    const styles: React.CSSProperties = {};
-    if (element._rotation !== undefined) styles.transform = `rotate(${element._rotation}deg)`;
-    if (element.player) Object.assign(styles, {'--player-color': element.player.color});
-    return styles;
-  }, [element._rotation, element.player]);
-
-  if ((element._t.children.length || 0) !== (json.children?.length || 0)) {
-    console.error('Earlier errors have put the board out of sync');
-    return null;
-  }
-
   let contents: React.JSX.Element[] | React.JSX.Element = [];
   for (let l = 0; l !== (element._ui.computedLayouts?.length ?? 0); l++) {
     const layout = element._ui.computedLayouts![l]
     const layoutContents: React.JSX.Element[] = [];
     for (const child of layout.children) {
-      if (!child._ui.computedStyle || child._ui.appearance.render === false) continue;
-      const childJSON = json.children?.[element._t.children.indexOf(child)];
-      if (childJSON) {
-        const childBranch = child._t.was || child.branch();
-        const key = 'isSpace' in child ? childBranch : !child.hasChangedParent() && renderedState[childBranch]?.key || uuid();
-        renderedState[childBranch] ??= { key };
-
-        layoutContents.push(
-          <Element
-            key={key}
-            element={child}
-            json={childJSON}
-            mode={mode === 'zoom' ? 'game' : mode}
-            onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
-            onSelectElement={onSelectElement}
-          />
-        );
-      }
+      layoutContents.push(
+        <Element
+          key={child._ui.computedStyle.key}
+          element={child}
+          mode={mode === 'zoom' ? 'game' : mode}
+          onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
+          onSelectElement={onSelectElement}
+        />
+      );
     }
     if (layout.drawer) {
       const drawer = layout.drawer!;
@@ -411,12 +330,12 @@ const Element = ({element, json, mode, onSelectElement, onMouseLeave}: {
 
       if (source._ui.computedStyle && target._ui.computedStyle) {
         const origin = {
-          x: (source._ui.computedStyle.left + source._ui.computedStyle?.width / 2) * absoluteTransform.width / 100,
-          y: (source._ui.computedStyle.top + source._ui.computedStyle?.height / 2) * absoluteTransform.height / 100
+          x: (source._ui.computedStyle.pos!.left + source._ui.computedStyle.pos!.width / 2) * absoluteTransform.width / 100,
+          y: (source._ui.computedStyle.pos!.top + source._ui.computedStyle?.pos!.height / 2) * absoluteTransform.height / 100
         }
         const destination = {
-          x: (target._ui.computedStyle.left + target._ui.computedStyle?.width / 2) * absoluteTransform.width / 100,
-          y: (target._ui.computedStyle.top + target._ui.computedStyle?.height / 2) * absoluteTransform.height / 100
+          x: (target._ui.computedStyle.pos!.left + target._ui.computedStyle.pos!.width / 2) * absoluteTransform.width / 100,
+          y: (target._ui.computedStyle.pos!.top + target._ui.computedStyle.pos!.height / 2) * absoluteTransform.height / 100
         }
 
         const distance = Math.sqrt(Math.pow(origin.x - destination.x, 2) + Math.pow(origin.y - destination.y, 2))
@@ -502,11 +421,8 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
       ref={domElement}
       title={title}
       className={classNames(
-        baseClass,
-        element._ui.appearance.className,
-        ...effectClasses,
+        rendered.classes,
         {
-          [element.constructor.name]: baseClass !== element.constructor.name,
           selected: isSelected && mode === 'game',
           clickable: clickable || invalidSelectionError,
           invalid: !!invalidSelectionError || (placing && placement?.invalid),
@@ -514,7 +430,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
           droppable
         }
       )}
-      style={baseStyles}
+      style={rendered.baseStyles}
       onClick={clickable || placing || invalidSelectionError ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -532,7 +448,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
     <div
       ref={wrapper}
       className={classNames("transform-wrapper", { dragging, placing, 'has-info': !!info })}
-      style={style}
+      style={styles}
     >
       {contents}
       {!!info && <div className="info-hotspot" onClick={() => setInfoElement({ info, element })}/>}
@@ -545,7 +461,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
     contents = (
       <>
         {contents}
-        <div className="rotator" style={{...style, width: (element._ui.computedStyle!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
+        <div className="rotator" style={{...styles, width: (element._ui.computedStyle.pos!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
           <div className="left" onClick={() => handleRotate(-1)}>
             <svg
               viewBox="0 0 254.2486 281.95978"
@@ -588,18 +504,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
     );
   }
 
-  if (previousRender) {
-    previousRender.style = relativeTransform ?? {};
-    previousRender.style!.rotation = element._rotation;
-    previousRender.attrs = newAttrs;
-  }
-  if (branch === '0/0/0') console.log('now!', element._t.was, {...previousRender});
-
   return contents;
-};
-// would like to memo but not yet clear how well this work - dont optimize yet
-// memo(... (el1, el2) => (
-//   JSON.stringify(el1.clickable) === JSON.stringify(el2.clickable) &&
-//     JSON.stringify(el1.json) === JSON.stringify(el2.json)
+}, (prevProps, props) => !props.element._ui.computedStyle.mutated && prevProps.mode === props.mode);
 
 export default Element;

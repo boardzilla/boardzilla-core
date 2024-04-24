@@ -88,7 +88,20 @@ export type ElementUI<T extends GameElement> = {
       labelScale?: number,
     },
   },
-  computedStyle?: Box & { transformOrigin?: string },
+  computedStyle: {
+    key?: string;
+    mutated?: boolean;
+    attributes?: Record<string, any>;
+    dataAttributes?: Record<string, any>;
+    previousAttributes?: Record<string, any>;
+    previousDataAttributes?: Record<string, any>;
+    pos?: Box & { rotation?: number }; // raw pos data relative to parent
+    relPos?: Box & { rotation?: number }; // raw pos data relative to board
+    oldPos?: Box & { rotation?: number }; // old pos for transform
+    styles?: React.CSSProperties; // CSS, includes pos and transform from move
+    baseStyles?: React.CSSProperties;
+    classes?: string;
+  }
   computedLayouts?: {
     area: Box,
     grid?: {
@@ -1003,8 +1016,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     return json;
   }
 
-  // translations are new->old
-  createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string, translations?: Record<string, string>) {
+  createChildrenFromJSON(childrenJSON: ElementJSON[], branch: string) {
     // preserve previous children references
     const childrenRefs = [...this._t.children];
     this._t.children = new ElementCollection<GameElement<G, P>>();
@@ -1012,7 +1024,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
       const childBranch = branch + '/' + i;
-      let { className, children, was, _id, name, order } = json;
+      let { className, children, _id, name, order } = json;
       let child: GameElement | undefined = undefined;
       if (_id !== undefined) { // try to match space, preserve the object and any references. this should also match the .was if it's a sibling
         child = childrenRefs.find(c => c._t.id === _id && c.name === name);
@@ -1025,10 +1037,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         child._t.parent = this;
         child._t.order = order;
       }
-      if (!('isSpace' in child) && this._t.parent?._t.order !== 'stacking') child._t.was = childBranch;
-      if (translations) translations[childBranch] = was || childBranch;
       this._t.children.push(child);
-      child.createChildrenFromJSON(children || [], childBranch, translations);
+      child.createChildrenFromJSON(children || [], childBranch);
     }
   }
 
@@ -1054,7 +1064,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     getBaseLayout: () => ({
       alignment: 'center',
       direction: 'square'
-    })
+    }),
+    computedStyle: {}
   };
 
   resetUI() {
@@ -1063,20 +1074,24 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       attributes: this._ui.getBaseLayout()
     }];
     this._ui.appearance = {};
-    this._ui.computedStyle = undefined;
+    this._ui.computedStyle = {
+      key: this._ui.computedStyle.key,
+      oldPos: this._ui.computedStyle.relPos,
+      attributes: this._ui.computedStyle.attributes,
+      dataAttributes: this._ui.computedStyle.dataAttributes,
+    };
     for (const child of this._t.children) child.resetUI();
   }
 
   /**
    * Viewport relative to a square perfectly containing the playing area. The
    * `left` and `top` values are from 0-100. The x and y values in this method
-   * are on the same scale, unlike {@link relativeTransformToBoard}.
+   * are on the same scale.
    * @category UI
    * @internal
    */
-  absoluteTransform(preComputedRelativeTransform?: Box): Box {
-    preComputedRelativeTransform ??= this.relativeTransformToBoard();
-    return this.game._ui.frame ? translate(preComputedRelativeTransform, this.game._ui.frame) : preComputedRelativeTransform;
+  absoluteTransform(): Box {
+    return this.game._ui.frame ? translate(this._ui.computedStyle.relPos!, this.game._ui.frame) : this._ui.computedStyle.relPos!;
   }
 
   /**
@@ -1088,15 +1103,15 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @category UI
    * @internal
    */
-  relativeTransformToBoard(): Box {
-    let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
-    let parent = this._t.parent;
-    while (parent?._ui.computedStyle) {
-      transform = translate(transform, parent._ui.computedStyle)
-      parent = parent._t.parent;
-    }
-    return transform;
-  }
+  // relativeTransformToBoard(): Box {
+  //   let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
+  //   let parent = this._t.parent;
+  //   while (parent?._ui.computedStyle) {
+  //     transform = translate(transform, parent._ui.computedStyle)
+  //     parent = parent._t.parent;
+  //   }
+  //   return transform;
+  // }
 
   /**
    * Apply a layout to some of the elements directly contained within this
@@ -1159,10 +1174,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   applyLayouts() {
     if (this._ui.appearance.render === false) return;
 
-    this._ui.computedStyle ??= { left: 0, top: 0, width: 100, height: 100 };
-
     const layoutItems = this.getLayoutItems();
-    const absoluteTransform = this.absoluteTransform();
+    const absoluteTransform = this.absoluteTransform()
 
     for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
       const { attributes } = this._ui.layouts[l];
@@ -1586,6 +1599,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         const box = cellBoxes[i];
         if (!box) continue;
         const child = children[i];
+        child._ui.computedStyle.styles ??= {};
         let { width, height, left, top } = box;
         let transformOrigin: string | undefined = undefined;
         const gridSize = this._sizeNeededFor(child);
@@ -1639,8 +1653,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
             }
             let worstOverlapThisTry = Infinity;
             if (children.every(c => {
-              if (!c._ui.computedStyle) return true;
-              const cbox = c._ui.computedStyle;
+              if (!c._ui.computedStyle.pos) return true;
+              const cbox = c._ui.computedStyle.pos;
               const childOverlap = Math.min(
                 Math.max(0, cbox.left + cbox.width - left - w.x),
                 Math.max(0, cbox.top + cbox.height - top - w.y),
@@ -1661,8 +1675,22 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
           left += wiggle.x
           top += wiggle.y
         }
-        child._ui.computedStyle = { width, height, left, top };
-        if (transformOrigin) child._ui.computedStyle.transformOrigin = transformOrigin;
+
+        child._ui.computedStyle.pos = { width, height, left, top };
+        if (child._rotation !== undefined) child._ui.computedStyle.pos.rotation = child._rotation;
+        child._ui.computedStyle.relPos = translate(child._ui.computedStyle.pos, this._ui.computedStyle.pos!);
+        child._ui.computedStyle.styles = {
+          width: width + '%',
+          height: height + '%',
+          left: left + '%',
+          top: top + '%',
+          transformOrigin,
+          fontSize: child._ui.computedStyle.relPos.height * (this.game._ui.frame?.height ?? 100) * 0.0004 + 'rem'
+        }
+
+        child._ui.computedStyle.baseStyles = {};
+        if (child._rotation !== undefined) child._ui.computedStyle.baseStyles.transform = `rotate(${child._rotation}deg)`;
+        if (child.player) Object.assign(child._ui.computedStyle.baseStyles, {'--player-color': child.player.color});
 
         child.applyLayouts();
       }

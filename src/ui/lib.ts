@@ -1,14 +1,17 @@
 import { CSSProperties } from 'react'
 import { SerializedArg, serializeArg } from '../action/utils.js';
 import Selection from '../action/selection.js'
-import { GameElement } from '../board/index.js'
+import { GameElement, Piece } from '../board/index.js'
+import uuid from 'uuid-random';
+import { serialize } from '../action/utils.js'
+import classNames from 'classnames';
 
 import type { GameStore } from './store.js';
 import type { default as GameManager, SerializedMove, PendingMove } from '../game-manager.js'
 import type { Box, ElementJSON } from '../board/element.js'
 import type { ResolvedSelection } from '../action/selection.js';
 import type { BaseGame } from '../board/game.js'
-import type { ActionLayout, Piece, PieceGrid } from '../board/index.js'
+import type { ActionLayout, PieceGrid } from '../board/index.js'
 
 type GamePendingMoves = ReturnType<GameManager['getPendingMoves']>;
 
@@ -27,6 +30,100 @@ export type MoveMessage = {
     name: string,
     args: Record<string, SerializedArg>
   }[]
+}
+
+export function updateRendered(store: GameStore, transform: boolean = false): GameStore {
+  const state = { ...store, ...updateBoard(store.gameManager, store.position!) };
+  translateRendered(state.gameManager.game, transform);
+
+  return state;
+}
+
+function translateRendered(el: GameElement, transform: boolean = false): boolean {
+  // depth first, bubble up mutations
+  let mutated = false
+  for (const layout of el._ui.computedLayouts!) {
+    for (const child of layout.children) {
+      mutated = translateRendered(child, transform) || mutated;
+    }
+  }
+  const branch = el.branch();
+  const render = el._ui.computedStyle;
+
+  // TODO - stacked pieces get translated from element that used to occupy this branch, need a lookup on was at time of layout
+  // const oldRender = transform ? (el._t.was && el._t.parent?._t.order === 'stacking' ? el.game.atBranch(el._t.was) : el)._ui.computedStyle : undefined;
+  const oldRender = transform ? el._ui.computedStyle : undefined;
+  const styles = render.styles!;
+
+  render.key = 'isSpace' in el ? branch : !el.hasChangedParent() && oldRender?.key || uuid();
+  render.attributes = el.attributeList();
+
+  // TODO ---------------------------------------- check if data-mine present
+  render.dataAttributes = Object.assign(
+    {
+      'data-player': el.player?.position
+    },
+    Object.fromEntries(Object.entries(render.attributes).filter(([key, val]) => (
+      typeof val !== 'object' && (el.isVisible() || (el.constructor as typeof GameElement).visibleAttributes?.includes(key))
+    )).map(([key, val]) => (
+      [`data-${key.toLowerCase()}`, serialize(val)]
+    )))
+  );
+
+  const baseClass = el instanceof Piece ? 'Piece' : 'Space';
+
+  render.classes = classNames(
+    baseClass,
+    el._ui.appearance.className,
+    {
+      [el.constructor.name]: baseClass !== el.constructor.name,
+    }
+  )
+
+  if (!mutated || (transform && oldRender)) {
+    const pos = render.relPos!;
+    if (!oldRender?.oldPos) {
+      mutated = true;
+    } else if (
+      oldRender.oldPos.left !== pos.left ||
+      oldRender.oldPos.top !== pos.top ||
+      oldRender.oldPos.width !== pos.width ||
+      oldRender.oldPos.height !== pos.height ||
+      (oldRender.oldPos.rotation ?? 0) !== (pos.rotation ?? 0)
+    ) {
+      mutated = true;
+      if (transform) styles.transform = `translate(${(oldRender.oldPos.left + oldRender.oldPos.width / 2 - pos.left - pos.width / 2) / pos.width * 100}%, ` +
+        `${(oldRender.oldPos.top + oldRender.oldPos.height / 2 - pos.top - pos.height / 2) / pos.height * 100}%) ` +
+        `scaleX(${oldRender.oldPos.width / pos.width}) ` +
+        `scaleY(${oldRender.oldPos.height / pos.height}) ` +
+        `rotate(${(oldRender.oldPos.rotation ?? 0) - (pos.rotation ?? 0)}deg)`;
+      Object.assign(styles, {
+        '--transformed-to-old': String(uuid()),
+        transition: 'none'
+      });
+    }
+
+    const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender?.dataAttributes);
+    mutated ||= changedAttrs;
+    console.log(branch, changedAttrs);
+
+    if (changedAttrs && transform && oldRender) {
+      render.previousAttributes = oldRender.attributes;
+      render.previousDataAttributes = oldRender.dataAttributes;
+
+      if (el._ui.appearance.effects && changedAttrs) {
+        for (const effect of el._ui.appearance.effects) {
+          if (effect.trigger(el, oldRender.attributes!)) render.classes += ' ' + effect.name;
+        }
+      }
+    }
+  }
+  if (!transform || !oldRender) {
+    delete render.previousAttributes;
+    delete render.previousDataAttributes;
+  }
+  render.mutated = mutated;
+  return mutated;
 }
 
 // refresh move and selections
@@ -179,10 +276,7 @@ export function updateSelections(store: GameStore): GameStore {
                 gameManager.game.fromJSON(json);
                 gameManager.intermediateUpdates = [];
               }
-              state = {
-                ...state,
-                ...updateBoard(gameManager, position, json),
-              }
+              state = updateRendered(state, true);
 
               window.top!.postMessage(message, "*");
             }
@@ -311,8 +405,8 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     layout = gameManager.game._ui.stepLayouts[name];
   }
 
-  if (layout) {
-    const box: Box = layout.element.relativeTransformToBoard();
+  if (layout && layout.element._ui.computedStyle.relPos) {
+    const box: Box = layout.element._ui.computedStyle.relPos;
 
     if (layout.position === 'beside' || layout.position === 'stack') {
       if (box.left > 100 - box.left - box.width) {

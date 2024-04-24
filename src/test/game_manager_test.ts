@@ -402,7 +402,6 @@ describe('GameManager', () => {
       game.fromJSON(JSON.parse(JSON.stringify(boardJSON)));
       gameManager.players.assignAttributesFromJSON(playerJSON);
 
-      console.log(JSON.stringify(boardJSON, undefined, 2), JSON.stringify(game.allJSON(1), undefined, 2))
       expect(game.allJSON(1)).to.deep.equals(boardJSON);
       expect(gameManager.players.map(p => p.toJSON())).to.deep.equals(playerJSON);
 
@@ -1243,8 +1242,6 @@ describe('GameManager', () => {
       gameManager.play();
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[3] });
       gameManager.play();
-
-      console.log(gameManager.flowState);
 
       expect(gameManager.players.currentPosition).to.deep.equal([4]);
       expect(gameManager.allowedActions(gameManager.players[3]).actions.length).to.equal(1);

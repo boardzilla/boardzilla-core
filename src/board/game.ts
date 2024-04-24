@@ -462,7 +462,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   }
 
   // hydrate from json, and assign all attrs. requires that players be hydrated first
-  fromJSON(boardJSON: ElementJSON[], movedTo?: Record<string, string>) {
+  fromJSON(boardJSON: ElementJSON[]) {
     let { className, children, _id, order, ...rest } = boardJSON[0];
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
 
@@ -471,7 +471,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
       if (!Game.unserializableAttributes.includes(key) && !(key in rest))
         rest[key] = undefined;
     }
-    this.createChildrenFromJSON(children || [], '0', movedTo);
+    this.createChildrenFromJSON(children || [], '0');
     this._ctx.removed.createChildrenFromJSON(boardJSON.slice(1), '1');
     if (order) this._t.order = order;
 
@@ -502,6 +502,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     boardSize: {name: '_default', aspectRatio: 1},
     layouts: [],
     appearance: {},
+    computedStyle: {},
     stepLayouts: {},
     previousStyles: {},
     announcements: {},
@@ -531,6 +532,18 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
 
   applyLayouts(this: G, base?: (b: G) => void) {
     this.resetUI();
+    this._ui.computedStyle = {
+      pos: { left: 0, top: 0, width: 100, height: 100 },
+      relPos: { left: 0, top: 0, width: 100, height: 100 },
+      styles: {
+        width: '100%',
+        height: '100%',
+        left: '0',
+        top: '0',
+        fontSize: (this._ui.frame?.height ?? 100) * 0.04 + 'rem'
+      }
+    };
+
     if (this._ui.setupLayout) {
       this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
     }
