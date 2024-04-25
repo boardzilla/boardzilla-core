@@ -305,7 +305,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     parent?: GameElement,
     id: number, // unique and immuatable
     ref: number, // unique and may change to hide moves
-    wasRef?: number, // previous ref to track changes
+    wasRef?: number, // previous ref to track changes, only populated if reorder during trackMovement
     moved?: boolean, // track if already moved (changed parent)
     order?: 'normal' | 'stacking',
     setId: (id: number) => void,
@@ -999,7 +999,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       const childBranch = branch + '/' + i;
       let { className, children, _id, _ref, _wasRef, name, order } = json;
       // try to match and preserve the object and any references.
-      let child = childrenRefs.find(c => c._t.id === _id || c._t.ref === (_wasRef ?? _ref));
+      let child = childrenRefs.find(c => _id !== undefined ? (c._t.id === _id) : (c._t.ref === (_wasRef ?? _ref)));
       if (!child) {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
         if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.registerClasses\``);
@@ -1007,13 +1007,13 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         child._t.setId(_id);
         child._t.parent = this;
         child._t.order = order;
+        child._t.ref = _ref ?? _id;
       } else if ('_visible' in json) {
         for (const attr of Object.keys(child)) {
           // strip absent attributes (hidden)
           if (!(attr in json) && child[attr as keyof typeof child] !== undefined && typeof child[attr as keyof typeof child] !== 'function' && !(this.constructor as typeof GameElement).unserializableAttributes.includes(attr)) Object.assign(child, {[attr]: undefined});
         }
       }
-      child._t.ref = _ref ?? _id;
       if (_wasRef !== undefined) child._t.wasRef = _wasRef;
       this._t.children.push(child);
       child.createChildrenFromJSON(children || [], childBranch);

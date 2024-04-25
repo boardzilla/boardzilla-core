@@ -99,7 +99,6 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
 export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
 
   const el = render.element;
-  const branch = el.branch();
 
   const oldRender = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
   if (!oldRender?.pos) {

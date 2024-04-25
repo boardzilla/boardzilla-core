@@ -168,8 +168,6 @@ export function updateSelections(store: GameStore): GameStore {
               // have been caught with any possible choices presented
               throw Error(state.error);
             } else {
-              // obsolete?
-              // gameManager.sequence = Math.floor(gameManager.sequence) + 0.5; // intermediate local update that will need to be merged
               let json: any = undefined;
               if (gameManager.intermediateUpdates.length) {
                 json = gameManager.intermediateUpdates[0][0].board
