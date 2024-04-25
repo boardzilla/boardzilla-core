@@ -490,7 +490,7 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
    * @category Structure
    */
   putInto(to: GameElement, options?: {position?: number, fromTop?: number, fromBottom?: number}) {
-    if (this.some(el => el.hasChangedParent())) to.game.addDelay();
+    if (this.some(el => el._t.moved)) to.game.addDelay();
     for (const el of this) {
       if ('isSpace' in el) throw Error('cannot move Space');
       (el as unknown as Piece<Game>).putInto(to, options);

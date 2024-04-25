@@ -367,13 +367,13 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   addDelay() {
     if (this.game._ctx.trackMovement) {
       this._ctx.gameManager.sequence += 1;
+      this.resetMovementTracking();
     } else if (this._ctx.gameManager.intermediateUpdates.length) {
       return; // even if not tracking, record one intermediate to allow UI to extract proper state to animate towards
     }
     this._ctx.gameManager.intermediateUpdates.push(this.players.map(
       p => this._ctx.gameManager.getState(p) // TODO unnecessary for all players if in context of player
     ));
-    this.resetMovementTracking();
   }
 
   /**

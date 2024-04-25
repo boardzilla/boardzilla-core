@@ -20,7 +20,6 @@ import {
 
 import { ActionDebug } from '../game-manager.js'
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
-import type { ElementJSON } from '../board/element.js'
 import type { BaseGame } from '../board/game.js'
 import type { GameElement, Piece, PieceGrid } from '../board/index.js'
 import type Selection from '../action/selection.js'
@@ -41,7 +40,6 @@ export type GameStore = {
   setSetup: (s: SetupFunction) => void;
   gameManager: GameManager;
   isMobile: boolean;
-  boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with gameManager.sequence
   updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState}, readOnly?: boolean) => void;
   position?: number; // this player
   move?: UIMove; // move in progress
@@ -83,7 +81,7 @@ export type GameStore = {
   aspectRatio?: number;
   dragElement?: string;
   setDragElement: (el?: string) => void;
-  dragOffset: {element?: string, x?: number, y?: number}; // mutable non-reactive record of drag offset
+  dragOffset: {ref?: number, x?: number, y?: number}; // mutable non-reactive record of drag offset
   dropSelections: UIMove[];
   currentDrop?: GameElement;
   setCurrentDrop: (el?: GameElement) => void;
@@ -112,7 +110,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   setSetup: setup => set({ setup }),
   gameManager: new GameManager(Player, Game),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
-  boardJSON: [],
   updateState: (update, readOnly=false) => set(s => {
     let { gameManager } = s;
     const position = s.position || update.position;
@@ -163,7 +160,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     const rendered = applyLayouts(gameManager.game);
     if (update.state.sequence === s.renderedSequence + 1 && state.rendered) applyDiff(rendered.game, rendered, state.rendered);
     state.rendered = rendered;
-    gameManager.game.resetMovementTracking();
 
     if (!readOnly && update.type !== 'gameFinished') {
       state = updateSelections(state)

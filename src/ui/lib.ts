@@ -83,7 +83,7 @@ export function updateSelections(store: GameStore): GameStore {
       state.placement = {
         piece: clone,
         into,
-        layout: state.rendered.all[into.branch()].layouts[0], // assume first/only layout - need a Stack class to formalize
+        layout: state.rendered.all[into._t.ref].layouts[0], // assume first/only layout - need a Stack class to formalize
         rotationChoices: selection.rotationChoices,
       };
     }
@@ -268,7 +268,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     const element = Object.entries(move.args).reverse().find(([name, el]) => (
       !gameManager.game._ui.stepLayouts["action:" + move.name]?.noAnchor?.includes(name) && el instanceof GameElement
     ));
-    if (element && store.rendered!.all[(element[1] as GameElement).branch()]) {
+    if (element && store.rendered!.all[(element[1] as GameElement)._t.ref]) {
       layout = { element: element[1] as GameElement, position: 'beside', gap: 2 };
       name = 'action:' + element[0];
     }
@@ -281,7 +281,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
       // skip non-board moves if board elements already selected (cant this be more specific? just moves that could apply?)
       if (!selected?.length || moves[0].selections.some(s => s.type !== 'board')) {
         const actionLayout = gameManager.game._ui.stepLayouts["action:" + moves[0].name];
-        if (store.rendered!.all[actionLayout?.element.branch()]) {
+        if (store.rendered!.all[actionLayout?.element._t.ref]) {
           layout = actionLayout;
           name = 'action:' + moves[0].name;
         }
@@ -291,7 +291,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
 
   if (!layout && otherPlayerAction) {
     const actionLayout = gameManager.game._ui.stepLayouts["action:" + otherPlayerAction];
-    if (store.rendered!.all[actionLayout?.element.branch()]) {
+    if (store.rendered!.all[actionLayout?.element._t.ref]) {
       layout = actionLayout;
       name = 'action:' + otherPlayerAction;
     }
@@ -307,7 +307,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     layout = gameManager.game._ui.stepLayouts[name];
   }
 
-  const box: Box | undefined = store.rendered!.all[layout?.element.branch()]?.pos;
+  const box: Box | undefined = store.rendered!.all[layout?.element._t.ref]?.pos;
   if (layout && box) {
     if (layout.position === 'beside' || layout.position === 'stack') {
       if (box.left > 100 - box.left - box.width) {

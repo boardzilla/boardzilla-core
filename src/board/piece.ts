@@ -149,13 +149,15 @@ export default class Piece<G extends Game, P extends Player = NonNullable<G['pla
     if (options?.fromBottom !== undefined) pos = to._t.children.length - options.fromBottom;
     const previousParent = this._t.parent;
     const position = this.position();
-    if (this.hasChangedParent()) this.game.addDelay();
-    if (this._ctx.trackMovement && previousParent !== to) this._t.was ??= this.branch(); // track from deck
+    if (this._t.moved) this.game.addDelay();
+    const refs = this._ctx.trackMovement && previousParent === to && options?.row === undefined && options?.column === undefined && to.childRefs();
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);
+    if (refs) this.assignChildRefs(refs);
 
     if (previousParent !== to && previousParent instanceof Space) previousParent.triggerEvent("exit", this);
+    if (previousParent !== to && this._ctx.trackMovement) this._t.moved = true;
 
     delete this.column;
     delete this.row;

@@ -303,13 +303,16 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   _t: {
     children: ElementCollection<GameElement>,
     parent?: GameElement,
-    id: number,
+    id: number, // unique and immuatable
+    ref: number, // unique and may change to hide moves
+    wasRef?: number, // previous ref to track changes
+    moved?: boolean, // track if already moved (changed parent)
     order?: 'normal' | 'stacking',
-    was?: string,
     setId: (id: number) => void,
   } = {
     children: new ElementCollection<GameElement>(),
     id: 0,
+    ref: 0,
     setId: () => {}
   };
 
@@ -346,14 +349,16 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
     this._t = {
       children: new ElementCollection(),
-      id: this._ctx.sequence++,
+      id: this._ctx.sequence,
+      ref: this._ctx.sequence,
       setId: (id?: number) => {
         if (id !== undefined) {
           this._t.id = id;
           if (this._ctx.sequence < id) this._ctx.sequence = id;
         }
       },
-    }
+    };
+    this._ctx.sequence += 1;
   }
 
   /**
@@ -577,11 +582,12 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @param order - ordering style
    * - "normal": Elements placed into this element are put at the end of the
    *   list (default)
-   * - "stacking": Elements placed into this element are put at the beginning of
-   *   the list. This is prefered for elements that stack. E.g. if a stack of
-   *   cards has `order` set to `stacking` the {@link first} method will return
-   *   the last card placed in the stack, rather than the first one placed in
-   *   the stack.
+   * - "stacking": Used primarily for stacks of cards. Elements placed into this
+   *   element are put at the beginning of the list. E.g. if a stack of cards
+   *   has `order` set to `stacking` the {@link first} method will return the
+   *   last card placed in the stack, rather than the first one placed in the
+   *   stack. Hidden items in the stack are not tracked or animated while
+   *   reordered to prevent their identity from being exposed as they move
    */
   setOrder(order: typeof this._t.order) {
     this._t.order = order;
@@ -634,7 +640,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @category Structure
    */
   shuffle() {
+    const refs = this._ctx.trackMovement && this.childRefs();
     shuffleArray(this._t.children, this._ctx.gameManager?.random || Math.random);
+    if (refs) this.assignChildRefs(refs);
   }
 
   /**
@@ -957,11 +965,11 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       )) as typeof attrs;
     }
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
-    if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name or we'll leak information
     if (this._t.order) json.order = this._t.order;
-    if (this._t.was && this._t.was !== this.branch()) json.was = this._t.was;
+    if (seenBy === undefined) json._id = this._t.id;
+    if (json._id !== this._t.ref) json._ref = this._t.ref;
     // do not expose moves within deck (shuffles)
-    // if (seenBy && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) delete json.was;
+    if (seenBy !== undefined && this._t.wasRef !== undefined && this.isVisibleTo(seenBy)) json._wasRef = this._t.wasRef;
     if (this._t.children.length && (
       !seenBy || !('_screen' in this) || this._screen === undefined ||
         (this._screen === 'all-but-owner' && this.owner?.position === seenBy) ||
@@ -989,11 +997,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
       const childBranch = branch + '/' + i;
-      let { className, children, _id, name, order } = json;
-      let child: GameElement | undefined = undefined;
-      if (_id !== undefined) { // try to match space, preserve the object and any references. this should also match the .was if it's a sibling
-        child = childrenRefs.find(c => c._t.id === _id && c.name === name);
-      }
+      let { className, children, _id, _ref, _wasRef, name, order } = json;
+      // try to match and preserve the object and any references.
+      let child = childrenRefs.find(c => c._t.id === _id || c._t.ref === (_wasRef ?? _ref));
       if (!child) {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
         if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.registerClasses\``);
@@ -1001,7 +1007,14 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         child._t.setId(_id);
         child._t.parent = this;
         child._t.order = order;
+      } else if ('_visible' in json) {
+        for (const attr of Object.keys(child)) {
+          // strip absent attributes (hidden)
+          if (!(attr in json) && child[attr as keyof typeof child] !== undefined && typeof child[attr as keyof typeof child] !== 'function' && !(this.constructor as typeof GameElement).unserializableAttributes.includes(attr)) Object.assign(child, {[attr]: undefined});
+        }
       }
+      child._t.ref = _ref ?? _id;
+      if (_wasRef !== undefined) child._t.wasRef = _wasRef;
       this._t.children.push(child);
       child.createChildrenFromJSON(children || [], childBranch);
     }
@@ -1010,7 +1023,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   assignAttributesFromJSON(childrenJSON: ElementJSON[], branch: string) {
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
-      let { className: _cn, children, was: _w, _id, name: _n, order: _o, ...rest } = json;
+      let { className: _cn, children, _ref, _wasRef, _id, name: _n, order: _o, ...rest } = json;
       rest = deserializeObject({...rest}, this.game);
       let child = this._t.children[i];
       Object.assign(child, rest);
@@ -1128,14 +1141,23 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     Object.assign(this._ui.appearance, appearance);
   }
 
-  resetMovementTracking() {
-    this._t.was = this.branch();
-    for (const child of this._t.children) child.resetMovementTracking();
+  childRefs() {
+    const refs = [];
+    for (const child of this._t.children) {
+      child._t.wasRef = child._t.ref;
+      refs.push(child._t.ref);
+    }
+    return refs;
   }
 
-  hasChangedParent() {
-    const branch = this.branch();
-    if (!this._t.was || this._t.was === branch) return false;
-    return this._t.was?.substring(0, this._t.was?.lastIndexOf('/')) !== branch.substring(0, branch.lastIndexOf('/'));
+  assignChildRefs(refs: number[]) {
+    for (let i = 0; i != refs.length; i++) {
+      this._t.children[i]._t.ref = refs[i];
+    }
+  }
+
+  resetMovementTracking() {
+    this._t.moved = false
+    for (const child of this._t.children) child.resetMovementTracking();
   }
 }

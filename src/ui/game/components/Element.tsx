@@ -63,7 +63,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   useEffect(() => {
     const node = wrapper.current;
     if (node?.style.getPropertyValue('--transformed-to-old')) {
-      console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'));
+      // console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'));
       node?.scrollTop; // force reflow
       // move to 'new' by removing transform and animate
       node.classList.add('animating');
@@ -131,7 +131,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     if (dragging) {
       if (currentDrop) {
         if (wrapper.current) {
-          dragOffset.element = branch
+          dragOffset.ref = element._t.ref;
           dragOffset.x = data.x - parseInt(wrapper.current.getAttribute('data-lastx') || '');
           dragOffset.y = data.y - parseInt(wrapper.current.getAttribute('data-lasty') || '');
         }
@@ -148,7 +148,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
       setCurrentDrop(undefined);
       setDragElement(undefined);
     }
-  }, [dragging, wrapper, render, currentDrop, dropSelections, onSelectElement, setDragElement, setCurrentDrop, dragOffset, branch]);
+  }, [dragging, wrapper, render, currentDrop, dropSelections, onSelectElement, setDragElement, setCurrentDrop, dragOffset, element._t.ref]);
 
   const handleMouseEnter = useCallback(() => {
     if (droppable) setCurrentDrop(element);
@@ -251,13 +251,13 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
       }
     }
 
-    if (styles.transform && dragOffset.element && dragOffset.element === element._t.was) {
+    if (styles.transform && dragOffset.ref === element._t.ref) {
       // offset by the last drag position to prevent jump back to original position
       styles = {
         ...styles,
         transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) ` + styles.transform
       };
-      dragOffset.element = undefined;
+      dragOffset.ref = undefined;
       dragOffset.x = undefined;
       dragOffset.y = undefined;
     }
@@ -501,7 +501,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
       </DraggableCore>
     );
   }
-  console.log('==================== RENDER', branch);
+  console.log('==================== RENDER', branch, render.key);
 
   return contents;
 }// , (prevProps, props) => {

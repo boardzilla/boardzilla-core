@@ -34,7 +34,7 @@ export type UIRender = {
     children: UIRender[],
     drawer: ElementUI<GameElement>['layouts'][number]['attributes']['drawer']
   }[],
-  parent?: UIRender,
+  parentRef?: number,
 };
 
 export type UI = {
@@ -52,7 +52,7 @@ export type UI = {
  * @internal
  */
 export function absPositionSquare(el: GameElement, ui: UI): Box {
-  return translate(ui.all[el._t.was || el.branch()].pos!, ui.frame);
+  return translate(ui.all[String(el._t.ref)].pos!, ui.frame);
 }
 
 /**
@@ -90,16 +90,82 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
       layouts: []
     },
   };
-  ui.all['0'] = ui.game;
-  ui.game.layouts = calcLayouts(game, ui, ui.game)
+  ui.all[String(game._t.ref)] = ui.game;
+  ui.game.layouts = calcLayouts(game, ui)
   return ui;
 }
+
+// compares render to oldRender and applies transforms, effect classes, DOM key, old attrs
+export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
+
+  const el = render.element;
+  const branch = el.branch();
+
+  const oldRender = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
+  if (!oldRender?.pos) {
+    delete render.previousAttributes;
+    delete render.previousDataAttributes;
+    return true;
+  }
+
+  // depth first, bubble up mutations
+  let mutated = false
+
+  for (const layout of render.layouts) {
+    for (const child of layout.children) {
+      mutated = applyDiff(child, ui, oldUI) || mutated;
+    }
+  }
+
+  const styles = render.styles!;
+
+  if (!('isSpace' in el) && el._t.parent?._t.ref === oldRender.parentRef) {
+    render.key = oldRender?.key ?? render.key;
+  }
+
+  const pos = render.pos!;
+  if (
+    oldRender.pos.left !== pos.left ||
+    oldRender.pos.top !== pos.top ||
+    oldRender.pos.width !== pos.width ||
+    oldRender.pos.height !== pos.height ||
+    (oldRender.pos.rotation ?? 0) !== (pos.rotation ?? 0)
+  ) {
+    mutated = true;
+    styles.transform = `translate(${(oldRender.pos.left + oldRender.pos.width / 2 - pos.left - pos.width / 2) / pos.width * 100}%, ` +
+      `${(oldRender.pos.top + oldRender.pos.height / 2 - pos.top - pos.height / 2) / pos.height * 100}%) ` +
+      `scaleX(${oldRender.pos.width / pos.width}) ` +
+      `scaleY(${oldRender.pos.height / pos.height}) ` +
+      `rotate(${(oldRender.pos.rotation ?? 0) - (pos.rotation ?? 0)}deg)`;
+    Object.assign(styles, {
+      '--transformed-to-old': String(uuid()),
+      transition: 'none'
+    });
+
+    const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender?.dataAttributes);
+    mutated ||= changedAttrs;
+
+    if (changedAttrs) {
+      render.previousAttributes = oldRender.attributes;
+      render.previousDataAttributes = oldRender.dataAttributes;
+
+      if (el._ui.appearance.effects && changedAttrs) {
+        for (const effect of el._ui.appearance.effects) {
+          if (effect.trigger(el, oldRender.attributes!)) render.classes += ' ' + effect.name;
+        }
+      }
+    }
+  }
+  render.mutated = mutated;
+  return mutated;
+}
+
 /**
  * recalc one elements UI
  * @category UI
  * @internal
  */
-export function calcLayouts(el: GameElement, ui: UI, parent: UIRender): UIRender['layouts'] {
+export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
   if (el._ui.appearance.render === false) return [];
 
   const layoutItems = getLayoutItems(el);
@@ -527,7 +593,13 @@ export function calcLayouts(el: GameElement, ui: UI, parent: UIRender): UIRender
       const box = cellBoxes[i];
       if (!box) continue;
       const child = children[i];
-      const render: UIRender = ui.all[child._t.was || child.branch()] = {element: child, styles: {}, layouts: [], parent};
+      const render: UIRender = ui.all[String(child._t.ref)] = {
+        element: child,
+        key: 'isSpace' in child ? String(child._t.ref) : uuid(),
+        styles: {},
+        layouts: [],
+        parentRef: el._t.ref
+      };
       let { width, height, left, top } = box;
       let transformOrigin: string | undefined = undefined;
       const gridSize = el._sizeNeededFor(child);
@@ -581,7 +653,7 @@ export function calcLayouts(el: GameElement, ui: UI, parent: UIRender): UIRender
           }
           let worstOverlapElTry = Infinity;
           if (children.every(c => {
-            const render = ui.all[c._t.was || c.branch()]
+            const render = ui.all[String(c._t.ref)]
             if (!render.relPos) return true;
             const cbox = render.relPos;
             const childOverlap = Math.min(
@@ -607,7 +679,7 @@ export function calcLayouts(el: GameElement, ui: UI, parent: UIRender): UIRender
 
       render.relPos = { width, height, left, top };
       if (child._rotation !== undefined) render.relPos.rotation = child._rotation;
-      render.pos = translate(render.relPos, ui.all[el._t.was || el.branch()].relPos!);
+      render.pos = translate(render.relPos, ui.all[String(el._t.ref)].relPos!);
       render.styles = {
         width: width + '%',
         height: height + '%',
@@ -638,7 +710,7 @@ export function calcLayouts(el: GameElement, ui: UI, parent: UIRender): UIRender
       if (child._rotation !== undefined) render.baseStyles.transform = `rotate(${child._rotation}deg)`;
       if (child.player) Object.assign(render.baseStyles, {'--player-color': child.player.color});
 
-      render.layouts = calcLayouts(child, ui, render);
+      render.layouts = calcLayouts(child, ui);
       layouts[l].children.push(render);
     }
   }
@@ -833,68 +905,4 @@ export function getTotalArea(
     left: cellArea.left,
     top: cellArea.top
   }
-}
-
-// compares render to oldRender and applies transforms, effect classes, DOM key, old attrs
-export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
-
-  const el = render.element;
-  const branch = el.branch();
-
-  // stacked pieces get translated from element that used to occupy this spot regardless of movement
-  const oldRender = oldUI.all[render.parent?.element._t.order === 'stacking' ? branch : el._t.was!];
-  if (!oldRender?.pos) {
-    delete render.previousAttributes;
-    delete render.previousDataAttributes;
-    return true;
-  }
-
-  // depth first, bubble up mutations
-  let mutated = false
-
-  for (const layout of render.layouts) {
-    for (const child of layout.children) {
-      mutated = applyDiff(child, ui, oldUI) || mutated;
-    }
-  }
-
-  const styles = render.styles!;
-
-  render.key = 'isSpace' in el ? branch : !el.hasChangedParent() && oldRender?.key || uuid();
-
-  const pos = render.pos!;
-  if (
-    oldRender.pos.left !== pos.left ||
-    oldRender.pos.top !== pos.top ||
-    oldRender.pos.width !== pos.width ||
-    oldRender.pos.height !== pos.height ||
-    (oldRender.pos.rotation ?? 0) !== (pos.rotation ?? 0)
-  ) {
-    mutated = true;
-    styles.transform = `translate(${(oldRender.pos.left + oldRender.pos.width / 2 - pos.left - pos.width / 2) / pos.width * 100}%, ` +
-      `${(oldRender.pos.top + oldRender.pos.height / 2 - pos.top - pos.height / 2) / pos.height * 100}%) ` +
-      `scaleX(${oldRender.pos.width / pos.width}) ` +
-      `scaleY(${oldRender.pos.height / pos.height}) ` +
-      `rotate(${(oldRender.pos.rotation ?? 0) - (pos.rotation ?? 0)}deg)`;
-    Object.assign(styles, {
-      '--transformed-to-old': String(uuid()),
-      transition: 'none'
-    });
-
-    const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender?.dataAttributes);
-    mutated ||= changedAttrs;
-
-    if (changedAttrs) {
-      render.previousAttributes = oldRender.attributes;
-      render.previousDataAttributes = oldRender.dataAttributes;
-
-      if (el._ui.appearance.effects && changedAttrs) {
-        for (const effect of el._ui.appearance.effects) {
-          if (effect.trigger(el, oldRender.attributes!)) render.classes += ' ' + effect.name;
-        }
-      }
-    }
-  }
-  render.mutated = mutated;
-  return mutated;
 }
