@@ -46,7 +46,6 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
   _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
-    computedStyle: {},
     getBaseLayout: () => ({
       rows: this.rows,
       columns: this.columns,
@@ -287,9 +286,7 @@ export default class PieceGrid<G extends Game> extends AdjacencySpace<G> {
    */
   adjacenciesByEdge(piece: Piece<G>, other?: Piece<G>): {piece: Piece<G>, from?: string, to?: string}[] {
     if (!other) {
-      // TODO reduce to single layout
-      const layout = this._ui.computedLayouts?.find(l => l?.children.includes(this));
-      const children = layout?.children ?? this._t.children;
+      const children = this._t.children;
       return children.reduce(
         (all, p) => all.concat(p !== piece ? this.adjacenciesByEdge(piece, p as Piece<G>) : []),
         [] as {piece: Piece<G>, from?: string, to?: string}[]

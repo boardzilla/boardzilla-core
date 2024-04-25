@@ -12,7 +12,6 @@ export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G
   _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
-    computedStyle: {},
     getBaseLayout: () => ({
       sticky: true,
       alignment: 'center',
@@ -66,7 +65,6 @@ export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G
   resetUI() {
     if (!this._ui.layouts.length) this.configureLayout({});
     this._ui.appearance = {};
-    this._ui.computedStyle = {};
     for (const child of this._t.children) child.resetUI();
   }
 }

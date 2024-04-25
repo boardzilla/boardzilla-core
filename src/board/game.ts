@@ -491,7 +491,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     disabledDefaultAppearance?: boolean;
     boundingBoxes?: boolean;
     stepLayouts: Record<string, ActionLayout>;
-    previousStyles: Record<any, Box>;
     announcements: Record<string, (game: G) => JSX.Element>;
     infoModals: {
       title: string,
@@ -502,9 +501,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     boardSize: {name: '_default', aspectRatio: 1},
     layouts: [],
     appearance: {},
-    computedStyle: {},
     stepLayouts: {},
-    previousStyles: {},
     announcements: {},
     infoModals: [],
     getBaseLayout: () => ({
@@ -517,7 +514,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   resetUI() {
     super.resetUI();
     this._ui.stepLayouts = {};
-    this._ui.previousStyles ||= {};
   }
 
   setBoardSize(boardSize: BoardSize) {
@@ -528,35 +524,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
 
   getBoardSize(screenX: number, screenY: number, mobile: boolean) {
     return this._ui.boardSizes && this._ui.boardSizes(screenX, screenY, mobile) || { name: '_default', aspectRatio: 1 };
-  }
-
-  applyLayouts(this: G, base?: (b: G) => void) {
-    this.resetUI();
-    this._ui.computedStyle = {
-      pos: { left: 0, top: 0, width: 100, height: 100 },
-      relPos: { left: 0, top: 0, width: 100, height: 100 },
-      styles: {
-        width: '100%',
-        height: '100%',
-        left: '0',
-        top: '0',
-        fontSize: (this._ui.frame?.height ?? 100) * 0.04 + 'rem'
-      }
-    };
-
-    if (this._ui.setupLayout) {
-      this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
-    }
-    if (base) base(this);
-
-    const aspectRatio = this._ui.boardSize.aspectRatio;
-    this._ui.frame = {
-      left: 0,
-      top: 0,
-      width: aspectRatio < 1 ? aspectRatio * 100 : 100,
-      height: aspectRatio > 1 ? 100 / aspectRatio : 100
-    };
-    return super.applyLayouts();
   }
 
   /**

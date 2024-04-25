@@ -6,9 +6,10 @@ import Element from './Element.js';
 import DebugChoices from './DebugChoices.js';
 import { ResolvedSelection } from '../../../action/selection.js';
 import DebugArgument from './DebugArgument.js';
+import { absPositionSquare } from '../../render.js';
 
 const Debug = () => {
-  const [position, gameManager, actionDebug, pendingMoves, infoElement, setInfoElement, selected, disambiguateElement] = gameStore(s => [s.position, s.gameManager, s.actionDebug, s.pendingMoves, s.infoElement, s.setInfoElement, s.selected, s.disambiguateElement]);
+  const [position, gameManager, rendered, actionDebug, pendingMoves, infoElement, setInfoElement, selected, disambiguateElement] = gameStore(s => [s.position, s.gameManager, s.rendered, s.actionDebug, s.pendingMoves, s.infoElement, s.setInfoElement, s.selected, s.disambiguateElement]);
   const player = gameManager.players.atPosition(position!)!;
 
   useEffect(() => setInfoElement(), [setInfoElement]);
@@ -18,7 +19,7 @@ const Debug = () => {
 
   let elementStyle: React.CSSProperties | undefined = useMemo(() => {
     if (!infoElement?.element) return {};
-    const scale = {...infoElement.element.absoluteTransform()};
+    const scale = absPositionSquare(infoElement.element, rendered!);
     let fontSize = 24 * 0.04;
     const aspectRatio = scale.width / scale.height;
 
@@ -33,7 +34,7 @@ const Debug = () => {
       aspectRatio,
       fontSize: fontSize + 'rem',
     };
-  }, [infoElement?.element]);
+  }, [infoElement?.element, rendered]);
 
   if (!gameManager || !actionDebug) return null;
 
@@ -117,7 +118,7 @@ const Debug = () => {
           <div className="element-zoom">
             <div style={elementStyle}>
               <Element
-                element={infoElement!.element!}
+                render={rendered!.all[infoElement!.element!.branch()]}
                 mode='zoom'
                 onSelectElement={() => {}}
               />

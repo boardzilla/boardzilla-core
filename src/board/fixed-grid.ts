@@ -17,7 +17,6 @@ export default abstract class FixedGrid<G extends Game> extends ConnectedSpaceMa
   _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
-    computedStyle: {},
     getBaseLayout: () => ({
       rows: this.rows,
       columns: this.columns,

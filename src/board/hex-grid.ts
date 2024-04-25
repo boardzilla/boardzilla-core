@@ -43,7 +43,6 @@ export default class HexGrid<G extends Game> extends FixedGrid<G> {
   _ui: ElementUI<this> = {
     layouts: [],
     appearance: {},
-    computedStyle: {},
     getBaseLayout: () => ({
       rows: this.rows,
       columns: this.columns,

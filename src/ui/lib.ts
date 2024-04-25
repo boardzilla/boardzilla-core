@@ -2,13 +2,11 @@ import { CSSProperties } from 'react'
 import { SerializedArg, serializeArg } from '../action/utils.js';
 import Selection from '../action/selection.js'
 import { GameElement, Piece } from '../board/index.js'
-import uuid from 'uuid-random';
-import { serialize } from '../action/utils.js'
-import classNames from 'classnames';
+import { applyDiff, applyLayouts } from './render.js';
 
 import type { GameStore } from './store.js';
 import type { default as GameManager, SerializedMove, PendingMove } from '../game-manager.js'
-import type { Box, ElementJSON } from '../board/element.js'
+import type { Box } from '../board/element.js'
 import type { ResolvedSelection } from '../action/selection.js';
 import type { BaseGame } from '../board/game.js'
 import type { ActionLayout, PieceGrid } from '../board/index.js'
@@ -31,101 +29,6 @@ export type MoveMessage = {
     args: Record<string, SerializedArg>
   }[]
 }
-
-export function updateRendered(store: GameStore, transform: boolean = false): GameStore {
-  const state = { ...store, ...updateBoard(store.gameManager, store.position!) };
-  translateRendered(state.gameManager.game, transform);
-
-  return state;
-}
-
-function translateRendered(el: GameElement, transform: boolean = false): boolean {
-  // depth first, bubble up mutations
-  let mutated = false
-  for (const layout of el._ui.computedLayouts!) {
-    for (const child of layout.children) {
-      mutated = translateRendered(child, transform) || mutated;
-    }
-  }
-  const branch = el.branch();
-  const render = el._ui.computedStyle;
-
-  // TODO - stacked pieces get translated from element that used to occupy this branch, need a lookup on was at time of layout
-  // const oldRender = transform ? (el._t.was && el._t.parent?._t.order === 'stacking' ? el.game.atBranch(el._t.was) : el)._ui.computedStyle : undefined;
-  const oldRender = transform ? el._ui.computedStyle : undefined;
-  const styles = render.styles!;
-
-  render.key = 'isSpace' in el ? branch : !el.hasChangedParent() && oldRender?.key || uuid();
-  render.attributes = el.attributeList();
-
-  // TODO ---------------------------------------- check if data-mine present
-  render.dataAttributes = Object.assign(
-    {
-      'data-player': el.player?.position
-    },
-    Object.fromEntries(Object.entries(render.attributes).filter(([key, val]) => (
-      typeof val !== 'object' && (el.isVisible() || (el.constructor as typeof GameElement).visibleAttributes?.includes(key))
-    )).map(([key, val]) => (
-      [`data-${key.toLowerCase()}`, serialize(val)]
-    )))
-  );
-
-  const baseClass = el instanceof Piece ? 'Piece' : 'Space';
-
-  render.classes = classNames(
-    baseClass,
-    el._ui.appearance.className,
-    {
-      [el.constructor.name]: baseClass !== el.constructor.name,
-    }
-  )
-
-  if (!mutated || (transform && oldRender)) {
-    const pos = render.relPos!;
-    if (!oldRender?.oldPos) {
-      mutated = true;
-    } else if (
-      oldRender.oldPos.left !== pos.left ||
-      oldRender.oldPos.top !== pos.top ||
-      oldRender.oldPos.width !== pos.width ||
-      oldRender.oldPos.height !== pos.height ||
-      (oldRender.oldPos.rotation ?? 0) !== (pos.rotation ?? 0)
-    ) {
-      mutated = true;
-      if (transform) styles.transform = `translate(${(oldRender.oldPos.left + oldRender.oldPos.width / 2 - pos.left - pos.width / 2) / pos.width * 100}%, ` +
-        `${(oldRender.oldPos.top + oldRender.oldPos.height / 2 - pos.top - pos.height / 2) / pos.height * 100}%) ` +
-        `scaleX(${oldRender.oldPos.width / pos.width}) ` +
-        `scaleY(${oldRender.oldPos.height / pos.height}) ` +
-        `rotate(${(oldRender.oldPos.rotation ?? 0) - (pos.rotation ?? 0)}deg)`;
-      Object.assign(styles, {
-        '--transformed-to-old': String(uuid()),
-        transition: 'none'
-      });
-    }
-
-    const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender?.dataAttributes);
-    mutated ||= changedAttrs;
-    console.log(branch, changedAttrs);
-
-    if (changedAttrs && transform && oldRender) {
-      render.previousAttributes = oldRender.attributes;
-      render.previousDataAttributes = oldRender.dataAttributes;
-
-      if (el._ui.appearance.effects && changedAttrs) {
-        for (const effect of el._ui.appearance.effects) {
-          if (effect.trigger(el, oldRender.attributes!)) render.classes += ' ' + effect.name;
-        }
-      }
-    }
-  }
-  if (!transform || !oldRender) {
-    delete render.previousAttributes;
-    delete render.previousDataAttributes;
-  }
-  render.mutated = mutated;
-  return mutated;
-}
-
 // refresh move and selections
 export function updateSelections(store: GameStore): GameStore {
   let { gameManager, position, move, placement } = store;
@@ -176,14 +79,11 @@ export function updateSelections(store: GameStore): GameStore {
           })[0];
       }
 
-      state = {
-        ...state,
-        ...updateBoard(gameManager, position),
-      };
+      state.rendered = applyLayouts(gameManager.game);
       state.placement = {
         piece: clone,
         into,
-        layout: into._ui.computedLayouts![0],
+        layout: state.rendered.all[into.branch()].layouts[0], // assume first/only layout - need a Stack class to formalize
         rotationChoices: selection.rotationChoices,
       };
     }
@@ -276,7 +176,9 @@ export function updateSelections(store: GameStore): GameStore {
                 gameManager.game.fromJSON(json);
                 gameManager.intermediateUpdates = [];
               }
-              state = updateRendered(state, true);
+              const rendered = applyLayouts(gameManager.game);
+              if (state.rendered) applyDiff(rendered.game, rendered, state.rendered);
+              state.rendered = rendered;
 
               window.top!.postMessage(message, "*");
             }
@@ -366,7 +268,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     const element = Object.entries(move.args).reverse().find(([name, el]) => (
       !gameManager.game._ui.stepLayouts["action:" + move.name]?.noAnchor?.includes(name) && el instanceof GameElement
     ));
-    if (element && (element[1] as GameElement)._ui?.computedStyle) {
+    if (element && store.rendered!.all[(element[1] as GameElement).branch()]) {
       layout = { element: element[1] as GameElement, position: 'beside', gap: 2 };
       name = 'action:' + element[0];
     }
@@ -379,7 +281,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
       // skip non-board moves if board elements already selected (cant this be more specific? just moves that could apply?)
       if (!selected?.length || moves[0].selections.some(s => s.type !== 'board')) {
         const actionLayout = gameManager.game._ui.stepLayouts["action:" + moves[0].name];
-        if (actionLayout?.element?._ui?.computedStyle) {
+        if (store.rendered!.all[actionLayout?.element.branch()]) {
           layout = actionLayout;
           name = 'action:' + moves[0].name;
         }
@@ -389,7 +291,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
 
   if (!layout && otherPlayerAction) {
     const actionLayout = gameManager.game._ui.stepLayouts["action:" + otherPlayerAction];
-    if (actionLayout?.element?._ui?.computedStyle) {
+    if (store.rendered!.all[actionLayout?.element.branch()]) {
       layout = actionLayout;
       name = 'action:' + otherPlayerAction;
     }
@@ -405,9 +307,8 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     layout = gameManager.game._ui.stepLayouts[name];
   }
 
-  if (layout && layout.element._ui.computedStyle.relPos) {
-    const box: Box = layout.element._ui.computedStyle.relPos;
-
+  const box: Box | undefined = store.rendered!.all[layout?.element.branch()]?.pos;
+  if (layout && box) {
     if (layout.position === 'beside' || layout.position === 'stack') {
       if (box.left > 100 - box.left - box.width) {
         style.right = `clamp(0%, calc(${100 - box.left - (layout.position === 'beside' ? 0 : box.width)}% + ${layout.position === 'beside' ? layout.gap : 0}vw), 100%)`;
@@ -531,15 +432,6 @@ export function updatePrompts(store: GameStore): Partial<GameStore> {
 export function removePlacementPiece(placement: NonNullable<GameStore['placement']>) {
   const position = placement.into._t.children.indexOf(placement.piece);
   placement.into._t.children.splice(position, 1);
-}
-
-// function to ensure react detects a change. must be called immediately after any function that alters board state
-export function updateBoard(gameManager: GameManager, position: number, json?: ElementJSON[]) {
-  // rerun layouts. probably optimize TODO
-  gameManager.contextualizeBoardToPlayer(gameManager.players.atPosition(position));
-  gameManager.game.applyLayouts();
-
-  return ({ boardJSON: json || gameManager.game.allJSON() })
 }
 
 export function decorateUIMove(move: PendingMove | UIMove): UIMove {

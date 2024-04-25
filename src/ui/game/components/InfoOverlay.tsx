@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { gameStore } from '../../store.js';
 import Element from './Element.js';
+import { absPositionSquare } from '../../render.js';
 
 const InfoOverlay = ({ setMode }: {
   setMode: (mode: 'info' | 'game' | 'debug') => void;
@@ -8,12 +9,12 @@ const InfoOverlay = ({ setMode }: {
   const [collapsed, setCollapsed] = useState(false);
   const [infoModal, setInfoModal] = useState<number | undefined>(undefined);
 
-  const [gameManager, infoElement, setInfoElement, actionDescription] = gameStore(s => [s.gameManager, s.infoElement, s.setInfoElement, s.actionDescription]);
+  const [gameManager, rendered, infoElement, setInfoElement, actionDescription] = gameStore(s => [s.gameManager, s.rendered, s.infoElement, s.setInfoElement, s.actionDescription]);
   useEffect(() => setInfoElement(), [setInfoElement]);
 
   let elementStyle: React.CSSProperties | undefined = useMemo(() => {
     if (!infoElement?.element) return {};
-    const scale = {...infoElement.element.absoluteTransform()};
+    const scale = absPositionSquare(infoElement.element, rendered!);
     let fontSize = 32 * 0.04;
     const aspectRatio = scale.width / scale.height;
 
@@ -28,7 +29,7 @@ const InfoOverlay = ({ setMode }: {
       aspectRatio,
       fontSize: fontSize + 'rem',
     };
-  }, [infoElement?.element]);
+  }, [rendered, infoElement?.element]);
 
   const close = useCallback(() => {
     if (infoElement || infoModal !== undefined) {
@@ -117,7 +118,7 @@ const InfoOverlay = ({ setMode }: {
                   <div className="element-zoom">
                     <div style={elementStyle}>
                       <Element
-                        element={infoElement.element}
+                        render={rendered!.all[infoElement!.element!.branch()]}
                         mode='zoom'
                         onSelectElement={() => {}}
                       />

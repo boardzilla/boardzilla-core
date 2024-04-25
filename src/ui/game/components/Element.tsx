@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../store.js';
@@ -12,23 +12,24 @@ import {
 import type { UIMove } from '../../lib.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 import type { DirectedGraph } from 'graphology';
+import { absPositionSquare, type UIRender } from '../../render.js';
 
 const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
-const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
-  element: GameElement,
+const Element = ({render, mode, onSelectElement, onMouseLeave}: {
+  render: UIRender,
   mode: 'game' | 'info' | 'zoom'
   onSelectElement: (moves: UIMove[], ...elements: GameElement[]) => void,
   onMouseLeave?: () => void,
 }) => {
 
-  const [move, selected, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev] =
-    gameStore(s => [s.move, s.selected, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev]);
+  const [move, rendered, selected, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev] =
+    gameStore(s => [s.move, s.rendered, s.selected, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev]);
 
+  const element = render.element;
   const branch = element.branch();
-  const rendered = element._ui.computedStyle;
   const [boardSelections] = gameStore(s => [s.boardSelections[branch]]);
-  const absoluteTransform = element.absoluteTransform();
+  const absoluteTransform = absPositionSquare(element, rendered!);
 
   const [dragging, setDragging] = useState<{ deltaY: number, deltaX: number } | undefined>(); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
@@ -49,10 +50,10 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
-  const transform = !!rendered.styles?.transform;
-  if ((positioning || mode === 'zoom') && rendered.styles?.transform) delete rendered.styles.transform; // not actually
+  const transform = !!render.styles?.transform;
+  if ((positioning || mode === 'zoom') && render.styles?.transform) delete render.styles.transform; // not actually
 
-  const attrs = rendered.previousDataAttributes || rendered.dataAttributes;
+  const attrs = render.previousDataAttributes || render.dataAttributes;
 
   useEffect(() => {
     if (placing && transform) setPositioning(true);
@@ -69,13 +70,15 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
       node.style.removeProperty('--transformed-to-old');
       node.style.removeProperty('transition');
       node.style.removeProperty('transform');
-      if (domElement.current) {
-       for (const [k, v] of Object.entries(rendered.attributes!)) domElement.current.setAttribute(k, v);
+      if (domElement.current && render.previousDataAttributes) {
+        for (const [k, v] of Object.entries(render.attributes!)) domElement.current.setAttribute(k, v);
         for (const attr of domElement.current.getAttributeNames()) {
-          if (attr.slice(0, 5) === 'data-' && rendered.attributes![attr] === undefined) {
+          if (attr.slice(0, 5) === 'data-' && render.attributes![attr] === undefined) {
             domElement.current.removeAttribute(attr);
           }
         }
+        delete render.previousAttributes;
+        delete render.previousDataAttributes;
       }
       const cancel = (e: TransitionEvent) => {
         if (e.propertyName === 'transform' && e.target === node) {
@@ -84,11 +87,9 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
         }
       };
       node.addEventListener('transitionend', cancel);
-      delete rendered.previousAttributes;
-      delete rendered.previousDataAttributes;
-      if (rendered.styles?.transform) delete rendered.styles.transform;
+      if (render.styles?.transform) delete render.styles.transform;
     }
-  }, [branch, element, rendered]);
+  }, [branch, element, render]);
 
   useEffect(() => {
     if (dragging && dragElement !== branch) setDragging(undefined);
@@ -115,7 +116,7 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
 
   const handleDrag = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
-    if (wrapper.current && element._ui.computedStyle) {
+    if (wrapper.current) {
       const deltaY = parseInt(wrapper.current.getAttribute('data-lasty') || '') - data.y;
       const deltaX = parseInt(wrapper.current.getAttribute('data-lastx') || '') - data.x;
       if (Math.abs(deltaX) + Math.abs(deltaY) > 5) {
@@ -123,7 +124,7 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
         setDragging({deltaY, deltaX});
       }
     }
-  }, [element._ui.computedStyle, wrapper, branch, dragElement, setDragElement]);
+  }, [wrapper, branch, dragElement, setDragElement]);
 
   const handleDragStop = useCallback((e: DraggableEvent, data: DraggableData) => {
     e.stopPropagation();
@@ -138,16 +139,16 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
         if (move) {
           onSelectElement([move], currentDrop);
           return;
-        } else if (wrapper.current && element._ui.computedStyle.styles) {
-          wrapper.current.style.top = element._ui.computedStyle.styles.top as string;
-          wrapper.current.style.left = element._ui.computedStyle.styles.left as string;
+        } else if (wrapper.current && render.styles) {
+          wrapper.current.style.top = render.styles.top as string;
+          wrapper.current.style.left = render.styles.left as string;
         }
       }
       setDragging(undefined);
       setCurrentDrop(undefined);
       setDragElement(undefined);
     }
-  }, [dragging, wrapper, element, currentDrop, dropSelections, onSelectElement, setDragElement, setCurrentDrop, dragOffset, branch]);
+  }, [dragging, wrapper, render, currentDrop, dropSelections, onSelectElement, setDragElement, setCurrentDrop, dragOffset, branch]);
 
   const handleMouseEnter = useCallback(() => {
     if (droppable) setCurrentDrop(element);
@@ -241,8 +242,8 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
       height: '100%'
     }
 
-    let styles = rendered.styles!;
-    if (dragging && rendered.styles && !rendered.styles.transform) {
+    let styles = render.styles!;
+    if (dragging && render.styles && !render.styles.transform) {
       styles = {
         ...styles,
         top: `calc(${styles.top} - ${dragging.deltaY}px)`,
@@ -262,7 +263,7 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
     }
 
     return styles;
-  }, [element, rendered, dragging, mode, dragOffset]);
+  }, [element, render, dragging, mode, dragOffset]);
 
   const info = useMemo(() => {
     if (mode === 'info') {
@@ -271,14 +272,14 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
   }, [mode, element]);
 
   let contents: React.JSX.Element[] | React.JSX.Element = [];
-  for (let l = 0; l !== (element._ui.computedLayouts?.length ?? 0); l++) {
-    const layout = element._ui.computedLayouts![l]
+  for (let l = 0; l !== render.layouts.length; l++) {
+    const layout = render.layouts[l]
     const layoutContents: React.JSX.Element[] = [];
-    for (const child of layout.children) {
+    for (const render of layout.children) {
       layoutContents.push(
         <Element
-          key={child._ui.computedStyle.key}
-          element={child}
+          key={render.key}
+          render={render}
           mode={mode === 'zoom' ? 'game' : mode}
           onMouseLeave={droppable ? () => setCurrentDrop(element) : undefined}
           onSelectElement={onSelectElement}
@@ -325,17 +326,17 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
     const lines: React.JSX.Element[] = [];
     const labels: React.JSX.Element[] = [];
     (element._graph as DirectedGraph).forEachEdge((...args) => {
-      const source = args[4].space as GameElement;
-      const target = args[5].space as GameElement;
+      const source = rendered!.all[(args[4].space as GameElement).branch()];
+      const target = rendered!.all[(args[5].space as GameElement).branch()];
 
-      if (source._ui.computedStyle && target._ui.computedStyle) {
+      if (source && target) {
         const origin = {
-          x: (source._ui.computedStyle.pos!.left + source._ui.computedStyle.pos!.width / 2) * absoluteTransform.width / 100,
-          y: (source._ui.computedStyle.pos!.top + source._ui.computedStyle?.pos!.height / 2) * absoluteTransform.height / 100
+          x: (source.pos!.left + source.pos!.width / 2) * absoluteTransform.width / 100,
+          y: (source.pos!.top + source?.pos!.height / 2) * absoluteTransform.height / 100
         }
         const destination = {
-          x: (target._ui.computedStyle.pos!.left + target._ui.computedStyle.pos!.width / 2) * absoluteTransform.width / 100,
-          y: (target._ui.computedStyle.pos!.top + target._ui.computedStyle.pos!.height / 2) * absoluteTransform.height / 100
+          x: (target.pos!.left + target.pos!.width / 2) * absoluteTransform.width / 100,
+          y: (target.pos!.top + target.pos!.height / 2) * absoluteTransform.height / 100
         }
 
         const distance = Math.sqrt(Math.pow(origin.x - destination.x, 2) + Math.pow(origin.y - destination.y, 2))
@@ -387,21 +388,18 @@ const Element = memo(({element, mode, onSelectElement, onMouseLeave}: {
     );
   }
 
-  let boundingBoxes: React.JSX.Element[] = [];
-  if (element._ui.computedLayouts) {
-    boundingBoxes = element._ui.computedLayouts.filter(layout => layout.showBoundingBox).map((layout, k) => (
-      <div key={k} className="bz-show-grid" style={{
-        left: layout.area.left + '%',
-        top: layout.area.top + '%',
-        width: layout.area.width + '%',
-        height: layout.area.height + '%',
-        // backgroundSize: `${(layout.grid?.offsetColumn.x ?? 100) / layout.area.width * 100}% ${(layout.grid?.offsetRow.y ?? 100) / layout.area.height * 100}%`,
-        // backgroundPosition: `calc(${(layout.grid?.anchor.x ?? 0) / layout.area.width * 10000}% - 1px) calc(${(layout.grid?.anchor.y ?? 0) / layout.area.height * 10000}% - 1px)`
-      }}>
-        {typeof layout.showBoundingBox === 'string' && <span>{layout.showBoundingBox}</span>}
-      </div>
-    ));
-  }
+  const boundingBoxes = render.layouts.filter(layout => layout.showBoundingBox).map((layout, k) => (
+    <div key={k} className="bz-show-grid" style={{
+      left: layout.area.left + '%',
+      top: layout.area.top + '%',
+      width: layout.area.width + '%',
+      height: layout.area.height + '%',
+      // backgroundSize: `${(layout.grid?.offsetColumn.x ?? 100) / layout.area.width * 100}% ${(layout.grid?.offsetRow.y ?? 100) / layout.area.height * 100}%`,
+      // backgroundPosition: `calc(${(layout.grid?.anchor.x ?? 0) / layout.area.width * 10000}% - 1px) calc(${(layout.grid?.anchor.y ?? 0) / layout.area.height * 10000}% - 1px)`
+    }}>
+      {typeof layout.showBoundingBox === 'string' && <span>{layout.showBoundingBox}</span>}
+    </div>
+  ));
 
   let title: string | undefined = undefined;
   if (dev) {
@@ -421,7 +419,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
       ref={domElement}
       title={title}
       className={classNames(
-        rendered.classes,
+        render.classes,
         {
           selected: isSelected && mode === 'game',
           clickable: clickable || invalidSelectionError,
@@ -430,7 +428,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
           droppable
         }
       )}
-      style={rendered.baseStyles}
+      style={render.baseStyles}
       onClick={clickable || placing || invalidSelectionError ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -461,7 +459,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
     contents = (
       <>
         {contents}
-        <div className="rotator" style={{...styles, width: (element._ui.computedStyle.pos!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
+        <div className="rotator" style={{...styles, width: (render.pos!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
           <div className="left" onClick={() => handleRotate(-1)}>
             <svg
               viewBox="0 0 254.2486 281.95978"
@@ -503,8 +501,13 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
       </DraggableCore>
     );
   }
+  console.log('==================== RENDER', branch);
 
   return contents;
-}, (prevProps, props) => !props.element._ui.computedStyle.mutated && prevProps.mode === props.mode);
+}// , (prevProps, props) => {
+//   const m = !props.render.mutated && prevProps.mode === props.mode;
+//   console.log(m, props);
+//   return true;
+// })
 
 export default Element;

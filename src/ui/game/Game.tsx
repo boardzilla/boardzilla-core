@@ -14,7 +14,7 @@ import type { Argument } from '../../action/action.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [gameManager, dev, position, rendered, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.dev, s.position, s.rendered, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON, s.aspectRatio]);
+  const [gameManager, rendered, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.rendered, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON, s.aspectRatio]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const announcement = useMemo(() => gameManager.announcements[announcementIndex], [gameManager.announcements, announcementIndex]);
@@ -124,9 +124,9 @@ export default () => {
       <audio ref={clickAudio} src={click} id="click"/>
       {mode !== 'debug' && <div id="background" className="full-page-cover" />}
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
-        {mode !== 'debug' && (
+        {mode !== 'debug' && rendered && (
           <Element
-            element={gameManager.game}
+            render={rendered.game}
             mode={announcement ? 'info' : mode}
             onSelectElement={handleSelectElement}
           />

@@ -7,18 +7,20 @@ import Player from '../player/player.js';
 import {
   updateSelections,
   UIMove,
-  updateRendered,
-  updateBoard,
   removePlacementPiece,
   decorateUIMove,
   clearMove,
   updateControls,
   updatePrompts,
 } from './lib.js';
+import {
+  applyLayouts,
+  applyDiff,
+} from './render.js';
 
 import { ActionDebug } from '../game-manager.js'
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
-import type { Box, ElementJSON } from '../board/element.js'
+import type { ElementJSON } from '../board/element.js'
 import type { BaseGame } from '../board/game.js'
 import type { GameElement, Piece, PieceGrid } from '../board/index.js'
 import type Selection from '../action/selection.js'
@@ -26,6 +28,7 @@ import type { Argument } from '../action/action.js'
 import type { SetupFunction } from '../game-creator.js'
 import type { GameState } from '../interface.js';
 import type { ResolvedSelection } from '../action/selection.js';
+import type { UI, UIRender } from './render.js';
 
 export type GameStore = {
   host: boolean;
@@ -74,20 +77,7 @@ export type GameStore = {
   selected?: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   selectElement: (moves: UIMove[], element: GameElement) => void;
   automove?: number;
-  rendered: Record<string, { // UI info keyed by current location in this UI
-    el: GameElement;
-    key: string;
-    children: GameStore['rendered'];
-    attributes: Record<string, any>;
-    dataAttributes: Record<string, any>;
-    previousAttributes?: Record<string, any>;
-    previousDataAttributes?: Record<string, any>;
-    visible: boolean;
-    box: Box & { rotation?: number };
-    styles: React.CSSProperties;
-    baseStyles: React.CSSProperties;
-    classes: string;
-  }>;
+  rendered?: UI;
   renderedSequence: number;
   setBoardSize: () => void;
   aspectRatio?: number;
@@ -102,7 +92,7 @@ export type GameStore = {
     piece: Piece<BaseGame> ; // temporary ghost piece
     invalid?: boolean
     into: PieceGrid<BaseGame>;
-    layout: NonNullable<GameElement['_ui']['computedLayouts']>[number];
+    layout: UIRender['layouts'][number];
     rotationChoices?: number[];
   };
   setPlacement: (placement: {column: number, row: number, rotation?: number}) => void; // select placement. not committed, analagous to input state in a controlled form
@@ -136,7 +126,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       boardPrompt: undefined,
       actionDescription: undefined,
       otherPlayerAction: undefined,
-      rendered: {},
       renderedSequence: update.state.sequence,
       announcementIndex: 0,
       step: undefined,
@@ -147,6 +136,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
     if (gameManager.phase === 'new' && s.setup) {
       gameManager = state.gameManager = s.setup(update.state);
+      gameManager.game._ctx.player = gameManager.game.players.atPosition(position);
       // @ts-ignore;
       window.game = gameManager.game;
       // @ts-ignore;
@@ -170,7 +160,9 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.winner = update.winners.map(p => gameManager.players.atPosition(p)!);
     }
     console.debug(`Game update for player #${position}. Current flow:\n ${gameManager.flow().stacktrace()}`);
-    state = updateRendered(state, update.state.sequence === s.renderedSequence + 1);
+    const rendered = applyLayouts(gameManager.game);
+    if (update.state.sequence === s.renderedSequence + 1 && state.rendered) applyDiff(rendered.game, rendered, state.rendered);
+    state.rendered = rendered;
     gameManager.game.resetMovementTracking();
 
     if (!readOnly && update.type !== 'gameFinished') {
@@ -203,7 +195,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         state = {
           ...state,
           placement: undefined,
-          ...updateBoard(s.gameManager, s.position!)
+          rendered: applyLayouts(s.gameManager.game)
         };
       }
     }
@@ -327,7 +319,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     );
     return {
       cancellable: true,
-      ...updateBoard(s.gameManager, s.position!)
+      rendered: applyLayouts(s.gameManager.game)
     };
   }),
 
@@ -367,13 +359,15 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     });
   }),
 
-  rendered: {},
   renderedSequence: -1,
   setBoardSize: () => set(s => {
     const boardSize = s.gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
     if ((boardSize.name !== s.gameManager.game._ui.boardSize.name || boardSize.aspectRatio !== s.gameManager.game._ui.boardSize.aspectRatio) && s.position) {
       s.gameManager.game.setBoardSize(boardSize);
-      return {aspectRatio: boardSize.aspectRatio, ...updateBoard(s.gameManager, s.position)};
+      return {
+        aspectRatio: boardSize.aspectRatio,
+        rendered: applyLayouts(s.gameManager.game)
+      };
     }
     return {};
   }),
