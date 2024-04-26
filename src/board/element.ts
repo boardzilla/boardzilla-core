@@ -1144,7 +1144,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   childRefs() {
     const refs = [];
     for (const child of this._t.children) {
-      child._t.wasRef = child._t.ref;
+      child._t.wasRef ??= child._t.ref;
       refs.push(child._t.ref);
     }
     return refs;
