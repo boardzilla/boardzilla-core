@@ -169,7 +169,6 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
     case 'gameFinished':
       {
         if (data.state instanceof Array) {
-          console.log('# of updates', data.state.length);
           const states = data.state;
           let delay = data.state[0].sequence === gameManager.sequence + 1;
 

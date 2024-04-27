@@ -161,6 +161,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     const rendered = applyLayouts(gameManager.game);
     if (update.state.sequence === s.renderedSequence + 1 && state.rendered) applyDiff(rendered.game, rendered, state.rendered);
     state.rendered = rendered;
+    gameManager.game.resetRefTracking();
 
     if (!readOnly && update.type !== 'gameFinished') {
       state = updateSelections(state)

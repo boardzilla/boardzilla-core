@@ -640,7 +640,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @category Structure
    */
   shuffle() {
-    const refs = this._ctx.trackMovement && this.childRefsIfObscured();
+    const refs = this.childRefsIfObscured();
     shuffleArray(this._t.children, this._ctx.gameManager?.random || Math.random);
     if (refs) this.assignChildRefs(refs);
   }
@@ -1015,7 +1015,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         }
       }
       if (_id !== undefined) child._t.ref = _ref ?? _id;
-      if (_wasRef !== undefined) child._t.wasRef = _wasRef;
+      if (_wasRef !== undefined && !this._ctx.trackMovement) child._t.wasRef = _wasRef;
       this._t.children.push(child);
       child.createChildrenFromJSON(children || [], childBranch);
     }
@@ -1143,10 +1143,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   childRefsIfObscured() {
-    if (!this._ctx.trackMovement || this._t.order !== 'stacking') return;
+    if (this._t.order !== 'stacking') return;
     const refs = [];
     for (const child of this._t.children) {
-      child._t.wasRef ??= child._t.ref;
+      if (this._ctx.trackMovement) child._t.wasRef ??= child._t.ref;
       refs.push(child._t.ref);
     }
     return refs;
@@ -1161,5 +1161,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   resetMovementTracking() {
     this._t.moved = false
     for (const child of this._t.children) child.resetMovementTracking();
+  }
+
+  resetRefTracking() {
+    delete this._t.wasRef;
+    for (const child of this._t.children) child.resetRefTracking();
   }
 }

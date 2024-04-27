@@ -177,6 +177,7 @@ export function updateSelections(store: GameStore): GameStore {
               const rendered = applyLayouts(gameManager.game);
               if (state.rendered) applyDiff(rendered.game, rendered, state.rendered);
               state.rendered = rendered;
+              gameManager.game.resetRefTracking();
 
               window.top!.postMessage(message, "*");
             }

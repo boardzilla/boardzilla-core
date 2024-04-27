@@ -705,8 +705,8 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       }
 
       render.relPos = { width, height, left, top };
-      if (child._rotation !== undefined) render.relPos.rotation = child._rotation;
       render.pos = translate(render.relPos, ui.all[String(el._t.ref)].relPos!);
+      if (child._rotation !== undefined) render.relPos.rotation = render.pos.rotation = child._rotation;
       render.styles = {
         width: width + '%',
         height: height + '%',

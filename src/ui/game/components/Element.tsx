@@ -63,13 +63,8 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   useEffect(() => {
     const node = wrapper.current;
     if (node?.style.getPropertyValue('--transformed-to-old')) {
-      // console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'), render.previousDataAttributes);
-      node?.scrollTop; // force reflow
-      // move to 'new' by removing transform and animate
-      node.classList.add('animating');
+      //console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'), render.previousDataAttributes);
       node.style.removeProperty('--transformed-to-old');
-      node.style.removeProperty('transition');
-      node.style.removeProperty('transform');
       if (domElement.current && render.previousDataAttributes) {
         for (const [k, v] of Object.entries(render.dataAttributes!)) domElement.current.setAttribute(k, v);
         for (const attr of domElement.current.getAttributeNames()) {
@@ -80,14 +75,21 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
         delete render.previousAttributes;
         delete render.previousDataAttributes;
       }
-      const cancel = (e: TransitionEvent) => {
-        if (e.propertyName === 'transform' && e.target === node) {
-          node.classList.remove('animating');
-          node.removeEventListener('transitionend', cancel);
-        }
-      };
-      node.addEventListener('transitionend', cancel);
-      if (render.styles?.transform) delete render.styles.transform;
+      if (node.style.getPropertyValue('transform')) {
+        node?.scrollTop; // force reflow
+        // move to 'new' by removing transform and animate
+        node.classList.add('animating');
+        node.style.removeProperty('transition');
+        node.style.removeProperty('transform');
+        const cancel = (e: TransitionEvent) => {
+          if (e.propertyName === 'transform' && e.target === node) {
+            node.classList.remove('animating');
+            node.removeEventListener('transitionend', cancel);
+          }
+        };
+        node.addEventListener('transitionend', cancel);
+        if (render.styles?.transform) delete render.styles.transform;
+      }
     }
   }, [branch, element, render]);
 
