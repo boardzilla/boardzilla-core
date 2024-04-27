@@ -20,6 +20,7 @@ export type UIRender = {
   styles?: React.CSSProperties; // CSS, includes pos and transform from move
   baseStyles?: React.CSSProperties;
   classes?: string;
+  effectClasses?: string;
   layouts: {
     area: Box,
     grid?: {
@@ -39,7 +40,7 @@ export type UIRender = {
 
 export type UI = {
   all: Record<string, UIRender>;
-  frame: Box;
+  frame: Vector;
   game: UIRender;
 };
 
@@ -52,7 +53,13 @@ export type UI = {
  * @internal
  */
 export function absPositionSquare(el: GameElement, ui: UI): Box {
-  return translate(ui.all[String(el._t.ref)].pos!, ui.frame);
+  const pos = ui.all[String(el._t.ref)].pos!;
+  return {
+    left: pos.left,
+    top: pos.top,
+    width: pos.width * ui.frame.x / 100,
+    height: pos.height * ui.frame.y / 100
+  };
 }
 
 /**
@@ -68,15 +75,14 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
   }
   base?.(game);
   const aspectRatio = game._ui.boardSize.aspectRatio;
+  const frame = {
+    x: aspectRatio < 1 ? aspectRatio * 100 : 100,
+    y: aspectRatio > 1 ? 100 / aspectRatio : 100
+  };
 
   const ui: UI = {
     all: {},
-    frame: {
-      left: 0,
-      top: 0,
-      width: aspectRatio < 1 ? aspectRatio * 100 : 100,
-      height: aspectRatio > 1 ? 100 / aspectRatio : 100
-    },
+    frame,
     game: {
       element: game,
       pos: { left: 0, top: 0, width: 100, height: 100 },
@@ -86,8 +92,9 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
         height: '100%',
         left: '0',
         top: '0',
-        fontSize: (game._ui.frame?.height ?? 100) * 0.04 + 'rem'
+        fontSize: (frame?.y ?? 100) * 0.04 + 'rem'
       },
+      classes: `Space ${game._ui.appearance.className ?? ''} ${game.constructor.name}`,
       layouts: []
     },
   };
@@ -121,7 +128,7 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
   const el = render.element;
 
   const oldRender = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
-  if (!oldRender?.pos) {
+  if (!oldRender?.pos || !oldRender?.relPos) {
     delete render.previousAttributes;
     delete render.previousDataAttributes;
     return true;
@@ -142,20 +149,24 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
     render.key = oldRender?.key ?? render.key;
   }
 
-  const pos = render.pos!;
+  const relPos = render.relPos!;
   if (
-    oldRender.pos.left !== pos.left ||
-    oldRender.pos.top !== pos.top ||
-    oldRender.pos.width !== pos.width ||
-    oldRender.pos.height !== pos.height ||
-    (oldRender.pos.rotation ?? 0) !== (pos.rotation ?? 0)
+    el._t.parent?._t.ref !== oldRender.parentRef ||
+    oldRender.relPos.left !== relPos.left ||
+    oldRender.relPos.top !== relPos.top ||
+    oldRender.relPos.width !== relPos.width ||
+    oldRender.relPos.height !== relPos.height ||
+    (oldRender.relPos.rotation ?? 0) !== (relPos.rotation ?? 0)
   ) {
     mutated = true;
-    styles.transform = `translate(${(oldRender.pos.left + oldRender.pos.width / 2 - pos.left - pos.width / 2) / pos.width * 100}%, ` +
-      `${(oldRender.pos.top + oldRender.pos.height / 2 - pos.top - pos.height / 2) / pos.height * 100}%) ` +
-      `scaleX(${oldRender.pos.width / pos.width}) ` +
-      `scaleY(${oldRender.pos.height / pos.height}) ` +
-      `rotate(${(oldRender.pos.rotation ?? 0) - (pos.rotation ?? 0)}deg)`;
+    const oldPos = el._t.parent?._t.ref === oldRender.parentRef ? oldRender.relPos : oldRender.pos;
+    const newPos = el._t.parent?._t.ref === oldRender.parentRef ? render.relPos! : render.pos!;
+
+    styles.transform = `translate(${(oldPos.left + oldPos.width / 2 - newPos.left - newPos.width / 2) / newPos.width * 100}%, ` +
+      `${(oldPos.top + oldPos.height / 2 - newPos.top - newPos.height / 2) / newPos.height * 100}%) ` +
+      `scaleX(${oldPos.width / newPos.width}) ` +
+      `scaleY(${oldPos.height / newPos.height}) ` +
+      `rotate(${(oldPos.rotation ?? 0) - (newPos.rotation ?? 0)}deg)`;
   }
 
   const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender.dataAttributes);
@@ -166,9 +177,10 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
     render.previousAttributes = oldRender.attributes;
     render.previousDataAttributes = oldRender.dataAttributes;
 
-    if (el._ui.appearance.effects && changedAttrs) {
+    if (el._ui.appearance.effects) {
+      render.effectClasses = '';
       for (const effect of el._ui.appearance.effects) {
-        if (effect.trigger(el, oldRender.attributes!)) render.classes += ' ' + effect.name;
+        if (effect.trigger(el, oldRender.attributes!)) render.effectClasses += ' ' + effect.name;
       }
     }
   }
@@ -705,18 +717,18 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       }
 
       render.relPos = { width, height, left, top };
-      render.pos = translate(render.relPos, ui.all[String(el._t.ref)].relPos!);
+      render.pos = translate(render.relPos, ui.all[String(el._t.ref)].pos!);
       if (child._rotation !== undefined) render.relPos.rotation = render.pos.rotation = child._rotation;
       render.styles = {
         width: width + '%',
         height: height + '%',
         left: left + '%',
         top: top + '%',
-        fontSize: render.pos.height * (el.game._ui.frame?.height ?? 100) * 0.0004 + 'rem'
+        fontSize: render.pos.height * (ui.frame?.y ?? 100) * 0.0004 + 'rem'
       }
 
       render.attributes = child.attributeList();
-      // TODO ---------------------------------------- check if data-mine present
+      render.attributes.mine = child.mine;
       render.dataAttributes = Object.assign(
         {
           'data-player': child.player?.position
@@ -817,28 +829,12 @@ function getArea(el: GameElement, ui: UI, attributes: { margin?: number | { top:
 }
 
 export function translate(original: Box, transform: Box): Box {
-  return shift(
-    scale(original, { x: transform.width / 100, y: transform.height / 100 }),
-    { x: transform.left, y: transform.top }
-  );
-}
-
-export function scale(a: Box, v: Vector): Box {
   return {
-    left: a.left * v.x,
-    top: a.top * v.y,
-    width: a.width * v.x,
-    height: a.height * v.y
-  }
-}
-
-export function shift(a: Box, v: Vector): Box {
-  return {
-    left: a.left + v.x,
-    top: a.top + v.y,
-    width: a.width,
-    height: a.height
-  }
+    left: original.left * transform.width / 100 + transform.left,
+    top: original.top * transform.height / 100 + transform.top,
+    width: original.width * transform.width / 100,
+    height: original.height * transform.height / 100,
+  };
 }
 
 export function cellBoxRC(

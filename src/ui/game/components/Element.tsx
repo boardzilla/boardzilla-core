@@ -50,14 +50,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [placement?.piece.rotation, placement?.piece.row, placement?.piece.column, placement?.into]);
 
-  const transform = !!render.styles?.transform;
-  if ((positioning || mode === 'zoom') && render.styles?.transform) delete render.styles.transform; // not actually
-
   const attrs = render.previousDataAttributes || render.dataAttributes;
-
-  useEffect(() => {
-    if (placing && transform) setPositioning(true);
-  }, [placing, transform]);
 
   // directly on the dom: remove the temporary transform-to-old position and set all new attr's
   useEffect(() => {
@@ -71,6 +64,9 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
           if (attr.slice(0, 5) === 'data-' && render.dataAttributes![attr] === undefined) {
             domElement.current.removeAttribute(attr);
           }
+        }
+        if (render.effectClasses !== undefined) {
+          domElement.current.setAttribute('class', domElement.current.getAttribute('class') + ' ' + render.effectClasses);
         }
         delete render.previousAttributes;
         delete render.previousDataAttributes;
@@ -245,7 +241,9 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     }
 
     let styles = render.styles!;
-    if (dragging && render.styles && !render.styles.transform) {
+    if (positioning) delete styles.transform;
+
+    if (dragging && styles.transform) {
       styles = {
         ...styles,
         top: `calc(${styles.top} - ${dragging.deltaY}px)`,
@@ -265,7 +263,11 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     }
 
     return styles;
-  }, [element, render, dragging, mode, dragOffset]);
+  }, [element, render, positioning, dragging, mode, dragOffset]);
+
+  useEffect(() => {
+    if (placing && styles.transform) setPositioning(true);
+  }, [placing, styles.transform]);
 
   const info = useMemo(() => {
     if (mode === 'info') {
@@ -328,17 +330,17 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     const lines: React.JSX.Element[] = [];
     const labels: React.JSX.Element[] = [];
     (element._graph as DirectedGraph).forEachEdge((...args) => {
-      const source = rendered!.all[(args[4].space as GameElement).branch()];
-      const target = rendered!.all[(args[5].space as GameElement).branch()];
+      const source = rendered!.all[(args[4].space as GameElement)._t.ref];
+      const target = rendered!.all[(args[5].space as GameElement)._t.ref];
 
       if (source && target) {
         const origin = {
-          x: (source.pos!.left + source.pos!.width / 2) * absoluteTransform.width / 100,
-          y: (source.pos!.top + source?.pos!.height / 2) * absoluteTransform.height / 100
+          x: (source.relPos!.left + source.relPos!.width / 2) * absoluteTransform.width / 100,
+          y: (source.relPos!.top + source?.relPos!.height / 2) * absoluteTransform.height / 100
         }
         const destination = {
-          x: (target.pos!.left + target.pos!.width / 2) * absoluteTransform.width / 100,
-          y: (target.pos!.top + target.pos!.height / 2) * absoluteTransform.height / 100
+          x: (target.relPos!.left + target.relPos!.width / 2) * absoluteTransform.width / 100,
+          y: (target.relPos!.top + target.relPos!.height / 2) * absoluteTransform.height / 100
         }
 
         const distance = Math.sqrt(Math.pow(origin.x - destination.x, 2) + Math.pow(origin.y - destination.y, 2))

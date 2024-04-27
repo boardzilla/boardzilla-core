@@ -134,7 +134,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
 
     if (s.setup && (gameManager.phase === 'new' || update.state.sequence !== s.renderedSequence + 1)) {
       gameManager = state.gameManager = s.setup(update.state);
-      gameManager.game._ctx.player = gameManager.game.players.atPosition(position);
       // @ts-ignore;
       window.game = gameManager.game;
       // @ts-ignore;
@@ -147,6 +146,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.players.assignAttributesFromJSON(update.state.players);
       gameManager.setFlowFromJSON(update.state.position);
     }
+    gameManager.game._ctx.player = gameManager.game.players.atPosition(position);
     gameManager.phase = 'started';
     gameManager.messages = update.state.messages;
     gameManager.announcements = update.state.announcements;
