@@ -640,7 +640,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @category Structure
    */
   shuffle() {
-    const refs = this._ctx.trackMovement && this.childRefs();
+    const refs = this._ctx.trackMovement && this.childRefsIfObscured();
     shuffleArray(this._t.children, this._ctx.gameManager?.random || Math.random);
     if (refs) this.assignChildRefs(refs);
   }
@@ -1014,6 +1014,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
           if (!(attr in json) && child[attr as keyof typeof child] !== undefined && typeof child[attr as keyof typeof child] !== 'function' && !(this.constructor as typeof GameElement).unserializableAttributes.includes(attr)) Object.assign(child, {[attr]: undefined});
         }
       }
+      if (_id !== undefined) child._t.ref = _ref ?? _id;
       if (_wasRef !== undefined) child._t.wasRef = _wasRef;
       this._t.children.push(child);
       child.createChildrenFromJSON(children || [], childBranch);
@@ -1023,7 +1024,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   assignAttributesFromJSON(childrenJSON: ElementJSON[], branch: string) {
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
-      let { className: _cn, children, _ref, _wasRef, _id, name: _n, order: _o, ...rest } = json;
+      let { className: _cn, children, _ref, _wasRef, _id, order: _o, ...rest } = json;
       rest = deserializeObject({...rest}, this.game);
       let child = this._t.children[i];
       Object.assign(child, rest);
@@ -1141,7 +1142,8 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     Object.assign(this._ui.appearance, appearance);
   }
 
-  childRefs() {
+  childRefsIfObscured() {
+    if (!this._ctx.trackMovement || this._t.order !== 'stacking') return;
     const refs = [];
     for (const child of this._t.children) {
       child._t.wasRef ??= child._t.ref;

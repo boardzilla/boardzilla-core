@@ -16,6 +16,7 @@ import {
 import {
   applyLayouts,
   applyDiff,
+  applyDOMKeys,
 } from './render.js';
 
 import { ActionDebug } from '../game-manager.js'
@@ -131,7 +132,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       placement: undefined,
     };
 
-    if (gameManager.phase === 'new' && s.setup) {
+    if (s.setup && (gameManager.phase === 'new' || update.state.sequence !== s.renderedSequence + 1)) {
       gameManager = state.gameManager = s.setup(update.state);
       gameManager.game._ctx.player = gameManager.game.players.atPosition(position);
       // @ts-ignore;
@@ -313,9 +314,12 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         '__placement__': [s.placement.piece.column ?? 1, s.placement.piece.row ?? 1, s.placement.piece.rotation]
       }
     );
+    const rendered = applyLayouts(s.gameManager.game);
+    applyDOMKeys(rendered.game, rendered, s.rendered!);
+
     return {
       cancellable: true,
-      rendered: applyLayouts(s.gameManager.game)
+      rendered
     };
   }),
 

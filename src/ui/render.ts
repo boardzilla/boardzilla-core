@@ -56,7 +56,8 @@ export function absPositionSquare(el: GameElement, ui: UI): Box {
 }
 
 /**
- * recalc all elements UI
+ * recalc all elements UI, base styles, wrapper styles, classes, attrs,
+ * data-attrs, assign UUID DOM keys
  * @category UI
  * @internal
  */
@@ -92,7 +93,26 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
   };
   ui.all[String(game._t.ref)] = ui.game;
   ui.game.layouts = calcLayouts(game, ui)
+
   return ui;
+}
+
+// compares render to oldRender and applies DOM keys only
+export function applyDOMKeys(render: UIRender, ui: UI, oldUI: UI) {
+
+  const el = render.element;
+
+  const oldRender = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
+
+  for (const layout of render.layouts) {
+    for (const child of layout.children) {
+      applyDOMKeys(child, ui, oldUI);
+    }
+  }
+
+  if (!('isSpace' in el) && el._t.parent?._t.ref === oldRender.parentRef) {
+    render.key = oldRender?.key ?? render.key;
+  }
 }
 
 // compares render to oldRender and applies transforms, effect classes, DOM key, old attrs
@@ -136,25 +156,33 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
       `scaleX(${oldRender.pos.width / pos.width}) ` +
       `scaleY(${oldRender.pos.height / pos.height}) ` +
       `rotate(${(oldRender.pos.rotation ?? 0) - (pos.rotation ?? 0)}deg)`;
-    Object.assign(styles, {
-      '--transformed-to-old': String(uuid()),
-      transition: 'none'
-    });
+  }
 
-    const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender?.dataAttributes);
-    mutated ||= changedAttrs;
+  const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender.dataAttributes);
+  // console.log('changedAttrs', el.branch(), changedAttrs, styles.transform, render.dataAttributes, oldRender.dataAttributes);
+  mutated ||= changedAttrs;
 
-    if (changedAttrs) {
-      render.previousAttributes = oldRender.attributes;
-      render.previousDataAttributes = oldRender.dataAttributes;
+  if (changedAttrs) {
+    render.previousAttributes = oldRender.attributes;
+    render.previousDataAttributes = oldRender.dataAttributes;
 
-      if (el._ui.appearance.effects && changedAttrs) {
-        for (const effect of el._ui.appearance.effects) {
-          if (effect.trigger(el, oldRender.attributes!)) render.classes += ' ' + effect.name;
-        }
+    if (el._ui.appearance.effects && changedAttrs) {
+      for (const effect of el._ui.appearance.effects) {
+        if (effect.trigger(el, oldRender.attributes!)) render.classes += ' ' + effect.name;
       }
     }
   }
+
+  if (changedAttrs || styles.transform) {
+    Object.assign(styles, {
+      // uuid so react re-applies if multiple
+      '--transformed-to-old': String(uuid()),
+      // supress normal transition style and re-add later. necessary to prevent
+      // transfrom transition from completing immediately
+      transition: 'none'
+    });
+  }
+
   render.mutated = mutated;
   return mutated;
 }
@@ -684,7 +712,6 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
         height: height + '%',
         left: left + '%',
         top: top + '%',
-        transformOrigin,
         fontSize: render.pos.height * (el.game._ui.frame?.height ?? 100) * 0.0004 + 'rem'
       }
 
@@ -703,10 +730,11 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
 
       const baseClass = 'isSpace' in child ? 'Space' : 'Piece';
 
-      render.classes = `${baseClass} ${child._ui.appearance.className} ${baseClass !== child.constructor.name ? child.constructor.name : ''}`;
+      render.classes = `${baseClass} ${child._ui.appearance.className ?? ''} ${baseClass !== child.constructor.name ? child.constructor.name : ''}`;
 
       render.baseStyles = {};
       if (child._rotation !== undefined) render.baseStyles.transform = `rotate(${child._rotation}deg)`;
+      if (transformOrigin) render.baseStyles.transformOrigin = transformOrigin;
       if (child.player) Object.assign(render.baseStyles, {'--player-color': child.player.color});
 
       render.layouts = calcLayouts(child, ui);

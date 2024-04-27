@@ -63,7 +63,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   useEffect(() => {
     const node = wrapper.current;
     if (node?.style.getPropertyValue('--transformed-to-old')) {
-      // console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'));
+      // console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'), render.previousDataAttributes);
       node?.scrollTop; // force reflow
       // move to 'new' by removing transform and animate
       node.classList.add('animating');
@@ -71,9 +71,9 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
       node.style.removeProperty('transition');
       node.style.removeProperty('transform');
       if (domElement.current && render.previousDataAttributes) {
-        for (const [k, v] of Object.entries(render.attributes!)) domElement.current.setAttribute(k, v);
+        for (const [k, v] of Object.entries(render.dataAttributes!)) domElement.current.setAttribute(k, v);
         for (const attr of domElement.current.getAttributeNames()) {
-          if (attr.slice(0, 5) === 'data-' && render.attributes![attr] === undefined) {
+          if (attr.slice(0, 5) === 'data-' && render.dataAttributes![attr] === undefined) {
             domElement.current.removeAttribute(attr);
           }
         }
@@ -403,7 +403,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
 
   let title: string | undefined = undefined;
   if (dev) {
-    title = element.constructor.name;
+    title = `${element.constructor.name} (ID: ${element._t.ref})`;
     if (element instanceof Piece) {
       title += `
   visibility: ${element._visible?.default ?? true ? "visible" : "hidden"}${element._visible?.except ? ` (except positions ${element._visible?.except.join(', ')})` : ""}`;
@@ -411,6 +411,8 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     title += `
 ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && !['_size', '_visible', 'was'].includes(k)).map(([k, v]) => `  ${k}: ${typeof v === 'object' && ('isGameElement' in v.constructor || 'isPlayer' in v.constructor) ? v.toString() : JSON.stringify(v)}`).join("\n")}`;
   }
+
+  //console.log('RENDER attrs', attrs, styles['--transformed-to-old' as keyof typeof styles]);
 
   // "base" semantic GameElement dom element
   contents = (
@@ -459,7 +461,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
     contents = (
       <>
         {contents}
-        <div className="rotator" style={{...styles, width: (render.pos!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
+        <div className="rotator" style={{...styles, width: (render.relPos!.width * widthStretch) + '%', fontSize: (0.08 * minSquare) + 'rem', transform: undefined}}>
           <div className="left" onClick={() => handleRotate(-1)}>
             <svg
               viewBox="0 0 254.2486 281.95978"
@@ -501,7 +503,6 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
       </DraggableCore>
     );
   }
-  console.log('==================== RENDER', branch, render.key);
 
   return contents;
 }// , (prevProps, props) => {
