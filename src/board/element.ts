@@ -1008,10 +1008,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         child._t.parent = this;
         child._t.order = order;
         child._t.ref = _ref ?? _id;
-      } else if ('_visible' in json) {
-        for (const attr of Object.keys(child)) {
-          // strip absent attributes (hidden)
-          if (!(attr in json) && child[attr as keyof typeof child] !== undefined && typeof child[attr as keyof typeof child] !== 'function' && !(this.constructor as typeof GameElement).unserializableAttributes.includes(attr)) Object.assign(child, {[attr]: undefined});
+      } else {
+        // remove absent attributes, odd since undefined rather than constructor default
+        for (const attr of Object.keys(child).filter(k => !(k in json) && !(child!.constructor as typeof GameElement).unserializableAttributes.includes(k))) {
+          Object.assign(child, {[attr]: undefined});
         }
       }
       if (_id !== undefined) child._t.ref = _ref ?? _id;
@@ -1029,6 +1029,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       let child = this._t.children[i];
       Object.assign(child, rest);
       child.assignAttributesFromJSON(children || [], branch + '/' + i);
+      if (json.name === 'Theater') console.log(json, child);
     }
   }
 
@@ -1156,6 +1157,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     for (let i = 0; i != refs.length; i++) {
       this._t.children[i]._t.ref = refs[i];
     }
+  }
+
+  hasMoved(): boolean {
+    return this._t.moved || !!this._t.parent?.hasMoved();
   }
 
   resetMovementTracking() {

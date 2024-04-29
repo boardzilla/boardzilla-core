@@ -149,7 +149,7 @@ export default class Piece<G extends Game, P extends Player = NonNullable<G['pla
     if (options?.fromBottom !== undefined) pos = to._t.children.length - options.fromBottom;
     const previousParent = this._t.parent;
     const position = this.position();
-    if (this._t.moved) this.game.addDelay();
+    if (this.hasMoved() || to.hasMoved()) this.game.addDelay();
     const refs = previousParent === to && options?.row === undefined && options?.column === undefined && to.childRefsIfObscured();
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;

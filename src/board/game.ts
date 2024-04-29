@@ -365,9 +365,9 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    * @category Game Management
    */
   addDelay() {
+    this.resetMovementTracking();
     if (this.game._ctx.trackMovement) {
       this._ctx.gameManager.sequence += 1;
-      this.resetMovementTracking();
     } else if (this._ctx.gameManager.intermediateUpdates.length) {
       return; // even if not tracking, record one intermediate to allow UI to extract proper state to animate towards
     }
