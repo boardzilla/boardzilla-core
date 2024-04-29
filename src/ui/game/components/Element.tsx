@@ -87,7 +87,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
         if (render.styles?.transform) delete render.styles.transform;
       }
     }
-  }, [branch, element, render]);
+  }, [element, render]);
 
   useEffect(() => {
     if (dragging && dragElement !== branch) setDragging(undefined);

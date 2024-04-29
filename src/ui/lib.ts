@@ -29,6 +29,7 @@ export type MoveMessage = {
     args: Record<string, SerializedArg>
   }[]
 }
+
 // refresh move and selections
 export function updateSelections(store: GameStore): GameStore {
   let { gameManager, position, move, placement } = store;

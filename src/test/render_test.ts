@@ -8,7 +8,10 @@ import {
   GameElement,
 } from '../board/index.js';
 
-import { applyLayouts } from '../ui/render.js';
+import {
+  applyLayouts,
+  applyDiff
+} from '../ui/render.js';
 
 import type { BaseGame } from '../board/game.js';
 
@@ -438,6 +441,191 @@ describe('Render', () => {
       expect(ui.all[b._t.ref].relPos).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
       expect(ui.all[c._t.ref].relPos).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
       expect(ui.all[d._t.ref].relPos).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
+    });
+  });
+
+  describe('applyDiff', () => {
+    let client: BaseGame;
+    let server: BaseGame;
+
+    beforeEach(() => {
+      client = new Game({ classRegistry: [Space, Piece] });
+      server = new Game({ classRegistry: [Space, Piece] });
+      server._ctx.trackMovement = true;
+    });
+
+    it("combines local and server", () => {
+      const a = server.create(Space, 'a');
+      const b = server.create(Space, 'b');
+      a.create(Piece, 'p1');
+      a.create(Piece, 'p2');
+
+      client.fromJSON(server.allJSON(1));
+      const p1c = client.first(Piece, 'p1')!;
+      const p2c = client.first(Piece, 'p2')!;
+      // client move
+      p1c.putInto(client.first('b')!);
+
+      const ui1 = applyLayouts(client);
+
+      const p1s = server.first(Piece, 'p1')!;
+      // server same move
+      p1s.putInto(b);
+
+      client.fromJSON(server.allJSON(1));
+      const p1c2 = client.first(Piece, 'p1')!;
+      const p2c2 = client.first(Piece, 'p2')!;
+
+      const ui2 = applyLayouts(client);
+      applyDiff(ui2.game, ui2, ui1);
+
+      // pieces are retained
+      expect(p1c).to.equal(p1c2);
+      expect(p2c).to.equal(p2c2);
+      // keys are retained
+      expect(ui2.all[p1c2._t.ref].key).to.equal(ui1.all[p1c._t.ref].key);
+      expect(ui2.all[p2c2._t.ref].key).to.equal(ui1.all[p2c._t.ref].key);
+      // no transform since same move
+      expect(ui2.all[p1c2._t.ref].styles?.transform).to.be.undefined
+      expect(ui2.all[p2c2._t.ref].styles?.transform).to.be.undefined
+    });
+
+    it("combines local and server conflicts", () => {
+      const a = server.create(Space, 'a');
+      server.create(Space, 'b');
+      const c = server.create(Space, 'c');
+      a.create(Piece, 'p1');
+      a.create(Piece, 'p2');
+
+      client.fromJSON(server.allJSON(1));
+      const p1c = client.first(Piece, 'p1')!;
+      const p2c = client.first(Piece, 'p2')!;
+      // client move
+      p1c.putInto(client.first('b')!);
+
+      const ui1 = applyLayouts(client);
+
+      const p1s = server.first(Piece, 'p1')!;
+      // server different move
+      p1s.putInto(c);
+
+      client.fromJSON(server.allJSON(1));
+      const p1c2 = client.first(Piece, 'p1')!;
+      const p2c2 = client.first(Piece, 'p2')!;
+
+      const ui2 = applyLayouts(client);
+      applyDiff(ui2.game, ui2, ui1);
+
+      // piece not retained with conflicting parent moves
+      expect(p1c).to.not.equal(p1c2);
+      // unmoved piece is retained
+      expect(p2c).to.equal(p2c2);
+      // same with keys
+      expect(ui2.all[p1c2._t.ref].key).to.not.equal(ui1.all[p1c._t.ref].key);
+      expect(ui2.all[p2c2._t.ref].key).to.equal(ui1.all[p2c._t.ref].key);
+      // transform for moved
+      expect(ui2.all[p1c2._t.ref].styles?.transform).not.to.be.undefined
+      expect(ui2.all[p2c2._t.ref].styles?.transform).to.be.undefined
+    });
+
+    it("tracks reorders", () => {
+      const a = server.create(Space, 'a');
+      const p1s = a.create(Piece, 'p1');
+      const p2s = a.create(Piece, 'p2'); // on bottom
+
+      client.fromJSON(server.allJSON(1));
+      const ui1 = applyLayouts(client);
+
+      const p1c = client.first(Piece, 'p1')!;
+      const p2c = client.first(Piece, 'p2')!;
+      expect(client.first(Piece)!.name).to.equal('p1');
+
+      // server shuffle
+      expect(server.first(Piece)).to.equal(p1s);
+      p1s.putInto(a, { fromBottom: 0 });
+      expect(server.first(Piece)).to.equal(p2s); // now on top
+
+      client.fromJSON(server.allJSON(1));
+      const p1c2 = client.first(Piece, 'p1')!;
+      const p2c2 = client.first(Piece, 'p2')!;
+
+      const ui2 = applyLayouts(client);
+      applyDiff(ui2.game, ui2, ui1);
+
+      // tracks move
+      expect(client.first(Piece)!.name).to.equal('p2');
+      expect(p1c).to.equal(p1c2);
+      expect(p2c).to.equal(p2c2);
+      // transform for both
+      expect(ui2.all[p1c2._t.ref].styles?.transform).not.to.be.undefined
+      expect(ui2.all[p2c2._t.ref].styles?.transform).not.to.be.undefined
+    });
+
+    it("shows stack reorders if visible", () => {
+      const a = server.create(Space, 'a');
+      a.setOrder('stacking');
+      const p1s = a.create(Piece, 'p1');
+      const p2s = a.create(Piece, 'p2'); // on top
+
+      client.fromJSON(server.allJSON(1));
+      const ui1 = applyLayouts(client);
+
+      const p1c = client.first(Piece, 'p1')!;
+      const p2c = client.first(Piece, 'p2')!;
+      expect(client.first(Piece)!.name).to.equal('p2');
+
+      // server shuffle
+      expect(server.first(Piece)).to.equal(p2s);
+      p2s.putInto(a, { fromBottom: 0 });
+      expect(server.first(Piece)).to.equal(p1s); // now on top
+
+      client.fromJSON(server.allJSON(1));
+      const p1c2 = client.first(Piece, 'p1')!;
+      const p2c2 = client.first(Piece, 'p2')!;
+
+      const ui2 = applyLayouts(client);
+      applyDiff(ui2.game, ui2, ui1);
+
+      // tracks move
+      expect(client.first(Piece)!.name).to.equal('p1');
+      expect(p1c).to.equal(p1c2);
+      expect(p2c).to.equal(p2c2);
+      // transform for both
+      expect(ui2.all[p1c2._t.ref].styles?.transform).not.to.be.undefined
+      expect(ui2.all[p2c2._t.ref].styles?.transform).not.to.be.undefined
+    });
+
+    it("hides stack reorders if hidden", () => {
+      const a = server.create(Space, 'a');
+      a.setOrder('stacking');
+      const p1s = a.create(Piece, 'p1');
+      const p2s = a.create(Piece, 'p2'); // on top
+      a.all(Piece).hideFromAll();
+
+      client.fromJSON(server.allJSON(1));
+      const ui1 = applyLayouts(client);
+
+      const p1c = client.first(Piece)!;
+      const p2c = client.last(Piece)!;
+
+      // server shuffle
+      expect(server.first(Piece)).to.equal(p2s);
+      p2s.putInto(a, { fromBottom: 0 });
+      expect(server.first(Piece)).to.equal(p1s); // now on top
+
+      client.fromJSON(server.allJSON(1));
+      const p1c2 = client.first(Piece)!;
+      const p2c2 = client.last(Piece)!;
+
+      const ui2 = applyLayouts(client);
+      applyDiff(ui2.game, ui2, ui1);
+
+      // no move
+      expect(p1c).to.equal(p1c2);
+      expect(p2c).to.equal(p2c2);
+      // no transform
+      expect(ui2.all[p1c2._t.ref].styles?.transform).to.be.undefined
+      expect(ui2.all[p2c2._t.ref].styles?.transform).to.be.undefined
     });
   });
 });
