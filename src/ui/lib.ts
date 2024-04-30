@@ -30,6 +30,8 @@ export type MoveMessage = {
   }[]
 }
 
+class NoRandomAllowed extends Error {}
+
 // refresh move and selections
 export function updateSelections(store: GameStore): GameStore {
   let { gameManager, position, move, placement } = store;
@@ -84,7 +86,7 @@ export function updateSelections(store: GameStore): GameStore {
       state.placement = {
         piece: clone,
         into,
-        layout: state.rendered.all[into._t.ref].layouts[0], // assume first/only layout - need a Stack class to formalize
+        layout: state.rendered.all[into._t.ref].layouts?.[0], // assume first/only layout - need a Stack class to formalize
         rotationChoices: selection.rotationChoices,
       };
     }
@@ -162,7 +164,18 @@ export function updateSelections(store: GameStore): GameStore {
           }
 
           try {
-            state.error = gameManager.processMove({ player, ...move });
+            const oldRandom = Math.random;
+            const oldGameRandom = gameManager.game.random;
+            gameManager.game.random = Math.random = () => { throw new NoRandomAllowed(); };
+            try {
+              state.error = gameManager.processMove({ player, ...move });
+            } catch (e) {
+              // silently stop if random elements run
+              if (!(e instanceof NoRandomAllowed)) throw e;
+            } finally {
+              Math.random = oldRandom;
+              gameManager.game.random = oldGameRandom;
+            }
 
             if (state.error) {
               // should probably never reach this point since the error would

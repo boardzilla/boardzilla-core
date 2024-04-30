@@ -23,20 +23,22 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   onMouseLeave?: () => void,
 }) => {
 
-  const [move, rendered, selected, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev] =
-    gameStore(s => [s.move, s.rendered, s.selected, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev]);
+  const [rendered, setInfoElement, setError, dragElement, setDragElement, dragOffset, dropSelections, currentDrop, setCurrentDrop, placement, setPlacement, selectPlacement, isMobile, dev] =
+    gameStore(s => [s.rendered, s.setInfoElement, s.setError, s.dragElement, s.setDragElement, s.dragOffset, s.dropSelections, s.currentDrop, s.setCurrentDrop, s.placement, s.setPlacement, s.selectPlacement, s.isMobile, s.dev]);
 
-  const element = render.element;
-  const branch = element.branch();
-  const [boardSelections] = gameStore(s => [s.boardSelections[branch]]);
-  const absoluteTransform = absPositionSquare(element, rendered!);
+  const [element, branch] = useMemo(() => [render.element, render.element.branch()], [render]);
+  // TODO future style put all store derived values here and add memo()
+  const [boardSelections, isSelected] = gameStore(s => [
+    s.boardSelections[branch],
+    mode === 'game' && (s.selected?.includes(element) || Object.values(s.move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)))
+  ]);
+  const absoluteTransform = useMemo(() => absPositionSquare(element, rendered!), [element, rendered]);
 
   const [dragging, setDragging] = useState<{ deltaY: number, deltaX: number } | undefined>(); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
   const wrapper = useRef<HTMLDivElement | null>(null);
   const domElement = useRef<HTMLDivElement>(null);
 
-  const isSelected = mode === 'game' && (selected?.includes(element) || Object.values(move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)));
   const appearance = element._ui.appearance.render || (element.game._ui.disabledDefaultAppearance ? () => null : defaultAppearance);
 
   const invalidSelectionError = mode === 'game' && boardSelections?.error;
@@ -75,11 +77,15 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
         node?.scrollTop; // force reflow
         // move to 'new' by removing transform and animate
         node.classList.add('animating');
+        if (render.crossParent) node.classList.add('cross-parent');
         node.style.removeProperty('transition');
         node.style.removeProperty('transform');
         const cancel = (e: TransitionEvent) => {
           if (e.propertyName === 'transform' && e.target === node) {
-            node.classList.remove('animating');
+            if (render.proxy) {
+              node.style.visibility = 'hidden';
+            }
+            node.classList.remove('animating', 'cross-parent');
             node.removeEventListener('transitionend', cancel);
           }
         };
@@ -87,6 +93,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
         if (render.styles?.transform) delete render.styles.transform;
       }
     }
+    delete render.mutated;
   }, [element, render]);
 
   useEffect(() => {
@@ -280,6 +287,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     const layout = render.layouts[l]
     const layoutContents: React.JSX.Element[] = [];
     for (const render of layout.children) {
+      if (render.proxy !== undefined && !render.mutated) continue;
       layoutContents.push(
         <Element
           key={render.key}
@@ -392,7 +400,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     );
   }
 
-  const boundingBoxes = render.layouts.filter(layout => layout.showBoundingBox).map((layout, k) => (
+  const boundingBoxes = render.layouts?.filter(layout => layout.showBoundingBox).map((layout, k) => (
     <div key={k} className="bz-show-grid" style={{
       left: layout.area.left + '%',
       top: layout.area.top + '%',
@@ -407,7 +415,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
 
   let title: string | undefined = undefined;
   if (dev) {
-    title = `${element.constructor.name} (ID: ${element._t.ref})`;
+    title = `${element.constructor.name} (#${element._t.ref} [${branch}])`;
     if (element instanceof Piece) {
       title += `
   visibility: ${element._visible?.default ?? true ? "visible" : "hidden"}${element._visible?.except ? ` (except positions ${element._visible?.except.join(', ')})` : ""}`;
@@ -416,7 +424,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
 ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && !['_size', '_visible', 'was'].includes(k)).map(([k, v]) => `  ${k}: ${typeof v === 'object' && ('isGameElement' in v.constructor || 'isPlayer' in v.constructor) ? v.toString() : JSON.stringify(v)}`).join("\n")}`;
   }
 
-  //console.log('RENDER attrs', attrs, styles['--transformed-to-old' as keyof typeof styles]);
+  // console.log('RENDER attrs', attrs, styles['--transformed-to-old' as keyof typeof styles]);
 
   // "base" semantic GameElement dom element
   contents = (

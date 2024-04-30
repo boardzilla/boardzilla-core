@@ -1010,7 +1010,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         child._t.ref = _ref ?? _id;
       } else {
         // remove absent attributes, odd since undefined rather than constructor default
-        for (const attr of Object.keys(child).filter(k => !(k in json) && !(child!.constructor as typeof GameElement).unserializableAttributes.includes(k))) {
+        for (const attr of Object.keys(child).filter(k => !(k in json) && !['_rotation', 'column', 'row'].includes(k) && !(child!.constructor as typeof GameElement).unserializableAttributes.includes(k))) {
           Object.assign(child, {[attr]: undefined});
         }
       }

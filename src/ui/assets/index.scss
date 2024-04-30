@@ -197,7 +197,9 @@ html, body { height: 100% }
       }
 
       &.animating {
-        z-index: 100;
+        &.cross-parent {
+          z-index: 100;
+        }
         pointer-events: none;
       }
 

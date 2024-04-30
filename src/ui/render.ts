@@ -36,12 +36,15 @@ export type UIRender = {
     drawer: ElementUI<GameElement>['layouts'][number]['attributes']['drawer']
   }[],
   parentRef?: number,
+  crossParent?: boolean,
+  proxy?: number
 };
 
 export type UI = {
   all: Record<string, UIRender>;
   frame: Vector;
   game: UIRender;
+  pile: number[];
 };
 
 
@@ -97,6 +100,7 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
       classes: `Space ${game._ui.appearance.className ?? ''} ${game.constructor.name}`,
       layouts: []
     },
+    pile: game.pile._t.children.map(e => e._t.ref)
   };
   ui.all[String(game._t.ref)] = ui.game;
   ui.game.layouts = calcLayouts(game, ui)
@@ -125,14 +129,35 @@ export function applyDOMKeys(render: UIRender, ui: UI, oldUI: UI) {
 // compares render to oldRender and applies transforms, effect classes, DOM key, old attrs
 export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
 
+  const proxy = render.proxy !== undefined ? ui.all[render.proxy] : undefined;
   const el = render.element;
 
-  const oldRender = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
-  if (!oldRender?.pos || !oldRender?.relPos) {
-    delete render.previousAttributes;
-    delete render.previousDataAttributes;
-    return true;
+  let oldRender = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
+  if (!oldRender?.pos || !oldRender?.relPos || oldRender?.proxy) {
+    if (oldUI.pile.includes(el._t.ref)) {
+      oldRender = {
+        pos: {
+          left: 100,
+          top: 0,
+          width: render.pos!.width,
+          height: render.pos!.height,
+        },
+        relPos: {
+          left: 100,
+          top: 0,
+          width: render.pos!.width,
+          height: render.pos!.height,
+        },
+        element: el,
+        layouts: [],
+      };
+    } else {
+      delete render.previousAttributes;
+      delete render.previousDataAttributes;
+      return true;
+    }
   }
+  render.crossParent = el._t.parent?._t.ref !== oldRender.parentRef;
 
   // depth first, bubble up mutations
   let mutated = false
@@ -143,37 +168,48 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
     }
   }
 
-  const styles = render.styles!;
-
-  if (!('isSpace' in el) && el._t.parent?._t.ref === oldRender.parentRef) {
+  if (!('isSpace' in el) && !render.crossParent) {
     render.key = oldRender?.key ?? render.key;
   }
 
-  const relPos = render.relPos!;
+  const actual = proxy ?? render;
+  const relPos = actual.relPos;
   if (
-    el._t.parent?._t.ref !== oldRender.parentRef ||
-    oldRender.relPos.left !== relPos.left ||
-    oldRender.relPos.top !== relPos.top ||
-    oldRender.relPos.width !== relPos.width ||
-    oldRender.relPos.height !== relPos.height ||
-    (oldRender.relPos.rotation ?? 0) !== (relPos.rotation ?? 0)
+    relPos && (
+      render.crossParent ||
+      oldRender.relPos!.left !== relPos.left ||
+      oldRender.relPos!.top !== relPos.top ||
+      oldRender.relPos!.width !== relPos.width ||
+      oldRender.relPos!.height !== relPos.height ||
+      (oldRender.relPos!.rotation ?? 0) !== (relPos.rotation ?? 0)
+    )
   ) {
     mutated = true;
-    const oldPos = el._t.parent?._t.ref === oldRender.parentRef ? oldRender.relPos : oldRender.pos;
-    const newPos = el._t.parent?._t.ref === oldRender.parentRef ? render.relPos! : render.pos!;
+    const oldPos = render.crossParent ? oldRender.pos! : oldRender.relPos!;
+    const newPos = render.crossParent ? actual.pos! : actual.relPos!;
+    if (proxy !== undefined) {
+      render.classes = proxy.classes;
+      render.pos = proxy.pos;
+      render.relPos = proxy.relPos;
+      render.styles = {...proxy.styles};
+      render.baseStyles = {...proxy.baseStyles};
+    }
 
-    styles.transform = `translate(${(oldPos.left + oldPos.width / 2 - newPos.left - newPos.width / 2) / newPos.width * 100}%, ` +
+    render.styles!.transform = `translate(${(oldPos.left + oldPos.width / 2 - newPos.left - newPos.width / 2) / newPos.width * 100}%, ` +
       `${(oldPos.top + oldPos.height / 2 - newPos.top - newPos.height / 2) / newPos.height * 100}%) ` +
       `scaleX(${oldPos.width / newPos.width}) ` +
       `scaleY(${oldPos.height / newPos.height}) ` +
       `rotate(${(oldPos.rotation ?? 0) - (newPos.rotation ?? 0)}deg)`;
-  }
+  } else if (proxy !== undefined) return false;
 
-  const changedAttrs = JSON.stringify(render.dataAttributes) !== JSON.stringify(oldRender.dataAttributes);
-  // console.log('changedAttrs', el.branch(), changedAttrs, styles.transform, render.dataAttributes, oldRender.dataAttributes);
+  const changedAttrs = JSON.stringify(actual.dataAttributes) !== JSON.stringify(oldRender.dataAttributes);
   mutated ||= changedAttrs;
 
   if (changedAttrs) {
+    if (proxy !== undefined) {
+      render.attributes = proxy.attributes;
+      render.dataAttributes = proxy.dataAttributes;
+    }
     render.previousAttributes = oldRender.attributes;
     render.previousDataAttributes = oldRender.dataAttributes;
 
@@ -185,8 +221,8 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
     }
   }
 
-  if (changedAttrs || styles.transform) {
-    Object.assign(styles, {
+  if (render.styles && (changedAttrs || render.styles.transform)) {
+    Object.assign(render.styles, {
       // uuid so react re-applies if multiple
       '--transformed-to-old': String(uuid()),
       // supress normal transition style and re-add later. necessary to prevent
@@ -213,7 +249,10 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
 
   for (let l = el._ui.layouts.length - 1; l >= 0; l--) {
     const { attributes } = el._ui.layouts[l];
-    let children = layoutItems[l];
+    const allChildren = layoutItems[l];
+    let children = allChildren && attributes.limit !== undefined && allChildren.length > attributes.limit ?
+      el._t.order === 'stacking' ? allChildren?.slice(allChildren.length - attributes.limit) : allChildren?.slice(0, attributes.limit) :
+      allChildren;
 
     const { slots, direction, gap, alignment, maxOverlap } = attributes;
     let { size, scaling, aspectRatio, haphazardly } = attributes;
@@ -752,6 +791,16 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       render.layouts = calcLayouts(child, ui);
       layouts[l].children.push(render);
     }
+
+    if (allChildren && allChildren.length > children.length) {
+      const unrendered = el._t.order === 'stacking' ? allChildren.slice(0, allChildren.length - children.length) : allChildren.slice(children.length);
+      // items beyond the layout limit inherit the appearance of the last item
+      for (const child of unrendered) {
+        const render = {element: child, layouts: [], proxy: children[el._t.order === 'stacking' ? 0 : children.length - 1]._t.ref, key: uuid()};
+        ui.all[child._t.ref] = render;
+        layouts[l].children.unshift(render);
+      }
+    }
   }
   return layouts;
 }
@@ -776,7 +825,7 @@ function getLayoutItems(el: GameElement) {
   for (const child of el._t.children) {
     if (child._ui.appearance.render === false) continue;
     for (const layout of layouts) {
-      const { applyTo, attributes } = layout;
+      const { applyTo } = layout;
       const l = el._ui.layouts.indexOf(layout);
 
       if ((typeof applyTo === 'function' && child instanceof applyTo) ||
@@ -784,7 +833,6 @@ function getLayoutItems(el: GameElement) {
         child === applyTo ||
         (applyTo instanceof ElementCollection && applyTo.includes(child))
       ) {
-        if (attributes.limit !== undefined && attributes.limit <= (layoutItems[l]?.length ?? 0)) break;
         layoutItems[l] ??= [];
         if (el._t.order === 'stacking') {
           layoutItems[l]!.unshift(child);
