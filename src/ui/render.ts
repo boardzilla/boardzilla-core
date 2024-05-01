@@ -142,14 +142,14 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
       if (previous?.pos) {
         const offRender = {
           pos: {
-            left: 200,
-            top: 0,
+            left: 125,
+            top: -previous.pos.height,
             width: previous.pos.width,
             height: previous.pos.height,
           },
           relPos: {
-            left: 200,
-            top: 0,
+            left: 125,
+            top: -previous.pos.height,
             width: previous.pos.width,
             height: previous.pos.height,
           },
@@ -166,19 +166,19 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
   }
 
   let oldRenderByWas = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
-  let oldRender = oldRenderByWas.proxy === undefined ? oldRenderByWas : oldUI.all[oldRenderByWas.proxy];
+  let oldRender = oldRenderByWas?.proxy === undefined ? oldRenderByWas : oldUI.all[oldRenderByWas.proxy];
   if (!oldRender?.pos || !oldRender?.relPos || (oldRender?.proxy && proxy)) { // do not animate from one proxy to another
     if (oldUI.pile.includes(el._t.ref)) {
       oldRender = {
         pos: {
-          left: 200,
-          top: 0,
+          left: 125,
+          top: -render.pos!.height,
           width: render.pos!.width,
           height: render.pos!.height,
         },
         relPos: {
-          left: 200,
-          top: 0,
+          left: 125,
+          top: -render.pos!.height,
           width: render.pos!.width,
           height: render.pos!.height,
         },
