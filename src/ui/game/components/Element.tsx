@@ -58,7 +58,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   useEffect(() => {
     const node = wrapper.current;
     if (node?.style.getPropertyValue('--transformed-to-old')) {
-      //console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'), render.previousDataAttributes);
+      console.log('transform remove', element.branch(), node.style.getPropertyValue('transform'), render.previousDataAttributes);
       node.style.removeProperty('--transformed-to-old');
       if (domElement.current && render.previousDataAttributes) {
         for (const [k, v] of Object.entries(render.dataAttributes!)) domElement.current.setAttribute(k, v);
@@ -82,9 +82,6 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
         node.style.removeProperty('transform');
         const cancel = (e: TransitionEvent) => {
           if (e.propertyName === 'transform' && e.target === node) {
-            if (render.proxy) {
-              node.style.visibility = 'hidden';
-            }
             node.classList.remove('animating', 'cross-parent');
             node.removeEventListener('transitionend', cancel);
           }

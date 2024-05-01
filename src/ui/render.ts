@@ -37,7 +37,7 @@ export type UIRender = {
   }[],
   parentRef?: number,
   crossParent?: boolean,
-  proxy?: number
+  proxy?: number // unrendered elements outside the limit are proxied to the closest element for animations
 };
 
 export type UI = {
@@ -132,8 +132,9 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
   const proxy = render.proxy !== undefined ? ui.all[render.proxy] : undefined;
   const el = render.element;
 
-  let oldRender = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
-  if (!oldRender?.pos || !oldRender?.relPos || oldRender?.proxy) {
+  let oldRenderByWas = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
+  let oldRender = oldRenderByWas.proxy === undefined ? oldRenderByWas : oldUI.all[oldRenderByWas.proxy];
+  if (!oldRender?.pos || !oldRender?.relPos || (oldRender?.proxy && proxy)) { // do not animate from one proxy to another
     if (oldUI.pile.includes(el._t.ref)) {
       oldRender = {
         pos: {

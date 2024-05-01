@@ -86,7 +86,7 @@ export function updateSelections(store: GameStore): GameStore {
       state.placement = {
         piece: clone,
         into,
-        layout: state.rendered.all[into._t.ref].layouts?.[0], // assume first/only layout - need a Stack class to formalize
+        layout: state.rendered.all[into._t.ref].layouts[0], // assume first/only layout - need a Stack class to formalize
         rotationChoices: selection.rotationChoices,
       };
     }
