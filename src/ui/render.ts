@@ -1,9 +1,10 @@
 import GameElement from '../board/element.js';
+import ElementCollection from '../board/element-collection.js';
 import random from 'random-seed';
 import { serialize } from '../action/utils.js'
 import uuid from 'uuid-random';
 
-import { type Game, type Box, type Vector, ElementCollection } from "../board/index.js";
+import type { Game, Box, Vector } from "../board/index.js";
 import type { ElementClass, ElementUI } from "../board/element.js";
 
 export type UIRender = {
@@ -102,6 +103,7 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
     },
     pile: game.pile._t.children.map(e => e._t.ref)
   };
+
   ui.all[String(game._t.ref)] = ui.game;
   ui.game.layouts = calcLayouts(game, ui)
 
@@ -132,19 +134,50 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
   const proxy = render.proxy !== undefined ? ui.all[render.proxy] : undefined;
   const el = render.element;
 
+  if ('pile' in el) {
+    // find offscreen moves
+    for (const off of (el as Game).pile._t.children) {
+      if (ui.all[off._t.ref]) continue;
+      const previous = oldUI.all[off._t.ref];
+      if (previous?.pos) {
+        const offRender = {
+          pos: {
+            left: 200,
+            top: 0,
+            width: previous.pos.width,
+            height: previous.pos.height,
+          },
+          relPos: {
+            left: 200,
+            top: 0,
+            width: previous.pos.width,
+            height: previous.pos.height,
+          },
+          element: off,
+          layouts: [],
+          key: previous.key,
+        };
+        applyBaseStyles(offRender, off, ui);
+
+        render.layouts[0].children.push(offRender);
+        ui.all[off._t.ref] = offRender;
+      }
+    }
+  }
+
   let oldRenderByWas = oldUI.all[String(el._t.wasRef ?? el._t.ref)];
   let oldRender = oldRenderByWas.proxy === undefined ? oldRenderByWas : oldUI.all[oldRenderByWas.proxy];
   if (!oldRender?.pos || !oldRender?.relPos || (oldRender?.proxy && proxy)) { // do not animate from one proxy to another
     if (oldUI.pile.includes(el._t.ref)) {
       oldRender = {
         pos: {
-          left: 100,
+          left: 200,
           top: 0,
           width: render.pos!.width,
           height: render.pos!.height,
         },
         relPos: {
-          left: 100,
+          left: 200,
           top: 0,
           width: render.pos!.width,
           height: render.pos!.height,
@@ -759,35 +792,9 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       render.relPos = { width, height, left, top };
       render.pos = translate(render.relPos, ui.all[String(el._t.ref)].pos!);
       if (child._rotation !== undefined) render.relPos.rotation = render.pos.rotation = child._rotation;
-      render.styles = {
-        width: width + '%',
-        height: height + '%',
-        left: left + '%',
-        top: top + '%',
-        fontSize: render.pos.height * (ui.frame?.y ?? 100) * 0.0004 + 'rem'
-      }
 
-      render.attributes = child.attributeList();
-      render.attributes.mine = child.mine;
-      render.dataAttributes = Object.assign(
-        {
-          'data-player': child.player?.position
-        },
-        Object.fromEntries(Object.entries(render.attributes).filter(([key, val]) => (
-          typeof val !== 'object' && (child.isVisible() || (child.constructor as typeof GameElement).visibleAttributes?.includes(key))
-        )).map(([key, val]) => (
-          [`data-${key.toLowerCase()}`, serialize(val)]
-        )))
-      );
-
-      const baseClass = 'isSpace' in child ? 'Space' : 'Piece';
-
-      render.classes = `${baseClass} ${child._ui.appearance.className ?? ''} ${baseClass !== child.constructor.name ? child.constructor.name : ''}`;
-
-      render.baseStyles = {};
-      if (child._rotation !== undefined) render.baseStyles.transform = `rotate(${child._rotation}deg)`;
-      if (transformOrigin) render.baseStyles.transformOrigin = transformOrigin;
-      if (child.player) Object.assign(render.baseStyles, {'--player-color': child.player.color});
+      applyBaseStyles(render, child, ui);
+      if (transformOrigin) render.baseStyles!.transformOrigin = transformOrigin;
 
       render.layouts = calcLayouts(child, ui);
       layouts[l].children.push(render);
@@ -804,6 +811,37 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
     }
   }
   return layouts;
+}
+
+function applyBaseStyles(render: UIRender, element: GameElement, ui: UI) {
+  render.styles = {
+    width: render.relPos!.width + '%',
+    height: render.relPos!.height + '%',
+    left: render.relPos!.left + '%',
+    top: render.relPos!.top + '%',
+    fontSize: render.pos!.height * (ui.frame?.y ?? 100) * 0.0004 + 'rem'
+  }
+
+  render.attributes = element.attributeList();
+  render.attributes.mine = element.mine;
+  render.dataAttributes = Object.assign(
+    {
+      'data-player': element.player?.position
+    },
+    Object.fromEntries(Object.entries(render.attributes).filter(([key, val]) => (
+      typeof val !== 'object' && (element.isVisible() || (element.constructor as typeof GameElement).visibleAttributes?.includes(key))
+    )).map(([key, val]) => (
+      [`data-${key.toLowerCase()}`, serialize(val)]
+    )))
+  );
+
+  const baseClass = 'isSpace' in element ? 'Space' : 'Piece';
+
+  render.classes = `${baseClass} ${element._ui.appearance.className ?? ''} ${baseClass !== element.constructor.name ? element.constructor.name : ''}`;
+
+  render.baseStyles = {};
+  if (element._rotation !== undefined) render.baseStyles.transform = `rotate(${element._rotation}deg)`;
+  if (element.player) Object.assign(render.baseStyles, {'--player-color': element.player.color});
 }
 
 function getLayoutItems(el: GameElement) {
