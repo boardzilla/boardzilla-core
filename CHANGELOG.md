@@ -1,3 +1,9 @@
+# v0.2.7 Animation overhaul
+* Overhauled the animation logic that decides how elements move for various
+  players, correcting several glitches
+* Pieces now animate on to and off of the board, into and out of the bottom of
+  decks even if unrendered
+
 # v0.2.6 Subflows
 * Subflows allow you to define entire new flows that branch of your main flow,
   e.g. playing a particular Card causes a set of new actions to happen

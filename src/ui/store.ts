@@ -146,7 +146,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.players.assignAttributesFromJSON(update.state.players);
       gameManager.setFlowFromJSON(update.state.position);
     }
-    gameManager.game._ctx.player = gameManager.game.players.atPosition(position);
+    gameManager.contextualizeBoardToPlayer(gameManager.game.players.atPosition(position));
     gameManager.phase = 'started';
     gameManager.messages = update.state.messages;
     gameManager.announcements = update.state.announcements;
@@ -198,19 +198,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       }
     }
 
-    state = updateSelections(state);
-
-    // obsolete???
-    // if (!pendingMove) {
-    //   s.gameManager.sequence = Math.floor(s.gameManager.sequence);
-    // }
-
-    // if (s.gameManager.sequence > Math.floor(s.gameManager.sequence)) {
-    //   state.previousRenderedState = {sequence: Math.floor(s.gameManager.sequence), elements: {...s.renderedState}};
-    //   state.renderedState = {};
-    // }
-
-    return state;
+    return updateSelections(state);
   }),
 
   cancellable: false,
