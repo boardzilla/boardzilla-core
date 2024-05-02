@@ -6,7 +6,6 @@ import {
   Game,
   Space,
   Piece,
-  GameElement,
   ConnectedSpaceMap,
   SquareGrid,
   HexGrid,

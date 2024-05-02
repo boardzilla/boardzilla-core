@@ -1,4 +1,4 @@
-import type { Box, Vector, Direction } from './element.js';
+import type { Direction } from './element.js';
 
 export function rotateDirection(dir: Direction, rotation: number) {
   rotation = (rotation % 360 + 360) % 360;

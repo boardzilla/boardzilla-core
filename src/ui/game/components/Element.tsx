@@ -412,7 +412,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
 
   let title: string | undefined = undefined;
   if (dev) {
-    title = `${element.constructor.name} (#${element._t.ref} [${branch}])`;
+    title = `${element.constructor.name} (#${element._t.ref} [${branch}] ${render.key})`;
     if (element instanceof Piece) {
       title += `
   visibility: ${element._visible?.default ?? true ? "visible" : "hidden"}${element._visible?.except ? ` (except positions ${element._visible?.except.join(', ')})` : ""}`;

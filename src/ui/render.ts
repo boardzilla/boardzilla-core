@@ -202,7 +202,7 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
     }
   }
 
-  if (!('isSpace' in el) && !render.crossParent) {
+  if (!('isSpace' in el) && !render.crossParent && !oldRenderByWas?.proxy) {
     render.key = oldRender?.key ?? render.key;
   }
 
