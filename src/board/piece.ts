@@ -1,7 +1,7 @@
 import GameElement from './element.js'
 import Space from './space.js'
 
-import type { ElementClass } from './element.js'
+import type { ElementAttributes, ElementClass } from './element.js'
 import type Game from './game.js'
 import type Player from '../player/player.js';
 import type { BaseGame } from './game.js';
@@ -15,6 +15,13 @@ export default class Piece<G extends Game, P extends Player = NonNullable<G['pla
   _visible?: {
     default: boolean,
     except?: number[]
+  }
+
+  createElement<T extends GameElement>(className: ElementClass<T>, name: string, attrs?: ElementAttributes<T>): T {
+    if (className === Space as unknown as ElementClass<T> || Object.prototype.isPrototypeOf.call(Space, className)) {
+      throw Error(`May not create Space "${name}" in Piece "${this.name}"`);
+    }
+    return super.createElement(className, name, attrs);
   }
 
   /**
@@ -142,12 +149,15 @@ export default class Piece<G extends Game, P extends Player = NonNullable<G['pla
     if (options?.fromBottom !== undefined) pos = to._t.children.length - options.fromBottom;
     const previousParent = this._t.parent;
     const position = this.position();
-    if (this.hasChangedParent()) this.game.addDelay();
+    if (this.hasMoved() || to.hasMoved()) this.game.addDelay();
+    const refs = previousParent === to && options?.row === undefined && options?.column === undefined && to.childRefsIfObscured();
     this._t.parent!._t.children.splice(position, 1);
     this._t.parent = to;
     to._t.children.splice(pos, 0, this);
+    if (refs) to.assignChildRefs(refs);
 
     if (previousParent !== to && previousParent instanceof Space) previousParent.triggerEvent("exit", this);
+    if (previousParent !== to && this._ctx.trackMovement) this._t.moved = true;
 
     delete this.column;
     delete this.row;
@@ -155,6 +165,23 @@ export default class Piece<G extends Game, P extends Player = NonNullable<G['pla
     if (options?.column !== undefined) this.column = options.column;
 
     if (previousParent !== to && to instanceof Space) to.triggerEvent("enter", this);
+  }
+
+  cloneInto<T extends GameElement>(this: T, into: GameElement): T {
+    let attrs = this.attributeList();
+    delete attrs.column;
+    delete attrs.row;
+
+    const clone = into.createElement(this.constructor as ElementClass<T>, this.name, attrs);
+    if (into._t.order === 'stacking') {
+      into._t.children.unshift(clone);
+    } else {
+      into._t.children.push(clone);
+    }
+    clone._t.parent = into;
+    clone._t.order = this._t.order;
+    for (const child of this._t.children) if (child instanceof Piece) child.cloneInto(clone);
+    return clone;
   }
 
   /**

@@ -65,7 +65,6 @@ export default abstract class AdjacencySpace<G extends BaseGame> extends Space<G
   resetUI() {
     if (!this._ui.layouts.length) this.configureLayout({});
     this._ui.appearance = {};
-    this._ui.computedStyle = undefined;
     for (const child of this._t.children) child.resetUI();
   }
 }

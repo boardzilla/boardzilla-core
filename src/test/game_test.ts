@@ -6,7 +6,6 @@ import {
   Game,
   Space,
   Piece,
-  GameElement,
   ConnectedSpaceMap,
   SquareGrid,
   HexGrid,
@@ -18,6 +17,7 @@ import {
   PlayerCollection,
 } from '../player/index.js';
 import type { BaseGame } from '../board/game.js';
+import { applyLayouts } from '../ui/render.js';
 
 chai.use(spies);
 const { expect } = chai;
@@ -455,11 +455,11 @@ describe('Game', () => {
         [
           { className: 'Game', _id: 0, children: [
             { className: 'Space', name: 'deck', _id: 2, children: [
-              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4, was: '0/0/0' }
+              { className: 'Card', flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _id: 4 }
             ]},
             { className: 'Space', name: 'discard', _id: 3, children: [
-              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5, was: '0/0/1' },
-              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6, was: '0/0/2' }
+              { className: 'Card', flipped: false, state: 'initial', name: '2H', suit: 'H', pip: 2, _id: 5 },
+              { className: 'Card', flipped: false, state: 'initial', name: '3H', suit: 'H', pip: 3, _id: 6 }
             ]}
           ]},
         ]
@@ -555,10 +555,10 @@ describe('Game', () => {
       const card = game.create(Card, 'AH', { suit: 'H', pip: 1 });
       card.showOnlyTo(1);
       expect(card.toJSON(1)).to.deep.equal(
-        { className: 'Card', _id: 2, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _visible: { default: false, except: [1] } },
+        { className: 'Card', _ref: 2, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1, _visible: { default: false, except: [1] } },
       );
       expect(card.toJSON(2)).to.deep.equal(
-        { className: 'Card', flipped: false, state: 'initial', pip: 1, _visible: { default: false, except: [1] } },
+        { className: 'Card', _ref: 2, flipped: false, state: 'initial', pip: 1, _visible: { default: false, except: [1] } },
       )
       game.fromJSON(JSON.parse(JSON.stringify(game.allJSON(2))));
       const card3 = game.first(Card)!;
@@ -572,31 +572,31 @@ describe('Game', () => {
 
       hand.blockViewFor('all-but-owner');
       expect(hand.toJSON(1)).to.deep.equal(
-        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, children: [
-          {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
+        { className: 'Space', name: "hand", player: "$p[1]", _ref: 2, children: [
+          {className: 'Card', _ref: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
         ]}
       );
       expect(hand.toJSON(2)).to.deep.equal(
-        { className: 'Space', name: "hand", player: "$p[1]", _id: 2 }
+        { className: 'Space', name: "hand", player: "$p[1]", _ref: 2 }
       );
 
       hand.blockViewFor('all');
       expect(hand.toJSON(1)).to.deep.equal(
-        { className: 'Space', name: "hand", player: "$p[1]", _id: 2 }
+        { className: 'Space', name: "hand", player: "$p[1]", _ref: 2 }
       );
       expect(hand.toJSON(2)).to.deep.equal(
-        { className: 'Space', name: "hand", player: "$p[1]", _id: 2 }
+        { className: 'Space', name: "hand", player: "$p[1]", _ref: 2 }
       );
 
       hand.blockViewFor('none');
       expect(hand.toJSON(1)).to.deep.equal(
-        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, children: [
-          {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
+        { className: 'Space', name: "hand", player: "$p[1]", _ref: 2, children: [
+          {className: 'Card', _ref: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
         ]}
       );
       expect(hand.toJSON(2)).to.deep.equal(
-        { className: 'Space', name: "hand", player: "$p[1]", _id: 2, children: [
-          {className: 'Card', _id: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
+        { className: 'Space', name: "hand", player: "$p[1]", _ref: 2, children: [
+          {className: 'Card', _ref: 3, flipped: false, state: 'initial', name: 'AH', suit: 'H', pip: 1},
         ]}
       );
     });
@@ -841,424 +841,6 @@ describe('Game', () => {
       expect(p2.adjacencies(Piece)).to.deep.equal([p1, p3]);
       expect(p1.adjacencies(Piece)).to.deep.equal([p2]);
       expect(p3.adjacencies(Piece)).to.deep.equal([p2]);
-    });
-  });
-
-  describe('layouts', () => {
-    beforeEach(() => {
-      game = new Game({});
-      game.layout(GameElement, {
-        margin: 0,
-        gap: 0,
-      });
-    });
-
-    it('applies', () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      game.applyLayouts();
-
-      expect(game._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 100 })
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
-    });
-
-    it('applies overlaps', () => {
-      game.create(Space, 's1');
-      game.create(Space, 's2');
-      game.create(Space, 's3');
-      game.create(Space, 's4');
-      const p1 = game.create(Piece, 'p1');
-      const p2 = game.create(Piece, 'p2');
-      const p3 = game.create(Piece, 'p3');
-      const p4 = game.create(Piece, 'p4');
-      game.applyLayouts(() => {
-        game.layout(Piece, {
-          rows: 3,
-          columns: 3,
-          direction: 'ltr'
-        });
-      });
-
-      expect(p1._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100 / 3, height: 100 / 3 })
-      expect(p2._ui.computedStyle).to.deep.equal({ left: 100 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
-      expect(p3._ui.computedStyle).to.deep.equal({ left: 200 / 3, top: 0, width: 100 / 3, height: 100 / 3 })
-      expect(p4._ui.computedStyle).to.deep.equal({ left: 0, top: 100 / 3, width: 100 / 3, height: 100 / 3 })
-    });
-
-    it('adds gaps and margins', () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          gap: 10,
-          margin: 5
-        });
-      });
-      expect(a._ui.computedStyle).to.deep.equal({ left: 5, top: 5, width: 40, height: 40 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 55, top: 5, width: 40, height: 40 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 5, top: 55, width: 40, height: 40 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 55, top: 55, width: 40, height: 40 })
-    });
-
-    it('adds gaps and margins absolutely to relative sizes', () => {
-      const outer = game.createMany(4, Space, 'outer');
-      const a = outer[3].create(Space, 'a');
-      const b = outer[3].create(Space, 'b');
-      const c = outer[3].create(Space, 'c');
-      const d = outer[3].create(Space, 'd');
-      game.applyLayouts(() => {
-        outer[3].layout(GameElement, {
-          gap: 4,
-          margin: 2
-        });
-      });
-      expect(a._ui.computedStyle).to.deep.equal({ left: 4, top: 4, width: 42, height: 42 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 4, width: 42, height: 42 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 4, top: 54, width: 42, height: 42 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 54, top: 54, width: 42, height: 42 })
-    });
-
-    it('areas are relative to parent', () => {
-      const outer = game.createMany(3, Space, 'outer');
-      const a = outer[2].create(Space, 'a');
-      const b = outer[2].create(Space, 'b');
-      const c = outer[2].create(Space, 'c');
-      const d = outer[2].create(Space, 'd');
-      game.applyLayouts(() => {
-        outer[2].layout(GameElement, {
-          gap: 4,
-          area: {
-            left: 10,
-            top: 20,
-            width: 80,
-            height: 60,
-          }
-        });
-      });
-      expect(a._ui.computedStyle).to.deep.equal({ left: 10, top: 20, width: 36, height: 26 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 54, top: 20, width: 36, height: 26 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 10, top: 54, width: 36, height: 26 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 54, top: 54, width: 36, height: 26 })
-    });
-
-    it('aligns', () => {
-      const spaces = game.createMany(3, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 4 / 5,
-          scaling: 'fit',
-          alignment: 'right',
-        });
-      });
-
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 60, top: 0, width: 40, height: 50 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 40, height: 50 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 60, top: 50, width: 40, height: 50 })
-    });
-
-    it('aligns vertical', () => {
-      const spaces = game.createMany(3, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 5 / 4,
-          scaling: 'fit',
-          alignment: 'bottom right',
-        });
-      });
-
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 50, top: 60, width: 50, height: 40 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 0, top: 60, width: 50, height: 40 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 50, top: 20, width: 50, height: 40 })
-    });
-
-    it('sizes to fit', () => {
-      const spaces = game.createMany(3, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 4 / 5,
-          scaling: 'fit'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 10, top: 0, width: 40, height: 50 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 40, height: 50 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 10, top: 50, width: 40, height: 50 })
-    });
-
-    it('sizes to fill', () => {
-      const spaces = game.createMany(3, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 4 / 5,
-          scaling: 'fill'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 62.5 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 62.5 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 37.5, width: 50, height: 62.5 })
-    });
-
-    it('retains sizes', () => {
-      const spaces = game.createMany(3, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          size: { width: 20, height: 25 },
-        });
-      });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 30, top: 25, width: 20, height: 25 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 25, width: 20, height: 25 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 30, top: 50, width: 20, height: 25 })
-    });
-
-    it('fits based on aspect ratios', () => {
-      const spaces = game.createMany(3, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 5 / 4,
-          scaling: 'fit'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 10, width: 50, height: 40 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 50, top: 10, width: 50, height: 40 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 40 })
-    });
-
-    it('fills based on aspect ratios', () => {
-      const spaces = game.createMany(3, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 5 / 4,
-          scaling: 'fill'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 62.5, height: 50 })
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ left: 37.5, top: 0, width: 62.5, height: 50 })
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 62.5, height: 50 })
-    });
-
-    it('accommodate min row', () => {
-      const spaces = game.createMany(10, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          rows: { min: 2 },
-          columns: 1,
-          aspectRatio: 5 / 4,
-          scaling: 'fill'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(62.5);
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(50);
-      expect(spaces[0]._ui.computedStyle?.top).to.be.approximately(0, 0.0001);
-    });
-
-    it('accommodate min col', () => {
-      const spaces = game.createMany(10, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          columns: { min: 2 },
-          rows: 1,
-          aspectRatio: 4 / 5,
-          scaling: 'fill'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(62.5);
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(50);
-      expect(spaces[0]._ui.computedStyle?.left).to.be.approximately(0, 0.0001);
-    });
-
-    it('size overrides scaling', () => {
-      const spaces = game.createMany(10, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          rows: { min: 2 },
-          columns: 1,
-          size: { width: 5, height: 4 },
-          scaling: 'fill'
-        });
-      });
-      expect(spaces[0]._ui.computedStyle?.width).to.equal(5);
-      expect(spaces[0]._ui.computedStyle?.height).to.equal(4);
-      expect(spaces[0]._ui.computedStyle?.top).to.equal(30);
-    });
-
-    it('isomorphic', () => {
-      const spaces = game.createMany(9, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 4 / 5,
-          offsetColumn: {x: 100, y: 100},
-          scaling: 'fit',
-        });
-      });
-
-      expect(spaces[0]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 0 });
-      expect(spaces[1]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 58, top: 20 });
-      expect(spaces[2]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 74, top: 40 });
-      expect(spaces[3]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 26, top: 20 });
-      expect(spaces[4]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 40 });
-      expect(spaces[5]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 58, top: 60 });
-      expect(spaces[6]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 10, top: 40 });
-      expect(spaces[7]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 26, top: 60 });
-      expect(spaces[8]._ui.computedStyle).to.deep.equal({ width: 16, height: 20, left: 42, top: 80 });
-    });
-
-    it('stacks', () => {
-      const spaces = game.createMany(9, Space, 'space');
-      game.applyLayouts(() => {
-        game.layout(GameElement, {
-          aspectRatio: 4 / 5,
-          offsetColumn: {x: -5, y: -5},
-          scaling: 'fit',
-          direction: 'ltr'
-        });
-      });
-
-      expect(spaces[8]!._ui.computedStyle!.top).to.equal(0);
-      expect(spaces[0]!._ui.computedStyle!.top + spaces[0]!._ui.computedStyle!.height).to.equal(100);
-    });
-
-    it('align+scale', () => {
-      const pieces = game.createMany(6, Piece, 'piece');
-
-      game.applyLayouts(() => {
-        game.layout(Piece, {
-          offsetColumn: {x: 10, y: 10},
-          scaling: 'fit',
-        });
-      });
-
-      expect(pieces[0]!._ui.computedStyle!.top).to.equal(0);
-      expect(pieces[5]!._ui.computedStyle!.top + pieces[5]!._ui.computedStyle!.height).to.equal(100);
-      expect(pieces[3]!._ui.computedStyle!.left).to.equal(0);
-      expect(pieces[2]!._ui.computedStyle!.left + pieces[2]!._ui.computedStyle!.width).to.equal(100);
-    });
-
-    it('specificity', () => {
-      class Country extends Space<Game> { }
-      game = new Game({});
-
-      const spaces = game.createMany(4, Space, 'space');
-      const space = game.create(Space, 'special');
-      const france = game.create(Country, 'france');
-      const special = game.create(Country, 'special');
-      const el = game.create(GameElement, 'whatev');
-
-      game.applyLayouts(() => {
-        game.layout(spaces[2], { direction: 'btt-rtl', showBoundingBox: '1' });
-        game.layout('special', { direction: 'ttb-rtl', showBoundingBox: '2' });
-        game.layout(spaces.slice(0, 2), { direction: 'ttb', showBoundingBox: '3' });
-        game.layout(Country, { direction: 'rtl', showBoundingBox: '4' });
-        game.layout(Space, { direction: 'btt', showBoundingBox: '5' });
-        game.layout(GameElement, { direction: 'ltr-btt', showBoundingBox: '6' });
-      });
-
-      expect(game._ui.computedLayouts?.[6].children).to.include(el); // by GameElement
-      expect(game._ui.computedLayouts?.[5].children).contains(spaces[3]); // by Space
-      expect(game._ui.computedLayouts?.[4].children).contains(france); // by more specific class
-      expect(game._ui.computedLayouts?.[3].children).contains(spaces[0]); // by single ref
-      expect(game._ui.computedLayouts?.[2].children).contains(space); // by name
-      expect(game._ui.computedLayouts?.[2].children).contains(special); // by name
-      expect(game._ui.computedLayouts?.[1].children).contains(spaces[2]); // by array ref
-    });
-
-    it('can place', () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.row = 2;
-      a.column = 2;
-      game.applyLayouts();
-
-      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-    });
-
-    it('can shift bounds', () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.row = 4;
-      a.column = 4;
-      game.applyLayouts();
-
-      expect(a._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-    });
-
-    it('can shift negative', () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.row = -4;
-      a.column = -4;
-      game.applyLayouts();
-
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 50, height: 50 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
-    });
-
-    it('can stretch bounds', () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.row = 1;
-      a.column = 2;
-      d.row = 4;
-      d.column = 2;
-      game.applyLayouts();
-
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 25 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 25, width: 100, height: 25 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 100, height: 25 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 100, height: 25 })
-    });
-
-    it('can become sparse', () => {
-      const a = game.create(Space, 'a');
-      const b = game.create(Space, 'b');
-      const c = game.create(Space, 'c');
-      const d = game.create(Space, 'd');
-      a.row = 4;
-      a.column = 1;
-      d.row = 1;
-      d.column = 4;
-      game.applyLayouts();
-
-      expect(a._ui.computedStyle).to.deep.equal({ left: 0, top: 75, width: 25, height: 25 })
-      expect(b._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 25, height: 25 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 25, top: 0, width: 25, height: 25 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 75, top: 0, width: 25, height: 25 })
-    });
-
-    it('can place sticky', () => {
-      const a = game.create(Piece, 'a');
-      const b = game.create(Piece, 'b');
-      const c = game.create(Piece, 'c');
-      const d = game.create(Piece, 'd');
-      game.applyLayouts(() => {
-        game.layout(Piece, { sticky: true });
-      });
-      a.remove();
-
-      expect(b._ui.computedStyle).to.deep.equal({ left: 50, top: 0, width: 50, height: 50 })
-      expect(c._ui.computedStyle).to.deep.equal({ left: 0, top: 50, width: 50, height: 50 })
-      expect(d._ui.computedStyle).to.deep.equal({ left: 50, top: 50, width: 50, height: 50 })
     });
   });
 
@@ -1657,9 +1239,9 @@ describe('Game', () => {
       p2.column = -1;
       p2.row = -1;
 
-      game.applyLayouts();
-      expect(p1._ui.computedStyle).to.deep.equal({ left: 25, top: 25, width: 75, height: 75 })
-      expect(p2._ui.computedStyle).to.deep.equal({ left: 0, top: 0, width: 100, height: 50 })
+      const ui = applyLayouts(game);
+      expect(ui.all[p1._t.ref].relPos).to.deep.equal({ left: 25, top: 25, width: 75, height: 75 })
+      expect(ui.all[p2._t.ref].relPos).to.deep.equal({ left: 0, top: 0, width: 100, height: 50 })
     });
 
     it('can place shapes rotated', () => {
@@ -1670,9 +1252,10 @@ describe('Game', () => {
       p2.row = 1;
       p2.rotation = 90;
 
-      game.applyLayouts();
-      expect(p1._ui.computedStyle).to.deep.equal({ left: 20, top: 0, width: 60, height: 60 })
-      expect(p2._ui.computedStyle).to.deep.equal({ left: 40, top: 20, width: 80, height: 40, transformOrigin: '25% 50%' })
+      const ui = applyLayouts(game);
+      expect(ui.all[p1._t.ref].relPos).to.deep.equal({ left: 20, top: 0, width: 60, height: 60, rotation: 180 })
+      expect(ui.all[p2._t.ref].relPos).to.deep.equal({ left: 40, top: 20, width: 80, height: 40, rotation: 90 })
+      expect(ui.all[p2._t.ref].baseStyles?.transformOrigin).to.equal('25% 50%')
     });
 
     it('can find place for shapes', () => {
@@ -1713,7 +1296,3 @@ describe('Game', () => {
     });
   });
 });
-
-      // console.log('<div style="width: 200; height: 200; position: relative; outline: 1px solid black">');
-      // for (const c of game._t.children) console.log(`<div style="position: absolute; left: ${c._ui.computedStyle?.left}%; top: ${c._ui.computedStyle?.top}%; width: ${c._ui.computedStyle?.width}%; height: ${c._ui.computedStyle?.height}%; background: red; outline: 1px solid blue"></div>`);
-      // console.log('</div>');

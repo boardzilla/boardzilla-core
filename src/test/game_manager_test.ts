@@ -388,15 +388,15 @@ describe('GameManager', () => {
       const map = game.create(Space, 'map', {});
       const france = map.create(Country, 'france');
       const england = map.create(Country, 'england');
-      const napolean = france.create(General, 'napolean', { country: france });
-      gameManager.players[0].general = napolean;
-      france.general = napolean;
+      const napoleon = france.create(General, 'napoleon', { country: france });
+      gameManager.players[0].general = napoleon;
+      france.general = napoleon;
       gameManager.start();
 
       const playerJSON = gameManager.players.map(p => p.toJSON() as PlayerAttributes<TestPlayer>);
       const boardJSON = game.allJSON(1);
 
-      napolean.putInto(england);
+      napoleon.putInto(england);
 
       gameManager.players.fromJSON(playerJSON);
       game.fromJSON(JSON.parse(JSON.stringify(boardJSON)));
@@ -405,9 +405,9 @@ describe('GameManager', () => {
       expect(game.allJSON(1)).to.deep.equals(boardJSON);
       expect(gameManager.players.map(p => p.toJSON())).to.deep.equals(playerJSON);
 
-      expect(gameManager.players[0].general?.name).to.equal('napolean');
+      expect(gameManager.players[0].general?.name).to.equal('napoleon');
       expect(game.first(Country, 'france')).to.equal(france);
-      expect(game.first(Country, 'france')!.general?.name).to.equal('napolean');
+      expect(game.first(Country, 'france')!.general?.name).to.equal('napoleon');
       expect(game.first(Country, 'france')!.general?.country).to.equal(france);
     });
 
@@ -1242,8 +1242,6 @@ describe('GameManager', () => {
       gameManager.play();
       gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[3] });
       gameManager.play();
-
-      console.log(gameManager.flowState);
 
       expect(gameManager.players.currentPosition).to.deep.equal([4]);
       expect(gameManager.allowedActions(gameManager.players[3]).actions.length).to.equal(1);

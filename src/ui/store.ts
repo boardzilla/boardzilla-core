@@ -7,17 +7,20 @@ import Player from '../player/player.js';
 import {
   updateSelections,
   UIMove,
-  updateBoard,
   removePlacementPiece,
   decorateUIMove,
   clearMove,
   updateControls,
   updatePrompts,
 } from './lib.js';
+import {
+  applyLayouts,
+  applyDiff,
+  applyDOMKeys,
+} from './render.js';
 
 import { ActionDebug } from '../game-manager.js'
 import type { GameUpdateEvent, GameFinishedEvent, User } from './Main.js'
-import type { Box, ElementJSON } from '../board/element.js'
 import type { BaseGame } from '../board/game.js'
 import type { GameElement, Piece, PieceGrid } from '../board/index.js'
 import type Selection from '../action/selection.js'
@@ -25,6 +28,7 @@ import type { Argument } from '../action/action.js'
 import type { SetupFunction } from '../game-creator.js'
 import type { GameState } from '../interface.js';
 import type { ResolvedSelection } from '../action/selection.js';
+import type { UI, UIRender } from './render.js';
 
 export type GameStore = {
   host: boolean;
@@ -37,7 +41,6 @@ export type GameStore = {
   setSetup: (s: SetupFunction) => void;
   gameManager: GameManager;
   isMobile: boolean;
-  boardJSON: ElementJSON[]; // cache complete immutable json here, listen to this for board changes. eventually can replace with gameManager.sequence
   updateState: (state: (GameUpdateEvent | GameFinishedEvent) & {state: GameState}, readOnly?: boolean) => void;
   position?: number; // this player
   move?: UIMove; // move in progress
@@ -73,25 +76,13 @@ export type GameStore = {
   selected?: GameElement[]; // selected elements on board. these are not committed, analagous to input state in a controlled form
   selectElement: (moves: UIMove[], element: GameElement) => void;
   automove?: number;
-  renderedState: Record<string, {
-    key: string;
-    style?: Box & { rotation?: number };
-    attrs?: Record<string, any>;
-  }>;
-  previousRenderedState: {
-    sequence: number;
-    elements: Record<string, {
-      key?: string;
-      style?: Box & { rotation?: number };
-      attrs?: Record<string, any>;
-      movedTo?: string;
-    }>
-  };
+  rendered?: UI;
+  renderedSequence: number;
   setBoardSize: () => void;
   aspectRatio?: number;
   dragElement?: string;
   setDragElement: (el?: string) => void;
-  dragOffset: {element?: string, x?: number, y?: number}; // mutable non-reactive record of drag offset
+  dragOffset: {ref?: number, x?: number, y?: number}; // mutable non-reactive record of drag offset
   dropSelections: UIMove[];
   currentDrop?: GameElement;
   setCurrentDrop: (el?: GameElement) => void;
@@ -100,7 +91,7 @@ export type GameStore = {
     piece: Piece<BaseGame> ; // temporary ghost piece
     invalid?: boolean
     into: PieceGrid<BaseGame>;
-    layout: NonNullable<GameElement['_ui']['computedLayouts']>[number];
+    layout: UIRender['layouts'][number];
     rotationChoices?: number[];
   };
   setPlacement: (placement: {column: number, row: number, rotation?: number}) => void; // select placement. not committed, analagous to input state in a controlled form
@@ -120,26 +111,29 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   setSetup: setup => set({ setup }),
   gameManager: new GameManager(Player, Game),
   isMobile: !!globalThis.navigator?.userAgent.match(/Mobi/),
-  boardJSON: [],
   updateState: (update, readOnly=false) => set(s => {
     let { gameManager } = s;
     const position = s.position || update.position;
-    let renderedState = s.renderedState;
-    let previousRenderedState = s.previousRenderedState;
     window.clearTimeout(s.automove);
-    if (update.state.sequence === s.gameManager.sequence + 1) {
-      // demote current state to previous and play over top
-      renderedState = {};
-      previousRenderedState = {sequence: s.gameManager.sequence, elements: {...s.renderedState}};
-    } else if (update.state.sequence !== s.previousRenderedState.sequence + 1) {
-      // old state is invalid
-      renderedState = {};
-      previousRenderedState = {sequence: -1, elements: {}};
-    }
-    // otherwise reuse previous+current state, we're overwriting an internal version of the same state
 
-    if (gameManager.phase === 'new' && s.setup) {
-      gameManager = s.setup(update.state);
+    let state: GameStore = {
+      ...s,
+      position,
+      move: undefined,
+      prompt: undefined,
+      boardPrompt: undefined,
+      actionDescription: undefined,
+      otherPlayerAction: undefined,
+      renderedSequence: update.state.sequence,
+      announcementIndex: 0,
+      step: undefined,
+      boardSelections: {},
+      pendingMoves: undefined,
+      placement: undefined,
+    };
+
+    if (s.setup && (gameManager.phase === 'new' || update.state.sequence !== s.renderedSequence + 1)) {
+      gameManager = state.gameManager = s.setup(update.state);
       // @ts-ignore;
       window.game = gameManager.game;
       // @ts-ignore;
@@ -152,6 +146,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.players.assignAttributesFromJSON(update.state.players);
       gameManager.setFlowFromJSON(update.state.position);
     }
+    gameManager.contextualizeBoardToPlayer(gameManager.game.players.atPosition(position));
     gameManager.phase = 'started';
     gameManager.messages = update.state.messages;
     gameManager.announcements = update.state.announcements;
@@ -163,31 +158,15 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
       gameManager.winner = update.winners.map(p => gameManager.players.atPosition(p)!);
     }
     console.debug(`Game update for player #${position}. Current flow:\n ${gameManager.flow().stacktrace()}`);
+    const rendered = applyLayouts(gameManager.game);
+    if (update.state.sequence === s.renderedSequence + 1 && state.rendered) applyDiff(rendered.game, rendered, state.rendered);
+    state.rendered = rendered;
+    gameManager.game.resetRefTracking();
 
-    let state: GameStore = {
-      ...s,
-      gameManager,
-      position,
-      move: undefined,
-      prompt: undefined,
-      boardPrompt: undefined,
-      actionDescription: undefined,
-      otherPlayerAction: undefined,
-      announcementIndex: 0,
-      step: undefined,
-      boardSelections: {},
-      pendingMoves: undefined,
-      placement: undefined,
-      ...updateBoard(gameManager, position, update.state.board),
-    };
-
-    // may override board with new information from playing forward from the new state
     if (!readOnly && update.type !== 'gameFinished') {
       state = updateSelections(state)
     }
 
-    state.previousRenderedState = previousRenderedState;
-    state.renderedState = renderedState;
     s.gameManager.sequence = update.state.sequence;
 
     return state;
@@ -214,23 +193,12 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         state = {
           ...state,
           placement: undefined,
-          ...updateBoard(s.gameManager, s.position!)
+          rendered: applyLayouts(s.gameManager.game)
         };
       }
     }
 
-    state = updateSelections(state);
-
-    if (!pendingMove) {
-      s.gameManager.sequence = Math.floor(s.gameManager.sequence);
-    }
-
-    if (s.gameManager.sequence > Math.floor(s.gameManager.sequence)) {
-      state.previousRenderedState = {sequence: Math.floor(s.gameManager.sequence), elements: {...s.renderedState}};
-      state.renderedState = {};
-    }
-
-    return state;
+    return updateSelections(state);
   }),
 
   cancellable: false,
@@ -335,7 +303,13 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
         '__placement__': [s.placement.piece.column ?? 1, s.placement.piece.row ?? 1, s.placement.piece.rotation]
       }
     );
-    return { cancellable: true, ...updateBoard(s.gameManager, s.position!) };
+    const rendered = applyLayouts(s.gameManager.game);
+    applyDOMKeys(rendered.game, rendered, s.rendered!);
+
+    return {
+      cancellable: true,
+      rendered
+    };
   }),
 
   selectPlacement: ({ column, row, rotation }) => set(s => {
@@ -374,13 +348,15 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     });
   }),
 
-  renderedState: {},
-  previousRenderedState: {sequence: -1, elements: {}},
+  renderedSequence: -1,
   setBoardSize: () => set(s => {
     const boardSize = s.gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
     if ((boardSize.name !== s.gameManager.game._ui.boardSize.name || boardSize.aspectRatio !== s.gameManager.game._ui.boardSize.aspectRatio) && s.position) {
       s.gameManager.game.setBoardSize(boardSize);
-      return {aspectRatio: boardSize.aspectRatio, ...updateBoard(s.gameManager, s.position)};
+      return {
+        aspectRatio: boardSize.aspectRatio,
+        rendered: applyLayouts(s.gameManager.game)
+      };
     }
     return {};
   }),

@@ -12,7 +12,7 @@ import classNames from 'classnames';
  * @category UI
  */
 export function ProfileBadge({player}: {player: Player}) {
-  const [userOnline] = gameStore(s => [s.userOnline, s.boardJSON]);
+  const [userOnline] = gameStore(s => [s.userOnline]);
   const online = userOnline.has(player.id)
   return (
     <div className={classNames("profile-badge", {online, current: player.isCurrent()})} data-position={player.position} style={{backgroundColor: player.color}}>

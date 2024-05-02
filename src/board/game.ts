@@ -365,6 +365,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
    * @category Game Management
    */
   addDelay() {
+    this.resetMovementTracking();
     if (this.game._ctx.trackMovement) {
       this._ctx.gameManager.sequence += 1;
     } else if (this._ctx.gameManager.intermediateUpdates.length) {
@@ -373,7 +374,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     this._ctx.gameManager.intermediateUpdates.push(this.players.map(
       p => this._ctx.gameManager.getState(p) // TODO unnecessary for all players if in context of player
     ));
-    this.resetMovementTracking();
   }
 
   /**
@@ -461,6 +461,7 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     );
   }
 
+  // hydrate from json, and assign all attrs. requires that players be hydrated first
   fromJSON(boardJSON: ElementJSON[]) {
     let { className, children, _id, order, ...rest } = boardJSON[0];
     if (this.constructor.name !== className) throw Error(`Cannot create board from JSON. ${className} must equal ${this.constructor.name}`);
@@ -490,7 +491,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     disabledDefaultAppearance?: boolean;
     boundingBoxes?: boolean;
     stepLayouts: Record<string, ActionLayout>;
-    previousStyles: Record<any, Box>;
     announcements: Record<string, (game: G) => JSX.Element>;
     infoModals: {
       title: string,
@@ -502,7 +502,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
     layouts: [],
     appearance: {},
     stepLayouts: {},
-    previousStyles: {},
     announcements: {},
     infoModals: [],
     getBaseLayout: () => ({
@@ -515,7 +514,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   resetUI() {
     super.resetUI();
     this._ui.stepLayouts = {};
-    this._ui.previousStyles ||= {};
   }
 
   setBoardSize(boardSize: BoardSize) {
@@ -526,23 +524,6 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
 
   getBoardSize(screenX: number, screenY: number, mobile: boolean) {
     return this._ui.boardSizes && this._ui.boardSizes(screenX, screenY, mobile) || { name: '_default', aspectRatio: 1 };
-  }
-
-  applyLayouts(this: G, base?: (b: G) => void) {
-    this.resetUI();
-    if (this._ui.setupLayout) {
-      this._ui.setupLayout(this, this._ctx.player!, this._ui.boardSize.name);
-    }
-    if (base) base(this);
-
-    const aspectRatio = this._ui.boardSize.aspectRatio;
-    this._ui.frame = {
-      left: 0,
-      top: 0,
-      width: aspectRatio < 1 ? aspectRatio * 100 : 100,
-      height: aspectRatio > 1 ? 100 / aspectRatio : 100
-    };
-    return super.applyLayouts();
   }
 
   /**

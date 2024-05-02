@@ -14,7 +14,7 @@ import type { Argument } from '../../action/action.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [gameManager, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement, boardJSON] = gameStore(s => [s.gameManager, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.boardJSON, s.aspectRatio]);
+  const [gameManager, rendered, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement] = gameStore(s => [s.gameManager, s.rendered, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.aspectRatio]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const announcement = useMemo(() => gameManager.announcements[announcementIndex], [gameManager.announcements, announcementIndex]);
@@ -87,8 +87,6 @@ export default () => {
     }
   }, [gameManager.game._ui.boardSize]);
 
-  if (!boardJSON.length) return null;
-
   console.debug('Showing game with pending moves:' +
     (pendingMoves?.map(m => (
       `\n⮕ ${typeof m === 'string' ? m :
@@ -110,7 +108,7 @@ export default () => {
         {
           'scaling-scroll': gameManager.game._ui.boardSize.scaling === 'scroll',
           'browser-chrome': globalThis.navigator?.userAgent.indexOf('Chrome') > -1,
-          'browser-safari': globalThis.navigator?.userAgent.indexOf('Safari') > -1,
+          'browser-safari': globalThis.navigator?.userAgent.indexOf('Chrome') === -1 && globalThis.navigator?.userAgent.indexOf('Safari') > -1,
           'browser-edge': globalThis.navigator?.userAgent.indexOf('Edge') > -1,
           'browser-firefox': globalThis.navigator?.userAgent.indexOf('Firefox') > -1,
         }
@@ -124,10 +122,9 @@ export default () => {
       <audio ref={clickAudio} src={click} id="click"/>
       {mode !== 'debug' && <div id="background" className="full-page-cover" />}
       <div id="play-area" style={{width: '100%', height: '100%'}} className={dragElement ? "in-drag-movement" : ""}>
-        {mode !== 'debug' && (
+        {mode !== 'debug' && rendered && (
           <Element
-            element={gameManager.game}
-            json={boardJSON[0]}
+            render={rendered.game}
             mode={announcement ? 'info' : mode}
             onSelectElement={handleSelectElement}
           />

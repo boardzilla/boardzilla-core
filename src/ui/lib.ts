@@ -1,18 +1,18 @@
 import { CSSProperties } from 'react'
 import { SerializedArg, serializeArg } from '../action/utils.js';
 import Selection from '../action/selection.js'
-import { GameElement } from '../board/index.js'
+import { GameElement, Piece } from '../board/index.js'
+import { applyDiff, applyLayouts } from './render.js';
 
 import type { GameStore } from './store.js';
 import type { default as GameManager, SerializedMove, PendingMove } from '../game-manager.js'
-import type { Box, ElementJSON } from '../board/element.js'
+import type { Box } from '../board/element.js'
 import type { ResolvedSelection } from '../action/selection.js';
 import type { BaseGame } from '../board/game.js'
-import type { ActionLayout, Piece, PieceGrid } from '../board/index.js'
+import type { ActionLayout, PieceGrid } from '../board/index.js'
 
 type GamePendingMoves = ReturnType<GameManager['getPendingMoves']>;
 
-// this feels like the makings of a class
 export type UIMove = PendingMove & {
   requireExplicitSubmit: boolean; // true if explicit submit has been provided or is not needed
 }
@@ -29,6 +29,8 @@ export type MoveMessage = {
     args: Record<string, SerializedArg>
   }[]
 }
+
+class NoRandomAllowed extends Error {}
 
 // refresh move and selections
 export function updateSelections(store: GameStore): GameStore {
@@ -80,14 +82,11 @@ export function updateSelections(store: GameStore): GameStore {
           })[0];
       }
 
-      state = {
-        ...state,
-        ...updateBoard(gameManager, position),
-      };
+      state.rendered = applyLayouts(gameManager.game);
       state.placement = {
         piece: clone,
         into,
-        layout: into._ui.computedLayouts![0],
+        layout: state.rendered.all[into._t.ref].layouts[0], // assume first/only layout - need a Stack class to formalize
         rotationChoices: selection.rotationChoices,
       };
     }
@@ -165,32 +164,34 @@ export function updateSelections(store: GameStore): GameStore {
           }
 
           try {
-            state.error = gameManager.processMove({ player, ...move });
+            const oldRandom = Math.random;
+            const oldGameRandom = gameManager.game.random;
+            gameManager.game.random = Math.random = () => { throw new NoRandomAllowed(); };
+            try {
+              state.error = gameManager.processMove({ player, ...move });
+            } catch (e) {
+              // silently stop if random elements run
+              if (!(e instanceof NoRandomAllowed)) throw e;
+            } finally {
+              Math.random = oldRandom;
+              gameManager.game.random = oldGameRandom;
+            }
 
             if (state.error) {
               // should probably never reach this point since the error would
               // have been caught with any possible choices presented
               throw Error(state.error);
             } else {
-              try {
-                gameManager.play();
-              } catch (e) {
-                // this is a nice-to-have to speed up animations by
-                // "pre-playing" the flow. this could legitimately fail until
-                // the updated state is received from the server so exceptions
-                // here are ignored.
-              }
-              gameManager.sequence = Math.floor(gameManager.sequence) + 0.5; // intermediate local update that will need to be merged
               let json: any = undefined;
               if (gameManager.intermediateUpdates.length) {
                 json = gameManager.intermediateUpdates[0][0].board
                 gameManager.game.fromJSON(json);
                 gameManager.intermediateUpdates = [];
               }
-              state = {
-                ...state,
-                ...updateBoard(gameManager, position, json),
-              }
+              const rendered = applyLayouts(gameManager.game);
+              if (state.rendered) applyDiff(rendered.game, rendered, state.rendered);
+              state.rendered = rendered;
+              gameManager.game.resetRefTracking();
 
               window.top!.postMessage(message, "*");
             }
@@ -199,9 +200,7 @@ export function updateSelections(store: GameStore): GameStore {
             // surface the error but update board anyways to prevent more errors
             console.error(
               `Game attempted to complete move but was unable to process:\n` +
-                `⮕ ${move!.name}({${Object.entries(move!.args).map(
-                  ([k, v]) => `${k}: ${v}`
-                ).join(', ')}})\n`
+                `⮕ ${move!.name}({ ${Object.entries(move!.args).map(([k, v]) => `${k}: ${v}`).join(', ')} })\n`
             );
             console.error(e.message);
             console.debug(e.stack);
@@ -282,7 +281,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     const element = Object.entries(move.args).reverse().find(([name, el]) => (
       !gameManager.game._ui.stepLayouts["action:" + move.name]?.noAnchor?.includes(name) && el instanceof GameElement
     ));
-    if (element && (element[1] as GameElement)._ui?.computedStyle) {
+    if (element && store.rendered!.all[(element[1] as GameElement)._t.ref]) {
       layout = { element: element[1] as GameElement, position: 'beside', gap: 2 };
       name = 'action:' + element[0];
     }
@@ -295,7 +294,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
       // skip non-board moves if board elements already selected (cant this be more specific? just moves that could apply?)
       if (!selected?.length || moves[0].selections.some(s => s.type !== 'board')) {
         const actionLayout = gameManager.game._ui.stepLayouts["action:" + moves[0].name];
-        if (actionLayout?.element?._ui?.computedStyle) {
+        if (store.rendered!.all[actionLayout?.element._t.ref]) {
           layout = actionLayout;
           name = 'action:' + moves[0].name;
         }
@@ -305,7 +304,7 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
 
   if (!layout && otherPlayerAction) {
     const actionLayout = gameManager.game._ui.stepLayouts["action:" + otherPlayerAction];
-    if (actionLayout?.element?._ui?.computedStyle) {
+    if (store.rendered!.all[actionLayout?.element._t.ref]) {
       layout = actionLayout;
       name = 'action:' + otherPlayerAction;
     }
@@ -321,9 +320,8 @@ export function updateControls(store: GameStore): Pick<GameStore, "controls"> {
     layout = gameManager.game._ui.stepLayouts[name];
   }
 
-  if (layout) {
-    const box: Box = layout.element.relativeTransformToBoard();
-
+  const box: Box | undefined = store.rendered!.all[layout?.element._t.ref]?.pos;
+  if (layout && box) {
     if (layout.position === 'beside' || layout.position === 'stack') {
       if (box.left > 100 - box.left - box.width) {
         style.right = `clamp(0%, calc(${100 - box.left - (layout.position === 'beside' ? 0 : box.width)}% + ${layout.position === 'beside' ? layout.gap : 0}vw), 100%)`;
@@ -447,15 +445,6 @@ export function updatePrompts(store: GameStore): Partial<GameStore> {
 export function removePlacementPiece(placement: NonNullable<GameStore['placement']>) {
   const position = placement.into._t.children.indexOf(placement.piece);
   placement.into._t.children.splice(position, 1);
-}
-
-// function to ensure react detects a change. must be called immediately after any function that alters board state
-export function updateBoard(gameManager: GameManager, position: number, json?: ElementJSON[]) {
-  // rerun layouts. probably optimize TODO
-  gameManager.contextualizeBoardToPlayer(gameManager.players.atPosition(position));
-  gameManager.game.applyLayouts();
-
-  return ({ boardJSON: json || gameManager.game.allJSON() })
 }
 
 export function decorateUIMove(move: PendingMove | UIMove): UIMove {

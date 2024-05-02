@@ -1,13 +1,6 @@
 import ElementCollection from './element-collection.js';
 import { shuffleArray, times } from '../utils.js';
-import {
-  translate,
-  cellSizeForArea,
-  cellBoxRC,
-  getTotalArea,
-} from './utils.js';
 import { serializeObject, deserializeObject } from '../action/utils.js';
-import random from 'random-seed';
 
 import type GameManager from '../game-manager.js';
 import type { default as Player, BasePlayer } from '../player/player.js';
@@ -77,7 +70,7 @@ export type ElementUI<T extends GameElement> = {
     className?: string,
     render?: ((el: T) => JSX.Element | null) | false,
     aspectRatio?: number,
-    effects?: { attributes: ElementAttributes<T>, name: string }[],
+    effects?: { trigger: (element: T, oldAttributes: ElementAttributes<T>) => boolean, name: string }[],
     info?: ((el: T) => JSX.Element | null | boolean) | boolean,
     connections?: {
       thickness?: number,
@@ -88,21 +81,6 @@ export type ElementUI<T extends GameElement> = {
       labelScale?: number,
     },
   },
-  computedStyle?: Box & { transformOrigin?: string },
-  computedLayouts?: {
-    area: Box,
-    grid?: {
-      anchor: Vector,
-      origin: { column: number, row: number },
-      columns: number,
-      rows: number,
-      offsetColumn: Vector,
-      offsetRow: Vector,
-    },
-    showBoundingBox?: string | boolean,
-    children: GameElement[],
-    drawer: ElementUI<T>['layouts'][number]['attributes']['drawer']
-  }[],
   getBaseLayout: () => LayoutAttributes<T>,
   ghost?: boolean,
 };
@@ -325,13 +303,16 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   _t: {
     children: ElementCollection<GameElement>,
     parent?: GameElement,
-    id: number,
+    id: number, // unique and immuatable
+    ref: number, // unique and may change to hide moves
+    wasRef?: number, // previous ref to track changes, only populated if reorder during trackMovement
+    moved?: boolean, // track if already moved (changed parent)
     order?: 'normal' | 'stacking',
-    was?: string,
     setId: (id: number) => void,
   } = {
     children: new ElementCollection<GameElement>(),
     id: 0,
+    ref: 0,
     setId: () => {}
   };
 
@@ -368,14 +349,16 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
     this._t = {
       children: new ElementCollection(),
-      id: this._ctx.sequence++,
+      id: this._ctx.sequence,
+      ref: this._ctx.sequence,
       setId: (id?: number) => {
         if (id !== undefined) {
           this._t.id = id;
           if (this._ctx.sequence < id) this._ctx.sequence = id;
         }
       },
-    }
+    };
+    this._ctx.sequence += 1;
   }
 
   /**
@@ -599,11 +582,12 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @param order - ordering style
    * - "normal": Elements placed into this element are put at the end of the
    *   list (default)
-   * - "stacking": Elements placed into this element are put at the beginning of
-   *   the list. This is prefered for elements that stack. E.g. if a stack of
-   *   cards has `order` set to `stacking` the {@link first} method will return
-   *   the last card placed in the stack, rather than the first one placed in
-   *   the stack.
+   * - "stacking": Used primarily for stacks of cards. Elements placed into this
+   *   element are put at the beginning of the list. E.g. if a stack of cards
+   *   has `order` set to `stacking` the {@link first} method will return the
+   *   last card placed in the stack, rather than the first one placed in the
+   *   stack. Hidden items in the stack are not tracked or animated while
+   *   reordered to prevent their identity from being exposed as they move
    */
   setOrder(order: typeof this._t.order) {
     this._t.order = order;
@@ -656,7 +640,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @category Structure
    */
   shuffle() {
+    const refs = this.childRefsIfObscured();
     shuffleArray(this._t.children, this._ctx.gameManager?.random || Math.random);
+    if (refs) this.assignChildRefs(refs);
   }
 
   /**
@@ -708,10 +694,19 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     if (this._ctx.gameManager?.phase === 'started') throw Error('Game elements cannot be created once game has started.');
     const el = this.createElement(className, name, attributes);
     el._t.parent = this;
-    if (this._t.order === 'stacking') {
-      this._t.children.unshift(el);
+    const firstPiece = this._t.children.findIndex(c => !('isSpace' in c));
+    if (this._t.order === 'stacking' && !('isSpace' in el)) {
+      if (firstPiece > 0) {
+        this._t.children.splice(firstPiece, 0, el);
+      } else {
+        this._t.children.unshift(el);
+      }
     } else {
-      this._t.children.push(el);
+      if ('isSpace' in el && firstPiece !== -1) {
+        this._t.children.splice(firstPiece, 0, el)
+      } else {
+        this._t.children.push(el);
+      }
     }
     if ('isSpace' in el && name) {
       if (name in this._ctx.uniqueNames) { // no longer unique
@@ -970,11 +965,11 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       )) as typeof attrs;
     }
     const json: ElementJSON = Object.assign(serializeObject(attrs, seenBy !== undefined), { className: this.constructor.name });
-    if (seenBy === undefined || 'isSpace' in this || attrs['name']) json._id = this._t.id; // this should also check for *unique* name or we'll leak information
     if (this._t.order) json.order = this._t.order;
-    if (this._t.was) json.was = this._t.was;
-    // do not expose hidden deck shuffles
-    if (seenBy && this._t.was && this._t.parent?._t.order === 'stacking' && !this.hasChangedParent() && !this.isVisibleTo(seenBy)) json.was = this.branch();
+    if (seenBy === undefined) json._id = this._t.id;
+    if (json._id !== this._t.ref) json._ref = this._t.ref;
+    // do not expose moves within deck (shuffles)
+    if (seenBy !== undefined && this._t.wasRef !== undefined && this.isVisibleTo(seenBy)) json._wasRef = this._t.wasRef;
     if (this._t.children.length && (
       !seenBy || !('_screen' in this) || this._screen === undefined ||
         (this._screen === 'all-but-owner' && this.owner?.position === seenBy) ||
@@ -1001,11 +996,10 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
-      let { className, children, was, _id, name, order } = json;
-      let child: GameElement | undefined = undefined;
-      if (_id !== undefined) { // try to match space, preserve the object and any references. this should also match the .was if it's a sibling
-        child = childrenRefs.find(c => c._t.id === _id && c.name === name);
-      }
+      const childBranch = branch + '/' + i;
+      let { className, children, _id, _ref, _wasRef, name, order } = json;
+      // try to match and preserve the object and any references.
+      let child = childrenRefs.find(c => _id !== undefined ? (c._t.id === _id) : (c._t.ref === (_wasRef ?? _ref)));
       if (!child) {
         const elementClass = this._ctx.classRegistry.find(c => c.name === className);
         if (!elementClass) throw Error(`No class found ${className}. Declare any classes in \`game.registerClasses\``);
@@ -1013,40 +1007,32 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
         child._t.setId(_id);
         child._t.parent = this;
         child._t.order = order;
+        child._t.ref = _ref ?? _id;
+      } else {
+        // remove absent attributes
+        const emptyAttrs = Object.keys(child).filter(k => !(k in json) && !['_rotation', 'column', 'row'].includes(k) && !(child!.constructor as typeof GameElement).unserializableAttributes.includes(k));
+        if (emptyAttrs.length) {
+          const blank = Reflect.construct(child.constructor, [{}]);
+          for (const attr of emptyAttrs) Object.assign(child, {[attr]: blank[attr]});
+        }
       }
-      child._t.was = was;
-      if (this._ctx.trackMovement && !('isSpace' in child)) child._t.was = branch + '/' + i;
+      if (_id !== undefined) child._t.ref = _ref ?? _id;
+      if (_wasRef !== undefined && !this._ctx.trackMovement) child._t.wasRef = _wasRef;
       this._t.children.push(child);
-      child.createChildrenFromJSON(children || [], branch + '/' + i);
+      child.createChildrenFromJSON(children || [], childBranch);
     }
   }
 
   assignAttributesFromJSON(childrenJSON: ElementJSON[], branch: string) {
     for (let i = 0; i !== childrenJSON.length; i++) {
       const json = childrenJSON[i];
-      let { className: _cn, children, was: _w, _id, name: _n, order: _o, ...rest } = json;
+      let { className: _cn, children, _ref, _wasRef, _id, order: _o, ...rest } = json;
       rest = deserializeObject({...rest}, this.game);
       let child = this._t.children[i];
       Object.assign(child, rest);
       child.assignAttributesFromJSON(children || [], branch + '/' + i);
+      if (json.name === 'Theater') console.log(json, child);
     }
-  }
-
-  cloneInto<T extends GameElement>(this: T, into: GameElement): T {
-    let attrs = this.attributeList();
-    delete attrs.column;
-    delete attrs.row;
-
-    const clone = into.createElement(this.constructor as ElementClass<T>, this.name, attrs);
-    if (into._t.order === 'stacking') {
-      into._t.children.unshift(clone);
-    } else {
-      into._t.children.push(clone);
-    }
-    clone._t.parent = into;
-    clone._t.order = this._t.order;
-    for (const child of this._t.children) child.cloneInto(clone);
-    return clone;
   }
 
   /**
@@ -1060,7 +1046,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     getBaseLayout: () => ({
       alignment: 'center',
       direction: 'square'
-    })
+    }),
   };
 
   resetUI() {
@@ -1069,39 +1055,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       attributes: this._ui.getBaseLayout()
     }];
     this._ui.appearance = {};
-    this._ui.computedStyle = undefined;
     for (const child of this._t.children) child.resetUI();
-  }
-
-  /**
-   * Viewport relative to a square perfectly containing the playing area. The
-   * `left` and `top` values are from 0-100. The x and y values in this method
-   * are on the same scale, unlike {@link relativeTransformToBoard}.
-   * @category UI
-   * @internal
-   */
-  absoluteTransform(preComputedRelativeTransform?: Box): Box {
-    preComputedRelativeTransform ??= this.relativeTransformToBoard();
-    return this.game._ui.frame ? translate(preComputedRelativeTransform, this.game._ui.frame) : preComputedRelativeTransform;
-  }
-
-  /**
-   * Viewport relative to the playing area. The `left` and `top` values are
-   * percentages from 0-100, where `left: 100` is the right edge of the playing
-   * area and `top: 100` the bottom. The x and y values in this method are
-   * therefore not necessarily on the same scale, unlike {@link
-   * absoluteTransform}.
-   * @category UI
-   * @internal
-   */
-  relativeTransformToBoard(): Box {
-    let transform: Box = this._ui.computedStyle || { left: 0, top: 0, width: 100, height: 100 };
-    let parent = this._t.parent;
-    while (parent?._ui.computedStyle) {
-      transform = translate(transform, parent._ui.computedStyle)
-      parent = parent._t.parent;
-    }
-    return transform;
   }
 
   /**
@@ -1128,7 +1082,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     attributes: Partial<LayoutAttributes<this>>
   ) {
     let {slots, area, size, aspectRatio, scaling, gap, margin, offsetColumn, offsetRow} = attributes
-    if (this._ui.layouts.length === 0) this.resetUI();
     if (slots && (area || margin || scaling || gap || margin || offsetColumn || offsetRow)) {
       console.warn('Layout has `slots` which overrides supplied grid parameters');
       delete attributes.area;
@@ -1155,596 +1108,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       delete attributes.gap;
     }
     this._ui.layouts.push({ applyTo, attributes: { alignment: 'center', direction: 'square', ...attributes} });
-  }
-
-  /**
-   * recalc all elements computedStyle
-   * @category UI
-   * @internal
-   */
-  applyLayouts() {
-    if (this._ui.appearance.render === false) return;
-
-    this._ui.computedStyle ??= { left: 0, top: 0, width: 100, height: 100 };
-
-    const layoutItems = this.getLayoutItems();
-    const absoluteTransform = this.absoluteTransform();
-
-    for (let l = this._ui.layouts.length - 1; l >= 0; l--) {
-      const { attributes } = this._ui.layouts[l];
-      let children = layoutItems[l];
-
-      const { slots, direction, gap, alignment, maxOverlap } = attributes;
-      let { size, scaling, aspectRatio, haphazardly } = attributes;
-      if (!size && !scaling) scaling = 'fit';
-
-      const area = this.getArea(attributes);
-
-      let cellBoxes = slots || [];
-      let sizes: number[] = []; // relative sizes of children so they retain scaling against each other
-      let maxSize: number = 0;
-
-      if (!this._ui.computedLayouts) this._ui.computedLayouts = [];
-      this._ui.computedLayouts[l] = {
-        area,
-        children: children ?? [],
-        showBoundingBox: attributes.showBoundingBox ?? this.game._ui.boundingBoxes,
-        drawer: attributes.drawer
-      };
-
-      let minColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.min || 1;
-      let minRows = typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.min || 1;
-
-      if (!children?.length && minRows === 1 && minColumns === 1) continue;
-      children ??= [];
-
-      if (!slots) {
-        const cells: [number?, number?][] = [];
-        const min: {column?: number, row?: number} = {};
-        const max: {column?: number, row?: number} = {};
-
-        // find bounding box for any set positions
-        for (let c = 0; c != children.length; c++) {
-          const child = children[c];
-          const gridSize = this._sizeNeededFor(child);
-          if (child.column !== undefined && child.row !== undefined && !child._ui.ghost) {
-            cells[c] = [child.column, child.row];
-            if (min.column === undefined || child.column < min.column) min.column = child.column;
-            if (min.row === undefined || child.row < min.row) min.row = child.row;
-            if (max.column === undefined || child.column + gridSize.width - 1 > max.column) max.column = child.column + gridSize.width - 1;
-            if (max.row === undefined || child.row + gridSize.height - 1 > max.row) max.row = child.row + gridSize.height - 1;
-          }
-        }
-        min.column ??= 1;
-        min.row ??= 1;
-        max.column ??= 1;
-        max.row ??= 1;
-
-        // calculate # of rows/cols
-        minColumns = Math.max(minColumns, max.column - min.column + 1);
-        minRows = Math.max(minRows, max.row - min.row + 1);
-        let maxColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.max || Infinity;
-        let maxRows = typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.max || Infinity;
-
-        let columns = minColumns;
-        let rows = minRows;
-        let origin = {column: 1, row: 1};
-        const alignOffset = {
-          left: alignment.includes('left') ? 0 : (alignment.includes('right') ? 1 : 0.5),
-          top: alignment.includes('top') ? 0 : (alignment.includes('bottom') ? 1 : 0.5),
-        };
-
-        const ghostPiecesIgnoredForLayout = ('extendableGrid' in this && this.extendableGrid) ? children.filter(c => c._ui.ghost) : [];
-        const elements = children.length - ghostPiecesIgnoredForLayout.length;
-
-        // expand grid as needed for children in direction specified
-        if (children.length) {
-          if (direction === 'square') {
-            columns = Math.max(minColumns,
-              Math.min(
-                maxColumns,
-                Math.ceil(elements / minRows),
-                Math.max(Math.ceil(elements / maxRows), Math.ceil(Math.sqrt(elements)))
-              )
-            );
-            rows = Math.max(minRows,
-              Math.min(maxRows,
-                Math.ceil(elements / minColumns),
-                Math.ceil(elements / columns)
-              )
-            );
-          } else {
-            if (rows * columns < elements) {
-              if (['ltr', 'ltr-btt', 'rtl', 'rtl-btt'].includes(direction)) {
-                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(elements / rows)));
-                rows = Math.max(rows, Math.min(maxRows, Math.ceil(elements / columns)));
-              }
-              if (['ttb', 'btt', 'ttb-rtl', 'btt-rtl'].includes(direction)) {
-                rows = Math.max(rows, Math.min(maxRows, Math.ceil(elements / columns)));
-                columns = Math.max(columns, Math.min(maxColumns, Math.ceil(elements / rows)));
-              }
-            }
-          }
-
-          // set origin if viewport should shift
-          origin = {
-            column: Math.min(min.column, max.column, Math.max(1, max.column - columns + 1)),
-            row: Math.min(min.row, max.row, Math.max(1, max.row - rows + 1))
-          }
-
-          if (ghostPiecesIgnoredForLayout.length) {
-            const extension = Math.max(...ghostPiecesIgnoredForLayout.map(p => Math.max(p._size?.width ?? 1, p._size?.height ?? 1)));
-            if (extension > 0) {
-              if (children.length === ghostPiecesIgnoredForLayout.length) {
-                columns = Math.max(columns, extension);
-                rows = Math.max(rows, extension);
-              } else {
-                if (min.column - extension < origin.column) {
-                  columns += extension - min.column + origin.column;
-                  origin.column = min.column - extension;
-                }
-                if (max.column + extension >= origin.column + columns) {
-                  columns = max.column + extension - origin.column + 1;
-                }
-                if (min.row - extension < origin.row) {
-                  rows += extension - min.row + origin.row;
-                  origin.row = min.row - extension;
-                }
-                if (max.row + extension >= origin.row + rows) {
-                  rows = max.row + extension - origin.row + 1;
-                }
-              }
-            }
-          }
-
-          let available: Vector;
-          let advance: Vector;
-          let carriageReturn: Vector;
-          let fillDirection = direction;
-          if (fillDirection === 'square') {
-            if (['left', 'top left', 'top', 'center'].includes(alignment)) {
-              fillDirection = 'ltr';
-            } else if (['right', 'top right'].includes(alignment)) {
-              fillDirection = 'rtl';
-            } else if (['bottom','bottom left'].includes(alignment)) {
-              fillDirection = 'ltr-btt';
-            } else {
-              fillDirection = 'rtl-btt';
-            }
-          }
-          switch (fillDirection) {
-          case 'ltr':
-            available = {x: 1, y: 1};
-            advance = {x: 1, y: 0};
-            carriageReturn = {x: -columns, y: 1};
-            break;
-          case 'rtl':
-            available = {x: columns, y: 1};
-            advance = {x: -1, y: 0};
-            carriageReturn = {x: columns, y: 1};
-            break;
-          case 'ttb':
-            available = {x: 1, y: 1};
-            advance = {x: 0, y: 1};
-            carriageReturn = {x: 1, y: -rows};
-            break;
-          case 'btt':
-            available = {x: 1, y: rows};
-            advance = {x: 0, y: -1};
-            carriageReturn = {x: 1, y: rows};
-            break;
-          case 'ltr-btt':
-            available = {x: 1, y: rows};
-            advance = {x: 1, y: 0};
-            carriageReturn = {x: -columns, y: -1};
-            break;
-          case 'rtl-btt':
-            available = {x: columns, y: rows};
-            advance = {x: -1, y: 0};
-            carriageReturn = {x: columns, y: -1};
-            break;
-          case 'ttb-rtl':
-            available = {x: columns, y: 1};
-            advance = {x: 0, y: 1};
-            carriageReturn = {x: -1, y: -rows};
-            break;
-          case 'btt-rtl':
-            available = {x: columns, y: rows};
-            advance = {x: 0, y: -1};
-            carriageReturn = {x: -1, y: rows};
-            break;
-          }
-
-          if (ghostPiecesIgnoredForLayout) {
-            for (let c = 0; c != children.length; c++) {
-              const child = children[c];
-              if (child.column !== undefined && child.row !== undefined && child._ui.ghost) cells[c] = [child.column, child.row];
-            }
-          }
-
-          // place unpositioned elements
-          let c = 0;
-          while (c != children.length) {
-            const child = children[c];
-            if (cells[c]) {
-              c++;
-              continue;
-            }
-            const cell: [number, number] = [available.x + origin.column! - 1, available.y + origin.row! - 1];
-            if (cells.every(([x, y]) => x !== cell[0] || y !== cell[1])) {
-              cells[c] = cell;
-              if (attributes.sticky) {
-                child.column = cell[0];
-                child.row = cell[1];
-              }
-              c++;
-            }
-            available.x += advance.x;
-            available.y += advance.y;
-            if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) {
-              available.x += carriageReturn.x;
-              available.y += carriageReturn.y;
-            }
-            if (available.x > columns || available.x <= 0 || available.y > rows || available.y <= 0) break;
-          }
-        }
-
-        // calculate offset or gap
-        let cellGap: Vector | undefined = undefined;
-        let offsetRow: Vector | undefined = undefined;
-        let offsetColumn: Vector | undefined = undefined;
-        let effecitveRowsWithOffsets = '_gridPositions' in this && 'rows' in this ? this.rows as number : rows;
-        let effecitveColumnsWithOffsets = '_gridPositions' in this && 'columns' in this ? this.columns as number : columns;
-        let rhomboid = !('_gridPositions' in this) || !('shape' in this) || this.shape === 'rhomboid';
-
-        if (attributes.offsetColumn || attributes.offsetRow) {
-          offsetColumn = typeof attributes.offsetColumn === 'number' ? {x: attributes.offsetColumn, y: 0} : attributes.offsetColumn;
-          offsetRow = typeof attributes.offsetRow === 'number' ? {x: 0, y: attributes.offsetRow} : attributes.offsetRow;
-          if (!offsetRow) offsetRow = { x: -offsetColumn!.y, y: offsetColumn!.x };
-          if (!offsetColumn) offsetColumn = { x: offsetRow!.y, y: -offsetRow!.x };
-        } else {
-          // gaps are absolute and convert by ratio
-          cellGap = {
-            x: (gap && (typeof gap === 'number' ? gap : gap.x) || 0) / absoluteTransform.width * 100,
-            y: (gap && (typeof gap === 'number' ? gap : gap.y) || 0) / absoluteTransform.height * 100,
-          };
-        }
-
-        if (!size) {
-          // start with largest size needed to accommodate
-          size = cellSizeForArea(
-            effecitveRowsWithOffsets, effecitveColumnsWithOffsets,
-            area, cellGap, offsetColumn, offsetRow, rhomboid
-          );
-
-          // find all aspect ratios and sizes of child elements and choose best fit
-          if (!aspectRatio) {
-            let minRatio = Infinity;
-            let maxRatio = 0;
-            for (const c of children) {
-              const r = c._ui.appearance.aspectRatio;
-              if (r !== undefined) {
-                if (r < minRatio) minRatio = r;
-                if (r > maxRatio) maxRatio = r;
-              }
-              const largestDimension = c._size ? Math.max(c._size.width, c._size.height) : 1;
-              sizes.push(largestDimension);
-              if (largestDimension > maxSize) maxSize = largestDimension;
-            }
-            if (minRatio < Infinity || maxRatio > 0) {
-              if (maxRatio > 1 && minRatio < 1) aspectRatio = 1;
-              else if (minRatio > 1) aspectRatio = minRatio;
-              else aspectRatio = maxRatio;
-            }
-          }
-
-          if (aspectRatio) {
-            aspectRatio *= absoluteTransform.height / absoluteTransform.width;
-            if (aspectRatio > size.width / size.height) {
-              size.height = size.width / aspectRatio;
-            } else {
-              size.width = aspectRatio * size.height;
-            }
-          }
-        }
-
-        if (!children.length) {
-          this._ui.computedLayouts[l].grid = {
-            anchor: { x: 0, y: 0 },
-            origin,
-            rows,
-            columns,
-            offsetColumn: offsetColumn ?? { x: size.width + cellGap!.x, y: 0 },
-            offsetRow: offsetRow ?? { x: 0, y: size.height + cellGap!.y }
-          }
-          continue;
-        }
-
-        if (haphazardly) {
-          haphazardly *= .2 + Math.max(0, cellGap ?
-            cellGap.x / size.width + cellGap.y / size.height :
-            (Math.abs(offsetColumn!.x) + Math.abs(offsetColumn!.y) + Math.abs(offsetRow!.y) + Math.abs(offsetColumn!.y) - 200) / 100);
-        } else {
-          haphazardly = 0;
-        }
-        //console.log('haphazardly', haphazardly);
-
-        const startingOffset = {x: 0, y: 0};
-
-        const corners = '_cornerPositions' in this ? (this._cornerPositions as () => [number, number][])() : [
-          [1, 1],
-          [columns, 1],
-          [1, rows],
-          [columns, rows],
-        ] as [number, number][];
-
-        let totalAreaNeeded = getTotalArea(corners, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
-
-        let scale: Vector = {x: 1, y: 1};
-
-        if (scaling) {
-          if (scaling === 'fill') {
-            // match the dimension furthest, spilling one dimesion out of bounds
-            const s = Math.max(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
-            scale = {x: s, y: s};
-          } else if (scaling === 'fit' && attributes.size) { // if size was not given, size was already calculated as 'fit'
-            // match the closest dimension, pushing one dimesion inside
-            const s = Math.min(area.width / totalAreaNeeded.width, area.height / totalAreaNeeded.height);
-            scale = {x: s, y: s};
-          }
-
-          // reduce scale if necessary to keep size below amount needed for min rows/cols
-          const largestCellSize = cellSizeForArea(
-            Math.min(minRows, effecitveRowsWithOffsets), Math.min(minColumns, effecitveColumnsWithOffsets),
-            area, cellGap, offsetColumn, offsetRow, rhomboid
-          );
-          if (maxOverlap !== undefined) {
-            const largestCellSize2 = cellSizeForArea(rows, columns, area, undefined,
-              { x: Math.min(100 - maxOverlap, offsetColumn?.x ?? 100), y: Math.min(100 - maxOverlap, offsetColumn?.y ?? 0) },
-              { x: Math.min(100 - maxOverlap, offsetRow?.x ?? 0), y: Math.min(100 - maxOverlap, offsetRow?.y ?? 100) }
-            );
-            largestCellSize.width = Math.min(largestCellSize.width, largestCellSize2.width);
-            largestCellSize.height = Math.min(largestCellSize.height, largestCellSize2.height);
-          }
-
-          if (size.width * scale.x > largestCellSize.width) {
-            const reduction = largestCellSize.width / size.width / scale.x;
-            scale.x *= reduction;
-            scale.y *= reduction;
-          }
-          if (size.height * scale.y > largestCellSize.height) {
-            const reduction = largestCellSize.height / size.height / scale.y;
-            scale.x *= reduction;
-            scale.y *= reduction;
-          }
-
-          //console.log('pre-scale', largestCellSize, area, size, totalAreaNeeded, alignOffset, scale);
-
-          size.width *= scale.x;
-          size.height *= scale.y;
-        }
-
-        if (!cellGap) { // non-othogonal grid
-          if (scaling !== 'fit') {
-            // reduce offset along dimension needed to squish
-            if (area.width * scale.x / totalAreaNeeded.width > area.height * scale.y / totalAreaNeeded.height) {
-              const offsetScale = (area.height - size.height) / (totalAreaNeeded.height * scale.y - size.height);
-              if (offsetScale < 1) {
-                scale.y = scale.x = area.height / totalAreaNeeded.height;
-                offsetColumn!.y *= offsetScale;
-                offsetRow!.y *= offsetScale;
-              }
-            } else {
-              const offsetScale = (area.width - size.width) / (totalAreaNeeded.width * scale.x - size.width);
-              if (offsetScale < 1) {
-                scale.y = scale.x = area.width / totalAreaNeeded.width;
-                offsetColumn!.x *= offsetScale;
-                offsetRow!.x *= offsetScale;
-              }
-            }
-
-            totalAreaNeeded = getTotalArea(corners, area, size, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
-          }
-          // align in reduced area
-          startingOffset.x += area.left - totalAreaNeeded.left * scale.x + alignOffset.left * (area.width - totalAreaNeeded.width * scale.x);
-          startingOffset.y += area.top - totalAreaNeeded.top * scale.y + alignOffset.top * (area.height - totalAreaNeeded.height * scale.y);
-          //console.log('align', area, size, totalAreaNeeded, alignOffset, startingOffset, scale);
-
-        } else { // orthogonal
-
-          if (scaling === 'fill') {
-            // reduce gap to squish it to fit, creating overlap
-            if (rows > 1) cellGap.y = Math.min(cellGap.y || 0, (area.height - rows * size.height) / (rows - 1));
-            if (columns > 1) cellGap.x = Math.min(cellGap.x || 0, (area.width - columns * size.width) / (columns - 1));
-          }
-
-          // align in reduced area
-          const newWidth = columns * (size.width + cellGap.x!) - cellGap.x!;
-          startingOffset.x += alignOffset.left * (area.width - newWidth);
-          const newHeight = rows * (size.height + cellGap.y!) - cellGap.y!;
-          startingOffset.y += alignOffset.top * (area.height - newHeight);
-        }
-
-        //console.log('size, area after fit/fill adj', size, area, scale, cellGap)
-        for (let c = 0; c < children.length && c < cells.length; c++) {
-          let [column, row] = cells[c];
-          if (column !== undefined && row !== undefined) {
-            column -= origin.column - 1;
-            row -= origin.row - 1;
-            const box = cellBoxRC(column, row, area, size!, columns, rows, startingOffset, cellGap, offsetColumn, offsetRow);
-            if (box) cellBoxes[c] = box;
-          }
-        }
-
-        this._ui.computedLayouts[l].grid = {
-          anchor: startingOffset,
-          origin,
-          rows,
-          columns,
-          offsetColumn: offsetColumn ?? { x: size.width + cellGap!.x, y: 0 },
-          offsetRow: offsetRow ?? { x: 0, y: size.height + cellGap!.y }
-        }
-      }
-
-      // apply the final box to each child
-      const prandom = random.create('ge' + this.name).random;
-      for (let i = 0; i !== children.length; i++) {
-        const box = cellBoxes[i];
-        if (!box) continue;
-        const child = children[i];
-        let { width, height, left, top } = box;
-        let transformOrigin: string | undefined = undefined;
-        const gridSize = this._sizeNeededFor(child);
-        if (gridSize.width !== 1 || gridSize.height !== 1) {
-          height *= (child._size!.height ?? 1);
-          width *= (child._size!.width ?? 1);
-          if (child.rotation === 90) {
-            transformOrigin = `${50 * child._size!.height / child._size!.width}% 50%`;
-          }
-          if (child.rotation === 270) {
-            transformOrigin = `50% ${50 * child._size!.width / child._size!.height}%`;
-          }
-        } else {
-          if (child._ui.appearance.aspectRatio || child._size) {
-            const aspectRatio = (child._ui.appearance.aspectRatio ?? 1) * (child._size?.width ?? 1) / (child._size?.height ?? 1) * absoluteTransform.height / absoluteTransform.width;
-
-            if (aspectRatio && aspectRatio !== width / height) {
-              if (aspectRatio > width / height) {
-                height = width / aspectRatio;
-              } else {
-                width = aspectRatio * height;
-              }
-            }
-            left = box.left + (box.width - width) / 2;
-            top = box.top + (box.height - height) / 2;
-          }
-          if (maxSize && maxSize > 0 && sizes[i] && sizes[i] !== maxSize) {
-            const scale = sizes[i]! / maxSize;
-            left += width * 0.5 * (1 - scale);
-            top += height * 0.5 * (1 - scale);
-            height *= scale;
-            width *= scale;
-          }
-        }
-
-        if (haphazardly) {
-          let wiggle = {x: 0, y: 0};
-          let overlap = Infinity;
-          for (let tries = 0; tries < 10; tries ++) {
-            const rx = prandom();
-            const ry = prandom();
-            const w = {
-              x: haphazardly ? Math.min(
-                area.left + area.width - left - width,
-                Math.max(area.left - left, (rx - ((left - area.left) / (area.width - width) - .5) / 2 - .5) * haphazardly * (size!.width + size!.height))
-              ): 0,
-              y: haphazardly ? Math.min(
-                area.top + area.height - top - height,
-                Math.max(area.top - top, (ry - ((top - area.top) / (area.height - height) - .5) / 2 - .5) * haphazardly * (size!.width + size!.height))
-              ): 0
-            }
-            let worstOverlapThisTry = Infinity;
-            if (children.every(c => {
-              if (!c._ui.computedStyle) return true;
-              const cbox = c._ui.computedStyle;
-              const childOverlap = Math.min(
-                Math.max(0, cbox.left + cbox.width - left - w.x),
-                Math.max(0, cbox.top + cbox.height - top - w.y),
-                Math.max(0, left + width + w.x - cbox.left),
-                Math.max(0, top + height + w.y - cbox.top)
-              );
-              if (childOverlap === 0) return true;
-              worstOverlapThisTry = Math.min(childOverlap, worstOverlapThisTry);
-            })) {
-              wiggle = w;
-              break;
-            }
-            if (worstOverlapThisTry < overlap) {
-              overlap = worstOverlapThisTry;
-              wiggle = w;
-            }
-          }
-          left += wiggle.x
-          top += wiggle.y
-        }
-        child._ui.computedStyle = { width, height, left, top };
-        if (transformOrigin) child._ui.computedStyle.transformOrigin = transformOrigin;
-
-        child.applyLayouts();
-      }
-    }
-  }
-
-  getLayoutItems() {
-    const layoutItems: (GameElement[] | undefined)[] = [];
-
-    const layouts = [...this._ui.layouts].sort((a, b) => {
-      let aVal = 0, bVal = 0;
-      if (a.applyTo instanceof GameElement) aVal = 3
-      if (b.applyTo instanceof GameElement) bVal = 3
-      if (typeof a.applyTo === 'string') aVal = 2
-      if (typeof b.applyTo === 'string') bVal = 2
-      if (a.applyTo instanceof Array) aVal = 1
-      if (b.applyTo instanceof Array) bVal = 1
-      if (aVal !== 0 || bVal !== 0) return aVal - bVal;
-      const ac = a.applyTo as ElementClass;
-      const bc = b.applyTo as ElementClass;
-      return ac.prototype instanceof bc ? 1 : (bc.prototype instanceof ac ? -1 : 0);
-    }).reverse();
-
-    for (const child of this._t.children) {
-      if (child._ui.appearance.render === false) continue;
-      for (const layout of layouts) {
-        const { applyTo, attributes } = layout;
-        const l = this._ui.layouts.indexOf(layout);
-
-        if ((typeof applyTo === 'function' && child instanceof applyTo) ||
-          (typeof applyTo === 'string' && child.name === applyTo) ||
-          child === applyTo ||
-          (applyTo instanceof ElementCollection && applyTo.includes(child))
-        ) {
-          if (attributes.limit !== undefined && attributes.limit <= (layoutItems[l]?.length ?? 0)) break;
-          layoutItems[l] ??= [];
-          if (this._t.order === 'stacking') {
-            layoutItems[l]!.unshift(child);
-          } else {
-            layoutItems[l]!.push(child);
-          }
-          break;
-        }
-      }
-    }
-    return layoutItems;
-  }
-
-  /**
-   * calculate working area
-   * @internal
-   */
-  getArea(attributes: { margin?: number | { top: number, bottom: number, left: number, right: number }, area?: Box }): Box {
-    let { area, margin } = attributes;
-    if (area) return area;
-    if (!margin) return { left: 0, top: 0, width: 100, height: 100 };
-
-    // margins are absolute, so translate
-    const absoluteTransform = this.absoluteTransform();
-    const transform: Vector = {
-      x: absoluteTransform.width / 100,
-      y: absoluteTransform.height / 100
-    }
-
-    margin = (typeof margin === 'number') ? { left: margin, right: margin, top: margin, bottom: margin } : {...margin};
-    margin.left /= transform.x;
-    margin.right /= transform.x;
-    margin.top /= transform.y;
-    margin.bottom /= transform.y;
-
-    return {
-      left: margin.left,
-      top: margin.top,
-      width: 100 - margin.left - margin.right,
-      height: 100 - margin.top - margin.bottom
-    };
   }
 
   /**
@@ -1782,14 +1145,33 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     Object.assign(this._ui.appearance, appearance);
   }
 
+  childRefsIfObscured() {
+    if (this._t.order !== 'stacking') return;
+    const refs = [];
+    for (const child of this._t.children) {
+      if (this._ctx.trackMovement) child._t.wasRef ??= child._t.ref;
+      refs.push(child._t.ref);
+    }
+    return refs;
+  }
+
+  assignChildRefs(refs: number[]) {
+    for (let i = 0; i != refs.length; i++) {
+      this._t.children[i]._t.ref = refs[i];
+    }
+  }
+
+  hasMoved(): boolean {
+    return this._t.moved || !!this._t.parent?.hasMoved();
+  }
+
   resetMovementTracking() {
-    this._t.was = this.branch();
+    this._t.moved = false
     for (const child of this._t.children) child.resetMovementTracking();
   }
 
-  hasChangedParent() {
-    const branch = this.branch();
-    if (!this._t.was || this._t.was === branch) return false;
-    return this._t.was?.substring(0, this._t.was?.lastIndexOf('/')) !== branch.substring(0, branch.lastIndexOf('/'));
+  resetRefTracking() {
+    delete this._t.wasRef;
+    for (const child of this._t.children) child.resetRefTracking();
   }
 }
