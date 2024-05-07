@@ -1,3 +1,7 @@
+# v0.2.8 Stack and Flippable
+* Added Stack class for decks within hidden elements and internal moves
+* Added Flippable component with back/front and animated flips
+
 # v0.2.7 Animation overhaul
 * Overhauled the animation logic that decides how elements move for various
   players, correcting several glitches
