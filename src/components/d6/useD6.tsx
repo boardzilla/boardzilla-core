@@ -7,6 +7,15 @@ import './assets/index.scss';
 
 import type { BaseGame } from '../../board/game.js';
 
+/**
+ * Adds an animated spinning appearance to the {@link D6} class
+ *
+ * @example
+ * import { useD6 } from '@boardzilla/core/components';
+ *
+ * // then in the layout() method
+ *     useD6(game);
+ */
 const D6Component = ({ die }: { die: D6 }) => {
   const diceAudio = useRef<HTMLAudioElement>(null);
   const lastRollSequence = useRef<number>();

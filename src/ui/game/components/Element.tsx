@@ -84,6 +84,9 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
           if (e.propertyName === 'transform' && e.target === node) {
             node.classList.remove('animating', 'cross-parent');
             node.removeEventListener('transitionend', cancel);
+            if (render.proxy && domElement.current) {
+              domElement.current.style.transform = (domElement.current.style.transform ?? '') + ' scale(0)';
+            }
           }
         };
         node.addEventListener('transitionend', cancel);

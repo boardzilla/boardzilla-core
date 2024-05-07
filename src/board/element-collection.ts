@@ -511,6 +511,18 @@ export default class ElementCollection<T extends GameElement = GameElement> exte
     for (const el of this) el.layout(applyTo, attributes);
   }
 
+
+  /**
+   * Configure the layout for all elements contained within this collection. See
+   * {@link GameElement#configureLayout}
+   * @category UI
+   */
+  configureLayout(
+    attributes: Partial<GameElement['_ui']['layouts'][number]['attributes']>
+  ) {
+    for (const el of this) el.configureLayout(attributes);
+  }
+
   /**
    * Define the appearance of the elements in this collection. Any values
    * provided override previous ones. See {@link GameElement#appearance}.

@@ -7,6 +7,7 @@ export { Game, Space };
 export { union } from './board/index.js';
 export {
   Piece,
+  Stack,
   ConnectedSpaceMap,
   AdjacencySpace,
   FixedGrid,
