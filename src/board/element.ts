@@ -1111,6 +1111,20 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   /**
+   * Change the layout attributes for this space's layout.
+   * @category UI
+   */
+  configureLayout(layoutConfiguration: Partial<LayoutAttributes<GameElement>>) {
+    this._ui.layouts[0] = {
+      applyTo: GameElement,
+      attributes: {
+        ...this._ui.getBaseLayout(),
+        ...layoutConfiguration,
+      }
+    };
+  }
+
+  /**
    * Define the appearance of this element. Any values provided override
    * previous ones. See also {@link ElementCollection#appearance}
    * @category UI

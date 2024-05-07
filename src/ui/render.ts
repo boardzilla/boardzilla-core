@@ -260,7 +260,7 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
       // uuid so react re-applies if multiple
       '--transformed-to-old': String(uuid()),
       // supress normal transition style and re-add later. necessary to prevent
-      // transfrom transition from completing immediately
+      // transform transition from completing immediately
       transition: 'none'
     });
   }

@@ -3,6 +3,7 @@ import ElementCollection from './element-collection.js';
 export { GameElement, ElementCollection };
 export { default as Space } from './space.js';
 export { default as Piece } from './piece.js';
+export { default as Stack } from './stack.js';
 export { default as AdjacencySpace } from './adjacency-space.js';
 export { default as ConnectedSpaceMap } from './connected-space-map.js';
 export { default as FixedGrid } from './fixed-grid.js';

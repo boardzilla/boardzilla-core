@@ -3,7 +3,12 @@ import Piece from '../../board/piece.js';
 import type Game from '../../board/game.js';
 
 /**
- * Specialized piece for represnting 6-sided dice
+ * Specialized piece for representing 6-sided dice
+ *
+ * @example
+ * import { D6 } from '@boardzilla/core/components';
+ * ...
+ * game.create(D6, 'my-die');
  * @category Board
  */
 export default class D6<G extends Game = Game> extends Piece<G> {
