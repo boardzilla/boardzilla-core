@@ -310,11 +310,14 @@ html, body { height: 100% }
     }
 
     .drawer {
+      visibility: hidden;
+      position: absolute;
       > .drawer-tab {
         position: absolute;
+        visibility: visible;
         font-size: .5rem;
         text-align: center;
-        transition: height .1s, width .1s, left .1s, top .1s, bottom .1s, right .1s;
+        transition: height .2s, width .2s, left .2s, top .2s, bottom .2s, right .2s;
         background: #0008;
         color: white;
         cursor: pointer;
@@ -332,23 +335,17 @@ html, body { height: 100% }
 
       > .drawer-content {
         position: absolute;
-        transition: left .2s, top .2s, bottom .2s, right .2s, transform .2s;
+        visibility: visible;
+        border: .1rem solid #0008;
+        background: #fffc;
+        transition: transform .2s;
         > .drawer-container {
           position: absolute;
           visibility: hidden;
+          width: 100%;
+          height: 100%;
           > * {
             visibility: visible;
-          }
-        }
-        > .drawer-background {
-          position: absolute;
-          z-index: -1000;
-          inset: 0;
-          border: .1rem solid #0008;
-          border-top-width: 0;
-          background: #fffc;
-          html.dark & {
-            background: #000e;
           }
         }
       }

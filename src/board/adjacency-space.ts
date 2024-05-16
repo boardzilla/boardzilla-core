@@ -37,7 +37,7 @@ export default abstract class AdjacencySpace<G extends BaseGame> extends SingleL
    * Change the layout attributes for this space's layout.
    * @category UI
    */
-  configureLayout(layoutConfiguration: Partial<LayoutAttributes<GameElement>>) {
+  configureLayout(layoutConfiguration: Partial<LayoutAttributes>) {
     const keys = Object.keys(layoutConfiguration);
     if (keys.includes('scaling') || keys.includes('alignment')) {
       throw Error("Layouts for grids cannot have alignment, scaling");
