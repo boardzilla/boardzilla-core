@@ -34,7 +34,7 @@ export type UIRender = {
     },
     showBoundingBox?: string | boolean,
     children: UIRender[],
-    drawer: ElementUI<GameElement>['layouts'][number]['attributes']['drawer']
+    container: ElementUI<GameElement>['layouts'][number]['attributes']['container']
   }[],
   parentRef?: number,
   crossParent?: boolean,
@@ -302,7 +302,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       area,
       children: [],
       showBoundingBox: attributes.showBoundingBox ?? el.game._ui.boundingBoxes,
-      drawer: attributes.drawer
+      container: attributes.container
     };
 
     let minColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.min || 1;

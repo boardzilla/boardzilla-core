@@ -1,15 +1,17 @@
-import { CSSProperties } from 'react'
 import { SerializedArg, serializeArg } from '../action/utils.js';
 import Selection from '../action/selection.js'
 import { GameElement, Piece } from '../board/index.js'
 import { applyDiff, applyLayouts } from './render.js';
+import { createContext } from 'react';
 
+import type { CSSProperties } from 'react'
 import type { GameStore } from './store.js';
 import type { default as GameManager, SerializedMove, PendingMove } from '../game-manager.js'
+import type { UIRender } from './render.js';
 import type { Box } from '../board/element.js'
 import type { ResolvedSelection } from '../action/selection.js';
 import type { BaseGame } from '../board/game.js'
-import type { ActionLayout, PieceGrid } from '../board/index.js'
+import type { ActionLayout, Game, PieceGrid } from '../board/index.js'
 
 type GamePendingMoves = ReturnType<GameManager['getPendingMoves']>;
 
@@ -31,6 +33,13 @@ export type MoveMessage = {
 }
 
 class NoRandomAllowed extends Error {}
+
+export const ContainerContext = createContext<{
+  game?: Game,
+  render?: UIRender,
+  layout?: UIRender['layouts'][number],
+  absoluteTransform?: Box,
+}>({});
 
 // refresh move and selections
 export function updateSelections(store: GameStore): GameStore {

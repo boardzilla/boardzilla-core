@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../store.js';
-import Drawer from './Drawer.js';
+import { ContainerContext } from '../../lib.js';
+import { absPositionSquare } from '../../render.js';
 
 import {
   Piece,
@@ -12,7 +13,7 @@ import {
 import type { UIMove } from '../../lib.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
 import type { DirectedGraph } from 'graphology';
-import { absPositionSquare, type UIRender } from '../../render.js';
+import type { UIRender } from '../../render.js';
 
 const defaultAppearance = (el: GameElement) => <div className="bz-default">{el.toString()}</div>;
 
@@ -298,29 +299,13 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
         />
       );
     }
-    if (layout.drawer) {
-      const drawer = layout.drawer!;
-      const openContent = typeof drawer.tab === 'function' ? drawer.tab(element) : drawer.tab
-      const closedContent = typeof drawer.closedTab === 'function' ? drawer.closedTab(element) : drawer.closedTab ?? openContent;
-
+    if (layout.container) {
+      console.log('->', absoluteTransform);
       contents.push(
-        <Drawer
-          key={l}
-          area={layout.area}
-          absoluteAspectRatio={absoluteTransform.width / absoluteTransform.height}
-          closeDirection={drawer.closeDirection}
-          openIf={drawer.openIf}
-          closeIf={drawer.closeIf}
-        >
-          <Drawer.Open>
-            {openContent}
-          </Drawer.Open>
-          <Drawer.Closed>
-            {closedContent}
-          </Drawer.Closed>
-          {layoutContents}
-        </Drawer>
-      );
+        <ContainerContext.Provider key={l} value={{ game: element.game, layout, render, absoluteTransform }}>
+          {layout.container({ elements: layout.children.map(c => c.element), children: layoutContents })}
+        </ContainerContext.Provider>
+      )
     } else {
       if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
     }

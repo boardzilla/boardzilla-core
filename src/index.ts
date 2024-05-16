@@ -29,7 +29,9 @@ export {
   toggleSetting,
   numberSetting,
   textSetting,
-  choiceSetting
+  choiceSetting,
+  Drawer,
+  Popout,
 } from './ui/index.js';
 
 export { TestRunner } from './test-runner.js';

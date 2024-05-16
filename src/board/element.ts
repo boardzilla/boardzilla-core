@@ -8,8 +8,8 @@ import type { default as Game, BaseGame } from './game.js';
 import type Space from './space.js';
 import type ConnectedSpaceMap from './connected-space-map.js';
 import type { ElementFinder, Sorter } from './element-collection.js';
-import type { Argument } from '../action/action.js';
 import type AdjacencySpace from './adjacency-space.js';
+import type { ReactNode } from 'react';
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 
@@ -64,7 +64,7 @@ export type DirectionWithDiagonals = Direction | 'upleft' | 'upright' | 'downlef
 export type ElementUI<T extends GameElement> = {
   layouts: {
     applyTo: ElementClass | GameElement | ElementCollection | string,
-    attributes: LayoutAttributes<T>
+    attributes: LayoutAttributes
   }[],
   appearance: {
     className?: string,
@@ -81,7 +81,7 @@ export type ElementUI<T extends GameElement> = {
       labelScale?: number,
     },
   },
-  getBaseLayout: () => LayoutAttributes<T>,
+  getBaseLayout: () => LayoutAttributes,
   ghost?: boolean,
 };
 
@@ -89,7 +89,7 @@ export type ElementUI<T extends GameElement> = {
  * List of attributes used to create a new layout in {@link GameElement#layout}.
  * @category UI
  */
-export type LayoutAttributes<T extends GameElement> = {
+export type LayoutAttributes = {
   /**
    * Instead of providing `area`, providing a `margin` defines the bounding box
    * in terms of a margin around the edges of this element. This value is an
@@ -216,32 +216,7 @@ export type LayoutAttributes<T extends GameElement> = {
    * defined `area`, tagged with the provided string.
    */
   showBoundingBox?: string | boolean,
-  /**
-   * Specifies that this layout should inhabit a drawer, a collapsible area that
-   * can be hidden to save overall space on the playing area.
-   */
-  drawer?: {
-    closeDirection: 'left' | 'right' | 'down' | 'up',
-    /**
-     * JSX to appear in the tab while open
-     */
-    tab: ((el: T) => React.ReactNode) | false,
-    /**
-     * JSX to appear in the tab while closed, if it differs from the open
-     * appearance
-     */
-    closedTab?: ((el: T) => React.ReactNode) | false,
-    /**
-     * A function that will be checked at each game state. If it returns true,
-     * the tab will automatically open.
-     */
-    openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-    /**
-     * A function that will be checked at each game state. If it returns true,
-     * the tab will automatically close.
-     */
-    closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-  }
+  container?: (args: { elements: GameElement[], children: ReactNode }) => JSX.Element,
 };
 
 /**
@@ -1080,7 +1055,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    */
   layout(
     applyTo: typeof this._ui.layouts[number]['applyTo'],
-    attributes: Partial<LayoutAttributes<this>>
+    attributes: Partial<LayoutAttributes>
   ) {
     let {slots, area, size, aspectRatio, scaling, gap, margin, offsetColumn, offsetRow} = attributes
     if (slots && (area || margin || scaling || gap || margin || offsetColumn || offsetRow)) {
@@ -1115,7 +1090,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * Change the layout attributes for this space's layout.
    * @category UI
    */
-  configureLayout(layoutConfiguration: Partial<LayoutAttributes<GameElement>>) {
+  configureLayout(layoutConfiguration: Partial<LayoutAttributes>) {
     this._ui.layouts[0] = {
       applyTo: GameElement,
       attributes: {
