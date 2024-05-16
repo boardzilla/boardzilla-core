@@ -21,7 +21,6 @@
   "type": "module",
   "exports": {
     ".": "./entry/index.js",
-    "./index.css": "./entry/ui/assets/index.css",
     "./components": "./entry/components/index.js"
   },
   "files": [

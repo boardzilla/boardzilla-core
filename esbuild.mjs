@@ -27,3 +27,13 @@ await esbuild.build({
   sourcemap: 'inline',
   plugins: [sassPlugin()],
 })
+
+await esbuild.build({
+  entryPoints: ['./src/components/flippable/index.ts'],
+  assetNames: '[name]',
+  bundle: true,
+  format: 'esm',
+  outdir: 'dist/components/flippable/assets/',
+  sourcemap: 'inline',
+  plugins: [sassPlugin()],
+})
