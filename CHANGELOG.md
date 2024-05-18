@@ -1,3 +1,9 @@
+# v0.3.0
+* Fixed Info and Debug overlays
+
+# v0.2.9
+* Removed deprecated index.scss import
+
 # v0.2.8 Stack and Flippable
 * Added Stack class for decks within hidden elements and internal moves
 * Added Flippable component with back/front and animated flips

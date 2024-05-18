@@ -118,7 +118,7 @@ const Debug = () => {
           <div className="element-zoom">
             <div style={elementStyle}>
               <Element
-                render={rendered!.all[infoElement!.element!.branch()]}
+                render={rendered!.all[infoElement!.element!._t.ref]}
                 mode='zoom'
                 onSelectElement={() => {}}
               />

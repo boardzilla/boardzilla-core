@@ -1,6 +1,6 @@
 {
   "name": "@boardzilla/core",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "author": "Andrew Hull <aghull@gmail.com>",
   "license": "AGPL-3.0",
   "scripts": {
