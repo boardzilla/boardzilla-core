@@ -3,9 +3,12 @@ import ElementCollection from '../board/element-collection.js';
 import random from 'random-seed';
 import { serialize } from '../action/utils.js'
 import uuid from 'uuid-random';
+import Drawer from './game/components/Drawer.js';
+import Popout from './game/components/Popout.js';
+import React from 'react';
 
 import type { Game, Box, Vector } from "../board/index.js";
-import type { ElementClass, ElementUI } from "../board/element.js";
+import type { ElementClass } from "../board/element.js";
 
 export type UIRender = {
   element: GameElement,
@@ -15,8 +18,8 @@ export type UIRender = {
   dataAttributes?: Record<string, any>;
   previousAttributes?: Record<string, any>;
   previousDataAttributes?: Record<string, any>;
-  relPos?: Box & { rotation?: number }; // raw pos data relative to parent
-  pos?: Box & { rotation?: number }; // raw pos data relative to board
+  relPos?: Box & { rotation?: number }; // raw pos data relative to parent layout
+  pos?: Box & { rotation?: number }; // raw pos data relative to a square perfectly containing the board
   oldPos?: Box & { rotation?: number }; // old pos for transform relative to board
   styles?: React.CSSProperties; // CSS, includes pos and transform from move
   baseStyles?: React.CSSProperties;
@@ -24,6 +27,7 @@ export type UIRender = {
   effectClasses?: string;
   layouts: {
     area: Box,
+    fixed?: Box, // if fixed independently and not el.pos
     grid?: {
       anchor: Vector,
       origin: { column: number, row: number },
@@ -34,7 +38,17 @@ export type UIRender = {
     },
     showBoundingBox?: string | boolean,
     children: UIRender[],
-    container: ElementUI<GameElement>['layouts'][number]['attributes']['container']
+    container?: {
+      component: React.FC<{} & {
+        game: Game,
+        elements: GameElement[],
+        children: JSX.Element[],
+        layout: UIRender['layouts'][number],
+        absolutePosition: Box,
+        attributes: any
+      }>,
+      attributes: Record<string, any>
+    },
   }[],
   parentRef?: number,
   crossParent?: boolean,
@@ -47,24 +61,6 @@ export type UI = {
   game: UIRender;
   pile: number[];
 };
-
-
-/**
- * Viewport relative to a square perfectly containing the playing area. The
- * `left` and `top` values are from 0-100. The x and y values in el method
- * are on the same scale.
- * @category UI
- * @internal
- */
-export function absPositionSquare(el: GameElement, ui: UI): Box {
-  const pos = ui.all[String(el._t.ref)].pos!;
-  return {
-    left: pos.left,
-    top: pos.top,
-    width: pos.width * ui.frame.x / 100,
-    height: pos.height * ui.frame.y / 100
-  };
-}
 
 /**
  * recalc all elements UI, base styles, wrapper styles, classes, attrs,
@@ -89,7 +85,7 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
     frame,
     game: {
       element: game,
-      pos: { left: 0, top: 0, width: 100, height: 100 },
+      pos: { left: 0, top: 0, width: frame.x, height: frame.y },
       relPos: { left: 0, top: 0, width: 100, height: 100 },
       styles: {
         width: '100%',
@@ -105,7 +101,7 @@ export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
   };
 
   ui.all[String(game._t.ref)] = ui.game;
-  ui.game.layouts = calcLayouts(game, ui)
+  ui.game.layouts = calcLayouts(game, ui);
 
   return ui;
 }
@@ -157,9 +153,9 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
           layouts: [],
           key: previous.key,
         };
-        applyBaseStyles(offRender, off, ui);
+        applyBaseStyles(offRender, off);
 
-        render.layouts[0].children.push(offRender);
+        render.layouts[0].children.push(offRender); // decks are single-layout
         ui.all[off._t.ref] = offRender;
       }
     }
@@ -278,7 +274,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
   if (el._ui.appearance.render === false) return [];
 
   const layoutItems = getLayoutItems(el);
-  const absoluteTransform = absPositionSquare(el, ui)
+  let absolutePosition = ui.all[String(el._t.ref)].pos! // or layout-pos
   const layouts: UIRender['layouts'] = [];
 
   for (let l = el._ui.layouts.length - 1; l >= 0; l--) {
@@ -289,10 +285,29 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       allChildren;
 
     const { slots, direction, gap, alignment, maxOverlap } = attributes;
-    let { size, scaling, aspectRatio, haphazardly } = attributes;
+    let { size, scaling, aspectRatio, haphazardly, area, margin } = attributes;
     if (!size && !scaling) scaling = 'fit';
+    let layoutPosition = absolutePosition;
+    if (attributes.__container__?.type === 'popout') {
+      // calc the layout against the full viewport
+      const margin = 4; // popout margin
+      const aspectRatio = window.innerWidth / window.innerHeight;
+      let width = 100;
+      let height = 100;
+      if (aspectRatio > 1) {
+        height = 100 / aspectRatio;
+      } else {
+        width = 100 * aspectRatio;
+      }
+      layoutPosition = {
+        left: margin,
+        top: margin,
+        width: width - margin - margin,
+        height: height - margin - margin
+      };
+    }
 
-    const area = getArea(el, ui, attributes);
+    area = getArea(layoutPosition, margin, area);
 
     let cellBoxes = slots || [];
     let sizes: number[] = []; // relative sizes of children so they retain scaling against each other
@@ -302,8 +317,17 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       area,
       children: [],
       showBoundingBox: attributes.showBoundingBox ?? el.game._ui.boundingBoxes,
-      container: attributes.container
     };
+    if (layoutPosition !== absolutePosition) {
+      // override to a fixed absolute position with area being the full region
+      layouts[l].fixed = layoutPosition;
+      area = {
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 100
+      };
+    }
 
     let minColumns = typeof attributes.columns === 'number' ? attributes.columns : attributes.columns?.min || 1;
     let minRows = typeof attributes.rows === 'number' ? attributes.rows : attributes.rows?.min || 1;
@@ -518,8 +542,8 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       } else {
         // gaps are absolute and convert by ratio
         cellGap = {
-          x: (gap && (typeof gap === 'number' ? gap : gap.x) || 0) / absoluteTransform.width * 100,
-          y: (gap && (typeof gap === 'number' ? gap : gap.y) || 0) / absoluteTransform.height * 100,
+          x: (gap && (typeof gap === 'number' ? gap : gap.x) || 0) / layoutPosition.width * 100,
+          y: (gap && (typeof gap === 'number' ? gap : gap.y) || 0) / layoutPosition.height * 100,
         };
       }
 
@@ -552,7 +576,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
         }
 
         if (aspectRatio) {
-          aspectRatio *= absoluteTransform.height / absoluteTransform.width;
+          aspectRatio *= layoutPosition.height / layoutPosition.width;
           if (aspectRatio > size.width / size.height) {
             size.height = size.width / aspectRatio;
           } else {
@@ -726,7 +750,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
         }
       } else {
         if (child._ui.appearance.aspectRatio || child._size) {
-          const aspectRatio = (child._ui.appearance.aspectRatio ?? 1) * (child._size?.width ?? 1) / (child._size?.height ?? 1) * absoluteTransform.height / absoluteTransform.width;
+          const aspectRatio = (child._ui.appearance.aspectRatio ?? 1) * (child._size?.width ?? 1) / (child._size?.height ?? 1) * layoutPosition.height / layoutPosition.width;
 
           if (aspectRatio && aspectRatio !== width / height) {
             if (aspectRatio > width / height) {
@@ -790,10 +814,10 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       }
 
       render.relPos = { width, height, left, top };
-      render.pos = translate(render.relPos, ui.all[String(el._t.ref)].pos!);
+      render.pos = translate(render.relPos, layoutPosition);
       if (child._rotation !== undefined) render.relPos.rotation = render.pos.rotation = child._rotation;
 
-      applyBaseStyles(render, child, ui);
+      applyBaseStyles(render, child);
       if (transformOrigin) render.baseStyles!.transformOrigin = transformOrigin;
 
       render.layouts = calcLayouts(child, ui);
@@ -809,17 +833,26 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
         layouts[l].children.unshift(render);
       }
     }
+
+    if (attributes.__container__) {
+      const { type, attributes: containerAttributes } = attributes.__container__;
+      if (type === 'drawer') {
+        layouts[l].container = { component: Drawer, attributes: containerAttributes };
+      } else if (type === 'popout') {
+        layouts[l].container = { component: Popout, attributes: containerAttributes };
+      }
+    }
   }
   return layouts;
 }
 
-function applyBaseStyles(render: UIRender, element: GameElement, ui: UI) {
+function applyBaseStyles(render: UIRender, element: GameElement) {
   render.styles = {
     width: render.relPos!.width + '%',
     height: render.relPos!.height + '%',
     left: render.relPos!.left + '%',
     top: render.relPos!.top + '%',
-    fontSize: render.pos!.height * (ui.frame?.y ?? 100) * 0.0004 + 'rem'
+    fontSize: render.pos!.height * 0.04 + 'rem'
   }
 
   render.attributes = element.attributeList();
@@ -889,16 +922,14 @@ function getLayoutItems(el: GameElement) {
  * calculate working area
  * @internal
  */
-function getArea(el: GameElement, ui: UI, attributes: { margin?: number | { top: number, bottom: number, left: number, right: number }, area?: Box }): Box {
-  let { area, margin } = attributes;
+function getArea(absolutePosition: Box, margin?: number | { top: number, bottom: number, left: number, right: number }, area?: Box): Box {
   if (area) return area;
   if (!margin) return { left: 0, top: 0, width: 100, height: 100 };
 
   // margins are absolute, so translate
-  const absoluteTransform = absPositionSquare(el, ui);
   const transform: Vector = {
-    x: absoluteTransform.width / 100,
-    y: absoluteTransform.height / 100
+    x: absolutePosition.width / 100,
+    y: absolutePosition.height / 100
   }
 
   margin = (typeof margin === 'number') ? { left: margin, right: margin, top: margin, bottom: margin } : {...margin};

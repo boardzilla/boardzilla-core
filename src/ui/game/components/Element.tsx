@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import classNames from 'classnames';
 import { DraggableCore } from 'react-draggable';
 import { gameStore } from '../../store.js';
-import { ContainerContext } from '../../lib.js';
-import { absPositionSquare } from '../../render.js';
 
 import {
   Piece,
@@ -33,7 +31,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     s.boardSelections[branch],
     mode === 'game' && (s.selected?.includes(element) || Object.values(s.move?.args || {}).some(a => a === element || a instanceof Array && a.includes(element)))
   ]);
-  const absoluteTransform = useMemo(() => absPositionSquare(element, rendered!), [element, rendered]);
+  const absolutePosition = useMemo(() => rendered!.all[String(element._t.ref)].pos!, [element, rendered]);
 
   const [dragging, setDragging] = useState<{ deltaY: number, deltaX: number } | undefined>(); // currently dragging
   const [positioning, setPositioning] = useState(false); // currently positioning within a placePiece
@@ -300,12 +298,15 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
       );
     }
     if (layout.container) {
-      console.log('->', absoluteTransform);
-      contents.push(
-        <ContainerContext.Provider key={l} value={{ game: element.game, layout, render, absoluteTransform }}>
-          {layout.container({ elements: layout.children.map(c => c.element), children: layoutContents })}
-        </ContainerContext.Provider>
-      )
+      contents.push(React.createElement(layout.container.component, {
+        key: l,
+        game: element.game,
+        elements: layout.children.map(c => c.element),
+        children: layoutContents,
+        absolutePosition,
+        layout,
+        attributes: layout.container.attributes,
+      }));
     } else {
       if (layoutContents.length) contents.push(<div key={l} className="layout-wrapper">{layoutContents}</div>);
     }
@@ -323,17 +324,17 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
     const lines: React.JSX.Element[] = [];
     const labels: React.JSX.Element[] = [];
     (element._graph as DirectedGraph).forEachEdge((...args) => {
-      const source = rendered!.all[(args[4].space as GameElement)._t.ref];
-      const target = rendered!.all[(args[5].space as GameElement)._t.ref];
+      const source = rendered!.all[args[2]];
+      const target = rendered!.all[args[3]];
 
       if (source && target) {
         const origin = {
-          x: (source.relPos!.left + source.relPos!.width / 2) * absoluteTransform.width / 100,
-          y: (source.relPos!.top + source?.relPos!.height / 2) * absoluteTransform.height / 100
+          x: (source.relPos!.left + source.relPos!.width / 2) * absolutePosition.width / 100,
+          y: (source.relPos!.top + source?.relPos!.height / 2) * absolutePosition.height / 100
         }
         const destination = {
-          x: (target.relPos!.left + target.relPos!.width / 2) * absoluteTransform.width / 100,
-          y: (target.relPos!.top + target.relPos!.height / 2) * absoluteTransform.height / 100
+          x: (target.relPos!.left + target.relPos!.width / 2) * absolutePosition.width / 100,
+          y: (target.relPos!.top + target.relPos!.height / 2) * absolutePosition.height / 100
         }
 
         const distance = Math.sqrt(Math.pow(origin.x - destination.x, 2) + Math.pow(origin.y - destination.y, 2))
@@ -370,18 +371,18 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
           labels.push(
             <g
               key={`label${i}`}
-              transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * absoluteTransform.width * .5}
-  ${(origin.y + destination.y) / 2 - labelScale! * absoluteTransform.height * .5})
+              transform={`translate(${(origin.x + destination.x) / 2 - labelScale! * absolutePosition.width * .5}
+  ${(origin.y + destination.y) / 2 - labelScale! * absolutePosition.height * .5})
   scale(${labelScale})`}
             >{label({ distance: args[1].distance, to: args[4].space, from: args[5].space })}</g>);
         }
       }
     });
     contents.unshift(
-      <svg key="svg-edges" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${absoluteTransform.width} ${absoluteTransform.height}`}>{lines}</svg>
+      <svg key="svg-edges" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${absolutePosition.width} ${absolutePosition.height}`}>{lines}</svg>
     );
     if (label) contents.push(
-      <svg key="svg-edge-labels" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${absoluteTransform.width} ${absoluteTransform.height}`}>{labels}</svg>
+      <svg key="svg-edge-labels" style={{pointerEvents: 'none', position: 'absolute', width: '100%', height: '100%', left: 0, top: 0}} viewBox={`0 0 ${absolutePosition.width} ${absolutePosition.height}`}>{labels}</svg>
     );
   }
 
@@ -453,7 +454,7 @@ ${Object.entries(element.attributeList()).filter(([k, v]) => v !== undefined && 
   );
   if (placing && placement?.rotationChoices) {
     const widthStretch = gridSizeNeeded.width / (element._size?.width ?? 1);
-    const minSquare = Math.min(absoluteTransform.width, absoluteTransform.height);
+    const minSquare = Math.min(absolutePosition.width, absolutePosition.height);
 
     contents = (
       <>

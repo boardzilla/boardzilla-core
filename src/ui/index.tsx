@@ -17,9 +17,6 @@ export {
   choiceSetting
 } from './setup/components/settingComponents.js';
 
-export { default as Drawer } from './game/components/Drawer.js';
-export { default as Popout } from './game/components/Popout.js';
-
 /**
  * The core function called to customize the game's UI.
  *

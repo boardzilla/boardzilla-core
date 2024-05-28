@@ -65,6 +65,7 @@ html, body { height: 100% }
   .full-page-cover {
     width: 100vw;
     height: 100vh;
+    z-index: 200;
     #root.orientation-flipped & {
       width: 100vh;
       height: 100vw;
@@ -348,6 +349,30 @@ html, body { height: 100% }
             visibility: visible;
           }
         }
+      }
+    }
+
+    .popout-button {
+      position: absolute;
+      .full-page-cover {
+        background: #444c;
+      }
+      .popout-close {
+        position: absolute;
+        top: .5vmax;
+        right: .5vmax;
+        height: 5vmax;
+        width: 5vmax;
+        fill: none;
+        stroke: #0008;
+        stroke-width: .08rem;
+        stroke-linecap: round;
+        cursor: pointer;
+      }
+      .popout-modal {
+        position: absolute;
+        background: white;
+        border: .1rem solid black;
       }
     }
 

@@ -1,21 +1,27 @@
-import React, { ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { gameStore } from '../../store.js';
 
 import type { Argument } from '../../../action/action.js';
-import { ContainerContext } from '../../lib.js';
+import type { Box, LayoutAttributes } from '../../../board/element.js';
 
-const Drawer = ({ closeDirection, openIf, closeIf, children }: {
-  closeDirection: 'up' | 'down' | 'left' | 'right',
-  openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-  closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-  children: ReactNode
+const Drawer = ({ layout, absolutePosition, children, attributes }: {
+  layout: Partial<LayoutAttributes>,
+  absolutePosition: Box,
+  children: JSX.Element[],
+  attributes: {
+    tab?: React.ReactNode
+    closedTab?: React.ReactNode,
+    closeDirection: 'up' | 'down' | 'left' | 'right',
+    openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+    closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+  }
 }) => {
   const [open, setOpen] = useState(false);
   const [pendingMoves] = gameStore(s => [s.pendingMoves]);
-  const {layout, absoluteTransform} = useContext(ContainerContext);
+  const { tab, closedTab, openIf, closeIf, closeDirection } = attributes;
 
   const area = useMemo(() => layout?.area ?? {top: 0, left: 0, width: 100, height: 100}, [layout])
-  const aspectRatio = useMemo(() => absoluteTransform ? absoluteTransform.width / absoluteTransform.height : 1, [absoluteTransform])
+  const aspectRatio = useMemo(() => absolutePosition ? absolutePosition.width / absolutePosition.height : 1, [absolutePosition])
 
   useEffect(() => {
     const actions = pendingMoves?.map(m => ({ name: m.name, args: m.args })) ?? [];
@@ -90,21 +96,6 @@ const Drawer = ({ closeDirection, openIf, closeIf, children }: {
     }
   }, [closeDirection, aspectRatio, area, open]);
 
-  let openContent: React.ReactNode = null;
-  let closedContent: React.ReactNode = null;
-  let content: React.ReactNode[] = [];
-
-  React.Children.forEach(children, child => {
-    if (!React.isValidElement(child)) return;
-    if (child.type === Drawer.Open) {
-      openContent = child;
-    } else if (child.type === Drawer.Closed) {
-      closedContent = child;
-    } else {
-      content.push(child);
-    }
-  });
-
   return (
     <div className={`drawer close-direction-${closeDirection} ${open ? 'open' : 'closed'}`} style={style}>
       <div
@@ -112,22 +103,16 @@ const Drawer = ({ closeDirection, openIf, closeIf, children }: {
         style={tabStyle}
         onClick={() => setOpen(o => !o)}
       >
-        {open ? openContent : closedContent}
+        {open ? tab : closedTab ?? tab}
       </div>
       <div className="drawer-content" style={sliderStyle}>
         <div className="drawer-background"/>
         <div className="drawer-container" style={containerStyle}>
-          {content}
+          {children}
         </div>
       </div>
     </div>
   );
 }
-
-const Open = ({ children }: { children: React.ReactNode }) => children;
-Drawer.Open = Open;
-
-const Closed = ({ children }: { children: React.ReactNode }) =>  children;
-Drawer.Closed = Closed;
 
 export default Drawer;

@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { gameStore } from '../../store.js';
 import Element from './Element.js';
-import { absPositionSquare } from '../../render.js';
 
 const InfoOverlay = ({ setMode }: {
   setMode: (mode: 'info' | 'game' | 'debug') => void;
@@ -14,7 +13,7 @@ const InfoOverlay = ({ setMode }: {
 
   let elementStyle: React.CSSProperties | undefined = useMemo(() => {
     if (!infoElement?.element) return {};
-    const scale = absPositionSquare(infoElement.element, rendered!);
+    const scale = rendered!.all[String(infoElement.element._t.ref)].pos!
     let fontSize = 32 * 0.04;
     const aspectRatio = scale.width / scale.height;
 
