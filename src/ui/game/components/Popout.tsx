@@ -1,27 +1,17 @@
-import React, { ReactNode, useContext, useEffect, useMemo } from 'react';
-import { gameStore } from '../../store.js';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 
-import type { Argument } from '../../../action/action.js';
-import { ContainerContext } from '../../lib.js';
+import type { UIRender } from '../../render.js';
 
-const Popout = ({ openIf, closeIf, children }: {
-  openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-  closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-  children: ReactNode
+const Popout = ({ layout, children, attributes }: {
+  layout: UIRender['layouts'][number],
+  children: JSX.Element[],
+  attributes: {
+    button: ReactNode,
+    popoutMargin?: number | { top: number, bottom: number, left: number, right: number },
+  }
 }) => {
-  const [pendingMoves, setPopupLayout] = gameStore(s => [s.pendingMoves, s.setPopupLayout]);
-  const {layout} = useContext(ContainerContext);
+  const [open, setOpen] = useState(false);
   const area = useMemo(() => layout?.area ?? {top: 0, left: 0, width: 100, height: 100}, [layout])
-
-  useEffect(() => {
-    const actions = pendingMoves?.map(m => ({ name: m.name, args: m.args })) ?? [];
-
-    if (openIf?.(actions)) setPopupLayout(layout);
-    if (closeIf?.(actions)) setPopupLayout(undefined);
-  }, [openIf, closeIf, pendingMoves, setPopupLayout, layout]);
-
-  let closedContent: React.ReactNode = null;
-  let content: React.ReactNode[] = [];
 
   const style = useMemo(() => {
     return {
@@ -29,26 +19,40 @@ const Popout = ({ openIf, closeIf, children }: {
       left: area.left + '%',
       height: area.height + '%',
       width: area.width + '%',
+      fontSize: layout.area.height + '%',
     }
-  }, [area]);
+  }, [area, layout]);
 
-  React.Children.forEach(children, child => {
-    if (!React.isValidElement(child)) return;
-    if (child.type === Popout.Closed) {
-      closedContent = child;
-    } else {
-      content.push(child);
-    }
-  });
+  const popoutStyle = useMemo(() => {
+    return { inset: attributes.popoutMargin === undefined ? '4vmax' : (typeof attributes.popoutMargin === 'number' ? `${attributes.popoutMargin}vmax` : `${attributes.popoutMargin.top}vmax ${attributes.popoutMargin.right}vmax ${attributes.popoutMargin.bottom}vmax ${attributes.popoutMargin.left}vmax`) };
+  }, [attributes.popoutMargin]);
+
+  useEffect(() => {
+    const keydownHandler = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.code === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', keydownHandler);
+    return () => window.removeEventListener('keydown', keydownHandler);
+  }, [setOpen]);
 
   return (
-    <div className="popout-closed" onClick={() => setPopupLayout(layout)} style={style}>
-      {closedContent}
+    <div className="popout-button" style={style}>
+      <div onClick={() => open || setOpen(true)}>{attributes.button}</div>
+      {open && (
+        <div className="full-page-cover" onClick={() => setOpen(false)}>
+          <div className="popout-modal" onClick={e => e.stopPropagation()} style={popoutStyle}>
+            {children}
+            <svg className="popout-close" onClick={() => setOpen(false)} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-const Closed = ({ children }: { children: React.ReactNode }) =>  children;
-Popout.Closed = Closed;
 
 export default Popout;

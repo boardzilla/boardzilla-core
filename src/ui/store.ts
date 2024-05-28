@@ -99,7 +99,6 @@ export type GameStore = {
   infoElement?: {info: JSX.Element | boolean, element: GameElement };
   setInfoElement: (el?: {info: JSX.Element | boolean, element: GameElement }) => void;
   popupLayout?: UIRender['layouts'][number],
-  setPopupLayout: (layout?: UIRender['layouts'][number]) => void,
   userOnline: Map<string, boolean>
   setUserOnline: (id: string, online: boolean) => void
 }
@@ -385,7 +384,6 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
     return { currentDrop };
   }),
   setInfoElement: infoElement => set({ infoElement }),
-  setPopupLayout: popupLayout => set({ popupLayout }),
   setUserOnline: (id: string, online: boolean) => {
     set(s => {
       const userOnline = new Map(s.userOnline)

@@ -41,7 +41,7 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
   isAdjacent(el1: GameElement, el2: GameElement) {
     const n1 = this._positionedParentOf(el1);
     const n2 = this._positionedParentOf(el2);
-    return this._graph.areNeighbors(n1._t.id, n2._t.id);
+    return this._graph.areNeighbors(n1._t.ref, n2._t.ref);
   }
 
   /**
@@ -58,17 +58,17 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
   connect(space1: Space<G>, space2: Space<G>, distance: number = 1) {
     this.connectOneWay(space1, space2, distance);
     // assume bidirectional unless directly called in reverse
-    if (!this._graph.hasDirectedEdge(space2._t.id, space1._t.id)) this._graph.addDirectedEdge(space2._t.id, space1._t.id, {distance});
+    if (!this._graph.hasDirectedEdge(space2._t.ref, space1._t.ref)) this._graph.addDirectedEdge(space2._t.ref, space1._t.ref, {distance});
   }
 
   // @internal
   connectOneWay(space1: Space<G>, space2: Space<G>, distance: number = 1) {
     if (this !== space1._t.parent || this !== space2._t.parent) throw Error("Both spaces must be children of the space to be connected");
 
-    if (!this._graph.hasNode(space1._t.id)) this._graph.addNode(space1._t.id, {space: space1});
-    if (!this._graph.hasNode(space2._t.id)) this._graph.addNode(space2._t.id, {space: space2});
+    if (!this._graph.hasNode(space1._t.ref)) this._graph.addNode(space1._t.ref, {space: space1});
+    if (!this._graph.hasNode(space2._t.ref)) this._graph.addNode(space2._t.ref, {space: space2});
 
-    this._graph.mergeEdge(space1._t.id, space2._t.id, {distance});
+    this._graph.mergeEdge(space1._t.ref, space2._t.ref, {distance});
   }
 
   /**
@@ -84,7 +84,7 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
   distanceBetween(el1: GameElement, el2: GameElement) {
     const n1 = this._positionedParentOf(el1);
     const n2 = this._positionedParentOf(el2);
-    return this._distanceBetweenNodes(String(n1._t.id), String(n2._t.id));
+    return this._distanceBetweenNodes(String(n1._t.ref), String(n2._t.ref));
   }
 
   _distanceBetweenNodes(n1: string, n2: string): number {
@@ -135,7 +135,7 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
   allWithinDistanceOf<F extends GameElement>(element: GameElement, distance: number, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
   allWithinDistanceOf(element: GameElement, distance: number, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
   allWithinDistanceOf(element: GameElement, distance: number, className?: any, ...finders: ElementFinder[]) {
-    const source = String(this._positionedParentOf(element)._t.id);
+    const source = String(this._positionedParentOf(element)._t.ref);
     const nodes = new ElementCollection();
     bfsFromNode(this._graph, source, target => {
       const d = this._distanceBetweenNodes(source, target);
@@ -163,7 +163,7 @@ export default class ConnectedSpaceMap<G extends BaseGame> extends AdjacencySpac
   allConnectedTo<F extends GameElement>(element: GameElement, className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
   allConnectedTo(element: GameElement, className?: ElementFinder<GameElement>, ...finders: ElementFinder<GameElement>[]): ElementCollection;
   allConnectedTo(element: GameElement, className?: any, ...finders: ElementFinder[]) {
-    const source = String(this._positionedParentOf(element)._t.id);
+    const source = String(this._positionedParentOf(element)._t.ref);
     const nodes = new ElementCollection();
     bfsFromNode(this._graph, source, target => {
       nodes.push(this._graph.getNodeAttributes(target).space);

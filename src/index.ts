@@ -30,8 +30,6 @@ export {
   numberSetting,
   textSetting,
   choiceSetting,
-  Drawer,
-  Popout,
 } from './ui/index.js';
 
 export { TestRunner } from './test-runner.js';

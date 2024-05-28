@@ -9,7 +9,7 @@ import type Space from './space.js';
 import type ConnectedSpaceMap from './connected-space-map.js';
 import type { ElementFinder, Sorter } from './element-collection.js';
 import type AdjacencySpace from './adjacency-space.js';
-import type { ReactNode } from 'react';
+import type { Argument } from '../action/action.js';
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 
@@ -216,7 +216,10 @@ export type LayoutAttributes = {
    * defined `area`, tagged with the provided string.
    */
   showBoundingBox?: string | boolean,
-  container?: (args: { elements: GameElement[], children: ReactNode }) => JSX.Element,
+  __container__?: {
+    type: 'drawer' | 'popout' | 'tabs',
+    attributes: Record<string, any>
+  }
 };
 
 /**
@@ -805,7 +808,25 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @internal
    */
   atID(id: number): GameElement | undefined {
-    return this._t.children.find(c => c._t.id === id) || this._t.children.find(c => c.atID(id))?.atID(id)
+    let el = this._t.children.find(c => c._t.id === id);
+    if (el) return el;
+    for (const child of this._t.children) {
+      el = child.atID(id);
+      if (el) return el;
+    }
+  }
+
+  /**
+   * Returns the element for the given ref
+   * @internal
+   */
+  atRef(ref: number): GameElement | undefined {
+    let el = this._t.children.find(c => c._t.ref === ref);
+    if (el) return el;
+    for (const child of this._t.children) {
+      el = child.atRef(ref);
+      if (el) return el;
+    }
   }
 
   _cellAt(pos: Vector): string | undefined {
@@ -1007,7 +1028,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       let child = this._t.children[i];
       Object.assign(child, rest);
       child.assignAttributesFromJSON(children || [], branch + '/' + i);
-      if (json.name === 'Theater') console.log(json, child);
     }
   }
 
@@ -1084,6 +1104,29 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       delete attributes.gap;
     }
     this._ui.layouts.push({ applyTo, attributes: { alignment: 'center', direction: 'square', ...attributes} });
+  }
+
+  layoutAsDrawer(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
+    area?: Box,
+    margin?: number | { top: number, bottom: number, left: number, right: number },
+    closeDirection: 'left' | 'right' | 'down' | 'up',
+    tab?: React.ReactNode,
+    closedTab?: React.ReactNode,
+    openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+    closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+  }) {
+    const { area, margin, ...container } = attributes;
+    this.layout(applyTo, { area, margin, __container__: { type: 'drawer', attributes: container }});
+  }
+
+  layoutAsPopout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
+    area?: Box,
+    margin?: number | { top: number, bottom: number, left: number, right: number },
+    button: React.ReactNode,
+    popoutMargin?: number | { top: number, bottom: number, left: number, right: number },
+  }) {
+    const { area, margin, ...container } = attributes;
+    this.layout(applyTo, { area, margin, __container__: { type: 'popout', attributes: container }});
   }
 
   /**
