@@ -1119,6 +1119,19 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     this.layout(applyTo, { area, margin, __container__: { type: 'drawer', attributes: container }});
   }
 
+  layoutAsTabs(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
+    area?: Box,
+    margin?: number | { top: number, bottom: number, left: number, right: number },
+    closeDirection: 'left' | 'right' | 'down' | 'up',
+    tab?: React.ReactNode,
+    closedTab?: React.ReactNode,
+    openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+    closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+  }) {
+    const { area, margin, ...container } = attributes;
+    this.layout(applyTo, { area, margin, __container__: { type: 'drawer', attributes: container }});
+  }
+
   layoutAsPopout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
     area?: Box,
     margin?: number | { top: number, bottom: number, left: number, right: number },
