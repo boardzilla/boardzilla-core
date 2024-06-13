@@ -785,6 +785,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
 
   /**
    * Returns the index of this element within its parent, starting at zero
+   * @category Structure
    */
   position() {
     return this._t.parent?._t.children.indexOf(this) ?? -1;

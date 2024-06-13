@@ -74,7 +74,8 @@ export default class Space<G extends BaseGame, P extends Player = NonNullable<G[
    * number, type or movement of contents inside this Space will be revealed to
    * the specified players
    *
-   * @param players = Players for whome the view is blocked
+   * @param players = Players for whom the view is blocked
+   * @category Visibility
    */
   blockViewFor(players: 'all' | 'none' | 'all-but-owner' | Player[]) {
     this._screen = players === 'none' ? undefined : players instanceof Array ? players.map(p => p.position) : players
