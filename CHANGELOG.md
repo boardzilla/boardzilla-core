@@ -1,4 +1,4 @@
-# v0.3.0
+# v0.2.10
 * Fixed Info and Debug overlays
 
 # v0.2.9
