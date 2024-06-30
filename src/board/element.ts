@@ -1,6 +1,7 @@
 import ElementCollection from './element-collection.js';
 import { shuffleArray, times } from '../utils.js';
 import { serializeObject, deserializeObject } from '../action/utils.js';
+import uuid from 'uuid-random';
 
 import type GameManager from '../game-manager.js';
 import type { default as Player, BasePlayer } from '../player/player.js';
@@ -218,7 +219,9 @@ export type LayoutAttributes = {
   showBoundingBox?: string | boolean,
   __container__?: {
     type: 'drawer' | 'popout' | 'tabs',
-    attributes: Record<string, any>
+    attributes: Record<string, any>,
+    id?: string,
+    key?: string,
   }
 };
 
@@ -1119,17 +1122,18 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
     this.layout(applyTo, { area, margin, __container__: { type: 'drawer', attributes: container }});
   }
 
-  layoutAsTabs(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {
+  layoutAsTabs(tabs: Record<string, typeof this._ui.layouts[number]['applyTo']>, attributes: {
     area?: Box,
     margin?: number | { top: number, bottom: number, left: number, right: number },
-    closeDirection: 'left' | 'right' | 'down' | 'up',
-    tab?: React.ReactNode,
-    closedTab?: React.ReactNode,
-    openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-    closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+    tabDirection: 'left' | 'right' | 'down' | 'up',
+    tabs?: Record<string, React.ReactNode>,
+    setTabTo?: (actions: { name: string, args: Record<string, Argument> }[]) => string,
   }) {
     const { area, margin, ...container } = attributes;
-    this.layout(applyTo, { area, margin, __container__: { type: 'drawer', attributes: container }});
+    const id = uuid();
+    for (const [key, tab] of Object.entries(tabs)) {
+      this.layout(tab, { area, margin, __container__: { type: 'tabs', id, key, attributes: container }});
+    }
   }
 
   layoutAsPopout(applyTo: typeof this._ui.layouts[number]['applyTo'], attributes: {

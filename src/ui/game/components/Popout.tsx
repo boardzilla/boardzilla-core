@@ -4,7 +4,7 @@ import type { UIRender } from '../../render.js';
 
 const Popout = ({ layout, children, attributes }: {
   layout: UIRender['layouts'][number],
-  children: JSX.Element[],
+  children: Record<string, JSX.Element[]>,
   attributes: {
     button: ReactNode,
     popoutMargin?: number | { top: number, bottom: number, left: number, right: number },
@@ -42,7 +42,7 @@ const Popout = ({ layout, children, attributes }: {
       {open && (
         <div className="full-page-cover" onClick={() => setOpen(false)}>
           <div className="popout-modal" onClick={e => e.stopPropagation()} style={popoutStyle}>
-            {children}
+            {children.main}
             <svg className="popout-close" onClick={() => setOpen(false)} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="15" y1="9" x2="9" y2="15"></line>

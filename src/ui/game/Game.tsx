@@ -14,7 +14,7 @@ import type { Argument } from '../../action/action.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [gameManager, rendered, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement] = gameStore(s => [s.gameManager, s.rendered, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.aspectRatio]);
+  const [gameManager, rendered, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, move, clearMove, selectElement, setBoardSize, dragElement, disambiguateElement, selected] = gameStore(s => [s.gameManager, s.rendered, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.move, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.aspectRatio, s.disambiguateElement, s.selected]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const announcement = useMemo(() => gameManager.announcements[announcementIndex], [gameManager.announcements, announcementIndex]);
@@ -24,10 +24,10 @@ export default () => {
   if (!player) return null;
 
   const handleSubmitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument>) => {
-    clickAudio.current?.play();
+    if (move || disambiguateElement || selected) clickAudio.current?.play();
     clearMove();
     selectMove(pendingMove, args);
-  }, [clearMove, selectMove]);
+  }, [move, disambiguateElement, selected, clearMove, selectMove]);
 
   const handleSelectElement = useCallback((moves: UIMove[], element: GameElement) => {
     clickAudio.current?.play();

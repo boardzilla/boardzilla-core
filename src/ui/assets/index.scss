@@ -296,7 +296,7 @@ html, body { height: 100% }
 
     .bz-show-grid {
       position: absolute;
-      border: 1px dashed white;
+      border: 1px dashed #99f;
       pointer-events: none;
       /* background-image: linear-gradient(to right, #f009 1px, transparent 1px), linear-gradient(to bottom, #f009 1px, transparent 1px); */
       > span {
@@ -324,18 +324,48 @@ html, body { height: 100% }
         cursor: pointer;
         height: .75rem;
         border-radius: .75em .75em 0 0;
+        &.multi {
+          display: flex;
+          flex-wrap: nowrap;
+        }
+        .tabs-tab {
+          position: relative;
+          display: inline-block;
+          padding: 0 .5em;
+          flex: 1 1 auto;
+          overflow: hidden;
+          background: #0004;
+          &.active, &:hover {
+            background: #fff4;
+          }
+          &:first-child {
+            border-top-left-radius: .75em;
+          }
+          &:last-child {
+            border-top-right-radius: .75em;
+          }
+        }
       }
 
       &.closed > .drawer-tab:hover {
         height: .85rem;
       }
 
-      &.close-direction-up > .drawer-tab {
+      &.close-direction-up > .drawer-tab, &.close-direction-up > .drawer-right {
         border-radius: 0 0 .75em .75em;
+        .tabs-tab {
+          &:first-child {
+            border-bottom-left-radius: .75em;
+          }
+          &:last-child {
+            border-bottom-right-radius: .75em;
+          }
+        }
       }
 
       > .drawer-content {
         position: absolute;
+        inset: 0;
         visibility: visible;
         border: .1rem solid #0008;
         background: #fffc;
@@ -364,10 +394,13 @@ html, body { height: 100% }
         height: 5vmax;
         width: 5vmax;
         fill: none;
-        stroke: #0008;
-        stroke-width: .08rem;
+        stroke: #666;
+        stroke-width: .15vmax;
         stroke-linecap: round;
         cursor: pointer;
+        &:hover {
+          stroke: black;
+        }
       }
       .popout-modal {
         position: absolute;

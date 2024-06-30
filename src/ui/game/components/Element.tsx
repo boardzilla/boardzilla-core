@@ -6,7 +6,12 @@ import { gameStore } from '../../store.js';
 import {
   Piece,
   GameElement,
+  type Game,
+  type Box,
 } from '../../../board/index.js'
+import Drawer from './Drawer.js';
+import Tabs from './Tabs.js';
+import Popout from './Popout.js';
 
 import type { UIMove } from '../../lib.js';
 import type { DraggableData, DraggableEvent } from 'react-draggable';
@@ -282,6 +287,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   }, [mode, element]);
 
   let contents: React.JSX.Element[] | React.JSX.Element = [];
+  const containerPendingContents: Record<string, React.JSX.Element[]> = {};
   for (let l = 0; l !== render.layouts.length; l++) {
     const layout = render.layouts[l]
     const layoutContents: React.JSX.Element[] = [];
@@ -298,11 +304,26 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
       );
     }
     if (layout.container) {
-      contents.push(React.createElement(layout.container.component, {
+      if (layout.container.id) {
+        containerPendingContents[layout?.container.key ?? 'main'] = layoutContents;
+        if (render.layouts.find((layout2, l2) => l2 > l && layout2.container?.id === layout.container?.id)) continue;
+      }
+      const component: React.FC<{} & {
+        game: Game,
+        elements: GameElement[],
+        children: Record<string, JSX.Element[]>,
+        layout: UIRender['layouts'][number],
+        absolutePosition: Box,
+        attributes: any
+      }> = {drawer: Drawer, popout: Popout, tabs: Tabs}[layout.container.type];
+
+      const children = layout.container.id ? containerPendingContents : { main: layoutContents };
+
+      contents.push(React.createElement(component, {
         key: l,
         game: element.game,
         elements: layout.children.map(c => c.element),
-        children: layoutContents,
+        children,
         absolutePosition,
         layout,
         attributes: layout.container.attributes,
