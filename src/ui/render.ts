@@ -3,8 +3,6 @@ import ElementCollection from '../board/element-collection.js';
 import random from 'random-seed';
 import { serialize } from '../action/utils.js'
 import uuid from 'uuid-random';
-import Drawer from './game/components/Drawer.js';
-import Popout from './game/components/Popout.js';
 import React from 'react';
 
 import type { Game, Box, Vector } from "../board/index.js";
@@ -39,15 +37,10 @@ export type UIRender = {
     showBoundingBox?: string | boolean,
     children: UIRender[],
     container?: {
-      component: React.FC<{} & {
-        game: Game,
-        elements: GameElement[],
-        children: JSX.Element[],
-        layout: UIRender['layouts'][number],
-        absolutePosition: Box,
-        attributes: any
-      }>,
+      type: 'drawer' | 'popout' | 'tabs',
       attributes: Record<string, any>
+      id?: string,
+      key?: string,
     },
   }[],
   parentRef?: number,
@@ -254,7 +247,7 @@ export function applyDiff(render: UIRender, ui: UI, oldUI: UI): boolean {
   if (render.styles && (changedAttrs || render.styles.transform)) {
     Object.assign(render.styles, {
       // uuid so react re-applies if multiple
-      '--transformed-to-old': String(uuid()),
+      '--transformed-to-old': uuid(),
       // supress normal transition style and re-add later. necessary to prevent
       // transform transition from completing immediately
       transition: 'none'
@@ -318,9 +311,11 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       children: [],
       showBoundingBox: attributes.showBoundingBox ?? el.game._ui.boundingBoxes,
     };
+    const layout = layouts[l];
+
     if (layoutPosition !== absolutePosition) {
       // override to a fixed absolute position with area being the full region
-      layouts[l].fixed = layoutPosition;
+      layout.fixed = layoutPosition;
       area = {
         left: 0,
         top: 0,
@@ -586,7 +581,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       }
 
       if (!children.length) {
-        layouts[l].grid = {
+        layout.grid = {
           anchor: { x: 0, y: 0 },
           origin,
           rows,
@@ -713,7 +708,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
         }
       }
 
-      layouts[l].grid = {
+      layout.grid = {
         anchor: startingOffset,
         origin,
         rows,
@@ -821,7 +816,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       if (transformOrigin) render.baseStyles!.transformOrigin = transformOrigin;
 
       render.layouts = calcLayouts(child, ui);
-      layouts[l].children.push(render);
+      layout.children.push(render);
     }
 
     if (allChildren && allChildren.length > children.length) {
@@ -830,17 +825,13 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
       for (const child of unrendered) {
         const render = {element: child, layouts: [], proxy: children[el._t.order === 'stacking' ? 0 : children.length - 1]._t.ref, key: uuid()};
         ui.all[child._t.ref] = render;
-        layouts[l].children.unshift(render);
+        layout.children.unshift(render);
       }
     }
 
     if (attributes.__container__) {
-      const { type, attributes: containerAttributes } = attributes.__container__;
-      if (type === 'drawer') {
-        layouts[l].container = { component: Drawer, attributes: containerAttributes };
-      } else if (type === 'popout') {
-        layouts[l].container = { component: Popout, attributes: containerAttributes };
-      }
+      const { type, id, key, attributes: containerAttributes } = attributes.__container__;
+      layout.container = { type, id, key, attributes: containerAttributes };
     }
   }
   return layouts;
