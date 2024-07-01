@@ -37,8 +37,8 @@ const Popout = ({ layout, children, attributes }: {
   }, [setOpen]);
 
   return (
-    <div className="popout-button" style={style}>
-      <div onClick={() => open || setOpen(true)}>{attributes.button}</div>
+    <div className="popout-container" style={style}>
+      <div className="popout-button" onClick={() => open || setOpen(true)}>{attributes.button}</div>
       {open && (
         <div className="full-page-cover" onClick={() => setOpen(false)}>
           <div className="popout-modal" onClick={e => e.stopPropagation()} style={popoutStyle}>

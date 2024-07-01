@@ -48,21 +48,21 @@ const Tabs = ({ layout, absolutePosition, children, attributes }: {
   }, [area]);
 
   const tabStyle = useMemo(() => {
-    if (tabDirection === 'up') {
+    if (tabDirection === 'down') {
       return {
         top: `100%`,
         left: 0,
         width: `100%`,
       }
     }
-    if (tabDirection === 'down') {
+    if (tabDirection === 'up') {
       return {
         bottom: `100%`,
         left: 0,
         width: `100%`,
       }
     }
-    if (tabDirection === 'left') {
+    if (tabDirection === 'right') {
       return {
         left: `100%`,
         bottom: `100%`,
@@ -71,7 +71,7 @@ const Tabs = ({ layout, absolutePosition, children, attributes }: {
         transformOrigin: 'bottom left',
       }
     }
-    if (tabDirection === 'right') {
+    if (tabDirection === 'left') {
       return {
         right: `100%`,
         bottom: `100%`,
@@ -83,7 +83,7 @@ const Tabs = ({ layout, absolutePosition, children, attributes }: {
   }, [tabDirection, aspectRatio, area]);
 
   return (
-    <div className={`drawer close-direction-${tabDirection}`} style={style}>
+    <div className={`drawer open-direction-${tabDirection}`} style={style}>
       <div
         className="drawer-tab multi"
         style={tabStyle}
@@ -93,7 +93,6 @@ const Tabs = ({ layout, absolutePosition, children, attributes }: {
         ))}
       </div>
       <div className="drawer-content">
-        <div className="drawer-background"/>
         <div className="drawer-container" style={containerStyle}>
           {openTab}
           {children[openTab]}

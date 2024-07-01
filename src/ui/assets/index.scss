@@ -296,9 +296,10 @@ html, body { height: 100% }
 
     .bz-show-grid {
       position: absolute;
-      border: 1px dashed #99f;
+      border: 1px solid #99f;
+      outline: 1px dashed white;
+      outline-offset: -1px;
       pointer-events: none;
-      /* background-image: linear-gradient(to right, #f009 1px, transparent 1px), linear-gradient(to bottom, #f009 1px, transparent 1px); */
       > span {
         position: absolute;
         font-size: .5rem;
@@ -339,10 +340,10 @@ html, body { height: 100% }
             background: #fff4;
           }
           &:first-child {
-            border-top-left-radius: .75em;
+            border-radius: .75em 0 0 0;
           }
           &:last-child {
-            border-top-right-radius: .75em;
+            border-radius: 0 .75em 0 0;
           }
         }
       }
@@ -351,14 +352,14 @@ html, body { height: 100% }
         height: .85rem;
       }
 
-      &.close-direction-up > .drawer-tab, &.close-direction-up > .drawer-right {
+      &.open-direction-down > .drawer-tab {
         border-radius: 0 0 .75em .75em;
         .tabs-tab {
           &:first-child {
-            border-bottom-left-radius: .75em;
+            border-radius: 0 0 0 .75em;
           }
           &:last-child {
-            border-bottom-right-radius: .75em;
+            border-radius: 0 0 .75em 0;
           }
         }
       }
@@ -382,8 +383,20 @@ html, body { height: 100% }
       }
     }
 
-    .popout-button {
+    .popout-container {
       position: absolute;
+      .popout-button {
+        position: absolute;
+        inset: 0;
+        background: #0008;
+        &:hover {
+          background: #0004;
+        }
+        color: white;
+        cursor: pointer;
+        border-radius: .75em;
+        text-align: center;
+      }
       .full-page-cover {
         background: #444c;
       }
