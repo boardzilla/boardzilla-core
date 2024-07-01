@@ -11,14 +11,14 @@ const Drawer = ({ layout, absolutePosition, children, attributes }: {
   attributes: {
     tab?: React.ReactNode
     closedTab?: React.ReactNode,
-    closeDirection: 'up' | 'down' | 'left' | 'right',
+    openDirection: 'up' | 'down' | 'left' | 'right',
     openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
     closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
   }
 }) => {
   const [open, setOpen] = useState(false);
   const [pendingMoves] = gameStore(s => [s.pendingMoves]);
-  const { tab, closedTab, openIf, closeIf, closeDirection } = attributes;
+  const { tab, closedTab, openIf, closeIf, openDirection } = attributes;
 
   const area = useMemo(() => layout?.area ?? {top: 0, left: 0, width: 100, height: 100}, [layout])
   const aspectRatio = useMemo(() => absolutePosition ? absolutePosition.width / absolutePosition.height : 1, [absolutePosition])
@@ -41,10 +41,10 @@ const Drawer = ({ layout, absolutePosition, children, attributes }: {
 
   const sliderStyle = useMemo(() => {
     return {
-      transform: `scaleX(${open || ['up', 'down'].includes(closeDirection) ? 1 : 0}) scaleY(${open || ['left', 'right'].includes(closeDirection) ? 1 : 0})`,
-      transformOrigin: closeDirection === 'up' ? 'top' : (closeDirection === 'down' ? 'bottom' : closeDirection),
+      transform: `scaleX(${open || ['up', 'down'].includes(openDirection) ? 1 : 0}) scaleY(${open || ['left', 'right'].includes(openDirection) ? 1 : 0})`,
+      transformOrigin: openDirection === 'down' ? 'top' : (openDirection === 'up' ? 'bottom' : openDirection),
     }
-  }, [closeDirection, open]);
+  }, [openDirection, open]);
 
   /** inverse size to provide a relative box that matches the parent that the content was calculated against */
   const containerStyle = useMemo(() => {
@@ -53,29 +53,25 @@ const Drawer = ({ layout, absolutePosition, children, attributes }: {
       left: `${-area.left / area.width * 100}%`,
       height: `${10000 / area.height}%`,
       width: `${10000 / area.width}%`,
-      // top: `${gap.y - (area.top / area.height * (100 - gap.y - gap.y))}%`,
-      // left: `${gap.x - (area.left / area.width * (100 - gap.x - gap.x))}%`,
-      // height: `${100 / area.height * (100 - gap.y - gap.y)}%`,
-      // width: `${100 / area.width * (100 - gap.x - gap.x)}%`,
     }
   }, [area]);
 
   const tabStyle = useMemo(() => {
-    if (closeDirection === 'up') {
+    if (openDirection === 'down') {
       return {
         top: `${open ? 100 : 0}%`,
         left: 0,
         width: `100%`,
       }
     }
-    if (closeDirection === 'down') {
+    if (openDirection === 'up') {
       return {
         bottom: `${open ? 100 : 0}%`,
         left: 0,
         width: `100%`,
       }
     }
-    if (closeDirection === 'left') {
+    if (openDirection === 'right') {
       return {
         left: `${open ? 100 : 0}%`,
         bottom: `100%`,
@@ -84,7 +80,7 @@ const Drawer = ({ layout, absolutePosition, children, attributes }: {
         transformOrigin: 'bottom left',
       }
     }
-    if (closeDirection === 'right') {
+    if (openDirection === 'left') {
       return {
         right: `${open ? 100 : 0}%`,
         bottom: `100%`,
@@ -93,10 +89,10 @@ const Drawer = ({ layout, absolutePosition, children, attributes }: {
         transformOrigin: 'bottom right',
       }
     }
-  }, [closeDirection, aspectRatio, area, open]);
+  }, [openDirection, aspectRatio, area, open]);
 
   return (
-    <div className={`drawer close-direction-${closeDirection} ${open ? 'open' : 'closed'}`} style={style}>
+    <div className={`drawer open-direction-${openDirection} ${open ? 'open' : 'closed'}`} style={style}>
       <div
         className="drawer-tab"
         style={tabStyle}
@@ -105,7 +101,6 @@ const Drawer = ({ layout, absolutePosition, children, attributes }: {
         {open ? tab : closedTab ?? tab}
       </div>
       <div className="drawer-content" style={sliderStyle}>
-        <div className="drawer-background"/>
         <div className="drawer-container" style={containerStyle}>
           {children.main}
         </div>
