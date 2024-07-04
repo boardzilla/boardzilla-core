@@ -1,6 +1,7 @@
 import ElementCollection from './element-collection.js';
 import { shuffleArray, times } from '../utils.js';
 import { serializeObject, deserializeObject } from '../action/utils.js';
+import uuid from 'uuid-random';
 
 import type GameManager from '../game-manager.js';
 import type { default as Player, BasePlayer } from '../player/player.js';
@@ -8,8 +9,8 @@ import type { default as Game, BaseGame } from './game.js';
 import type Space from './space.js';
 import type ConnectedSpaceMap from './connected-space-map.js';
 import type { ElementFinder, Sorter } from './element-collection.js';
-import type { Argument } from '../action/action.js';
 import type AdjacencySpace from './adjacency-space.js';
+import type { Argument } from '../action/action.js';
 
 export type ElementJSON = ({className: string, children?: ElementJSON[]} & Record<string, any>);
 
@@ -64,7 +65,7 @@ export type DirectionWithDiagonals = Direction | 'upleft' | 'upright' | 'downlef
 export type ElementUI<T extends GameElement> = {
   layouts: {
     applyTo: ElementClass | GameElement | ElementCollection | string,
-    attributes: LayoutAttributes<T>
+    attributes: LayoutAttributes
   }[],
   appearance: {
     className?: string,
@@ -81,7 +82,7 @@ export type ElementUI<T extends GameElement> = {
       labelScale?: number,
     },
   },
-  getBaseLayout: () => LayoutAttributes<T>,
+  getBaseLayout: () => LayoutAttributes,
   ghost?: boolean,
 };
 
@@ -89,7 +90,7 @@ export type ElementUI<T extends GameElement> = {
  * List of attributes used to create a new layout in {@link GameElement#layout}.
  * @category UI
  */
-export type LayoutAttributes<T extends GameElement> = {
+export type LayoutAttributes = {
   /**
    * Instead of providing `area`, providing a `margin` defines the bounding box
    * in terms of a margin around the edges of this element. This value is an
@@ -216,31 +217,11 @@ export type LayoutAttributes<T extends GameElement> = {
    * defined `area`, tagged with the provided string.
    */
   showBoundingBox?: string | boolean,
-  /**
-   * Specifies that this layout should inhabit a drawer, a collapsible area that
-   * can be hidden to save overall space on the playing area.
-   */
-  drawer?: {
-    closeDirection: 'left' | 'right' | 'down' | 'up',
-    /**
-     * JSX to appear in the tab while open
-     */
-    tab: ((el: T) => React.ReactNode) | false,
-    /**
-     * JSX to appear in the tab while closed, if it differs from the open
-     * appearance
-     */
-    closedTab?: ((el: T) => React.ReactNode) | false,
-    /**
-     * A function that will be checked at each game state. If it returns true,
-     * the tab will automatically open.
-     */
-    openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
-    /**
-     * A function that will be checked at each game state. If it returns true,
-     * the tab will automatically close.
-     */
-    closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+  __container__?: {
+    type: 'drawer' | 'popout' | 'tabs',
+    attributes: Record<string, any>,
+    id?: string,
+    key?: string,
   }
 };
 
@@ -830,7 +811,25 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @internal
    */
   atID(id: number): GameElement | undefined {
-    return this._t.children.find(c => c._t.id === id) || this._t.children.find(c => c.atID(id))?.atID(id)
+    let el = this._t.children.find(c => c._t.id === id);
+    if (el) return el;
+    for (const child of this._t.children) {
+      el = child.atID(id);
+      if (el) return el;
+    }
+  }
+
+  /**
+   * Returns the element for the given ref
+   * @internal
+   */
+  atRef(ref: number): GameElement | undefined {
+    let el = this._t.children.find(c => c._t.ref === ref);
+    if (el) return el;
+    for (const child of this._t.children) {
+      el = child.atRef(ref);
+      if (el) return el;
+    }
   }
 
   _cellAt(pos: Vector): string | undefined {
@@ -1032,7 +1031,6 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
       let child = this._t.children[i];
       Object.assign(child, rest);
       child.assignAttributesFromJSON(children || [], branch + '/' + i);
-      if (json.name === 'Theater') console.log(json, child);
     }
   }
 
@@ -1080,7 +1078,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    */
   layout(
     applyTo: typeof this._ui.layouts[number]['applyTo'],
-    attributes: Partial<LayoutAttributes<this>>
+    attributes: Partial<LayoutAttributes>
   ) {
     let {slots, area, size, aspectRatio, scaling, gap, margin, offsetColumn, offsetRow} = attributes
     if (slots && (area || margin || scaling || gap || margin || offsetColumn || offsetRow)) {
@@ -1112,10 +1110,94 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   /**
+   * Creates a collapsible drawer layout for a Space within this Element. This
+   * is like {@link GameElement#layout} except for one specific Space, with
+   * additional parameters that set the behaviour/appearance of the drawer. A
+   * tab will be attached the drawer that will allow it be opened/closed.
+   *
+   * @param applyTo - The Space for the drawer. Either the Space itself or its
+   * name.
+   * @param area - The area for the drawer when opened expressed in percentage
+   * sizes of this element.
+   * @param openDirection - the direction the drawer will open
+   * @param tab - JSX for the appearance of the tab
+   * @param closedTab - JSX for the appearance of the tab when closed if
+   * different
+   * @param openIf - A function that will be checked at each game state. If it
+   * returns true, the drawer will automatically open.
+   * @param closeIf - A function that will be checked at each game state. If it
+   * returns true, the drawer will automatically close.
+   */
+  layoutAsDrawer(applyTo: Space<G, P> | string, attributes: {
+    area?: Box,
+    openDirection: 'left' | 'right' | 'down' | 'up',
+    tab?: React.ReactNode,
+    closedTab?: React.ReactNode,
+    openIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+    closeIf?: (actions: { name: string, args: Record<string, Argument> }[]) => boolean,
+  }) {
+    const { area, ...container } = attributes;
+    this.layout(applyTo, { area, __container__: { type: 'drawer', attributes: container }});
+  }
+
+  /**
+   * Creates a tabbed layout for a set of Space's within this Element. This is
+   * like {@link GameElement#layout} except for a set of Spaces, with additional
+   * parameters that set the behaviour/appearance of the tabs. Each Space will
+   * be laid out into the same area, with a set of tabs attached to allow the
+   * Player or the game rules to select which tab is shown.
+   *
+   * @param applyTo - The Spaces for the drawer as a set of key-value
+   * pairs. Each value is a Space or a name of a Space.
+   * @param area - The area for the tabs expressed in percentage sizes of this
+   * element.
+   * @param tabDirection - the side on which the tabs will be placed
+   * @param tabs - JSX for the appearance of the tabs as a set of key-value pairs
+   * @param setTabTo - A function that will be checked at each game state. If it
+   * returns a string, the tab with the matching key will be shown.
+   */
+  layoutAsTabs(tabs: Record<string, Space<G, P> | string>, attributes: {
+    area?: Box,
+    tabDirection: 'left' | 'right' | 'down' | 'up',
+    tabs?: Record<string, React.ReactNode>,
+    setTabTo?: (actions: { name: string, args: Record<string, Argument> }[]) => string,
+  }) {
+    const { area, ...container } = attributes;
+    const id = uuid();
+    for (const [key, tab] of Object.entries(tabs)) {
+      this.layout(tab, { area, __container__: { type: 'tabs', id, key, attributes: container }});
+    }
+  }
+
+  /**
+   * Hides a Space within this element and replaces it with popout
+   * button. Clicking on the button opens this Space in a full-board modal. This
+   * is like {@link GameElement#layout} except for one Space, with additional
+   * parameters that set the behaviour/appearance of the popout modal.
+   *
+   * @param applyTo - The Space for the popout. Either a Space or the name of a
+   * Space.
+   * @param area - The area for the tabs expressed in percentage sizes of this
+   * element.
+   * @param button - JSX for the appearance of the popout button
+   * @param popoutMargin - Alter the default margin around the opened
+   * popout. Takes a percentage or an object with percentages for top, bottom,
+   * left and right.
+   */
+  layoutAsPopout(applyTo: Space<G, P> | string, attributes: {
+    area?: Box,
+    button: React.ReactNode,
+    popoutMargin?: number | { top: number, bottom: number, left: number, right: number },
+  }) {
+    const { area, ...container } = attributes;
+    this.layout(applyTo, { area, __container__: { type: 'popout', attributes: container }});
+  }
+
+  /**
    * Change the layout attributes for this space's layout.
    * @category UI
    */
-  configureLayout(layoutConfiguration: Partial<LayoutAttributes<GameElement>>) {
+  configureLayout(layoutConfiguration: Partial<LayoutAttributes>) {
     this._ui.layouts[0] = {
       applyTo: GameElement,
       attributes: {

@@ -6,7 +6,7 @@ import { Game } from '../board/index.js'
 import './assets/index.scss';
 
 import type { SetupFunction } from '../game-creator.js'
-import type { BoardSize, BoardSizeMatcher } from '../board/game.js';
+import type { BoardSizeMatcher } from '../board/game.js';
 import type { SetupComponentProps } from './setup/components/settingComponents.js';
 
 export { ProfileBadge } from './game/components/ProfileBadge.js';
@@ -90,7 +90,7 @@ export {
  */
 export const render = <G extends Game>(setup: SetupFunction<G>, options: {
   settings?: Record<string, (p: SetupComponentProps) => JSX.Element>
-  boardSizes?: ((screenX: number, screenY: number, mobile: boolean) => BoardSize) | BoardSizeMatcher[],
+  boardSizes?: BoardSizeMatcher[],
   layout?: (game: G, player: NonNullable<G['player']>, boardSize: string) => void,
   announcements?: Record<string, (game: G) => JSX.Element>
   infoModals?: {title: string, modal: (game: G) => JSX.Element}[]
@@ -99,54 +99,74 @@ export const render = <G extends Game>(setup: SetupFunction<G>, options: {
   const state = gameStore.getState();
   const setupGame: SetupFunction<G> = state => {
     const gameManager = setup(state);
-    if (boardSizes instanceof Array) {
-      const bothOrientations = boardSizes.some(bs => bs.orientation === 'landscape') && boardSizes.some(bs => bs.orientation === 'portrait');
-      const bss = boardSizes.map(bs => ({
-        ...bs,
-        aspectRatio: typeof bs.aspectRatio === 'number' ? bs.aspectRatio : { min: Math.min(bs.aspectRatio.min, bs.aspectRatio.max), max: Math.max(bs.aspectRatio.min, bs.aspectRatio.max) }
-      }))
-      gameManager.game._ui.boardSizes = (screenX, screenY, mobile) => {
-        let aspectRatio = screenX / screenY;
-        let flipped: boolean | undefined = undefined;
-        let portrait = aspectRatio;
-        let landscape = aspectRatio;
-        if (mobile && !bothOrientations) {
-          if (aspectRatio < 1) {
-            landscape = 1 / aspectRatio;
-          } else {
-            portrait = 1 / aspectRatio;
-          }
+    boardSizes ??= [{name: '_default', aspectRatio: 1}];
+    const bothOrientations = boardSizes.some(bs => bs.orientation === 'landscape') && boardSizes.some(bs => bs.orientation === 'portrait');
+    const bss = boardSizes.map(bs => ({
+      ...bs,
+      aspectRatio: typeof bs.aspectRatio === 'number' ? bs.aspectRatio : { min: Math.min(bs.aspectRatio.min, bs.aspectRatio.max), max: Math.max(bs.aspectRatio.min, bs.aspectRatio.max) }
+    }))
+    gameManager.game._ui.boardSizes = (screenX, screenY, mobile) => {
+      let screenAspectRatio = screenX / screenY;
+      let flipped: boolean | undefined = undefined;
+      let portrait = screenAspectRatio;
+      let landscape = screenAspectRatio;
+      if (mobile && !bothOrientations) {
+        if (screenAspectRatio < 1) {
+          landscape = 1 / screenAspectRatio;
+        } else {
+          portrait = 1 / screenAspectRatio;
         }
-        const boardSize = bss.filter(
-          bs => (bs.mobile ?? mobile) === mobile && (bs.desktop ?? !mobile) === !mobile
-        ).sort(
-          (bs1, bs2) => {
-            const d1 = Math.max(
-              (typeof bs1.aspectRatio === 'number' ? bs1.aspectRatio : bs1.aspectRatio.min) - (bs1.orientation === 'landscape' ? landscape : (bs1.orientation === 'portrait' ? portrait : aspectRatio)),
-              (bs1.orientation === 'landscape' ? landscape : (bs1.orientation === 'portrait' ? portrait : aspectRatio)) - (typeof bs1.aspectRatio === 'number' ? bs1.aspectRatio : bs1.aspectRatio.max)
-            );
-            const d2 = Math.max(
-              (typeof bs2.aspectRatio === 'number' ? bs2.aspectRatio : bs2.aspectRatio.min) - (bs2.orientation === 'landscape' ? landscape : (bs2.orientation === 'portrait' ? portrait : aspectRatio)),
-              (bs2.orientation === 'landscape' ? landscape : (bs2.orientation === 'portrait' ? portrait : aspectRatio)) - (typeof bs2.aspectRatio === 'number' ? bs2.aspectRatio : bs2.aspectRatio.max)
-            );
-            return d1 > d2 ? 1 : -1;
-          }
-        )[0];
-        if (!boardSize) return undefined;
-        if (boardSize.orientation === 'landscape' && aspectRatio < 1 || boardSize.orientation === 'portrait' && aspectRatio > 1) {
-          aspectRatio = 1 / aspectRatio;
-          flipped = true;
-        }
-        return {
-          ...boardSize,
-          aspectRatio: typeof boardSize.aspectRatio === 'number' ?
-            boardSize.aspectRatio :
-            Math.min(boardSize.aspectRatio.max, Math.max(boardSize.aspectRatio.min, aspectRatio)),
-          flipped,
-        };
       }
-    } else {
-      gameManager.game._ui.boardSizes = boardSizes;
+      const boardSize = bss.filter(
+        bs => (bs.mobile ?? mobile) === mobile && (bs.desktop ?? !mobile) === !mobile
+      ).sort(
+        (bs1, bs2) => {
+          const d1 = Math.max(
+            (typeof bs1.aspectRatio === 'number' ? bs1.aspectRatio : bs1.aspectRatio.min) - (bs1.orientation === 'landscape' ? landscape : (bs1.orientation === 'portrait' ? portrait : screenAspectRatio)),
+            (bs1.orientation === 'landscape' ? landscape : (bs1.orientation === 'portrait' ? portrait : screenAspectRatio)) - (typeof bs1.aspectRatio === 'number' ? bs1.aspectRatio : bs1.aspectRatio.max)
+          );
+          const d2 = Math.max(
+            (typeof bs2.aspectRatio === 'number' ? bs2.aspectRatio : bs2.aspectRatio.min) - (bs2.orientation === 'landscape' ? landscape : (bs2.orientation === 'portrait' ? portrait : screenAspectRatio)),
+            (bs2.orientation === 'landscape' ? landscape : (bs2.orientation === 'portrait' ? portrait : screenAspectRatio)) - (typeof bs2.aspectRatio === 'number' ? bs2.aspectRatio : bs2.aspectRatio.max)
+          );
+          return d1 > d2 ? 1 : -1;
+        }
+      )[0];
+      if (boardSize.orientation === 'landscape' && screenAspectRatio < 1 || boardSize.orientation === 'portrait' && screenAspectRatio > 1) {
+        screenAspectRatio = 1 / screenAspectRatio;
+        flipped = true;
+      }
+      let boardAspectRatio: number;
+      let aspectRatioWidened: number;
+      if (typeof boardSize.aspectRatio === 'number') {
+        boardAspectRatio = boardSize.aspectRatio;
+        aspectRatioWidened = 1;
+      } else {
+        boardAspectRatio = Math.min(boardSize.aspectRatio.max, Math.max(boardSize.aspectRatio.min, screenAspectRatio));
+        aspectRatioWidened = boardAspectRatio / boardSize.aspectRatio.min
+      }
+      const boundByWidth = (screenAspectRatio < boardAspectRatio) !== (boardSize.scaling === 'scroll');
+      const frame = boardAspectRatio > 1 ? {
+        x: 100 * aspectRatioWidened,
+        y: 100 / boardAspectRatio * aspectRatioWidened
+      } : {
+        x: 100 * boardAspectRatio * aspectRatioWidened,
+        y: 100 * aspectRatioWidened
+      };
+      const screen = boundByWidth ? {
+        x: frame.x,
+        y: frame.x / screenAspectRatio
+      } : {
+        x: frame.y * screenAspectRatio,
+        y: frame.y
+      }
+      return {
+        ...boardSize,
+        aspectRatio: boardAspectRatio,
+        flipped,
+        frame,
+        screen
+      };
     }
     gameManager.game._ui.setupLayout = layout;
     gameManager.game._ui.announcements = announcements ?? {};

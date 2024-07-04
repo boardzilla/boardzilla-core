@@ -6,7 +6,6 @@ import Element from './Element.js';
 import DebugChoices from './DebugChoices.js';
 import { ResolvedSelection } from '../../../action/selection.js';
 import DebugArgument from './DebugArgument.js';
-import { absPositionSquare } from '../../render.js';
 
 const Debug = () => {
   const [position, gameManager, rendered, actionDebug, pendingMoves, infoElement, setInfoElement, selected, disambiguateElement] = gameStore(s => [s.position, s.gameManager, s.rendered, s.actionDebug, s.pendingMoves, s.infoElement, s.setInfoElement, s.selected, s.disambiguateElement]);
@@ -19,7 +18,7 @@ const Debug = () => {
 
   let elementStyle: React.CSSProperties | undefined = useMemo(() => {
     if (!infoElement?.element) return {};
-    const scale = absPositionSquare(infoElement.element, rendered!);
+    const scale = rendered!.all[String(infoElement.element._t.ref)].pos!
     let fontSize = 24 * 0.04;
     const aspectRatio = scale.width / scale.height;
 

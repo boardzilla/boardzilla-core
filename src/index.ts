@@ -29,7 +29,7 @@ export {
   toggleSetting,
   numberSetting,
   textSetting,
-  choiceSetting
+  choiceSetting,
 } from './ui/index.js';
 
 export { TestRunner } from './test-runner.js';

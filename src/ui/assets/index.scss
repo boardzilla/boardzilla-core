@@ -65,6 +65,7 @@ html, body { height: 100% }
   .full-page-cover {
     width: 100vw;
     height: 100vh;
+    z-index: 200;
     #root.orientation-flipped & {
       width: 100vh;
       height: 100vw;
@@ -295,9 +296,10 @@ html, body { height: 100% }
 
     .bz-show-grid {
       position: absolute;
-      border: 1px dashed white;
+      border: 1px solid #99f;
+      outline: 1px dashed white;
+      outline-offset: -1px;
       pointer-events: none;
-      /* background-image: linear-gradient(to right, #f009 1px, transparent 1px), linear-gradient(to bottom, #f009 1px, transparent 1px); */
       > span {
         position: absolute;
         font-size: .5rem;
@@ -310,47 +312,113 @@ html, body { height: 100% }
     }
 
     .drawer {
+      visibility: hidden;
+      position: absolute;
       > .drawer-tab {
         position: absolute;
+        visibility: visible;
         font-size: .5rem;
         text-align: center;
-        transition: height .1s, width .1s, left .1s, top .1s, bottom .1s, right .1s;
+        transition: height .2s, width .2s, left .2s, top .2s, bottom .2s, right .2s;
         background: #0008;
         color: white;
         cursor: pointer;
         height: .75rem;
         border-radius: .75em .75em 0 0;
+        &.multi {
+          display: flex;
+          flex-wrap: nowrap;
+        }
+        .tabs-tab {
+          position: relative;
+          display: inline-block;
+          padding: 0 .5em;
+          flex: 1 1 auto;
+          overflow: hidden;
+          background: #0004;
+          &.active, &:hover {
+            background: #fff4;
+          }
+          &:first-child {
+            border-radius: .75em 0 0 0;
+          }
+          &:last-child {
+            border-radius: 0 .75em 0 0;
+          }
+        }
       }
 
       &.closed > .drawer-tab:hover {
         height: .85rem;
       }
 
-      &.close-direction-up > .drawer-tab {
+      &.open-direction-down > .drawer-tab {
         border-radius: 0 0 .75em .75em;
+        .tabs-tab {
+          &:first-child {
+            border-radius: 0 0 0 .75em;
+          }
+          &:last-child {
+            border-radius: 0 0 .75em 0;
+          }
+        }
       }
 
       > .drawer-content {
         position: absolute;
-        transition: left .2s, top .2s, bottom .2s, right .2s, transform .2s;
+        inset: 0;
+        visibility: visible;
+        border: .1rem solid #0008;
+        background: #fffc;
+        transition: transform .2s;
         > .drawer-container {
           position: absolute;
           visibility: hidden;
+          width: 100%;
+          height: 100%;
           > * {
             visibility: visible;
           }
         }
-        > .drawer-background {
-          position: absolute;
-          z-index: -1000;
-          inset: 0;
-          border: .1rem solid #0008;
-          border-top-width: 0;
-          background: #fffc;
-          html.dark & {
-            background: #000e;
-          }
+      }
+    }
+
+    .popout-container {
+      position: absolute;
+      .popout-button {
+        position: absolute;
+        inset: 0;
+        background: #0008;
+        &:hover {
+          background: #0004;
         }
+        color: white;
+        cursor: pointer;
+        border-radius: .75em;
+        text-align: center;
+      }
+      .full-page-cover {
+        background: #444c;
+      }
+      .popout-close {
+        position: absolute;
+        top: .5vh;
+        right: .5vh;
+        height: 5vh;
+        width: 5vh;
+        fill: none;
+        stroke: #666;
+        stroke-width: .15vh;
+        stroke-linecap: round;
+        cursor: pointer;
+        &:hover {
+          stroke: black;
+        }
+      }
+      .popout-modal {
+        position: absolute;
+        background: white;
+        border: .1rem solid black;
       }
     }
 

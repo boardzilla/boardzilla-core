@@ -24,6 +24,12 @@ describe('Render', () => {
   describe('layouts', () => {
     beforeEach(() => {
       game = new Game({});
+      game.setBoardSize({
+        name: '_default',
+        aspectRatio: 1,
+        frame: {x:100, y:100},
+        screen: {x:100, y:100}
+      });
       game.layout(GameElement, {
         margin: 0,
         gap: 0,
@@ -319,6 +325,12 @@ describe('Render', () => {
     it('specificity', () => {
       class Country extends Space<Game> { }
       game = new Game({});
+      game.setBoardSize({
+        name: '_default',
+        aspectRatio: 1,
+        frame: {x:100, y:100},
+        screen: {x:100, y:100}
+      });
 
       const spaces = game.createMany(4, Space, 'space');
       const space = game.create(Space, 'special');
@@ -452,6 +464,12 @@ describe('Render', () => {
       client = new Game({ classRegistry: [Space, Piece] });
       server = new Game({ classRegistry: [Space, Piece] });
       server._ctx.trackMovement = true;
+      client.setBoardSize({
+        name: '_default',
+        aspectRatio: 1,
+        frame: {x:100, y:100},
+        screen: {x:100, y:100}
+      });
     });
 
     it("combines local and server", () => {

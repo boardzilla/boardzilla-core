@@ -14,7 +14,7 @@ import type { Argument } from '../../action/action.js';
 import AnnouncementOverlay from './components/AnnouncementOverlay.js';
 
 export default () => {
-  const [gameManager, rendered, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, clearMove, selectElement, setBoardSize, dragElement] = gameStore(s => [s.gameManager, s.rendered, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.aspectRatio]);
+  const [gameManager, rendered, dev, position, pendingMoves, step, announcementIndex, dismissAnnouncement, selectMove, move, clearMove, selectElement, setBoardSize, dragElement, disambiguateElement, selected] = gameStore(s => [s.gameManager, s.rendered, s.dev, s.position, s.pendingMoves, s.step, s.announcementIndex, s.dismissAnnouncement, s.selectMove, s.move, s.clearMove, s.selectElement, s.setBoardSize, s.dragElement, s.aspectRatio, s.disambiguateElement, s.selected]);
   const clickAudio = useRef<HTMLAudioElement>(null);
   const [mode, setMode] = useState<'game' | 'info' | 'debug'>('game');
   const announcement = useMemo(() => gameManager.announcements[announcementIndex], [gameManager.announcements, announcementIndex]);
@@ -24,10 +24,10 @@ export default () => {
   if (!player) return null;
 
   const handleSubmitMove = useCallback((pendingMove?: UIMove, args?: Record<string, Argument>) => {
-    clickAudio.current?.play();
+    if (move || disambiguateElement || selected) clickAudio.current?.play();
     clearMove();
     selectMove(pendingMove, args);
-  }, [clearMove, selectMove]);
+  }, [move, disambiguateElement, selected, clearMove, selectMove]);
 
   const handleSelectElement = useCallback((moves: UIMove[], element: GameElement) => {
     clickAudio.current?.play();
@@ -68,22 +68,24 @@ export default () => {
   }, [setBoardSize]);
 
   useEffect(() => {
-    window.document.documentElement.style.setProperty(
-      'font-size',
-      `${gameManager.game._ui.boardSize.scaling === 'scroll' ? 'max' : 'min'}(4${gameManager.game._ui.boardSize.flipped ? 'vh' : 'vw'} / var(--aspect-ratio), 4${gameManager.game._ui.boardSize.flipped ? 'vw' : 'vh'})`
-    );
-    window.document.documentElement.style.setProperty(
-      '--aspect-ratio',
-      String(gameManager.game._ui.boardSize.aspectRatio)
-    )
-    if (gameManager.game._ui.boardSize.flipped) {
-      window.document.querySelector('#root')?.classList.add('orientation-flipped');
-    } else {
-      window.document.querySelector('#root')?.classList.remove('orientation-flipped');
-    }
-    return () => {
-      window.document.documentElement.style.removeProperty('font-size');
-      window.document.documentElement.style.removeProperty('--aspect-ratio');
+    if (gameManager.game._ui.boardSize) {
+      window.document.documentElement.style.setProperty(
+        'font-size',
+        `${gameManager.game._ui.boardSize.scaling === 'scroll' ? 'max' : 'min'}(4${gameManager.game._ui.boardSize.flipped ? 'vh' : 'vw'} / var(--aspect-ratio), 4${gameManager.game._ui.boardSize.flipped ? 'vw' : 'vh'})`
+      );
+      window.document.documentElement.style.setProperty(
+        '--aspect-ratio',
+        String(gameManager.game._ui.boardSize.aspectRatio)
+      )
+      if (gameManager.game._ui.boardSize.flipped) {
+        window.document.querySelector('#root')?.classList.add('orientation-flipped');
+      } else {
+        window.document.querySelector('#root')?.classList.remove('orientation-flipped');
+      }
+      return () => {
+        window.document.documentElement.style.removeProperty('font-size');
+        window.document.documentElement.style.removeProperty('--aspect-ratio');
+      }
     }
   }, [gameManager.game._ui.boardSize]);
 
@@ -106,7 +108,7 @@ export default () => {
       className={classnames(
         globalThis.navigator?.userAgent.match(/Mobi/) ? 'mobile' : 'desktop',
         {
-          'scaling-scroll': gameManager.game._ui.boardSize.scaling === 'scroll',
+          'scaling-scroll': gameManager.game._ui.boardSize?.scaling === 'scroll',
           'browser-chrome': globalThis.navigator?.userAgent.indexOf('Chrome') > -1,
           'browser-safari': globalThis.navigator?.userAgent.indexOf('Chrome') === -1 && globalThis.navigator?.userAgent.indexOf('Safari') > -1,
           'browser-edge': globalThis.navigator?.userAgent.indexOf('Edge') > -1,
@@ -114,7 +116,7 @@ export default () => {
         }
       )}
       style={{
-        ['--aspect-ratio' as string]: gameManager.game._ui.boardSize.aspectRatio,
+        ['--aspect-ratio' as string]: gameManager.game._ui.boardSize?.aspectRatio,
         ['--current-player-color' as string]: gameManager.players.currentPosition.length === 1 ? gameManager.players.current()?.color : '',
         ['--my-player-color' as string]: gameManager.players.atPosition(position)?.color
       }}
