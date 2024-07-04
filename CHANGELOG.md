@@ -1,6 +1,6 @@
 # v0.2.11 Hideable Space Layouts
 * Added 3 new layouts for Spaces that save screen real estate
-* `element#layoutAsDrawer` replaces the drawer layout for creating a collapsible Space
+* `element#layoutAsDrawer` puts Space in a expandable drawer (replaces the drawer 'attribute' in layout)
 * `element#layoutAsTabs` puts several Spaces into a switchable layout of tabs
 * `element#layoutAsPopout` hides a Space behind a button that opens it as a popout modal
 

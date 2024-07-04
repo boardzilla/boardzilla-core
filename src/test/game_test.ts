@@ -50,6 +50,12 @@ describe('Game', () => {
       gameManager: { players, addDelay: () => {}, random: random.create('a').random },
     });
     game._ctx.gameManager.game = game;
+    game.setBoardSize({
+      name: '_default',
+      aspectRatio: 1,
+      frame: {x:100, y:100},
+      screen: {x:100, y:100}
+    });
   });
 
   it('renders', () => {

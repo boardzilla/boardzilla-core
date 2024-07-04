@@ -524,7 +524,12 @@ export default class Game<G extends BaseGame = BaseGame, P extends BasePlayer = 
   }
 
   getBoardSize(screenX: number, screenY: number, mobile: boolean) {
-    return this._ui.boardSizes!(screenX, screenY, mobile);
+    return this._ui.boardSizes?.(screenX, screenY, mobile) ?? {
+      name: '_default',
+      aspectRatio: 1,
+      frame: {x:100, y:100},
+      screen: {x:100, y:100}
+    };
   }
 
   /**
