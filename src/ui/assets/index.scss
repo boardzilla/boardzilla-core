@@ -402,13 +402,13 @@ html, body { height: 100% }
       }
       .popout-close {
         position: absolute;
-        top: .5vmax;
-        right: .5vmax;
-        height: 5vmax;
-        width: 5vmax;
+        top: .5vh;
+        right: .5vh;
+        height: 5vh;
+        width: 5vh;
         fill: none;
         stroke: #666;
-        stroke-width: .15vmax;
+        stroke-width: .15vh;
         stroke-linecap: round;
         cursor: pointer;
         &:hover {

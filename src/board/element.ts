@@ -1180,8 +1180,9 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * @param area - The area for the tabs expressed in percentage sizes of this
    * element.
    * @param button - JSX for the appearance of the popout button
-   * @param popoutMargin - Alter the default margin within the opened popout
-   * (default 4vmax).
+   * @param popoutMargin - Alter the default margin around the opened
+   * popout. Takes a percentage or an object with percentages for top, bottom,
+   * left and right.
    */
   layoutAsPopout(applyTo: Space<G, P> | string, attributes: {
     area?: Box,

@@ -24,7 +24,7 @@ const Popout = ({ layout, children, attributes }: {
   }, [area, layout]);
 
   const popoutStyle = useMemo(() => {
-    return { inset: attributes.popoutMargin === undefined ? '4vmax' : (typeof attributes.popoutMargin === 'number' ? `${attributes.popoutMargin}vmax` : `${attributes.popoutMargin.top}vmax ${attributes.popoutMargin.right}vmax ${attributes.popoutMargin.bottom}vmax ${attributes.popoutMargin.left}vmax`) };
+    return { inset: attributes.popoutMargin === undefined ? '4vmin' : (typeof attributes.popoutMargin === 'number' ? `${attributes.popoutMargin}vmin` : `${attributes.popoutMargin.top}vmin ${attributes.popoutMargin.right}vmin ${attributes.popoutMargin.bottom}vmin ${attributes.popoutMargin.left}vmin`) };
   }, [attributes.popoutMargin]);
 
   useEffect(() => {

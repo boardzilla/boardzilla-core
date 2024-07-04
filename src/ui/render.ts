@@ -16,8 +16,8 @@ export type UIRender = {
   dataAttributes?: Record<string, any>;
   previousAttributes?: Record<string, any>;
   previousDataAttributes?: Record<string, any>;
-  relPos?: Box & { rotation?: number }; // raw pos data relative to parent layout
-  pos?: Box & { rotation?: number }; // raw pos data relative to a square perfectly containing the board
+  relPos?: Box & { rotation?: number }; // raw pos data relative to parent
+  pos?: Box & { rotation?: number }; // raw pos data relative to a perfect square as high as the board
   oldPos?: Box & { rotation?: number }; // old pos for transform relative to board
   styles?: React.CSSProperties; // CSS, includes pos and transform from move
   baseStyles?: React.CSSProperties;
@@ -62,16 +62,13 @@ export type UI = {
  * @internal
  */
 export function applyLayouts(game: Game, base?: (b: Game) => void): UI {
+  if (!game._ui.boardSize) throw Error("Layout cannot be applied before setBoardSize");
   game.resetUI();
   if (game._ui.setupLayout) {
     game._ui.setupLayout(game, game._ctx.player!, game._ui.boardSize.name);
   }
   base?.(game);
-  const aspectRatio = game._ui.boardSize.aspectRatio;
-  const frame = {
-    x: aspectRatio < 1 ? aspectRatio * 100 : 100,
-    y: aspectRatio > 1 ? 100 / aspectRatio : 100
-  };
+  const { frame } = game._ui.boardSize;
 
   const ui: UI = {
     all: {},
@@ -282,21 +279,26 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
     if (!size && !scaling) scaling = 'fit';
     let layoutPosition = absolutePosition;
     if (attributes.__container__?.type === 'popout') {
+      const screen = el.game._ui.boardSize!.screen;
       // calc the layout against the full viewport
-      const margin = 4; // popout margin
-      const aspectRatio = window.innerWidth / window.innerHeight;
-      let width = 100;
-      let height = 100;
-      if (aspectRatio > 1) {
-        height = 100 / aspectRatio;
-      } else {
-        width = 100 * aspectRatio;
-      }
+      const margin = typeof attributes.__container__.attributes.popoutMargin === 'number' ? {
+        top: attributes.__container__.attributes.popoutMargin,
+        bottom: attributes.__container__.attributes.popoutMargin,
+        left: attributes.__container__.attributes.popoutMargin,
+        right: attributes.__container__.attributes.popoutMargin,
+      } : attributes.__container__.attributes.popoutMargin ?? {
+        top: 4,
+        bottom: 4,
+        left: 4,
+        right: 4
+      };
+      let width = screen.x;
+      let height = screen.y;
       layoutPosition = {
-        left: margin,
-        top: margin,
-        width: width - margin - margin,
-        height: height - margin - margin
+        left: margin.left,
+        top: margin.top,
+        width: width - (margin.left + margin.right) * Math.min(width, height) / 100,
+        height: height - (margin.top + margin.bottom) * Math.min(width, height) / 100
       };
     }
 
@@ -315,6 +317,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
 
     if (layoutPosition !== absolutePosition) {
       // override to a fixed absolute position with area being the full region
+      console.log('layoutPosition', el.name, layoutPosition);
       layout.fixed = layoutPosition;
       area = {
         left: 0,
@@ -843,7 +846,8 @@ function applyBaseStyles(render: UIRender, element: GameElement) {
     height: render.relPos!.height + '%',
     left: render.relPos!.left + '%',
     top: render.relPos!.top + '%',
-    fontSize: render.pos!.height * 0.04 + 'rem'
+    fontSize: render.pos!.height * 0.04 + 'rem',
+    backgroundSize: render.pos!.height
   }
 
   render.attributes = element.attributeList();

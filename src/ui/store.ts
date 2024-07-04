@@ -98,7 +98,6 @@ export type GameStore = {
   selectPlacement: (placement: {column: number, row: number, rotation?: number}) => void; // commit placement
   infoElement?: {info: JSX.Element | boolean, element: GameElement };
   setInfoElement: (el?: {info: JSX.Element | boolean, element: GameElement }) => void;
-  popupLayout?: UIRender['layouts'][number],
   userOnline: Map<string, boolean>
   setUserOnline: (id: string, online: boolean) => void
 }
@@ -352,7 +351,7 @@ export const createGameStore = () => createWithEqualityFn<GameStore>()((set, get
   renderedSequence: -1,
   setBoardSize: () => set(s => {
     const boardSize = s.gameManager.game.getBoardSize(window.innerWidth, window.innerHeight, s.isMobile);
-    if ((boardSize.name !== s.gameManager.game._ui.boardSize.name || boardSize.aspectRatio !== s.gameManager.game._ui.boardSize.aspectRatio) && s.position) {
+    if ((boardSize.name !== s.gameManager.game._ui.boardSize?.name || boardSize.aspectRatio !== s.gameManager.game._ui.boardSize?.aspectRatio) && s.position) {
       s.gameManager.game.setBoardSize(boardSize);
       return {
         aspectRatio: boardSize.aspectRatio,

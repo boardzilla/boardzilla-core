@@ -68,22 +68,24 @@ export default () => {
   }, [setBoardSize]);
 
   useEffect(() => {
-    window.document.documentElement.style.setProperty(
-      'font-size',
-      `${gameManager.game._ui.boardSize.scaling === 'scroll' ? 'max' : 'min'}(4${gameManager.game._ui.boardSize.flipped ? 'vh' : 'vw'} / var(--aspect-ratio), 4${gameManager.game._ui.boardSize.flipped ? 'vw' : 'vh'})`
-    );
-    window.document.documentElement.style.setProperty(
-      '--aspect-ratio',
-      String(gameManager.game._ui.boardSize.aspectRatio)
-    )
-    if (gameManager.game._ui.boardSize.flipped) {
-      window.document.querySelector('#root')?.classList.add('orientation-flipped');
-    } else {
-      window.document.querySelector('#root')?.classList.remove('orientation-flipped');
-    }
-    return () => {
-      window.document.documentElement.style.removeProperty('font-size');
-      window.document.documentElement.style.removeProperty('--aspect-ratio');
+    if (gameManager.game._ui.boardSize) {
+      window.document.documentElement.style.setProperty(
+        'font-size',
+        `${gameManager.game._ui.boardSize.scaling === 'scroll' ? 'max' : 'min'}(4${gameManager.game._ui.boardSize.flipped ? 'vh' : 'vw'} / var(--aspect-ratio), 4${gameManager.game._ui.boardSize.flipped ? 'vw' : 'vh'})`
+      );
+      window.document.documentElement.style.setProperty(
+        '--aspect-ratio',
+        String(gameManager.game._ui.boardSize.aspectRatio)
+      )
+      if (gameManager.game._ui.boardSize.flipped) {
+        window.document.querySelector('#root')?.classList.add('orientation-flipped');
+      } else {
+        window.document.querySelector('#root')?.classList.remove('orientation-flipped');
+      }
+      return () => {
+        window.document.documentElement.style.removeProperty('font-size');
+        window.document.documentElement.style.removeProperty('--aspect-ratio');
+      }
     }
   }, [gameManager.game._ui.boardSize]);
 
@@ -106,7 +108,7 @@ export default () => {
       className={classnames(
         globalThis.navigator?.userAgent.match(/Mobi/) ? 'mobile' : 'desktop',
         {
-          'scaling-scroll': gameManager.game._ui.boardSize.scaling === 'scroll',
+          'scaling-scroll': gameManager.game._ui.boardSize?.scaling === 'scroll',
           'browser-chrome': globalThis.navigator?.userAgent.indexOf('Chrome') > -1,
           'browser-safari': globalThis.navigator?.userAgent.indexOf('Chrome') === -1 && globalThis.navigator?.userAgent.indexOf('Safari') > -1,
           'browser-edge': globalThis.navigator?.userAgent.indexOf('Edge') > -1,
@@ -114,7 +116,7 @@ export default () => {
         }
       )}
       style={{
-        ['--aspect-ratio' as string]: gameManager.game._ui.boardSize.aspectRatio,
+        ['--aspect-ratio' as string]: gameManager.game._ui.boardSize?.aspectRatio,
         ['--current-player-color' as string]: gameManager.players.currentPosition.length === 1 ? gameManager.players.current()?.color : '',
         ['--my-player-color' as string]: gameManager.players.atPosition(position)?.color
       }}
