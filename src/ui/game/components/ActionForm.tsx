@@ -121,6 +121,7 @@ const ActionForm = ({ move, stepName, onSubmit }: {
           key={s.name}
           value={allArgs[s.name]}
           error={errors[s.name]}
+          setErrors={setErrors}
           onChange={(value: Argument) => handleChange(s.name, value)}
           selection={s}
         />

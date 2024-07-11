@@ -198,7 +198,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
           const error = this._withDecoratedArgs(allArgs as A, args => selection!.error(args))
           if (error) {
             pruned = true;
-            selection.invalidOptions.push({ option, error })
+            selection.invalidOptions.push({ option, error, label: selection.labelFor(option) })
             continue;
           }
         }
@@ -309,8 +309,8 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
   }
 
   _addSelection(selection: Selection) {
-    if (this.selections.find(s => s.name === selection.name)) throw Error(`Duplicate name for action ${this.name}: ${selection.name}`);
-    if (this.mutated) console.warn(`Adding a choice ("${selection.name}") after behavior in the "${this.name}" action is valid but players will need to perform the choices before the behavior.`);
+    if (this.selections.find(s => s.name === selection.name)) throw Error(`Duplicate selection name on action: ${selection.name}`);
+    if (this.mutated) console.warn(`Adding a choice ("${selection.name}") after behavior in action is valid but players will need to perform the choices before the behavior.`);
     this.selections.push(selection);
     return selection;
   }
@@ -540,10 +540,10 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
    * ).chooseFrom(
    *   // Use the functional style to include the resource choice in the text
    *   // Also use object style to have the value simply be "high" or "low"
-   *   'grade', resource => ({
-   *     high: `High grade ${resource}`,
-   *     low: `Low grade ${resource}`
-   *   }),
+   *   'grade', ({ resource }) => [
+   *     { choice: 'high', label: `High grade ${resource}` }
+   *     { choice: 'low', label: `Low grade ${resource}` }
+   *   ],
    *   {
    *     // A follow-up choice that doesn't apply to "oil"
    *     skipIf: ({ resource }) => resource === 'oil',
@@ -919,6 +919,39 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
   }
 
   /**
+   * Add a confirmtation step to this action. This can be useful if you want to
+   * present additional information to the player related to the consequences of
+   * their choice, like a cost incurred. Or this can simply be used to force the
+   * user to click an additional button on a particular important choice.
+   *
+   * @param prompt - Button text for the confirmation step. This can be a
+   * function returning the text which accepts each choice the player has made
+   * up till now as an argument.
+   *
+   * @example
+   * action({
+   *   prompt: "Buy resources",
+   * }).chooseNumber({
+   *   'amount', {
+   *     prompt: "Amount",
+   *     max: Math.floor(player.coins / 5)
+   * }).confirm(
+   *   ({ amount }) => `Spend ${amount * 5} coins`
+   * }).do(({ amount }) => {
+   *   player.resource += amount;
+   *   player.coins -= amount * 5;
+   * });
+   */
+  confirm(prompt: string | ((args: A) => string)): Action<A> {
+    this._addSelection(new Selection('__confirm__', {
+      prompt,
+      confirm: typeof prompt === 'string' ? prompt : ['{{__message__}}', (args: A) => ({__message__: prompt(args)})],
+      value: true
+    }));
+    return this;
+  }
+
+  /**
    * Perform a move with the selected element(s) into a selected
    * Space/Piece. This is almost the equivalent of calling Action#do and adding
    * a putInto command, except that the game will also permit the UI to allow a
@@ -949,9 +982,9 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     });
     const pieceSelection = typeof piece === 'string' ? this.selections.find(s => s.name === piece) : undefined;
     const intoSelection = typeof into === 'string' ? this.selections.find(s => s.name === into) : undefined;
-    if (intoSelection && intoSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${into as string}" must be the name of a previous chooseOnBoard`);
-    if (pieceSelection && pieceSelection.type !== 'board') throw Error(`Invalid move for ${this.name}: "${piece as string}" must be the name of a previous chooseOnBoard`);
-    if (intoSelection?.isMulti()) throw Error("Invalid move for ${this.name}: May not move into a multiple choice selection");
+    if (intoSelection && intoSelection.type !== 'board') throw Error(`Invalid move: "${into as string}" must be the name of a previous chooseOnBoard`);
+    if (pieceSelection && pieceSelection.type !== 'board') throw Error(`Invalid move: "${piece as string}" must be the name of a previous chooseOnBoard`);
+    if (intoSelection?.isMulti()) throw Error("Invalid move: May not move into a multiple choice selection");
     if (pieceSelection && !pieceSelection.isMulti()) pieceSelection.clientContext = { dragInto: intoSelection ?? into };
     if (intoSelection) intoSelection.clientContext = { dragFrom: pieceSelection ?? piece };
     return this;
@@ -991,8 +1024,8 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     });
     const piece1Selection = typeof piece1 === 'string' ? this.selections.find(s => s.name === piece1) : undefined;
     const piece2Selection = typeof piece2 === 'string' ? this.selections.find(s => s.name === piece2) : undefined;
-    if (piece1Selection && piece1Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece1 as string}" must be the name of a previous chooseOnBoard`);
-    if (piece2Selection && piece2Selection.type !== 'board') throw Error(`Invalid swap for ${this.name}: "${piece2 as string}" must be the name of a previous chooseOnBoard`);
+    if (piece1Selection && piece1Selection.type !== 'board') throw Error(`Invalid swap: "${piece1 as string}" must be the name of a previous chooseOnBoard`);
+    if (piece2Selection && piece2Selection.type !== 'board') throw Error(`Invalid swap: "${piece2 as string}" must be the name of a previous chooseOnBoard`);
     if (piece1Selection) piece1Selection.clientContext = { dragInto: piece2Selection ?? piece2 };
     return this;
   }
@@ -1018,8 +1051,8 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     prompt?: string | ((args: A) => string),
   }) {
     const { prompt } = options || {};
-    if (this.selections.some(s => s.name === '__reorder_from__')) throw Error(`Invalid reorder for ${this.name}: only one reorder allowed`);
-    if (collection.some(c => c._t.parent !== collection[0]._t.parent)) throw Error(`Invalid reorder for ${this.name}: all elements must belong to the same parent`);
+    if (this.selections.some(s => s.name === '__reorder_from__')) throw Error(`Invalid reorder: only one reorder allowed`);
+    if (collection.some(c => c._t.parent !== collection[0]._t.parent)) throw Error(`Invalid reorder: all elements must belong to the same parent`);
     const pieceSelection = this._addSelection(new Selection(
       '__reorder_from__', { prompt, selectOnBoard: { chooseFrom: collection }}
     ));
@@ -1091,7 +1124,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
     rotationChoices?: number[],
   }) {
     const { prompt, confirm, validate } = options || {};
-    if (this.selections.some(s => s.name === '__placement__')) throw Error(`Invalid placePiece for ${this.name}: only one placePiece allowed`);
+    if (this.selections.some(s => s.name === '__placement__')) throw Error(`Invalid placePiece: only one placePiece allowed`);
     const pieceSelection = this.selections.find(s => s.name === piece);
     if (!pieceSelection) throw (`No selection named ${String(piece)} for placePiece`)
     const positionSelection = this._addSelection(new Selection(

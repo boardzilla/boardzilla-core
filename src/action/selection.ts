@@ -124,7 +124,7 @@ export default class Selection {
   placePiece?: string;
   rotationChoices?: number[];
   value?: Argument;
-  invalidOptions: {option: Argument, error: string}[] = [];
+  invalidOptions: {option: Argument, error: string, label?: string}[] = [];
 
   constructor(name: string, s: SelectionDefinition | Selection) {
     this.name = name;
@@ -189,6 +189,10 @@ export default class Selection {
       return this.choices!.map(c => (c as { label: string, choice: SingleArgument }).choice)
     }
     return (this.choices ?? []) as string[];
+  }
+
+  labelFor(this: ResolvedSelection, choice: Argument): string {
+    return String(this.isLabeledChoice() ? (this.choices as { label: string, choice: SingleArgument }[]).find(c => c.choice === choice)?.label : choice)
   }
 
   /**

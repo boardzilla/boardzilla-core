@@ -3,10 +3,11 @@ import React from 'react';
 import type { ResolvedSelection } from '../../../action/selection.js';
 import type { Argument } from '../../../action/action.js';
 
-const Selection = ({selection, value, error, onChange} : {
+const Selection = ({selection, value, error, setErrors, onChange} : {
   selection: ResolvedSelection,
   value: Argument | undefined,
   error?: string,
+  setErrors: (errors: Record<string, string>) => void,
   onChange: (value: Argument) => void
 }) => (
   <div className={`selection ${selection.name}`}>
@@ -21,8 +22,18 @@ const Selection = ({selection, value, error, onChange} : {
       >
         {String(typeof choice === 'object' && 'label' in choice ? choice.label : choice)}
       </button>
-    )
-    )}
+    ))}
+
+    {selection.type === 'choices' && selection.invalidOptions?.map(choice => (
+      <button
+        type="button"
+        className='invalid'
+        key={String(choice.option)}
+        onClick={() => setErrors({ [String(selection.name)]: choice.error })}
+      >
+        {String(choice.label ?? choice.option)}
+      </button>
+    ))}
 
     {selection.type === 'number' && (
       <input

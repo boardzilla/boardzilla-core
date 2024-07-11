@@ -16,7 +16,7 @@ import type { ActionLayout, Game, PieceGrid } from '../board/index.js'
 type GamePendingMoves = ReturnType<GameManager['getPendingMoves']>;
 
 export type UIMove = PendingMove & {
-  requireExplicitSubmit: boolean; // true if explicit submit has been provided or is not needed
+  requireExplicitSubmit: boolean; // true if explicit submit has not been provided and is needed
 }
 
 // used to send a move

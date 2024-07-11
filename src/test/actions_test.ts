@@ -300,7 +300,7 @@ describe('Actions', () => {
     it('validates choices', () => {
       const moves = testAction._getPendingMoves({});
       expect(moves?.[0].selections[0].choices).to.deep.equal(['oil', 'garbage']);
-      expect(moves?.[0].selections[0].invalidOptions).to.deep.equal([{option: 'steel', error: 'no steel allowed'}]);
+      expect(moves?.[0].selections[0].invalidOptions).to.deep.equal([{option: 'steel', error: 'no steel allowed', label: 'steel'}]);
     });
   });
 

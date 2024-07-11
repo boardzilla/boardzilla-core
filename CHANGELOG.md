@@ -1,3 +1,8 @@
+# v0.2.12
+* Added action#confirm as an alternate means to add confirmation prompts
+* Providing a `validate` function in a `chooseFrom` now shows invalid choices
+  with error messages if clicked
+
 # v0.2.11 Hideable Space Layouts
 * Added 3 new layouts for Spaces that save screen real estate
 * `element#layoutAsDrawer` puts Space in a expandable drawer (replaces the drawer 'attribute' in layout)
