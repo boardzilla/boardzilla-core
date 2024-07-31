@@ -139,23 +139,16 @@ export default class Flow {
     const args = {...(this.top.args ?? {})};
     let flow: FlowStep | undefined = this.top;
     while (flow instanceof Flow) {
-      if ('position' in flow && flow.position) {
-        // want to remove
-        if (flow.type === 'action' && 'name' in flow.position) {
-          const position = flow.position as {
-            player: number,
-            name: string,
-            args: Record<string, Argument>,
-          };
-          args[position!.name] = position!.args;
-        }
-        if ('value' in flow.position && flow.name) {
-          args[flow.name] = flow.position.value;
-        }
-      }
+      Object.assign(args, flow.thisStepArgs());
       flow = flow.step;
     }
     return args;
+  }
+
+  thisStepArgs() {
+    if (this.position && 'value' in this.position && this.name) {
+      return {[this.name]: this.position.value};
+    }
   }
 
   branchJSON(forPlayer=true): FlowBranchJSON[] {

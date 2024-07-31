@@ -68,6 +68,13 @@ export default class ActionStep extends Flow {
     this.setPosition(undefined);
   }
 
+  thisStepArgs() {
+    if (this.position?.name && this.position?.args) {
+      // want to remove
+      return {[this.position.name]: this.position.args};
+    }
+  }
+
   setPosition(position: ActionStepPosition, sequence?: number) {
     super.setPosition(position, sequence);
     if (this.awaitingAction()) {

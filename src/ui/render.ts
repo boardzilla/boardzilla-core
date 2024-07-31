@@ -788,7 +788,7 @@ export function calcLayouts(el: GameElement, ui: UI): UIRender['layouts'] {
           let worstOverlapElTry = Infinity;
           if (children.every(c => {
             const render = ui.all[String(c._t.ref)]
-            if (!render.relPos) return true;
+            if (!render?.relPos) return true;
             const cbox = render.relPos;
             const childOverlap = Math.min(
               Math.max(0, cbox.left + cbox.width - left - w.x),

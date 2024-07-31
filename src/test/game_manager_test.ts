@@ -779,6 +779,51 @@ describe('GameManager', () => {
       expect(gameManager.phase).to.equal('finished');
     });
 
+    it('action for every player with blocks', () => {
+      const {
+        playerActions,
+        everyPlayer
+      } = game.flowCommands
+      const actionSpy = chai.spy((_p: Player) => {});
+
+      game.defineFlow(
+        () => { game.tokens = 4 },
+        everyPlayer({
+          name: 'testEvery',
+          do: [
+            args => actionSpy(args.testEvery),
+            playerActions({
+              actions: ['takeOne']
+            })
+          ]
+        })
+      );
+
+      gameManager.start();
+      gameManager.play();
+      expect(gameManager.players.currentPosition).to.deep.equal([1, 2, 3, 4]);
+      expect(actionSpy).to.have.been.called.exactly(4);
+      expect(actionSpy).to.have.been.called.with(game.players[0]);
+      expect(actionSpy).to.have.been.called.with(game.players[1]);
+      expect(actionSpy).to.have.been.called.with(game.players[2]);
+      expect(actionSpy).to.have.been.called.with(game.players[3]);
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[2] });
+      gameManager.play();
+      expect(gameManager.phase).to.equal('started');
+      expect(gameManager.players.currentPosition).to.deep.equal([1, 2, 4])
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[1] });
+      gameManager.play();
+      expect(gameManager.phase).to.equal('started');
+      expect(gameManager.players.currentPosition).to.deep.equal([1, 4])
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[0] });
+      gameManager.play();
+      expect(gameManager.phase).to.equal('started');
+      expect(gameManager.players.currentPosition).to.deep.equal([4])
+      gameManager.processMove({ name: 'takeOne', args: {}, player: gameManager.players[3] });
+      gameManager.play();
+      expect(gameManager.phase).to.equal('finished');
+    });
+
     it('action for every player with followups', () => {
       const {
         playerActions,

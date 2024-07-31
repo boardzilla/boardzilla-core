@@ -6,7 +6,7 @@ import type { Player, PlayerCollection } from '../player/index.js';
 import type { Argument } from '../action/action.js';
 import type { SubflowSignal, InterruptSignal } from './enums.js';
 
-export type EveryPlayerPosition = {positions: FlowBranchJSON[][], completed: (boolean | undefined)[]};
+export type EveryPlayerPosition = {positions: FlowBranchJSON[][], sequences: number[], completed: (boolean | undefined)[]};
 
 export default class EveryPlayer<P extends Player> extends Flow {
   position: EveryPlayerPosition;
@@ -28,18 +28,27 @@ export default class EveryPlayer<P extends Player> extends Flow {
   reset() {
     this.value = -1;
     this.completed = [];
-    this.setPosition({positions: [], completed: []});
+    this.setPosition({positions: [], sequences: [], completed: []});
+  }
+
+  thisStepArgs() {
+    if (this.name) {
+      const currentPlayer = this.getPlayers()[this.value];
+      if (currentPlayer) return {[this.name]: currentPlayer};
+    }
   }
 
   // closure wrapper for super's methods that will setPosition temporarily to a
   // specific player and pretend to be a normal flow with just one subflow
   withPlayer<T>(value: number, fn: () => T, mutate=false): T {
     this.value = value;
-    this.setPosition(this.position);
+    this.sequence = this.position.sequences[this.value];
+    this.setPosition(this.position, this.sequence);
     const result = fn();
     if (mutate) {
       const currentPlayer = this.getPlayers()[this.value];
       // capture position from existing player before returning to all player mode
+      this.position.sequences[this.value] = this.sequence;
       if (currentPlayer && this.step instanceof Flow) this.position.positions[this.value] = this.step.branchJSON();
     }
     this.value = -1;
@@ -56,7 +65,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
     if (this.position === undefined && this.sequence === undefined) return []; // probably invalid
     let branch: FlowBranchJSON = {
       type: this.type,
-      position: {positions: [], completed: this.completed}
+      position: {positions: [], sequences: this.position.sequences, completed: this.completed}
     };
     if (this.name) branch.name = this.name;
 
@@ -68,30 +77,25 @@ export default class EveryPlayer<P extends Player> extends Flow {
     return [branch];
   }
 
-  // add player management and hydration of flow for the correct player
+  // add player management, hydration of flow for the correct player, sequences[] management
   setPosition(positionJSON: any, sequence?: number) {
     const player = this.getPlayers()[this.value];
     this.completed = positionJSON.completed;
     if (player) {
       player.setCurrent();
+      positionJSON.sequences[this.value] = sequence;
     } else {
-      // no longer looking at an individual player. set game state to accept all players
+      // not looking at an individual player. set game state to accept all players
       const players: P[] = [];
       for (let i = 0; i !== this.getPlayers().length; i++) {
         if (this.completed[i] === false) players.push(this.getPlayers()[i]);
       }
       this.gameManager.players.setCurrent(players);
     }
-    super.setPosition(positionJSON, sequence);
+    super.setPosition(positionJSON, positionJSON.sequences[this.value]);
     if (this.step instanceof Flow && this.position.positions[this.value]) {
       this.step.setBranchFromJSON(this.position.positions[this.value]);
     }
-  }
-
-  // intercept normal setPosition to stop the super chain here and carry it ourselves
-  setPositionFromJSON(positionJSON: any, sequence?: number) {
-    super.setPositionFromJSON(positionJSON, sequence);
-    this.step = undefined; // prevent super trying to reach subflows
   }
 
   currentBlock() {
@@ -132,8 +136,7 @@ export default class EveryPlayer<P extends Player> extends Flow {
 
         // capture the complete state ourselves, pretend everything is fine
         if (result instanceof Flow || result === FlowControl.complete) this.completed![player] = result === FlowControl.complete;
-        result = FlowControl.ok;
-        return result;
+        return FlowControl.ok;
       }, true);
     }
 
