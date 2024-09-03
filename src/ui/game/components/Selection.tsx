@@ -13,25 +13,14 @@ const Selection = ({selection, value, error, setErrors, onChange} : {
   <div className={`selection ${selection.name}`}>
     {selection.prompt && selection.type !== 'button' && <span className="prompt">{selection.prompt}</span>}
 
-    {selection.type === 'choices' && selection.choices?.map(choice => (
+    {selection.type === 'choices' && selection.resolvedChoices?.map(choice => (
       <button
         type="button"
-        className={(typeof choice === 'object' && 'choice' in choice ? choice.choice : choice) === value ? 'selected' : ''}
+        className={choice.error ? 'invalid' : choice.choice === value ? 'selected' : ''}
         key={String(choice)}
-        onClick={() => onChange((typeof choice === 'object' && 'choice' in choice ? choice.choice : choice))}
+        onClick={() => choice.error ? setErrors({ [String(selection.name)]: choice.error }) : onChange(choice.choice)}
       >
-        {String(typeof choice === 'object' && 'label' in choice ? choice.label : choice)}
-      </button>
-    ))}
-
-    {selection.type === 'choices' && selection.invalidOptions?.map(choice => (
-      <button
-        type="button"
-        className='invalid'
-        key={String(choice.option)}
-        onClick={() => setErrors({ [String(selection.name)]: choice.error })}
-      >
-        {String(choice.label ?? choice.option)}
+        {String(choice.label ?? choice.choice)}
       </button>
     ))}
 

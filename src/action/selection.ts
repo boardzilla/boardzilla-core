@@ -5,8 +5,8 @@ import Player from '../player/player.js';
 
 import type { SingleArgument, Argument } from './action.js';
 
-export type BoardQuerySingle<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = string | T | undefined | ((args: A) => T | undefined)
-export type BoardQueryMulti<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = string | T[] | ((args: A) => T[])
+export type BoardQuerySingle<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = T | undefined | ((args: A) => T | undefined)
+export type BoardQueryMulti<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = T[] | ((args: A) => T[])
 export type BoardQuery<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = BoardQuerySingle<T, A> | BoardQueryMulti<T, A>
 
 export type BoardSelection<T extends GameElement, A extends Record<string, Argument> = Record<string, Argument>> = {
@@ -91,10 +91,9 @@ export type SelectionDefinition<A extends Record<string, Argument> = Record<stri
 });
 
 // any lambdas have been resolved to actual values
-export type ResolvedSelection = Omit<Selection, 'prompt' | 'choices' | 'boardChoices' | 'min' | 'max' | 'initial' | 'skipIf'> & {
+export type ResolvedSelection = Omit<Selection, 'prompt' | 'min' | 'max' | 'initial' | 'skipIf'> & {
   prompt?: string;
-  choices?: SingleArgument[] | { label: string, choice: SingleArgument }[];
-  boardChoices?: GameElement[];
+  resolvedChoices?: { label?: string, choice: SingleArgument, error?: string }[]; // selection.choices or selection.boardChoices resolve to this array
   min?: number;
   max?: number;
   initial?: Argument;
@@ -116,7 +115,7 @@ export default class Selection {
   clientContext: Record<any, any> = {}; // additional meta info that describes the context for this selection
   skipIf?: 'never' | 'always' | 'only-one' | ((args: Record<string, Argument>) => boolean);
   choices?: SingleArgument[] | { label: string, choice: SingleArgument }[] | ((args: Record<string, Argument>) => SingleArgument[] | { label: string, choice: SingleArgument }[]);
-  boardChoices?: BoardQueryMulti<GameElement>;
+  boardChoices?: BoardQueryMulti<GameElement>
   min?: number | ((args: Record<string, Argument>) => number);
   max?: number | ((args: Record<string, Argument>) => number);
   initial?: Argument | ((args: Record<string, Argument>) => Argument);
@@ -124,7 +123,6 @@ export default class Selection {
   placePiece?: string;
   rotationChoices?: number[];
   value?: Argument;
-  invalidOptions: {option: Argument, error: string, label?: string}[] = [];
 
   constructor(name: string, s: SelectionDefinition | Selection) {
     this.name = name;
@@ -173,28 +171,6 @@ export default class Selection {
     this.clientContext = s.clientContext ?? {};
   }
 
-  isLabeledChoice(this: ResolvedSelection) {
-    return this.choices && typeof this.choices[0] === 'object' && !(this.choices[0] instanceof GameElement) && !(this.choices[0] instanceof Player);
-  }
-
-  choiceLabels(this: ResolvedSelection) {
-    if (this.isLabeledChoice()) {
-      return this.choices!.map(c => (c as { label: string, choice: SingleArgument }).label)
-    }
-    return (this.choices ?? []) as string[];
-  }
-
-  choiceValues(this: ResolvedSelection) {
-    if (this.isLabeledChoice()) {
-      return this.choices!.map(c => (c as { label: string, choice: SingleArgument }).choice)
-    }
-    return (this.choices ?? []) as string[];
-  }
-
-  labelFor(this: ResolvedSelection, choice: Argument): string {
-    return String(this.isLabeledChoice() ? (this.choices as { label: string, choice: SingleArgument }[]).find(c => c.choice === choice)?.label : choice)
-  }
-
   /**
    * check specific selection with a given arg. evaluates within the context of
    * previous args, so any selection elements that have previous-arg-function
@@ -210,13 +186,13 @@ export default class Selection {
       if (error !== undefined && error !== true) return error || 'Invalid selection';
     }
 
-    if (s.type === 'choices' && s.choices) {
-      if (arg instanceof Array) return "multi-choice stil unsupported";
-      return s.choiceValues().includes(arg) ? undefined : "Not a valid choice";
+    if (s.type === 'choices' && s.resolvedChoices) {
+      if (arg instanceof Array) return "multi-choice stil unsupported"; // TODO
+      return s.resolvedChoices.find(c => c.choice === arg) ? undefined : "Not a valid choice";
     }
 
-    if (s.type === 'board' && s.boardChoices) {
-      const results = s.boardChoices;
+    if (s.type === 'board' && s.resolvedChoices) {
+      const results = s.resolvedChoices.map(c => c.choice);
       if (!results) console.warn('Attempted to validate an impossible move', s);
       if (this.isMulti()) {
         if (!(arg instanceof Array)) throw Error("Required multi select");
@@ -243,13 +219,14 @@ export default class Selection {
   }
 
   // All possible valid Arguments to this selection. Have to make some assumptions here to tree shake possible moves
-  options(this: ResolvedSelection): Argument[] {
+  // Argument to handle array of combo selections arrays
+  options(this: ResolvedSelection): {choice: Argument, error?: string, label?: string}[] {
     if (this.isUnbounded()) return [];
-    if (this.type === 'number') return range(this.min ?? 1, this.max!);
-    const choices = this.choiceValues()
-    if (this.isMulti()) return combinations(this.boardChoices || choices, this.min ?? 1, this.max ?? Infinity);
-    if (this.boardChoices) return this.boardChoices;
-    if (this.choices) return choices;
+    if (this.type === 'number') return range(this.min ?? 1, this.max!).map(choice => ({ choice }));
+    if (this.isMulti() && this.resolvedChoices) {
+      return combinations(this.resolvedChoices.map(c => c.choice), this.min ?? 1, this.max ?? Infinity).map(choice => ({ choice }));
+    }
+    if (this.resolvedChoices) return this.resolvedChoices;
     return [];
   }
 
@@ -265,7 +242,8 @@ export default class Selection {
       typeof this.initial !== 'function' &&
       typeof this.skipIf !== 'function' &&
       typeof this.choices !== 'function' &&
-      typeof this.boardChoices !== 'function';
+      typeof this.boardChoices !== 'function' &&
+      (!this.choices && !this.boardChoices || 'resolvedChoices' in this);
   }
 
   isMulti() {
@@ -278,23 +256,31 @@ export default class Selection {
 
   resolve(args: Record<string, Argument>): ResolvedSelection {
     const resolved = new Selection(this.name, this) as ResolvedSelection;
-    if (typeof this.boardChoices === 'string') throw Error("not impl");
+    if (this.choices) {
+      const choices = typeof this.choices === 'function' ? this.choices(args) : this.choices;
+      if (choices instanceof Array && typeof choices[0] === 'object' && !(choices[0] instanceof GameElement) && !(choices[0] instanceof Player)) {
+        resolved.resolvedChoices = choices as { label: string, choice: SingleArgument }[];
+      } else {
+        resolved.resolvedChoices = (choices as SingleArgument[]).map(choice => ({ choice }));
+      }
+    }
     if (typeof this.prompt === 'function') resolved.prompt = this.prompt(args);
     if (typeof this.min === 'function') resolved.min = this.min(args)
     if (typeof this.max === 'function') resolved.max = this.max(args)
     if (typeof this.initial === 'function') resolved.initial = this.initial(args)
     if (typeof this.skipIf === 'function') resolved.skipIf = this.skipIf(args)
-    if (typeof this.choices === 'function') resolved.choices = this.choices(args)
-    if (typeof this.boardChoices === 'string') throw Error("not impl");
-    if (typeof this.boardChoices === 'function') resolved.boardChoices = this.boardChoices(args);
+    if (this.boardChoices) {
+      const choices = typeof this.boardChoices === 'function' ? this.boardChoices(args) : this.boardChoices;
+      resolved.resolvedChoices = choices.map(choice => ({ choice }));
+    }
     return resolved;
   }
 
   isPossible(this: ResolvedSelection): boolean {
-    if (this.type === 'choices' && this.choices) return this.choices.length > 0
+    if (this.type === 'choices' && this.resolvedChoices) return this.resolvedChoices.length > 0
 
     const isInBounds = this.max !== undefined ? (this.min ?? 1) <= this.max : true;
-    if (this.type === 'board' && this.boardChoices) return isInBounds && this.boardChoices.length >= (this.min ?? 1);
+    if (this.type === 'board' && this.resolvedChoices) return isInBounds && this.resolvedChoices.length >= (this.min ?? 1);
     if (this.type === 'number') return isInBounds;
 
     return true;
@@ -304,31 +290,21 @@ export default class Selection {
     if (this.skipIf === 'never') return;
     if (this.type === 'button') {
       return this.value;
-    } else if (this.boardChoices && (this.skipIf === true || this.boardChoices?.length === 1) && !this.isMulti()) {
-      return this.boardChoices[0];
-    } else if (this.boardChoices && this.isMulti() && (this.skipIf === true || (this.boardChoices.length === (this.min ?? 1)) || this.max === 0)) {
-      return this.boardChoices.slice(0, this.min);
-    } else if (this.type === 'number' &&
-      this.min !== undefined &&
-      this.min === this.max) {
+    } else if (this.type === 'board') {
+      if (this.resolvedChoices && (this.skipIf === true || this.resolvedChoices?.length === 1) && !this.isMulti()) {
+        return this.resolvedChoices[0].choice;
+      } else if (this.resolvedChoices && this.isMulti() && (this.skipIf === true || (this.resolvedChoices.length === (this.min ?? 1)) || this.max === 0)) {
+        return this.resolvedChoices.slice(0, this.min).map(c => c.choice);
+      }
+    } else if (this.type === 'number' && this.min !== undefined && this.min === this.max) {
       return this.min;
-    } else if (this.type === 'choices' && this.choices) {
-      if (this.choices.length === 1 || this.skipIf === true) return this.choiceValues()[0];
-    }
-  }
-
-  overrideOptions(this: ResolvedSelection, options: SingleArgument[]) {
-    if (this.type === 'board') {
-      this.boardChoices = options as GameElement[];
-    } else if (this.isLabeledChoice()) {
-      this.choices = (this.choices as { label: string, choice: SingleArgument }[]).filter(c => options.includes(c.choice));
-    } else {
-      this.choices = options as GameElement[];
+    } else if (this.type === 'choices' && this.resolvedChoices) {
+      if (this.resolvedChoices.length === 1 || this.skipIf === true) return this.resolvedChoices[0].choice
     }
   }
 
   toString(): string {
     if (!this.isResolved()) return `unresolved selection ${this.type}`;
-    return `${this.type === 'board' ? `click ${this.boardChoices![0]?.constructor.name || 'board element'}` : `pick ${this.type}`}${(this.choices || this.boardChoices) ? ` (${(this.choices || this.boardChoices)!.length} choices)` : ''}`;
+    return `${this.type === 'board' ? `click ${this.resolvedChoices![0]?.choice.constructor.name || 'board element'}` : `pick ${this.type}`}${(this.choices || this.boardChoices) ? ` (${(this.choices || this.boardChoices)!.length} choices)` : ''}`;
   }
 }

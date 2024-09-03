@@ -643,6 +643,21 @@ describe('Game', () => {
       game.create(Card, "AH", {suit: "H", pip: 1});
       expect(eventSpy).to.have.been.called()
     });
+
+    it('query siblings', () => {
+      const space = game.create(Space, 'map', {});
+      const card1 = space.create(Card, 'p1');
+      const piece1 = space.create(Piece, 'c1');
+      const card2 = space.create(Card, 'p2');
+      const card3 = space.create(Card, 'p3');
+
+      expect(card2.others(Card)).to.deep.equal([card1, card3]);
+      expect(card2.others()).to.deep.equal([card1, piece1, card3]);
+
+      expect(card2.next()).to.equal(card3);
+      expect(card2.previous()).to.equal(card1);
+      expect(card3.next()).to.equal(undefined);
+    });
   });
 
   describe("graph", () => {

@@ -389,15 +389,12 @@ export function updateBoardSelections(store: GameStore): Pick<GameStore, "boardS
   for (const p of pendingMoves) {
     for (const sel of p.selections) {
       if (sel.type === 'board' && sel.boardChoices) {
-        const boardChoices = [...new Set(sel.boardChoices)];
+        const boardChoices = sel.resolvedChoices as { choice: GameElement, error?: string, label?: string }[];
         const boardMove = {...p, selections: [sel]}; // simple board move of single selection to attach to element
-        for (const el of boardChoices) {
-          boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-          boardSelections[el.branch()].clickMoves.push(boardMove);
-        }
-        for (const {option, error} of sel.invalidOptions) {
-          boardSelections[(option as GameElement).branch()] ??= { clickMoves: [], dragMoves: [] };
-          boardSelections[(option as GameElement).branch()].error = error;
+        for (const { choice, error } of boardChoices) {
+          boardSelections[choice.branch()] ??= { clickMoves: [], dragMoves: [], error };
+          // note that multiple moves might select the same piece. error only set if only one choice and its invalid
+          if (!error) boardSelections[choice.branch()].clickMoves.push(boardMove);
         }
         let { dragInto, dragFrom } = sel.clientContext as { dragInto?: Selection | GameElement, dragFrom?: Selection | GameElement };
         if (dragInto) {
@@ -405,15 +402,14 @@ export function updateBoardSelections(store: GameStore): Pick<GameStore, "boardS
             // convert to confirmation for a single drop target
             dragInto = new Selection('__confirm__', { selectOnBoard: { chooseFrom: [dragInto] } });
           }
-          for (const el of boardChoices) {
-            boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-            boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: dragInto });
+          for (const { choice, error } of boardChoices) {
+            if (!error) boardSelections[choice.branch()].dragMoves.push({ move: boardMove, drag: dragInto });
           }
         }
         if (dragFrom) {
-          for (const el of dragFrom instanceof GameElement ? [dragFrom] : dragFrom.resolve(move?.args || {}).boardChoices || []) {
-            boardSelections[el.branch()] ??= { clickMoves: [], dragMoves: [] };
-            boardSelections[el.branch()].dragMoves.push({ move: boardMove, drag: sel });
+          for (const el of dragFrom instanceof GameElement ? [{ choice: dragFrom }] : dragFrom.resolve(move?.args || {}).resolvedChoices || []) {
+            boardSelections[(el.choice as GameElement).branch()] ??= { clickMoves: [], dragMoves: [] };
+            boardSelections[(el.choice as GameElement).branch()].dragMoves.push({ move: boardMove, drag: sel });
           }
         }
       }

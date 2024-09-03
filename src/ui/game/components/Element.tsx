@@ -49,7 +49,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
   const clickable = mode === 'game' && !invalidSelectionError && !dragElement && boardSelections?.clickMoves.length;
   const selectable = mode === 'game' && !invalidSelectionError && !dragElement && boardSelections?.clickMoves.filter(m => m.name.slice(0, 4) !== '_god').length;
   const draggable = mode === 'game' && !invalidSelectionError && !!boardSelections?.dragMoves?.length; // ???
-  const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].boardChoices?.includes(element));
+  const droppable = mode === 'game' && dropSelections.some(move => move.selections[0].resolvedChoices?.find(c => c.choice === element));
   const placing = useMemo(() => element === placement?.piece && !placement?.selected, [element, placement])
   const gridSizeNeeded = useMemo(() => (
     placement?.into._sizeNeededFor(placement.piece) ?? {width: 1, height: 1}
@@ -144,7 +144,7 @@ const Element = ({render, mode, onSelectElement, onMouseLeave}: {
           dragOffset.x = data.x - parseInt(wrapper.current.getAttribute('data-lastx') || '');
           dragOffset.y = data.y - parseInt(wrapper.current.getAttribute('data-lasty') || '');
         }
-        const move = dropSelections.find(move => move.selections[0].boardChoices?.includes(currentDrop));
+        const move = dropSelections.find(move => move.selections[0].resolvedChoices?.find(c => c.choice === currentDrop));
         if (move) {
           onSelectElement([move], currentDrop);
           return;
