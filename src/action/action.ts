@@ -773,7 +773,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
    *     // select 1-3 cards from hand
    *     min: 1,
    *     max: 3
-   * ).do(
+   * }).do(
    *   ({ cards }) => {
    *     // `cards` is an ElementCollection of the cards selected
    *     cards.putInto($.discard);
