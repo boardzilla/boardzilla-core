@@ -10,7 +10,7 @@ import type { ForEachPosition } from './for-each.js';
 import type { SwitchCasePostion } from './switch-case.js';
 import type { ActionStepPosition } from './action-step.js';
 import type { EveryPlayerPosition } from './every-player.js';
-import type { Argument, ActionStub } from '../action/action.js';
+import type { ActionStub } from '../action/action.js';
 import type WhileLoop from './while-loop.js';
 import type { Serializable } from '../action/utils.js';
 
