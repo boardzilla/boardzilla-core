@@ -1,3 +1,9 @@
+# v0.2.14
+* Game elements now have next/previous selectors to find adjacent elements in
+  the same space.
+* Invalid options in selections now retain their position
+* Corrected a bug with nested follow-ups
+
 # v0.2.13
 * Game settings provided now all accept an initial default value
   (e.g. numberSetting, etc)
