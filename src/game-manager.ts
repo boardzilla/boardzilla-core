@@ -71,8 +71,8 @@ export type FlowStackJSON = {
  * @category Core
  */
 export default class GameManager<G extends BaseGame = BaseGame, P extends BasePlayer = BasePlayer> {
-  flows: Record<string, Flow> = {}; // list of defined flows, including at minimum __main__
-  flowState: FlowStackJSON[] = []; // current state for all flows. only the active one is hydrated
+  flows: Record<string, Flow> = {}; // list of defined flows, including at minimum __main__. includes any __followup[n]__
+  flowState: FlowStackJSON[] = []; // current state for all flows
   /**
    * The players in this game. See {@link Player}
    */
@@ -135,7 +135,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
     this.phase = 'started';
     this.players.currentPosition = [...this.players].map(p => p.position)
     this.flowState = [{stack: [], currentPosition: this.players.currentPosition}];
-    this.startFlow();
+    this.startFlow(this.flowState[0]);
   }
 
   play(): void {
@@ -164,7 +164,7 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
         // cede to previous flow
         console.debug(`Completed "${this.flowState[0].name}" flow. Returning to "${this.flowState[1].name ?? 'main' }" flow`);
         this.flowState.shift();
-        this.startFlow();
+        this.players.currentPosition = this.flowState[0].currentPosition;
         this.play();
       } else {
         this.game.finish();
@@ -186,38 +186,45 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   beginSubflow(flow: SubflowSignal['data']) {
     if (flow.name !== '__followup__' && flow.name !== '__main__' && !this.flows[flow.name]) throw Error(`No flow named "${flow.name}"`);
     console.debug(`Proceeding to "${flow.name}" flow${flow.args ? ` with { ${Object.entries(flow.args).map(([k, v]) => `${k}: ${v}`).join(', ')} }` : ''}`);
-    // capture current flow state
-    this.flowState[0].stack = this.flow().branchJSON();
+    // freeze current player in flow state
     this.flowState[0].currentPosition = this.players.currentPosition;
     // proceed to new flow on top of stack
+    let name = flow.name;
+    if (flow.name === '__followup__') {
+      let counter = 1;
+      do {
+        name = `__followup_${counter}__`;
+        counter += 1;
+      } while(this.flows[name])
+    }
     this.flowState.unshift({
-      name: flow.name,
+      name,
       args: serialize(flow.args),
       currentPosition: this.players.currentPosition,
       stack: []
     });
-    this.startFlow();
+    this.startFlow(this.flowState[0]);
   }
 
   setFlowFromJSON(json: FlowStackJSON[]) {
     this.flowState = json;
     this.phase = 'started';
-    this.startFlow();
+    [...this.flowState].reverse().forEach(s => this.startFlow(s));
   }
 
-  startFlow(json?: FlowStackJSON) {
-    const {name, args, stack, currentPosition} = json ?? this.flowState[0];
+  // hydrates flow with supplied json
+  startFlow(flowState: FlowStackJSON) {
+    const {name, args, stack} = flowState;
     let flow: Flow;
     const deserializedArgs = deserialize(args, this.game) as Record<string, Argument>;
-    if (name === '__followup__') {
+    if (name?.startsWith('__followup_')) {
       const actions = deserializedArgs as any as ActionStub;
-      flow = new ActionStep({ name: '__followup__', player: actions.player, actions: [actions] });
+      flow = new ActionStep({ name, player: actions.player, actions: [actions] });
       flow.gameManager = this;
-      this.flows.__followup__ = flow;
+      this.flows[name] = flow;
     } else {
       flow = this.flows[name ?? '__main__'];
     }
-    this.players.currentPosition = currentPosition;
     if (stack.length) {
       flow.setBranchFromJSON(stack);
     } else {
@@ -227,14 +234,16 @@ export default class GameManager<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   flowJSON(player: boolean = false) {
-    const currentFlow = this.flows[this.flowState[0].name ?? '__main__'];
-    const currentState: FlowStackJSON = {
-      stack: currentFlow.branchJSON(!!player),
-      currentPosition: this.players.currentPosition
-    };
-    if (this.flowState[0].name) currentState.name = this.flowState[0].name;
-    if (currentFlow.args) currentState.args = serialize(currentFlow.args);
-    return [currentState, ...this.flowState.slice(1)];
+    return this.flowState.map(flowState => {
+      const currentFlow = this.flows[flowState.name ?? '__main__'];
+      const currentState: FlowStackJSON = {
+        stack: currentFlow.branchJSON(!!player),
+        currentPosition: this.players.currentPosition
+      };
+      if (flowState.name) currentState.name = flowState.name;
+      if (currentFlow.args) currentState.args = serialize(currentFlow.args);
+      return currentState;
+    })
   }
 
   /**

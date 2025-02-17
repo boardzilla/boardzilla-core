@@ -188,17 +188,19 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
       return;
     }
     if (!selection.isUnbounded()) {
-      let possibleOptions: Argument[] = [];
+      let possibleOptions: { choice: SingleArgument, error?: string, label?: string }[] = [];
+      let anyValidOption = false;
       let pruned = false;
       let pendingMoves: PendingMove[] = [];
       let hasCompleteMove = false
       for (const option of selection.options()) {
-        const allArgs = {...args, [selection.name]: option};
+        const allArgs = {...args, [selection.name]: option.choice};
         if (selection.validation && !selection.isMulti()) {
           const error = this._withDecoratedArgs(allArgs as A, args => selection!.error(args))
           if (error) {
             pruned = true;
-            selection.invalidOptions.push({ option, error, label: selection.labelFor(option) })
+            option.error = error;
+            possibleOptions.push(option as { choice: SingleArgument, error?: string, label?: string })
             continue;
           }
         }
@@ -206,19 +208,20 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
         if (submoves === undefined) {
           pruned = true;
         } else {
-          possibleOptions.push(option);
+          if (!selection.isMulti()) possibleOptions.push(option as { choice: SingleArgument, error?: string, label?: string });
+          anyValidOption ||= true;
           hasCompleteMove ||= submoves.length === 0;
           pendingMoves = pendingMoves.concat(submoves);
         }
       }
-      if (!possibleOptions.length) {
+      if (!anyValidOption) {
         if (debug) {
           debug[this.name!].args[selection.name] = 'tree';
         }
         return undefined;
       }
       if (pruned && !selection.isMulti()) {
-        selection.overrideOptions(possibleOptions as SingleArgument[]);
+        selection.resolvedChoices = possibleOptions;
       }
 
       // return the next selection(s) if skipIf, provided it exists for all possible choices
@@ -770,7 +773,7 @@ export default class Action<A extends Record<string, Argument> = NonNullable<unk
    *     // select 1-3 cards from hand
    *     min: 1,
    *     max: 3
-   * ).do(
+   * }).do(
    *   ({ cards }) => {
    *     // `cards` is an ElementCollection of the cards selected
    *     cards.putInto($.discard);

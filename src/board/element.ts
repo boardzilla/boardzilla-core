@@ -480,6 +480,32 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   }
 
   /**
+   * Finds next element in this element's Space of the same class that matches
+   * the arguments provided, e.g. the next card after this one in the same
+   * pile.
+   * @param finders - any number of {@link ElementFinder} arguments to filter
+   * @category Queries
+   */
+  next<F extends GameElement>(this: F, ...finders: ElementFinder<F>[]): F | undefined {
+    if (!this._t.parent) return undefined;
+    const thisIndex = this._t.parent!._t.children.indexOf(this);
+    return this._t.parent!._t.children.slice(thisIndex + 1).first(this.constructor as ElementClass<F>, ...finders);
+  }
+
+  /**
+   * Finds previous element in this element's Space of the same class that
+   * matches the arguments provided, e.g. the previous card before this one in
+   * the same pile.
+   * @param finders - any number of {@link ElementFinder} arguments to filter
+   * @category Queries
+   */
+  previous<F extends GameElement>(this: F, ...finders: ElementFinder<F>[]): F | undefined {
+    if (!this._t.parent) return undefined;
+    const thisIndex = this._t.parent!._t.children.indexOf(this);
+    return this._t.parent!._t.children.slice(0, thisIndex - 1).last(this.constructor as ElementClass<F>, ...finders);
+  }
+
+  /**
    * Finds "sibling" elements (elements that are directly inside the parent of this element) that match the arguments
    * provided. See {@link all} for parameter details.
    * @category Queries
@@ -487,7 +513,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
   others<F extends GameElement>(className: ElementClass<F>, ...finders: ElementFinder<F>[]): ElementCollection<F>;
   others(className?: ElementFinder, ...finders: ElementFinder[]): ElementCollection<GameElement<G, P>>;
   others(className?: any, ...finders: ElementFinder[]) {
-    if (!this._t.parent) new ElementCollection();
+    if (!this._t.parent) return new ElementCollection();
     return this._t.parent!._t.children.all(className, (el: GameElement) => el !== this, ...finders);
   }
 

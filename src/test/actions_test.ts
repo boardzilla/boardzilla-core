@@ -60,10 +60,10 @@ describe('Actions', () => {
         .chooseFrom('a', [1, 2])
         .chooseFrom('b', [3, 4], {skipIf: ({ a }) => a === 1 })
         .chooseFrom('c', [5, 6])
-      expect(testAction._nextSelection({})?.choices).to.deep.equal([1,2]);
-      expect(testAction._nextSelection({a: 2})?.choices).to.deep.equal([3,4]);
-      expect(testAction._nextSelection({a: 1})?.choices).to.deep.equal([5,6]);
-      expect(testAction._nextSelection({a: 2, b: 3})?.choices).to.deep.equal([5,6]);
+      expect(testAction._nextSelection({})?.resolvedChoices).to.deep.equal([{choice: 1}, {choice: 2}]);
+      expect(testAction._nextSelection({a: 2})?.resolvedChoices).to.deep.equal([{choice: 3}, {choice: 4}]);
+      expect(testAction._nextSelection({a: 1})?.resolvedChoices).to.deep.equal([{choice: 5},{choice: 6}]);
+      expect(testAction._nextSelection({a: 2, b: 3})?.resolvedChoices).to.deep.equal([{choice: 5},{choice: 6}]);
       expect(testAction._nextSelection({a: 2, b: 3, c: 5})).to.be.undefined;
       expect(testAction._nextSelection({a:1, c: 5})).to.be.undefined;
     });
@@ -73,7 +73,7 @@ describe('Actions', () => {
         .chooseFrom('a', [1, 2] )
         .chooseFrom('b', [5, 6])
         .chooseFrom('c', [3, 4], { skipIf: ({ a }) => a === 1 })
-      expect(testAction._nextSelection({a: 2, b: 5})?.choices).to.deep.equal([3,4]);
+      expect(testAction._nextSelection({a: 2, b: 5})?.resolvedChoices).to.deep.equal([{choice: 3},{choice: 4}]);
       expect(testAction._nextSelection({a: 1, b: 5})).to.be.undefined;
     });
   });
@@ -228,7 +228,7 @@ describe('Actions', () => {
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');
-      expect(moves![0].selections[0].choices).to.deep.equal([{ label: 'Oil', choice: 'oil' }, { label: 'Garbage', choice: 'garbage' }]);
+      expect(moves![0].selections[0].resolvedChoices).to.deep.equal([{ label: 'Oil', choice: 'oil' }, { label: 'Garbage', choice: 'garbage' }]);
     });
 
     it('expands first selection', () => {
@@ -277,7 +277,7 @@ describe('Actions', () => {
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('choices');
-      expect(moves![0].selections[0].choices).to.deep.equal(['oil']);
+      expect(moves![0].selections[0].resolvedChoices).to.deep.equal([{choice: 'oil'}]);
     });
   });
 
@@ -286,7 +286,7 @@ describe('Actions', () => {
     beforeEach(() => {
       testAction = new Action({ prompt: 'p' })
         .chooseFrom(
-          'r', ['oil', 'garbage', 'steel'],
+          'r', ['oil', 'steel', 'garbage'],
           {
             validate: ({r}) => r === 'steel' ? 'no steel allowed' : true
           }
@@ -299,8 +299,11 @@ describe('Actions', () => {
 
     it('validates choices', () => {
       const moves = testAction._getPendingMoves({});
-      expect(moves?.[0].selections[0].choices).to.deep.equal(['oil', 'garbage']);
-      expect(moves?.[0].selections[0].invalidOptions).to.deep.equal([{option: 'steel', error: 'no steel allowed', label: 'steel'}]);
+      expect(moves?.[0].selections[0].resolvedChoices).to.deep.equal([
+        { choice: 'oil' },
+        { choice: 'steel', error: 'no steel allowed' },
+        { choice: 'garbage' },
+      ]);
     });
   });
 
@@ -376,7 +379,7 @@ describe('Actions', () => {
       expect(moves?.length).to.equal(1);
       expect(moves![0].selections.length).to.equal(1);
       expect(moves![0].selections[0].type).to.equal('board');
-      expect(moves![0].selections[0].boardChoices).to.deep.equal(game.all(Piece));
+      expect(moves![0].selections[0].resolvedChoices?.map(c => c.choice)).to.deep.equal(game.all(Piece));
     });
 
     it('moves', () => {

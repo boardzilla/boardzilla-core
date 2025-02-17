@@ -1,3 +1,17 @@
+# v0.2.14
+* Game elements now have next/previous selectors to find adjacent elements in
+  the same space.
+* Invalid options in selections now retain their position
+* Corrected a bug with nested follow-ups
+
+# v0.2.13
+* Game settings provided now all accept an initial default value
+  (e.g. numberSetting, etc)
+* The `everyPlayer` flow now passes the currently acting player to the flow
+  args, just like `eachPlayer`
+* Corrected an issue with `everyPlayer` hanging when using an array `do` block
+* Corrected a bug with `layout.haphazardly`.
+
 # v0.2.12
 * Added action#confirm as an alternate means to add confirmation prompts
 * Providing a `validate` function in a `chooseFrom` now shows invalid choices
@@ -5,9 +19,11 @@
 
 # v0.2.11 Hideable Space Layouts
 * Added 3 new layouts for Spaces that save screen real estate
-* `element#layoutAsDrawer` puts Space in a expandable drawer (replaces the drawer 'attribute' in layout)
+* `element#layoutAsDrawer` puts Space in a expandable drawer (replaces the
+  drawer 'attribute' in layout)
 * `element#layoutAsTabs` puts several Spaces into a switchable layout of tabs
-* `element#layoutAsPopout` hides a Space behind a button that opens it as a popout modal
+* `element#layoutAsPopout` hides a Space behind a button that opens it as a
+  popout modal
 
 # v0.2.10
 * Fixed Info and Debug overlays

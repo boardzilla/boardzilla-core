@@ -71,14 +71,9 @@ const Debug = () => {
                         {['ask', 'imp', 'tree'].includes(args[name]) && (
                           <div>
                             <ul>
-                              <DebugChoices
-                                choices={sel?.boardChoices || sel?.choices}
-                                heading="Choices"
-                              />
-                              <DebugChoices
-                                choices={sel?.invalidOptions}
-                                heading="Invalid"
-                              />
+                              <li>
+                                Choices: <DebugChoices choices={sel?.resolvedChoices} />
+                              </li>
                               {(sel?.min !== undefined || sel?.max !== undefined) && <><li>min: {sel.min ?? 1}</li><li>max: {sel.max ?? '∞'}</li></>}
                             </ul>
                           </div>
@@ -107,7 +102,7 @@ const Debug = () => {
           {selected?.length && (
             <div style={{marginBottom: '1em'}}>
               <hr/>
-              <DebugChoices choices={selected} heading="selected"/>
+              Selected: <DebugChoices choices={selected.map(s => ({choice: s}))}/>
               {disambiguateElement && <span>(ambiguous: valid moves are: "{disambiguateElement.moves.map(m => m.name).join('", "')}")</span>}
             </div>
           )}
