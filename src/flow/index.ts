@@ -297,10 +297,10 @@ export const ifElse = (options: ConstructorParameters<typeof IfElse>[0]) => new 
  *   name: 'switch',
  *   switch: () => deck.top(Card)?.suit,
  *   cases: [
- *     { eq: 'D', do: () => { /* ... diamonds *\/ },
- *     { eq: 'H', do: () => { /* ... hearts *\/ },
- *     { eq: 'S', do: () => { /* ... spades *\/ },
- *     { eq: 'C', do: () => { /* ... clubs *\/ }
+ *     { eq: 'D', do: () => { /* ... diamonds *\/ } },
+ *     { eq: 'H', do: () => { /* ... hearts *\/ } },
+ *     { eq: 'S', do: () => { /* ... spades *\/ } },
+ *     { eq: 'C', do: () => { /* ... clubs *\/ } },
  *   ],
  *   default: () => { /* ... there is no card *\/ }
  * })
