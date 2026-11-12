@@ -183,19 +183,21 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
 
           for (let i = 0; i !== states.length; i++) {
             const state = states[i];
-            queue.schedule(() => {
-              updateState({...data, state}, i !== states.length - 1);
-              if (state.announcements.length) queue.pause();
-            }, delay);
+            queue.schedule(
+              () => updateState({...data, state}, i !== states.length - 1),
+              delay,
+              state.announcements.length > 0
+            );
             delay = true;
           }
         } else {
           const state = data.state as GameState;
           let delay = state.sequence === gameManager.sequence + 1;
-          queue.schedule(() => {
-            updateState({...data, state});
-            if (state.announcements.length) queue.pause();
-          }, delay);
+          queue.schedule(
+            () => updateState({...data, state}),
+            delay,
+            state.announcements.length > 0
+          );
         }
       }
       break;
