@@ -57,7 +57,7 @@ const Seating = ({ users, players, minPlayers, maxPlayers, seatCount, onUpdatePl
   const updateSeatCount = useCallback((count: number) => {
     if (count < seatCount) {
       // compress and unseat
-      const openSeats = [];
+      const openSeats : number[] = [];
       const operations: UpdatePlayersMessage['operations'] = [
         // auto unready if reducing seats for more intuitive state game action
         { type: "update", userID, ready: false }

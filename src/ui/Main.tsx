@@ -121,7 +121,12 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
   defaultPlayers: number,
   setupComponents: Record<string, (p: SetupComponentProps) => JSX.Element>
 }) => {
-  const [gameManager, updateState, setUserOnline, announcementIndex] = gameStore(s => [s.gameManager, s.updateState, s.setUserOnline, s.announcementIndex]);
+  const [gameManager, updateState, setUserOnline, announcement] = gameStore(s => [
+    s.gameManager,
+    s.updateState,
+    s.setUserOnline,
+    s.gameManager.announcements[s.announcementIndex]
+  ]);
   const [settings, setSettings] = useState<GameSettings>();
   const [seatCount, setSeatCount] = useState(defaultPlayers);
   const [users, setUsers] = useState<User[]>([]);
@@ -138,12 +143,16 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
   const queue = useMemo(() => new Queue(1) /* speed */, []);
 
   useEffect(() => {
-    if (gameManager.announcements[announcementIndex]) {
+    if (announcement) {
       queue.pause();
-    } else if (queue.paused) {
-      setTimeout(() => queue.resume(), 500);
+      return;
     }
-  }, [queue, gameManager, announcementIndex])
+
+    if (queue.paused) {
+      const timeout = window.setTimeout(() => queue.resume(), 500);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [queue, announcement])
 
   const listener = useCallback((event: MessageEvent<
     UsersEvent |
@@ -174,12 +183,19 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
 
           for (let i = 0; i !== states.length; i++) {
             const state = states[i];
-            queue.schedule(() => updateState({...data, state}, i !== states.length - 1), delay);
+            queue.schedule(() => {
+              updateState({...data, state}, i !== states.length - 1);
+              if (state.announcements.length) queue.pause();
+            }, delay);
             delay = true;
           }
         } else {
-          let delay = data.state.sequence === gameManager.sequence + 1;
-          queue.schedule(() => updateState(data as typeof data & {state: typeof data.state}), delay); // TS needs help here...
+          const state = data.state as GameState;
+          let delay = state.sequence === gameManager.sequence + 1;
+          queue.schedule(() => {
+            updateState({...data, state});
+            if (state.announcements.length) queue.pause();
+          }, delay);
         }
       }
       break;
