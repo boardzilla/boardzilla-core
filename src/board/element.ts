@@ -1140,6 +1140,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * is like {@link GameElement#layout} except for one specific Space, with
    * additional parameters that set the behaviour/appearance of the drawer. A
    * tab will be attached the drawer that will allow it be opened/closed.
+   * @category UI
    *
    * @param applyTo - The Space for the drawer. Either the Space itself or its
    * name.
@@ -1172,6 +1173,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * parameters that set the behaviour/appearance of the tabs. Each Space will
    * be laid out into the same area, with a set of tabs attached to allow the
    * Player or the game rules to select which tab is shown.
+   * @category UI
    *
    * @param applyTo - The Spaces for the drawer as a set of key-value
    * pairs. Each value is a Space or a name of a Space.
@@ -1200,6 +1202,7 @@ export default class GameElement<G extends BaseGame = BaseGame, P extends BasePl
    * button. Clicking on the button opens this Space in a full-board modal. This
    * is like {@link GameElement#layout} except for one Space, with additional
    * parameters that set the behaviour/appearance of the popout modal.
+   * @category UI
    *
    * @param applyTo - The Space for the popout. Either a Space or the name of a
    * Space.
