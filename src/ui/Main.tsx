@@ -145,10 +145,7 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
   useEffect(() => {
     if (announcement) {
       queue.pause();
-      return;
-    }
-
-    if (queue.paused) {
+    } else if (queue.paused) {
       const timeout = window.setTimeout(() => queue.resume(), 500);
       return () => window.clearTimeout(timeout);
     }
@@ -191,7 +188,7 @@ export default ({ minPlayers, maxPlayers, defaultPlayers, setupComponents }: {
             delay = true;
           }
         } else {
-          const state = data.state as GameState;
+          const state = data.state;
           let delay = state.sequence === gameManager.sequence + 1;
           queue.schedule(
             () => updateState({...data, state}),
