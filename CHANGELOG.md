@@ -1,3 +1,6 @@
+# v0.2.15
+* Fix announcements sometimes not appearing
+
 # v0.2.14
 * Game elements now have next/previous selectors to find adjacent elements in
   the same space.

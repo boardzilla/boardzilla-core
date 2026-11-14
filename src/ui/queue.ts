@@ -9,8 +9,11 @@ class Queue {
   ) {
   }
 
-  schedule(update: () => any, waitIfProcessing = false) {
-    this.updates.push(update);
+  schedule(update: () => any, waitIfProcessing = false, pauseAfter = false) {
+    this.updates.push(() => {
+      update();
+      if (pauseAfter) this.pause();
+    });
     if (this.updates.length === 1 && (!this.justProcessed || !waitIfProcessing)) {
       this.pump();
     }
